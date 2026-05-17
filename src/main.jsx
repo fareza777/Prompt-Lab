@@ -33,11 +33,11 @@ import {
 import "./styles.css";
 
 const categories = ["Marketing", "Content Creator", "Business", "Coding", "Academic", "Image AI"];
-const tones = ["Profesional", "Santai", "Persuasif", "Kreatif"];
+const tones = ["Professional", "Casual", "Persuasive", "Creative"];
 const models = ["ChatGPT", "Claude", "Gemini", "Grok", "Midjourney"];
-const outputTypes = ["Kode Aplikasi", "Dokumen Word", "PPT", "Desain Teknis", "Analisis", "Konten"];
-const optimizerModes = ["Lebih Jelas", "Lebih Singkat", "Lebih Detail", "Akademik", "Marketing", "Coding"];
-const generationModes = ["Cepat", "Seimbang", "Sabar Gratis"];
+const outputTypes = ["Application Code", "Word Document", "PPT", "Technical Design", "Analysis", "Content"];
+const optimizerModes = ["Clearer", "Shorter", "More Detailed", "Academic", "Marketing", "Coding"];
+const generationModes = ["Fast", "Balanced", "Patient Free"];
 const providerOptions = ["openrouter", "openai", "custom"];
 const defaultModelSettings = {
   apiKey: "",
@@ -50,183 +50,183 @@ const defaultModelSettings = {
   timeoutMs: "40000",
 };
 const modeProfiles = {
-  Cepat: {
-    label: "Draft cepat",
-    detail: "Coba model utama, lalu fallback singkat jika perlu.",
-    bestFor: "Konten pendek, ide awal, revisi prompt ringan.",
+  Fast: {
+    label: "Fast draft",
+    detail: "Try the primary model, then use a short fallback if needed.",
+    bestFor: "Short content, early ideas, lightweight prompt revisions.",
   },
-  Seimbang: {
-    label: "Harian stabil",
-    detail: "Timeout sedang dengan fallback yang masih cukup sabar.",
-    bestFor: "Dokumen, PPT, prompt aplikasi, pekerjaan normal.",
+  Balanced: {
+    label: "Daily stable",
+    detail: "Moderate timeout with a patient fallback path.",
+    bestFor: "Documents, slides, app prompts, and normal daily work.",
   },
-  "Sabar Gratis": {
-    label: "Kejar hasil",
-    detail: "Mencoba seluruh fallback lebih lama saat model gratis antre.",
-    bestFor: "File besar, OCR, prompt kompleks, model free sedang lambat.",
+  "Patient Free": {
+    label: "Chase the result",
+    detail: "Gives free models more time before routing through the fallback chain.",
+    bestFor: "Large files, OCR, complex prompts, or slow free models.",
   },
 };
 
 const templates = [
   {
-    title: "Aplikasi Web dari Dokumen",
+    title: "Web App from Document",
     category: "Coding",
     model: "Claude",
-    outputType: "Kode Aplikasi",
-    tone: "Profesional",
+    outputType: "Application Code",
+    tone: "Professional",
     prompt:
-      "Buat aplikasi web yang bisa dijalankan secara lokal berdasarkan file terlampir. File hanya referensi konten. Output harus berupa kode aplikasi lengkap, bukan laporan.",
+      "Build a locally runnable web application from the attached file. The file is content reference only. The output must be complete application code, not a report.",
   },
   {
-    title: "PPT Akademik 20 Slide",
+    title: "20-Slide Academic Deck",
     category: "Academic",
     model: "Claude",
     outputType: "PPT",
-    tone: "Profesional",
+    tone: "Professional",
     prompt:
-      "Buat prompt untuk menyusun PPT akademik 20 slide dari dokumen terlampir, lengkap dengan visual, tabel, speaker notes, dan alur problem-analysis-solution.",
+      "Create a prompt for a 20-slide academic presentation from the attached document, including visuals, tables, speaker notes, and a problem-analysis-solution storyline.",
   },
   {
-    title: "Laporan Word Akademik",
+    title: "Academic Word Report",
     category: "Academic",
     model: "Claude",
-    outputType: "Dokumen Word",
-    tone: "Profesional",
+    outputType: "Word Document",
+    tone: "Professional",
     prompt:
-      "Buat prompt untuk menyusun laporan Word akademik dari dokumen terlampir dengan pendahuluan, pembahasan, analisis, kesimpulan, dan rekomendasi.",
+      "Create a prompt for an academic Word report from the attached document with introduction, discussion, analysis, conclusion, and recommendations.",
   },
   {
-    title: "Konten Instagram UMKM",
+    title: "SMB Instagram Content",
     category: "Content Creator",
     model: "ChatGPT",
-    outputType: "Konten",
-    tone: "Santai",
+    outputType: "Content",
+    tone: "Casual",
     prompt:
-      "Buat kalender konten 14 hari untuk brand lokal dengan hook, visual, caption, dan CTA.",
+      "Create a 14-day content calendar for a local brand with hooks, visuals, captions, and CTAs.",
   },
   {
-    title: "Proposal Kerja Sama",
+    title: "Partnership Proposal",
     category: "Business",
     model: "Claude",
-    outputType: "Dokumen Word",
-    tone: "Persuasif",
+    outputType: "Word Document",
+    tone: "Persuasive",
     prompt:
-      "Susun proposal kemitraan dengan latar belakang, tujuan, benefit, rencana eksekusi, dan penutup.",
+      "Draft a partnership proposal with background, objectives, benefits, execution plan, and closing section.",
   },
   {
-    title: "Debug Kode",
+    title: "Code Debugging",
     category: "Coding",
     model: "ChatGPT",
-    outputType: "Analisis",
-    tone: "Profesional",
+    outputType: "Analysis",
+    tone: "Professional",
     prompt:
-      "Analisis bug berikut, jelaskan penyebab, beri patch, dan tulis test case yang relevan.",
+      "Analyze the bug, explain the cause, provide a patch, and write relevant test cases.",
   },
   {
-    title: "Prompt Gambar Produk",
+    title: "Product Image Prompt",
     category: "Image AI",
     model: "Midjourney",
-    outputType: "Konten",
-    tone: "Kreatif",
+    outputType: "Content",
+    tone: "Creative",
     prompt:
-      "Buat prompt visual produk dengan komposisi, lighting, background, material, dan negative prompt.",
+      "Create a product visual prompt with composition, lighting, background, material, and negative prompt.",
   },
   {
-    title: "PRD Aplikasi Mobile",
+    title: "Mobile App PRD",
     category: "Coding",
     model: "Claude",
-    outputType: "Desain Teknis",
-    tone: "Profesional",
+    outputType: "Technical Design",
+    tone: "Professional",
     prompt:
-      "Buat product requirement document untuk aplikasi mobile: problem, user persona, fitur prioritas, flow, data model, API, acceptance criteria, dan roadmap.",
+      "Create a product requirements document for a mobile app: problem, user persona, priority features, flow, data model, API, acceptance criteria, and roadmap.",
   },
   {
-    title: "Rencana Implementasi Pemerintah",
+    title: "Government Implementation Plan",
     category: "Business",
     model: "Claude",
-    outputType: "Desain Teknis",
-    tone: "Profesional",
+    outputType: "Technical Design",
+    tone: "Professional",
     prompt:
-      "Buat rencana implementasi aplikasi layanan publik berdasarkan lampiran: arsitektur, fitur, SOP, pelatihan staf, milestone, risiko, dan indikator keberhasilan.",
+      "Create an implementation plan for a public service app based on the attachment: architecture, features, SOPs, staff training, milestones, risks, and success indicators.",
   },
   {
-    title: "Analisis File Survei",
+    title: "Survey File Analysis",
     category: "Academic",
     model: "Gemini",
-    outputType: "Analisis",
-    tone: "Profesional",
+    outputType: "Analysis",
+    tone: "Professional",
     prompt:
-      "Analisis data survei dari file terlampir, cari insight utama, hambatan, prioritas masalah, rekomendasi, dan tabel ringkasan.",
+      "Analyze survey data from the attached file, identify key insights, barriers, problem priorities, recommendations, and a summary table.",
   },
   {
     title: "Claude 4 Style Prompt",
     category: "Business",
     model: "Claude",
-    outputType: "Desain Teknis",
-    tone: "Profesional",
+    outputType: "Technical Design",
+    tone: "Professional",
     prompt:
-      "Ubah kebutuhan saya menjadi prompt Claude yang eksplisit: gunakan dokumen di atas, action verbs, batas panjang, output berurutan, positive instructions, dan Think before answering.",
+      "Turn my requirements into an explicit Claude prompt: use the document above, action verbs, length boundaries, ordered output, positive instructions, and Think before answering.",
   },
   {
     title: "Gemini Deep Research Brief",
     category: "Academic",
     model: "Gemini",
-    outputType: "Analisis",
-    tone: "Profesional",
+    outputType: "Analysis",
+    tone: "Professional",
     prompt:
-      "Buat brief riset untuk Gemini: pertanyaan utama, asumsi, sumber yang perlu diverifikasi, tabel temuan, kontra-argumen, dan rekomendasi final.",
+      "Create a research brief for Gemini: main questions, assumptions, sources to verify, findings table, counterarguments, and final recommendations.",
   },
   {
     title: "Grok/X Trend Breakdown",
     category: "Marketing",
     model: "Grok",
-    outputType: "Konten",
-    tone: "Santai",
+    outputType: "Content",
+    tone: "Casual",
     prompt:
-      "Analisis tren/topik sosial media berikut menjadi angle konten, hook, opini kontra, thread outline, dan CTA yang tajam.",
+      "Analyze this social media trend/topic into content angles, hooks, counter-opinions, thread outlines, and sharp CTAs.",
   },
   {
     title: "OCR Screenshot to Task",
     category: "Academic",
     model: "Claude",
-    outputType: "Analisis",
-    tone: "Profesional",
+    outputType: "Analysis",
+    tone: "Professional",
     prompt:
-      "Baca screenshot/foto tugas yang saya lampirkan, ekstrak instruksi penting, lalu ubah menjadi prompt final yang siap dipakai.",
+      "Read the attached screenshot/photo of the task, extract the important instructions, then turn them into a ready-to-use final prompt.",
   },
   {
-    title: "PPT dari Foto Layar",
+    title: "Deck from Screen Photo",
     category: "Academic",
     model: "Claude",
     outputType: "PPT",
-    tone: "Profesional",
+    tone: "Professional",
     prompt:
-      "Buat prompt untuk menghasilkan PPT dari foto layar/papan presentasi terlampir. Sertakan slide-by-slide outline, visual asli/pengganti, tabel, dan speaker notes.",
+      "Create a prompt to generate a PPT from the attached screen/photo/presentation board. Include a slide-by-slide outline, original/replacement visuals, tables, and speaker notes.",
   },
   {
     title: "Full-Stack App Builder",
     category: "Coding",
     model: "Claude",
-    outputType: "Kode Aplikasi",
-    tone: "Profesional",
+    outputType: "Application Code",
+    tone: "Professional",
     prompt:
-      "Buat prompt untuk membangun aplikasi full-stack siap jalan: struktur folder, UI, API, data model, state, validasi, test, dan cara run lokal.",
+      "Create a prompt to build a runnable full-stack app: folder structure, UI, API, data model, state, validation, tests, and local run steps.",
   },
   {
     title: "Executive Summary Word",
     category: "Business",
     model: "Claude",
-    outputType: "Dokumen Word",
-    tone: "Profesional",
+    outputType: "Word Document",
+    tone: "Professional",
     prompt:
-      "Buat prompt untuk menyusun executive summary Word dari lampiran: konteks, masalah, data kunci, solusi, risiko, rekomendasi, dan lampiran tabel.",
+      "Create a prompt for an executive summary Word document from the attachment: context, problem, key data, solution, risks, recommendations, and supporting tables.",
   },
 ];
 
 const defaultLibrary = [
-  { id: "seed-1", title: "Campaign promo kopi susu untuk mahasiswa", content: "Campaign promo kopi susu untuk mahasiswa", folder: "Content", tag: "Marketing", createdAt: Date.now() - 300000 },
-  { id: "seed-2", title: "Email follow-up client desain logo", content: "Email follow-up client desain logo", folder: "Work", tag: "Business", createdAt: Date.now() - 200000 },
-  { id: "seed-3", title: "Brief carousel edukasi skincare", content: "Brief carousel edukasi skincare", folder: "Content", tag: "Content", createdAt: Date.now() - 100000 },
+  { id: "seed-1", title: "Milk coffee campaign for students", content: "Milk coffee campaign for students", folder: "Content", tag: "Marketing", createdAt: Date.now() - 300000 },
+  { id: "seed-2", title: "Logo design client follow-up email", content: "Logo design client follow-up email", folder: "Work", tag: "Business", createdAt: Date.now() - 200000 },
+  { id: "seed-3", title: "Skincare education carousel brief", content: "Skincare education carousel brief", folder: "Content", tag: "Content", createdAt: Date.now() - 100000 },
 ];
 
 const readableFileTypes = ["application/json", "text/csv", "text/markdown", "text/plain"];
@@ -240,7 +240,7 @@ function inferRole(category) {
     Academic: "academic research assistant",
     "Image AI": "AI visual prompt director",
   };
-  return roles[category] || "prompt engineer profesional";
+  return roles[category] || "professional prompt engineer";
 }
 
 function isClaudeTarget(model) {
@@ -257,14 +257,14 @@ function buildClaudePrompt({
 }) {
   const cleanNarrative =
     narrative.trim() ||
-    "Aku ingin membuat output berkualitas tinggi dari konteks yang tersedia.";
+    "I want to create a high-quality output from the available context.";
   const documentBlock = attachments.length
     ? `<documents>
 ${attachments
   .map(
     (file, index) =>
       `<document index="${index + 1}" name="${file.name}" type="${file.kind}" size="${file.sizeLabel}">
-${file.excerpt ? file.excerpt : "Isi belum tersedia di preview lokal. Gunakan metadata file sebagai konteks awal."}
+${file.excerpt ? file.excerpt : "Content is not available in the local preview. Use the file metadata as initial context."}
 </document>`
   )
   .join("\n")}
@@ -309,7 +309,7 @@ Length:
 
 Style:
 - ${tone}.
-- Use plain, concrete Indonesian.
+- Use clear, concrete English.
 - Use action verbs: define, extract, build, map, rank, rewrite, verify.
 - Replace vague wording with specific boundaries, counts, order, and acceptance criteria.
 
@@ -357,63 +357,63 @@ function buildPrompt(narrative, category, tone, model, outputType, attachments) 
 
   const cleanNarrative =
     narrative.trim() ||
-    "Aku ingin membuat konten promosi untuk produk kopi susu lokal, targetnya mahasiswa, bahasanya santai tapi tetap menjual.";
+    "I want to create promotional content for a local milk coffee product targeting college students. The tone should be casual but still sell.";
   const attachmentContext = attachments.length
     ? `
 
-Lampiran yang perlu dianalisis:
+Attachments to analyze:
 ${attachments
   .map(
     (file, index) =>
-      `- Lampiran ${index + 1}: ${file.name} (${file.kind}, ${file.sizeLabel})${
-        file.excerpt ? `\n  Cuplikan isi: ${file.excerpt}` : ""
+      `- Attachment ${index + 1}: ${file.name} (${file.kind}, ${file.sizeLabel})${
+        file.excerpt ? `\n  Content excerpt: ${file.excerpt}` : ""
       }`
   )
   .join("\n")}
 
-Instruksi untuk lampiran:
-- Gunakan isi lampiran sebagai konteks, bukan sebagai penentu jenis output
-- Jangan mengarang detail yang tidak terlihat atau tidak tersedia dari lampiran`
+Attachment instructions:
+- Use attachment content as context, not as the deliverable type
+- Do not invent details that are not visible or unavailable in the attachment`
     : "";
 
-  return `Bertindaklah sebagai ${inferRole(category)}.
+  return `Act as a ${inferRole(category)}.
 
-Ubah kebutuhan berikut menjadi hasil terbaik untuk ${model}:
+Transform the following request into the best possible output for ${model}:
 "${cleanNarrative}"${attachmentContext}
 
-Jenis output yang diminta:
+Requested output type:
 - ${outputType}
 
-Tujuan:
-- Pahami konteks utama dari narasi user
-- Buat output yang jelas, praktis, dan siap digunakan
-- Hindari jawaban generik
+Goal:
+- Understand the main context from the user's request
+- Produce a clear, practical, ready-to-use output
+- Avoid generic answers
 
-Gaya bahasa:
+Language style:
 - ${tone}
-- Rapi dan mudah dipahami
-- Sesuai audiens Indonesia
+- Clean and easy to understand
+- Suitable for the intended audience
 
-Format output:
-1. Ringkasan kebutuhan
-2. Rekomendasi strategi
-3. Output utama sesuai jenis output yang diminta
-4. Checklist kualitas
-5. Saran iterasi berikutnya
+Output format:
+1. Request summary
+2. Strategic recommendation
+3. Main output according to the requested output type
+4. Quality checklist
+5. Next iteration suggestions
 
-Batasan:
-- Tanyakan maksimal 3 pertanyaan klarifikasi hanya jika informasi penting belum ada
-- Jika informasi sudah cukup, langsung berikan jawaban final
-- Gunakan contoh konkret, bukan teori umum`;
+Constraints:
+- Ask at most 3 clarifying questions only when critical information is missing
+- If the information is sufficient, provide the final answer directly
+- Use concrete examples, not generic theory`;
 }
 
 function scorePrompt(prompt) {
   const checks = [
-    prompt.includes("Bertindaklah") || prompt.includes("Role"),
-    prompt.includes("Tujuan") || prompt.includes("Objective"),
-    prompt.includes("Gaya bahasa") || prompt.includes("Tone"),
+    prompt.includes("Act as") || prompt.includes("Role"),
+    prompt.includes("Goal") || prompt.includes("Objective"),
+    prompt.includes("Language style") || prompt.includes("Tone"),
     prompt.includes("Format") || prompt.includes("Output"),
-    prompt.includes("Batasan") || prompt.includes("Constraints"),
+    prompt.includes("Constraints"),
     prompt.length > 500,
   ];
   const score = Math.round((checks.filter(Boolean).length / checks.length) * 100);
@@ -426,7 +426,7 @@ function scorePrompt(prompt) {
 }
 
 function buildLocalOptimizedPrompt(rawPrompt, mode, targetModel, tone) {
-  const source = rawPrompt.trim() || "Tuliskan prompt lama di sini.";
+  const source = rawPrompt.trim() || "Write the old prompt here.";
   if (isClaudeTarget(targetModel)) {
     return buildClaudePrompt({
       narrative: `Optimize this prompt for Claude while preserving the original deliverable:\n\n${source}`,
@@ -438,42 +438,42 @@ function buildLocalOptimizedPrompt(rawPrompt, mode, targetModel, tone) {
     });
   }
 
-  return `**Prompt Final**
+  return `**Final Prompt**
 
-**Role:** Anda adalah AI specialist yang memahami kebutuhan user dan mampu menghasilkan output sesuai deliverable yang diminta.
+**Role:** You are an AI specialist who understands user needs and can produce the requested deliverable accurately.
 
-**Context:** Prompt awal user adalah:
+**Context:** The user's original prompt is:
 ${source}
 
-**Objective:** Optimalkan prompt tersebut dengan mode "${mode}" untuk ${targetModel}. Pertahankan maksud utama dan jenis output yang diminta. Jangan mengubah permintaan aplikasi menjadi dokumen, permintaan PPT menjadi Word, atau permintaan Word menjadi PPT kecuali user meminta eksplisit.
+**Objective:** Optimize the prompt using "${mode}" mode for ${targetModel}. Preserve the original intent and requested output type. Do not turn an app request into a document, a PPT request into Word, or a Word request into PPT unless the user explicitly asks for it.
 
 **Output Format:**
-1. Ringkasan pemahaman kebutuhan
-2. Hasil utama sesuai deliverable
-3. Detail pendukung
-4. Checklist kualitas
-5. Maksimal 3 pertanyaan klarifikasi jika informasi krusial belum tersedia
+1. Summary of the interpreted request
+2. Main result according to the deliverable
+3. Supporting details
+4. Quality checklist
+5. Up to 3 clarifying questions if critical information is missing
 
 **Constraints:**
-- Gunakan bahasa Indonesia dengan tone ${tone}.
-- Jangan mengarang data yang tidak diberikan.
-- Gunakan lampiran sebagai konteks bila tersedia, bukan sebagai penentu jenis output.
-- Jika informasi cukup, langsung kerjakan tanpa meminta file ulang.
+- Use English with a ${tone} tone.
+- Do not invent data that was not provided.
+- Use attachments as context when available, not as the output type selector.
+- If the information is sufficient, proceed without asking for the file again.
 
-**Checklist Perbaikan**
-- Struktur role, context, objective, output, dan constraints sudah eksplisit.
-- Deliverable guard ditambahkan agar hasil tidak salah format.
-- Instruksi klarifikasi dibuat terbatas.`;
+**Improvement Checklist**
+- Role, context, objective, output, and constraints are explicit.
+- Deliverable guardrails are added to prevent wrong output formats.
+- Clarifying questions are limited.`;
 }
 
 function App() {
   const [active, setActive] = useState("Builder");
   const [category, setCategory] = useState("Marketing");
-  const [tone, setTone] = useState("Profesional");
+  const [tone, setTone] = useState("Professional");
   const [model, setModel] = useState("ChatGPT");
-  const [outputType, setOutputType] = useState("Kode Aplikasi");
+  const [outputType, setOutputType] = useState("Application Code");
   const [narrative, setNarrative] = useState(
-    "Aku mau bikin konten Instagram buat jualan kopi susu, targetnya anak kuliah, bahasanya santai tapi tetap jualan."
+    "I want to create Instagram content to sell milk coffee. The target audience is college students, and the tone should be casual but still persuasive."
   );
   const [attachments, setAttachments] = useState([]);
   const [generatedPrompt, setGeneratedPrompt] = useState("");
@@ -490,7 +490,7 @@ function App() {
   const [compareB, setCompareB] = useState("");
   const [settingsStatus, setSettingsStatus] = useState(null);
   const [generationMode, setGenerationMode] = useState(
-    () => localStorage.getItem("promptlab-generation-mode") || "Seimbang"
+    () => localStorage.getItem("promptlab-generation-mode") || "Balanced"
   );
   const [modelSettings, setModelSettings] = useState(() => {
     try {
@@ -530,6 +530,10 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem("promptlab-generation-mode", generationMode);
+  }, [generationMode]);
+
+  useEffect(() => {
+    if (!generationModes.includes(generationMode)) setGenerationMode("Balanced");
   }, [generationMode]);
 
   useEffect(() => {
@@ -628,7 +632,7 @@ function App() {
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Gagal generate prompt.");
+      if (!response.ok) throw new Error(data.error || "Failed to generate prompt.");
 
       setGeneratedPrompt(data.prompt || localPrompt);
       setGenerationSource(data.source || "server");
@@ -667,7 +671,7 @@ function App() {
         }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Gagal optimasi prompt.");
+      if (!response.ok) throw new Error(data.error || "Failed to optimize prompt.");
       setOptimizerResult(data.prompt || buildLocalOptimizedPrompt(rawPrompt, mode, model, tone));
       setOptimizerSource(data.source || "server");
       setOptimizerWarning(data.warning || "");
@@ -724,10 +728,10 @@ function App() {
       const response = await fetch(`${apiBase}/api/health?${params}`);
       const data = await response.json();
       setSettingsStatus(data);
-      setProviderTestStatus(data.ok ? "Health check OK" : "Health check gagal");
+      setProviderTestStatus(data.ok ? "Health check OK" : "Health check failed");
     } catch {
       setSettingsStatus({ ok: false, provider: "unreachable", model: "-", fallbackModel: "-" });
-      setProviderTestStatus("Backend tidak terhubung");
+      setProviderTestStatus("Backend is not connected");
     }
   }
 
@@ -741,7 +745,7 @@ function App() {
         body: JSON.stringify(modelSettings),
       });
       const data = await response.json();
-      if (!response.ok || !data.ok) throw new Error(data.error || "Provider test gagal.");
+      if (!response.ok || !data.ok) throw new Error(data.error || "Provider test failed.");
       setProviderTestStatus(`OK: ${data.model || modelSettings.primaryModel}`);
       setSettingsStatus((status) => ({
         ...(status || {}),
@@ -751,7 +755,7 @@ function App() {
         provider: data.provider || status?.provider || "openrouter",
       }));
     } catch (error) {
-      setProviderTestStatus(error.message || "Provider test gagal.");
+      setProviderTestStatus(error.message || "Provider test failed.");
       setSettingsStatus((status) => ({ ...(status || {}), ok: false }));
     } finally {
       setIsTestingProvider(false);
@@ -761,7 +765,7 @@ function App() {
   function saveModelSettings() {
     localStorage.setItem("promptlab-model-settings", JSON.stringify(modelSettings));
     setSettingsSavedAt(new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date()));
-    setProviderTestStatus("Settings tersimpan di browser ini.");
+    setProviderTestStatus("Settings saved in this browser.");
   }
 
   async function exportFile(format, content = prompt, titleSeed = narrative) {
@@ -776,7 +780,7 @@ function App() {
           content,
         }),
       });
-      if (!response.ok) throw new Error(`Gagal export ${format.toUpperCase()}.`);
+      if (!response.ok) throw new Error(`Failed to export ${format.toUpperCase()}.`);
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -789,7 +793,7 @@ function App() {
       setExportStatus(`${formatLabel} downloaded`);
       window.setTimeout(() => setExportStatus(""), 2200);
     } catch (error) {
-      setErrorMessage(error.message || "Export gagal.");
+      setErrorMessage(error.message || "Export failed.");
       setExportStatus(`${formatLabel} failed`);
     }
   }
@@ -969,11 +973,11 @@ function V2App(props) {
 function V2Header({ active, setActive, settingsStatus }) {
   const subtitles = {
     Builder: "Parse intent, lock guardrails, and ship model-ready prompts.",
-    Optimizer: "Diff prompt lama ke versi yang lebih tajam dan aman dipakai.",
-    Templates: "Mulai dari pola prompt yang sudah siap produksi.",
-    Library: "Kelola prompt terbaik sebagai asset kerja yang bisa dipakai ulang.",
-    Compare: "Bandingkan beberapa model dan versi prompt sebelum dikirim.",
-    Settings: "Atur provider, endpoint, model, timeout, dan fallback.",
+    Optimizer: "Diff an old prompt into a sharper, safer instruction.",
+    Templates: "Start from production-ready prompt patterns.",
+    Library: "Manage your best prompts as reusable work assets.",
+    Compare: "Compare models and prompt versions before sending them.",
+    Settings: "Configure provider, endpoint, model, timeout, and fallback.",
   };
   return (
     <header className="v2-headerbar">
@@ -1023,7 +1027,7 @@ function V2Builder(props) {
       <V2PageIntro
         eyebrow="Studio v2"
         title={<>The cleanest <em>prompt</em>, before you hit run.</>}
-        copy="Ubah ide mentah, file, dan screenshot menjadi instruksi presisi untuk Claude, ChatGPT, Gemini, dan model kreatif lainnya."
+        copy="Turn raw ideas, files, and screenshots into precise instructions for Claude, ChatGPT, Gemini, and other creative models."
       >
         <div className="v2-hero-status">
           <span>Readiness</span>
@@ -1033,10 +1037,10 @@ function V2Builder(props) {
       </V2PageIntro>
 
       <section className="v2-stats-strip">
-        <V2Stat label="Clarity" value={`${metrics.clarity}%`} detail="Intent & role terbaca" />
+        <V2Stat label="Clarity" value={`${metrics.clarity}%`} detail="Intent and role parsed" />
         <V2Stat label="Context" value={`${metrics.context}%`} detail={`${attachments.length} attachment`} />
         <V2Stat label="Output format" value={`${metrics.format}%`} detail={outputType} />
-        <V2Stat label="Engine" value={generationModel} detail="routing aktif" compact />
+        <V2Stat label="Engine" value={generationModel} detail="active routing" compact />
       </section>
 
       <section className="v2-studio-grid">
@@ -1044,16 +1048,16 @@ function V2Builder(props) {
           <div className="v2-card-head">
             <div>
               <h2>Prompt Studio</h2>
-              <p>Tulis bebas, pilih target AI, lampirkan bahan, lalu generate.</p>
+              <p>Write freely, choose a target AI, attach context, then generate.</p>
             </div>
             <Bot size={22} />
           </div>
-          <label className="v2-label">Narasi user</label>
+          <label className="v2-label">User request</label>
           <textarea className="v2-textarea large" value={narrative} onChange={(event) => setNarrative(event.target.value)} />
           <label className="v2-attach">
             <input type="file" multiple onChange={(event) => addAttachments(event.target.files)} />
             <Paperclip size={18} />
-            <span><strong>Attach gambar, screenshot, atau file</strong><small>PDF, DOCX, PPTX, TXT, JPG, PNG. Gambar dibaca OCR saat generate.</small></span>
+            <span><strong>Attach image, screenshot, or file</strong><small>PDF, DOCX, PPTX, TXT, JPG, PNG. Images are read with OCR during generation.</small></span>
           </label>
           {attachments.length > 0 && (
             <div className="v2-file-list">
@@ -1065,10 +1069,10 @@ function V2Builder(props) {
             </div>
           )}
           <div className="v2-field-grid">
-            <V2ChipGroup label="Kategori" options={categories} value={category} onChange={setCategory} />
+            <V2ChipGroup label="Category" options={categories} value={category} onChange={setCategory} />
             <V2ChipGroup label="Tone" options={tones} value={tone} onChange={setTone} />
             <V2ChipGroup label="Target AI" options={models} value={model} onChange={setModel} />
-            <V2ChipGroup label="Jenis Output" options={outputTypes} value={outputType} onChange={setOutputType} />
+            <V2ChipGroup label="Output Type" options={outputTypes} value={outputType} onChange={setOutputType} />
           </div>
           <div className="v2-actions">
             <button className="v2-btn primary" onClick={() => generatePrompt()} disabled={isGenerating}>
@@ -1113,7 +1117,7 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
           <div className="v2-ring" style={{ "--score": `${metrics.score * 3.6}deg` }}><span>{metrics.score}</span></div>
           <div>
             <h3>Readiness Score</h3>
-            <p>Struktur, konteks, format, dan batasan dicek sebelum prompt dipakai.</p>
+            <p>Structure, context, format, and constraints are checked before the prompt is used.</p>
           </div>
         </div>
         <V2Metric label="Clarity" value={metrics.clarity} />
@@ -1144,22 +1148,22 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
 }
 
 function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizerError, optimizerWarning, optimizePrompt, copyText, savePrompt, exportFile }) {
-  const [rawPrompt, setRawPrompt] = useState("Buat prompt yang lebih bagus untuk konten Instagram produk kopi susu.");
-  const [mode, setMode] = useState("Lebih Jelas");
-  const result = optimizerResult || buildLocalOptimizedPrompt(rawPrompt, mode, "Claude", "Profesional");
+  const [rawPrompt, setRawPrompt] = useState("Make this prompt stronger for Instagram content about a milk coffee product.");
+  const [mode, setMode] = useState("Clearer");
+  const result = optimizerResult || buildLocalOptimizedPrompt(rawPrompt, mode, "Claude", "Professional");
   const beforeScore = scorePrompt(rawPrompt);
   const afterScore = scorePrompt(result);
   const summary = [
-    ["Role", beforeScore.score > 60 ? "dipertajam" : "ditambahkan"],
-    ["Context", `${Math.max(0, afterScore.context - beforeScore.context)} pt naik`],
-    ["Format", "schema output dikunci"],
-    ["Guardrail", "anti salah deliverable"],
-    ["Tone", "lebih konsisten"],
-    ["Export", "siap DOCX"],
+    ["Role", beforeScore.score > 60 ? "sharpened" : "added"],
+    ["Context", `${Math.max(0, afterScore.context - beforeScore.context)} pt gain`],
+    ["Format", "output schema locked"],
+    ["Guardrail", "deliverable protected"],
+    ["Tone", "more consistent"],
+    ["Export", "DOCX ready"],
   ];
   return (
     <div className="v2-screen">
-      <V2PageIntro eyebrow="Optimizer" title="Prompt lama, dipoles jadi instruksi yang menang." copy="Lihat perubahan sebelum dan sesudah, lengkap dengan summary kualitas." />
+      <V2PageIntro eyebrow="Optimizer" title="Old prompts, refined into winning instructions." copy="Review before and after quality changes with a compact improvement summary." />
       <section className="v2-diff-grid">
         <div className="v2-card">
           <div className="v2-card-head"><h2>Input</h2><span className="v2-score-badge">{beforeScore.score}</span></div>
@@ -1190,19 +1194,19 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
 }
 
 function V2Templates({ setBuilderFromTemplate, search, setSearch }) {
-  const [filter, setFilter] = useState("Semua");
-  const options = ["Semua", ...new Set(templates.map((item) => item.category))];
+  const [filter, setFilter] = useState("All");
+  const options = ["All", ...new Set(templates.map((item) => item.category))];
   const filtered = templates.filter((item) => {
     const q = `${item.title} ${item.category} ${item.outputType} ${item.model} ${item.prompt}`.toLowerCase();
-    return (filter === "Semua" || item.category === filter) && q.includes(search.toLowerCase());
+    return (filter === "All" || item.category === filter) && q.includes(search.toLowerCase());
   });
   return (
     <div className="v2-screen">
-      <V2PageIntro eyebrow="Template Gallery" title="Featured prompts for serious output." copy="Filter cepat untuk aplikasi, laporan, PPT, konten, coding, dan visual prompt.">
+      <V2PageIntro eyebrow="Template Gallery" title="Featured prompts for serious output." copy="Fast filters for apps, reports, slides, content, coding, and visual prompts.">
         <div className="v2-hero-status"><span>Templates</span><strong>{filtered.length}</strong><small>ready to use</small></div>
       </V2PageIntro>
       <div className="v2-toolbar">
-        <div className="v2-search wide"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari template..." /></div>
+        <div className="v2-search wide"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search templates..." /></div>
         <div className="v2-chip-row">{options.map((item) => <button key={item} className={`v2-chip ${filter === item ? "active" : ""}`} onClick={() => setFilter(item)}>{item}</button>)}</div>
       </div>
       <section className="v2-template-grid">
@@ -1236,7 +1240,7 @@ function V2Library(props) {
   };
   return (
     <div className="v2-screen">
-      <V2PageIntro eyebrow="Library" title="Prompt archive that behaves like a workspace." copy="Cari, edit, duplikasi, export, dan kirim prompt ke Compare atau Builder.">
+      <V2PageIntro eyebrow="Library" title="Prompt archive that behaves like a workspace." copy="Search, edit, duplicate, export, and send prompts to Compare or Builder.">
         <div className="v2-hero-status"><span>Saved</span><strong>{filteredLibrary.length}</strong><small>prompts</small></div>
       </V2PageIntro>
       <section className="v2-stats-strip">
@@ -1246,7 +1250,7 @@ function V2Library(props) {
       </section>
       <section className="v2-library-grid">
         <div className="v2-card">
-          <div className="v2-toolbar compact"><div className="v2-search wide"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari prompt..." /></div></div>
+          <div className="v2-toolbar compact"><div className="v2-search wide"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search prompts..." /></div></div>
           <div className="v2-table">
             {rows.map((item) => (
               <button key={item.id} className={currentItem?.id === item.id ? "active" : ""} onClick={() => setSelectedLibraryId(item.id)}>
@@ -1277,7 +1281,7 @@ function V2Library(props) {
                 <button className="v2-btn danger" onClick={() => deleteLibraryItem(currentItem.id)}><Trash2 size={16} />Delete</button>
               </div>
             </>
-          ) : <p className="v2-small">Belum ada prompt tersimpan.</p>}
+          ) : <p className="v2-small">No saved prompts yet.</p>}
         </div>
       </section>
     </div>
@@ -1293,7 +1297,7 @@ function V2Compare({ compareA, setCompareA, compareB, setCompareB, setNarrative,
   const winnerPrompt = scoreA.score >= scoreB.score ? compareA : compareB;
   return (
     <div className="v2-screen">
-      <V2PageIntro eyebrow="Compare Lab" title="Side-by-side model readiness matrix." copy="Tiga model card, dua prompt input, dan score matrix lokal untuk memilih versi paling siap." />
+      <V2PageIntro eyebrow="Compare Lab" title="Side-by-side model readiness matrix." copy="Three model cards, two prompt inputs, and a local score matrix to choose the strongest version." />
       <section className="v2-compare-grid">
         {modelsToShow.map((name, index) => {
           const score = Math.min(99, Math.max(42, scorePrompt(basePrompt).score + index * 3));
@@ -1333,10 +1337,171 @@ function V2Compare({ compareA, setCompareA, compareB, setCompareB, setNarrative,
 }
 
 function V2Settings(props) {
+  const {
+    settingsStatus,
+    refreshHealth,
+    apiBase,
+    generationMode,
+    setGenerationMode,
+    modelSettings,
+    setModelSettings,
+    saveModelSettings,
+    settingsSavedAt,
+    providerTestStatus,
+    isTestingProvider,
+    testProvider,
+  } = props;
+  const fallbackModels = modelSettings.fallbackModels
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const providerReady = Boolean(settingsStatus?.ok && settingsStatus?.ai);
+  const activeProfile = modeProfiles[generationMode] || modeProfiles.Balanced;
+  const updateModelSetting = (key, value) => setModelSettings((settings) => ({ ...settings, [key]: value }));
+
   return (
     <div className="v2-screen v2-settings-screen">
-      <V2PageIntro eyebrow="Model Command Center" title="Provider, endpoint, routing, and saved settings." copy="Setting LLM lengkap tetap tersimpan di browser dan dipakai saat generate lewat backend." />
-      <SettingsView {...props} />
+      <V2PageIntro
+        eyebrow="Model Command Center"
+        title="Provider, endpoint, routing, and saved settings."
+        copy="Configure the LLM stack used by PromptLab. Browser overrides are saved locally and sent to the backend during generation."
+      >
+        <div className="v2-hero-status">
+          <span>Provider</span>
+          <strong>{providerReady ? "Ready" : "Offline"}</strong>
+          <small>{modelSettings.provider}</small>
+        </div>
+      </V2PageIntro>
+
+      <section className="v2-settings-grid">
+        <div className="v2-card v2-settings-card">
+          <div className="v2-card-head">
+            <div>
+              <h2>Generation Mode</h2>
+              <p>Choose how aggressively PromptLab waits before using fallback models.</p>
+            </div>
+            <span className={`v2-health ${providerReady ? "ready" : ""}`}>{providerReady ? "Ready" : "Offline"}</span>
+          </div>
+          <div className="v2-mode-grid">
+            {generationModes.map((mode) => (
+              <button key={mode} className={generationMode === mode ? "active" : ""} onClick={() => setGenerationMode(mode)}>
+                <span>{mode}</span>
+                <strong>{modeProfiles[mode].label}</strong>
+                <small>{modeProfiles[mode].detail}</small>
+              </button>
+            ))}
+          </div>
+          <div className="v2-settings-summary">
+            <span>Active Mode</span>
+            <strong>{generationMode}</strong>
+            <p>{activeProfile.bestFor}</p>
+          </div>
+          <div className="v2-info-grid">
+            <V2Info label="API Base" value={apiBase || "Same-origin Vercel API"} />
+            <V2Info label="Provider" value={settingsStatus?.provider || modelSettings.provider || "-"} />
+            <V2Info label="Last Active Model" value={settingsStatus?.model || modelSettings.primaryModel || "-"} />
+            <V2Info label="OCR Model" value={modelSettings.ocrModel || settingsStatus?.ocrModel || "-"} />
+          </div>
+        </div>
+
+        <div className="v2-card v2-settings-card">
+          <div className="v2-card-head">
+            <div>
+              <h2>Provider & Endpoint</h2>
+              <p>Use Vercel env values by default, or override them from this browser.</p>
+            </div>
+            <button className="v2-btn" onClick={() => setModelSettings(defaultModelSettings)}>Reset</button>
+          </div>
+          <V2ChipGroup label="Provider" options={providerOptions} value={modelSettings.provider} onChange={(item) => updateModelSetting("provider", item)} />
+          <label className="v2-label">Base URL / Endpoint</label>
+          <input
+            className="v2-input"
+            value={modelSettings.baseUrl}
+            onChange={(event) => updateModelSetting("baseUrl", event.target.value)}
+            placeholder="https://openrouter.ai/api/v1"
+          />
+          <label className="v2-label">API Key Override, Optional</label>
+          <input
+            className="v2-input"
+            type="password"
+            value={modelSettings.apiKey}
+            onChange={(event) => updateModelSetting("apiKey", event.target.value)}
+            placeholder="Leave empty to use Vercel Environment Variables"
+          />
+          <p className="v2-small">If empty, the backend uses the API key from Vercel Environment Variables. If filled, the key is stored only in this browser.</p>
+        </div>
+
+        <div className="v2-card v2-settings-card">
+          <div className="v2-card-head">
+            <div>
+              <h2>Model Routing</h2>
+              <p>Primary model, OCR model, timeout, and fallback chain.</p>
+            </div>
+            <span className="v2-score-badge">{modelSettings.timeoutMs || "auto"} ms</span>
+          </div>
+          <label className="v2-label">Primary Model</label>
+          <input className="v2-input" value={modelSettings.primaryModel} onChange={(event) => updateModelSetting("primaryModel", event.target.value)} />
+          <label className="v2-label">OCR / Vision Model</label>
+          <input className="v2-input" value={modelSettings.ocrModel} onChange={(event) => updateModelSetting("ocrModel", event.target.value)} />
+          <label className="v2-label">Primary Timeout, ms</label>
+          <input className="v2-input" value={modelSettings.timeoutMs} onChange={(event) => updateModelSetting("timeoutMs", event.target.value.replace(/[^\d]/g, ""))} />
+          <label className="v2-label">Fallback Models, One Model Per Line</label>
+          <textarea className="v2-textarea small" value={modelSettings.fallbackModels} onChange={(event) => updateModelSetting("fallbackModels", event.target.value)} />
+        </div>
+
+        <div className="v2-card v2-settings-card">
+          <div className="v2-card-head">
+            <div>
+              <h2>Fallback Chain</h2>
+              <p>PromptLab tries these models when the primary route fails or times out.</p>
+            </div>
+            <span className="v2-score-badge hot">{fallbackModels.length}</span>
+          </div>
+          <div className="v2-fallback-list">
+            {(fallbackModels.length ? fallbackModels : ["No fallback models configured"]).map((modelName, index) => (
+              <div key={`${modelName}-${index}`}>
+                <span>{index + 1}</span>
+                <strong>{modelName}</strong>
+              </div>
+            ))}
+          </div>
+          <div className="v2-actions wrap">
+            <button className="v2-btn primary" onClick={saveModelSettings}><Save size={16} />Save Settings</button>
+            <button className="v2-btn primary" onClick={testProvider} disabled={isTestingProvider}><Zap size={16} />{isTestingProvider ? "Testing..." : "Test Provider"}</button>
+            <button className="v2-btn" onClick={refreshHealth}><Gauge size={16} />Health</button>
+            <button className="v2-btn" onClick={() => navigator.clipboard?.writeText(apiBase).catch(() => {})}><Clipboard size={16} />Copy API Base</button>
+          </div>
+          {settingsSavedAt && <p className="v2-note">Settings last saved at {settingsSavedAt}</p>}
+          {providerTestStatus && <p className="v2-note">{providerTestStatus}</p>}
+        </div>
+
+        <div className="v2-card v2-settings-card v2-runbook">
+          <div className="v2-card-head">
+            <div>
+              <h2>Runbook</h2>
+              <p>Quick checks when generation feels slow or fallback is used too often.</p>
+            </div>
+            <Settings size={20} />
+          </div>
+          {[
+            "Use Patient Free for large files, OCR, or slow free models.",
+            "If local fallback always appears, run Test Provider and check the backend.",
+            "For production changes, update Vercel Environment Variables and redeploy.",
+            "Increase primary timeout when a healthy primary model is being skipped too quickly.",
+          ].map((item, index) => (
+            <div className="v2-runbook-row" key={item}><span>{index + 1}</span><p>{item}</p></div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function V2Info({ label, value }) {
+  return (
+    <div className="v2-info">
+      <span>{label}</span>
+      <strong>{String(value)}</strong>
     </div>
   );
 }
