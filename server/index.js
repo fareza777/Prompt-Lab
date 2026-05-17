@@ -60,8 +60,8 @@ const openrouter = process.env.OPENROUTER_API_KEY
     })
   : null;
 const provider = process.env.AI_PROVIDER || (openrouter ? "openrouter" : "openai");
-const openRouterPrimaryTimeoutMs = Number(process.env.OPENROUTER_PRIMARY_TIMEOUT_MS || 20000);
-const openRouterFallbackTimeoutMs = Number(process.env.OPENROUTER_FALLBACK_TIMEOUT_MS || 90000);
+const openRouterPrimaryTimeoutMs = Number(process.env.OPENROUTER_PRIMARY_TIMEOUT_MS || 55000);
+const openRouterFallbackTimeoutMs = Number(process.env.OPENROUTER_FALLBACK_TIMEOUT_MS || 55000);
 const openRouterOcrModel = process.env.OPENROUTER_OCR_MODEL || "baidu/qianfan-ocr-fast:free";
 const openRouterOcrTimeoutMs = Number(process.env.OPENROUTER_OCR_TIMEOUT_MS || 45000);
 const defaultOpenRouterFallbackModels = [
@@ -430,7 +430,7 @@ function getOpenRouterTiming(mode) {
   if (mode === "fast") {
     return {
       fallbackTimeoutMs: Number(process.env.OPENROUTER_FAST_FALLBACK_TIMEOUT_MS || 30000),
-      primaryTimeoutMs: Number(process.env.OPENROUTER_FAST_PRIMARY_TIMEOUT_MS || 10000),
+      primaryTimeoutMs: Number(process.env.OPENROUTER_FAST_PRIMARY_TIMEOUT_MS || 20000),
     };
   }
   if (mode === "patient") {
@@ -441,7 +441,7 @@ function getOpenRouterTiming(mode) {
   }
   return {
     fallbackTimeoutMs: Number(process.env.OPENROUTER_BALANCED_FALLBACK_TIMEOUT_MS || 55000),
-    primaryTimeoutMs: Number(process.env.OPENROUTER_BALANCED_PRIMARY_TIMEOUT_MS || 15000),
+    primaryTimeoutMs: Number(process.env.OPENROUTER_BALANCED_PRIMARY_TIMEOUT_MS || 40000),
   };
 }
 

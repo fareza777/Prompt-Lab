@@ -54,6 +54,17 @@ APP_URL=https://domain-vercel-kamu.vercel.app
 
 Saat production, frontend otomatis memakai same-origin API (`/api/...`). Saat development, frontend memakai API lokal `http://127.0.0.1:8787`.
 
+Timeout OpenRouter default:
+
+```bash
+OPENROUTER_FAST_PRIMARY_TIMEOUT_MS=20000
+OPENROUTER_BALANCED_PRIMARY_TIMEOUT_MS=40000
+OPENROUTER_PATIENT_PRIMARY_TIMEOUT_MS=55000
+OPENROUTER_FALLBACK_TIMEOUT_MS=55000
+```
+
+Jika primary model sering sebenarnya sehat tapi telat merespons, naikkan `OPENROUTER_BALANCED_PRIMARY_TIMEOUT_MS`. Untuk Vercel serverless, jaga nilainya tetap di bawah `maxDuration` function.
+
 ## OpenAI API
 
 Buat `.env` dari `.env.example`:
