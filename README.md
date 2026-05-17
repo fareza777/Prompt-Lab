@@ -65,6 +65,23 @@ OPENROUTER_FALLBACK_TIMEOUT_MS=55000
 
 Jika primary model sering sebenarnya sehat tapi telat merespons, naikkan `OPENROUTER_BALANCED_PRIMARY_TIMEOUT_MS`. Untuk Vercel serverless, jaga nilainya tetap di bawah `maxDuration` function.
 
+LLM settings juga bisa diubah dari halaman **Settings** di aplikasi:
+
+- Provider: `openrouter`, `openai`, atau `custom`
+- Base URL / endpoint untuk provider OpenAI-compatible
+- API key override opsional
+- Model utama, OCR model, fallback models, dan timeout
+
+Jika API key override dikosongkan, backend memakai Environment Variables Vercel. Jika diisi dari dashboard, key tersimpan di browser pengguna tersebut.
+
+Untuk provider custom OpenAI-compatible di Vercel, env opsional:
+
+```bash
+CUSTOM_LLM_BASE_URL=https://provider.example.com/v1
+CUSTOM_LLM_API_KEY=isi_key_di_sini
+CUSTOM_LLM_MODEL=nama-model-default
+```
+
 ## OpenAI API
 
 Buat `.env` dari `.env.example`:

@@ -1467,6 +1467,38 @@ pre {
   font-size: 16px;
 }
 
+.provider-switch {
+  margin-bottom: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.provider-switch button {
+  min-height: 40px;
+  color: #c7d7ea;
+  background: rgba(10, 18, 32, 0.56);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.provider-switch button.selected {
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb, #0fb7a8);
+  border-color: rgba(125, 211, 252, 0.35);
+}
+
+.settings-help {
+  margin: -4px 0 0;
+  color: #91a8c5;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .model-list-input {
   min-height: 112px;
   margin-bottom: 0;

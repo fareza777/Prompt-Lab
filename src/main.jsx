@@ -38,11 +38,16 @@ const models = ["ChatGPT", "Claude", "Gemini", "Grok", "Midjourney"];
 const outputTypes = ["Kode Aplikasi", "Dokumen Word", "PPT", "Desain Teknis", "Analisis", "Konten"];
 const optimizerModes = ["Lebih Jelas", "Lebih Singkat", "Lebih Detail", "Akademik", "Marketing", "Coding"];
 const generationModes = ["Cepat", "Seimbang", "Sabar Gratis"];
+const providerOptions = ["openrouter", "openai", "custom"];
 const defaultModelSettings = {
+  apiKey: "",
+  baseUrl: "https://openrouter.ai/api/v1",
   fallbackModels:
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free\nopenai/gpt-oss-20b:free\nqwen/qwen3-next-80b-a3b-instruct:free",
   ocrModel: "baidu/qianfan-ocr-fast:free",
   primaryModel: "google/gemma-4-26b-a4b-it:free",
+  provider: "openrouter",
+  timeoutMs: "40000",
 };
 const modeProfiles = {
   Cepat: {
@@ -496,6 +501,7 @@ function App() {
   });
   const [providerTestStatus, setProviderTestStatus] = useState("");
   const [isTestingProvider, setIsTestingProvider] = useState(false);
+  const [settingsSavedAt, setSettingsSavedAt] = useState("");
   const [optimizerResult, setOptimizerResult] = useState("");
   const [optimizerSource, setOptimizerSource] = useState("local");
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -610,6 +616,10 @@ function App() {
       formData.append("primaryModel", modelSettings.primaryModel);
       formData.append("fallbackModels", modelSettings.fallbackModels);
       formData.append("ocrModel", modelSettings.ocrModel);
+      formData.append("provider", modelSettings.provider);
+      formData.append("baseUrl", modelSettings.baseUrl);
+      formData.append("apiKey", modelSettings.apiKey);
+      formData.append("timeoutMs", modelSettings.timeoutMs);
       attachments.forEach((item) => formData.append("attachments", item.file));
 
       const response = await fetch(`${apiBase}/api/generate-prompt`, {
@@ -705,7 +715,13 @@ function App() {
 
   async function refreshHealth() {
     try {
-      const response = await fetch(`${apiBase}/api/health`);
+      const params = new URLSearchParams({
+        provider: modelSettings.provider || "",
+        baseUrl: modelSettings.baseUrl || "",
+        primaryModel: modelSettings.primaryModel || "",
+        ocrModel: modelSettings.ocrModel || "",
+      });
+      const response = await fetch(`${apiBase}/api/health?${params}`);
       const data = await response.json();
       setSettingsStatus(data);
       setProviderTestStatus(data.ok ? "Health check OK" : "Health check gagal");
@@ -740,6 +756,12 @@ function App() {
     } finally {
       setIsTestingProvider(false);
     }
+  }
+
+  function saveModelSettings() {
+    localStorage.setItem("promptlab-model-settings", JSON.stringify(modelSettings));
+    setSettingsSavedAt(new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date()));
+    setProviderTestStatus("Settings tersimpan di browser ini.");
   }
 
   async function exportFile(format, content = prompt, titleSeed = narrative) {
@@ -825,6 +847,8 @@ function App() {
     setGenerationMode,
     modelSettings,
     setModelSettings,
+    saveModelSettings,
+    settingsSavedAt,
     providerTestStatus,
     isTestingProvider,
     testProvider,
@@ -1528,6 +1552,8 @@ function SettingsView({
   setGenerationMode,
   modelSettings,
   setModelSettings,
+  saveModelSettings,
+  settingsSavedAt,
   providerTestStatus,
   isTestingProvider,
   testProvider,
@@ -1545,8 +1571,8 @@ function SettingsView({
       <div className="builder-panel">
         <div className="panel-heading">
           <div>
-            <h2>Provider Status</h2>
-            <p>Status dibaca dari backend lokal tanpa menampilkan API key.</p>
+            <h2>LLM Settings</h2>
+            <p>Atur provider, endpoint, model, timeout, dan fallback untuk generate PromptLab.</p>
           </div>
           <strong className={`status-pill ${providerReady ? "ready" : "offline"}`}>
             {providerReady ? "Ready" : "Offline"}
@@ -1568,16 +1594,46 @@ function SettingsView({
         </div>
         <div className="settings-grid">
           <InfoBox label="API Base" value={apiBase} />
-          <InfoBox label="Provider" value={settingsStatus?.provider || "-"} />
+          <InfoBox label="Provider" value={settingsStatus?.provider || modelSettings.provider || "-"} />
           <InfoBox label="Model aktif terakhir" value={settingsStatus?.model || "-"} />
           <InfoBox label="OCR aktif" value={modelSettings.ocrModel || settingsStatus?.ocrModel || "-"} />
         </div>
         <div className="model-settings-panel">
           <div className="section-title">
-            <h2>Model Routing</h2>
+            <h2>Provider & Endpoint</h2>
             <button className="ghost-button" onClick={() => setModelSettings(defaultModelSettings)}>Reset</button>
           </div>
-          <label className="field-label">Model utama OpenRouter</label>
+          <label className="field-label">Provider</label>
+          <div className="provider-switch">
+            {providerOptions.map((item) => (
+              <button key={item} className={modelSettings.provider === item ? "selected" : ""} onClick={() => updateModelSetting("provider", item)}>
+                {item}
+              </button>
+            ))}
+          </div>
+          <label className="field-label">Base URL / endpoint</label>
+          <input
+            className="text-input"
+            value={modelSettings.baseUrl}
+            onChange={(event) => updateModelSetting("baseUrl", event.target.value)}
+            placeholder="https://openrouter.ai/api/v1"
+          />
+          <label className="field-label">API key override, opsional</label>
+          <input
+            className="text-input"
+            type="password"
+            value={modelSettings.apiKey}
+            onChange={(event) => updateModelSetting("apiKey", event.target.value)}
+            placeholder="Kosongkan untuk memakai ENV Vercel"
+          />
+          <p className="settings-help">Jika kosong, backend memakai API key dari Environment Variables Vercel. Jika diisi, key tersimpan di browser ini.</p>
+        </div>
+        <div className="model-settings-panel">
+          <div className="section-title">
+            <h2>Model Routing</h2>
+            <span className="status-pill">{modelSettings.timeoutMs || "auto"} ms</span>
+          </div>
+          <label className="field-label">Model utama</label>
           <input
             className="text-input"
             value={modelSettings.primaryModel}
@@ -1590,6 +1646,13 @@ function SettingsView({
             value={modelSettings.ocrModel}
             onChange={(event) => updateModelSetting("ocrModel", event.target.value)}
             placeholder="baidu/qianfan-ocr-fast:free"
+          />
+          <label className="field-label">Primary timeout, ms</label>
+          <input
+            className="text-input"
+            value={modelSettings.timeoutMs}
+            onChange={(event) => updateModelSetting("timeoutMs", event.target.value.replace(/[^\d]/g, ""))}
+            placeholder="40000"
           />
           <label className="field-label">Fallback models, satu model per baris</label>
           <textarea
@@ -1612,12 +1675,16 @@ function SettingsView({
           ))}
         </div>
         <div className="builder-actions">
+          <button className="primary-button" onClick={saveModelSettings}>
+            <Save size={18} />Save Settings
+          </button>
           <button className="primary-button" onClick={testProvider} disabled={isTestingProvider}>
             <Zap size={18} />{isTestingProvider ? "Testing..." : "Test Provider"}
           </button>
           <button className="secondary-button" onClick={refreshHealth}><Gauge size={18} />Health</button>
           <button className="secondary-button" onClick={() => navigator.clipboard?.writeText(apiBase).catch(() => {})}><Clipboard size={18} />Copy API Base</button>
         </div>
+        {settingsSavedAt && <p className="provider-test-note">Settings terakhir disimpan: {settingsSavedAt}</p>}
         {providerTestStatus && <p className="provider-test-note">{providerTestStatus}</p>}
       </div>
       <div className="result-panel">

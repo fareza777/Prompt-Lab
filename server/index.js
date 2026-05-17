@@ -73,61 +73,81 @@ const defaultOpenRouterFallbackModels = [
 app.use(cors({ origin: true }));
 app.use(express.json({ limit: "1mb" }));
 
-app.get("/api/health", (_req, res) => {
+app.get("/api/health", (req, res) => {
+  const modelSettings = normalizeModelSettings(req.query);
+  const runtime = getRuntimeProvider(modelSettings);
   res.json({
     ok: true,
-    ai: provider === "openrouter" ? Boolean(openrouter) : Boolean(openai),
-    provider,
-    model: provider === "openrouter" ? getDefaultOpenRouterModel() : process.env.OPENAI_MODEL || "gpt-5-mini",
-    fallbackModel: provider === "openrouter" ? getOpenRouterFallbackModels()[0] || null : null,
-    fallbackModels: provider === "openrouter" ? getOpenRouterFallbackModels() : [],
-    ocrModel: provider === "openrouter" ? getDefaultOcrModel() : null,
+    ai: Boolean(runtime.client),
+    endpoint: runtime.baseURL || "OpenAI default",
+    provider: runtime.provider,
+    model: modelSettings.primaryModel || runtime.defaultModel,
+    fallbackModel: runtime.provider === "openai" ? null : getOpenRouterFallbackModels(modelSettings.primaryModel || runtime.defaultModel)[0] || null,
+    fallbackModels: runtime.provider === "openai" ? [] : getOpenRouterFallbackModels(modelSettings.primaryModel || runtime.defaultModel, "balanced", modelSettings.fallbackModels),
+    ocrModel: modelSettings.ocrModel || getDefaultOcrModel(),
   });
 });
 
 app.post("/api/test-provider", express.json({ limit: "64kb" }), async (req, res) => {
   try {
-    if (provider !== "openrouter") {
-      res.json({ ok: Boolean(openai), provider, model: process.env.OPENAI_MODEL || "gpt-5-mini" });
-      return;
-    }
-
-    if (!openrouter) {
-      res.status(400).json({ ok: false, provider, error: "OpenRouter API key belum aktif." });
-      return;
-    }
-
     const modelSettings = normalizeModelSettings(req.body);
-    const model = modelSettings.primaryModel || getDefaultOpenRouterModel();
-    const completion = await withTimeout(
-      openrouter.chat.completions.create(
-        {
-          model,
-          messages: [
-            {
-              role: "user",
-              content:
-                "Buat prompt singkat berbahasa Indonesia untuk mengubah brief mentah menjadi prompt AI profesional. Maksimal 120 kata.",
-            },
-          ],
-          max_tokens: 220,
-        },
-        { timeout: 20000 }
-      ),
-      20000,
-      model
+    const runtime = getRuntimeProvider(modelSettings);
+    const model = modelSettings.primaryModel || runtime.defaultModel;
+
+    if (!runtime.client) {
+      res.status(400).json({ ok: false, provider: runtime.provider, error: "API key belum aktif. Isi ENV Vercel atau API key override." });
+      return;
+    }
+
+    if (runtime.provider !== "openai") {
+      const completion = await withTimeout(
+        runtime.client.chat.completions.create(
+          {
+            model,
+            messages: [
+              {
+                role: "user",
+                content:
+                  "Buat prompt singkat berbahasa Indonesia untuk mengubah brief mentah menjadi prompt AI profesional. Maksimal 120 kata.",
+              },
+            ],
+            max_tokens: 220,
+          },
+          { timeout: 20000 }
+        ),
+        20000,
+        model
+      );
+
+      res.json({
+        ok: true,
+        provider: runtime.provider,
+        endpoint: runtime.baseURL,
+        model: completion.model || model,
+        message: completion.choices?.[0]?.message?.content || "OK",
+      });
+      return;
+    }
+
+    const response = await runtime.client.responses.create(
+      {
+        model,
+        input: "Buat prompt singkat berbahasa Indonesia untuk mengubah brief mentah menjadi prompt AI profesional. Maksimal 120 kata.",
+      },
+      { timeout: 20000 }
     );
 
     res.json({
       ok: true,
-      provider,
-      model: completion.model || model,
-      message: completion.choices?.[0]?.message?.content || "OK",
+      provider: runtime.provider,
+      endpoint: runtime.baseURL || "OpenAI default",
+      model,
+      message: response.output_text || "OK",
     });
   } catch (error) {
     res.status(502).json({
       ok: false,
-      provider,
+      provider: normalizeModelSettings(req.body).provider || provider,
       error: formatProviderError(error),
     });
   }
@@ -190,12 +210,13 @@ app.post("/api/export/pptx", async (req, res) => {
 app.post("/api/optimize-prompt", async (req, res) => {
   try {
     const payload = normalizeOptimizePayload(req.body);
+    const runtime = getRuntimeProvider(payload.modelSettings);
 
-    if (provider === "openrouter" && openrouter) {
+    if (runtime.provider !== "openai" && runtime.client) {
       try {
-        const completion = await createOpenRouterOptimizeCompletion(payload);
+        const completion = await createOpenRouterOptimizeCompletion(payload, runtime);
         res.json({
-          source: "openrouter",
+          source: runtime.provider,
           model: completion.model,
           prompt: completion.choices?.[0]?.message?.content || buildLocalOptimizedPrompt(payload),
         });
@@ -211,9 +232,9 @@ app.post("/api/optimize-prompt", async (req, res) => {
       }
     }
 
-    if (provider === "openai" && openai) {
-      const response = await openai.responses.create({
-        model: process.env.OPENAI_MODEL || "gpt-5-mini",
+    if (runtime.provider === "openai" && runtime.client) {
+      const response = await runtime.client.responses.create({
+        model: payload.modelSettings.primaryModel || runtime.defaultModel,
         input: [
           {
             role: "system",
@@ -257,28 +278,29 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
   try {
     const payload = normalizePayload(req.body);
     const attachments = await Promise.all((req.files || []).map((file) => normalizeFile(file, payload.modelSettings)));
+    const runtime = getRuntimeProvider(payload.modelSettings);
 
-    if (provider === "openrouter") {
-      if (!openrouter) {
+    if (runtime.provider !== "openai") {
+      if (!runtime.client) {
         res.json({
           source: "fallback",
           model: "Local fallback",
           modelStatus: "local-fallback",
-          warning: "OpenRouter API key belum aktif, memakai generator lokal.",
+          warning: "API key provider belum aktif, memakai generator lokal.",
           prompt: buildFallbackPrompt(payload, attachments),
         });
         return;
       }
 
       try {
-        const generation = await createOpenRouterCompletion(payload, attachments);
+        const generation = await createOpenRouterCompletion(payload, attachments, runtime);
         const completion = generation.completion;
         const prompt =
           completion.choices?.[0]?.message?.content ||
           buildFallbackPrompt(payload, attachments);
 
         res.json({
-          source: "openrouter",
+          source: runtime.provider,
           model: completion.model,
           modelStatus: generation.usedFallbackModel ? "fallback-model" : "primary-model",
           warning: generation.usedFallbackModel
@@ -299,7 +321,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       return;
     }
 
-    if (!openai) {
+    if (!runtime.client) {
       res.json({
         source: "fallback",
         model: "Local fallback",
@@ -310,8 +332,8 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       return;
     }
 
-    const response = await openai.responses.create({
-      model: process.env.OPENAI_MODEL || "gpt-5-mini",
+    const response = await runtime.client.responses.create({
+      model: payload.modelSettings.primaryModel || runtime.defaultModel,
       input: [
         {
           role: "system",
@@ -391,9 +413,79 @@ function normalizeModelSettings(body = {}) {
     ? body.fallbackModels.join(",")
     : String(body.fallbackModels || body.fallbackModelList || "");
   return {
+    apiKey: String(body.apiKey || "").trim().slice(0, 260),
+    baseUrl: sanitizeBaseUrl(body.baseUrl || body.endpoint || ""),
     fallbackModels: parseModelList(rawFallbacks).slice(0, 6),
     ocrModel: sanitizeModelName(body.ocrModel || ""),
     primaryModel: sanitizeModelName(body.primaryModel || body.openRouterModel || ""),
+    provider: normalizeProvider(body.provider),
+    timeoutMs: normalizeTimeout(body.timeoutMs),
+  };
+}
+
+function normalizeProvider(value) {
+  const normalized = String(value || provider || "openrouter").toLowerCase();
+  if (normalized === "openai") return "openai";
+  if (normalized === "custom") return "custom";
+  return "openrouter";
+}
+
+function sanitizeBaseUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    const url = new URL(raw);
+    if (!["https:", "http:"].includes(url.protocol)) return "";
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return "";
+  }
+}
+
+function normalizeTimeout(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+  return Math.min(Math.max(Math.round(parsed), 5000), 55000);
+}
+
+function getRuntimeProvider(modelSettings = {}) {
+  const runtimeProvider = normalizeProvider(modelSettings.provider);
+  if (runtimeProvider === "openai") {
+    const apiKey = modelSettings.apiKey || process.env.OPENAI_API_KEY || "";
+    return {
+      baseURL: "",
+      client: apiKey ? new OpenAI({ apiKey }) : null,
+      defaultModel: process.env.OPENAI_MODEL || "gpt-5-mini",
+      provider: "openai",
+    };
+  }
+
+  const isCustom = runtimeProvider === "custom";
+  const baseURL =
+    modelSettings.baseUrl ||
+    (isCustom ? process.env.CUSTOM_LLM_BASE_URL : "") ||
+    process.env.OPENROUTER_BASE_URL ||
+    "https://openrouter.ai/api/v1";
+  const apiKey =
+    modelSettings.apiKey ||
+    (isCustom ? process.env.CUSTOM_LLM_API_KEY : "") ||
+    process.env.OPENROUTER_API_KEY ||
+    "";
+
+  return {
+    baseURL,
+    client: apiKey
+      ? new OpenAI({
+          apiKey,
+          baseURL,
+          defaultHeaders: {
+            "HTTP-Referer": process.env.APP_URL || "http://127.0.0.1:5173",
+            "X-Title": "PromptLab",
+          },
+        })
+      : null,
+    defaultModel: isCustom ? process.env.CUSTOM_LLM_MODEL || getDefaultOpenRouterModel() : getDefaultOpenRouterModel(),
+    provider: runtimeProvider,
   };
 }
 
@@ -445,7 +537,7 @@ function getOpenRouterTiming(mode) {
   };
 }
 
-async function createOpenRouterCompletion(payload, attachments) {
+async function createOpenRouterCompletion(payload, attachments, runtime = getRuntimeProvider(payload.modelSettings)) {
   const messages = [
     {
       role: "system",
@@ -457,16 +549,17 @@ async function createOpenRouterCompletion(payload, attachments) {
       content: buildOpenRouterContent(payload, attachments),
     },
   ];
-  const primaryModel = payload.modelSettings?.primaryModel || getDefaultOpenRouterModel();
+  const primaryModel = payload.modelSettings?.primaryModel || runtime.defaultModel;
   const fallbackModels = getOpenRouterFallbackModels(
     primaryModel,
     payload.generationMode,
     payload.modelSettings?.fallbackModels
   );
   const timing = getOpenRouterTiming(payload.generationMode);
+  if (payload.modelSettings?.timeoutMs) timing.primaryTimeoutMs = payload.modelSettings.timeoutMs;
 
   try {
-    const completion = await withTimeout(openrouter.chat.completions.create(
+    const completion = await withTimeout(runtime.client.chat.completions.create(
       {
         model: primaryModel,
         messages,
@@ -483,6 +576,7 @@ async function createOpenRouterCompletion(payload, attachments) {
     if (!shouldTryFallbackModel(error) || fallbackModels.length === 0) throw error;
     const primaryError = formatProviderError(error);
     const { completion, errors } = await tryOpenRouterFallbackModels(
+      runtime.client,
       fallbackModels,
       messages,
       timing.fallbackTimeoutMs,
@@ -496,7 +590,7 @@ async function createOpenRouterCompletion(payload, attachments) {
   }
 }
 
-async function createOpenRouterOptimizeCompletion(payload) {
+async function createOpenRouterOptimizeCompletion(payload, runtime = getRuntimeProvider(payload.modelSettings)) {
   const messages = [
     {
       role: "system",
@@ -508,16 +602,17 @@ async function createOpenRouterOptimizeCompletion(payload) {
       content: buildOptimizerInstruction(payload),
     },
   ];
-  const primaryModel = payload.modelSettings?.primaryModel || getDefaultOpenRouterModel();
+  const primaryModel = payload.modelSettings?.primaryModel || runtime.defaultModel;
   const fallbackModels = getOpenRouterFallbackModels(
     primaryModel,
     payload.generationMode,
     payload.modelSettings?.fallbackModels
   );
   const timing = getOpenRouterTiming(payload.generationMode);
+  if (payload.modelSettings?.timeoutMs) timing.primaryTimeoutMs = payload.modelSettings.timeoutMs;
 
   try {
-    return await withTimeout(openrouter.chat.completions.create(
+    return await withTimeout(runtime.client.chat.completions.create(
       {
         model: primaryModel,
         messages,
@@ -531,7 +626,7 @@ async function createOpenRouterOptimizeCompletion(payload) {
       `openrouter optimize primary failed, trying fallback chain`,
       error.status || error.code || error.message
     );
-    return (await tryOpenRouterFallbackModels(fallbackModels, messages, timing.fallbackTimeoutMs, 1600)).completion;
+    return (await tryOpenRouterFallbackModels(runtime.client, fallbackModels, messages, timing.fallbackTimeoutMs, 1600)).completion;
   }
 }
 
@@ -547,14 +642,14 @@ function getOpenRouterFallbackModels(primaryModel = getDefaultOpenRouterModel(),
   return models.slice(0, 3);
 }
 
-async function tryOpenRouterFallbackModels(models, messages, timeoutMs, maxTokens = 2200) {
+async function tryOpenRouterFallbackModels(client, models, messages, timeoutMs, maxTokens = 2200) {
   const errors = [];
   let lastError = null;
 
   for (const model of models) {
     try {
       console.warn(`trying openrouter fallback model ${model}`);
-      const completion = await withTimeout(openrouter.chat.completions.create(
+      const completion = await withTimeout(client.chat.completions.create(
         {
           model,
           messages,
@@ -751,12 +846,13 @@ async function normalizeFile(file, modelSettings = {}) {
 }
 
 async function extractImageText(file, modelSettings = {}) {
-  if (!openrouter) return "";
+  const runtime = getRuntimeProvider(modelSettings);
+  if (!runtime.client || runtime.provider === "openai") return "";
   const mime = file.mimetype || "image/png";
   const dataUrl = `data:${mime};base64,${file.buffer.toString("base64")}`;
   const ocrModel = modelSettings.ocrModel || getDefaultOcrModel();
   const response = await withTimeout(
-    openrouter.chat.completions.create(
+    runtime.client.chat.completions.create(
       {
         model: ocrModel,
         messages: [
