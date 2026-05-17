@@ -930,7 +930,7 @@ function V2TokenSection({ title, tokens }) {
 }
 
 function V2App(props) {
-  const { active, setActive, settingsStatus, generationStatus, generationSource, generationModel, metrics } = props;
+  const { active, setActive, settingsStatus, generationStatus, generationSource, generationModel, metrics, isGenerating } = props;
   return (
     <div className="v2-shell" data-theme="v2">
       <aside className="v2-sidebar">
@@ -956,9 +956,9 @@ function V2App(props) {
           <button>Slide outline</button>
         </div>
         <div className="v2-side-card">
-          <span>Quota</span>
-          <strong>12.4k / 50k</strong>
-          <p>Resets May 31 · Upgrade</p>
+          <span>Session</span>
+          <strong>{isGenerating ? "Generating" : "Ready"}</strong>
+          <p>{statusLabel(generationStatus, generationSource)} · {generationModel}</p>
         </div>
       </aside>
 
@@ -1030,6 +1030,7 @@ function V2Builder(props) {
     metrics, generationStatus, generationSource, generationModel, warningMessage, errorMessage, copied,
     copyText, savePrompt, generatePrompt, isGenerating, exportStatus, exportFile,
   } = props;
+  const promptSize = `${Math.max(1, Math.round(prompt.length / 4)).toLocaleString("en-US")} est. tokens`;
 
   return (
     <div className="v2-screen">
@@ -1047,10 +1048,12 @@ function V2Builder(props) {
 
       <section className="v2-stats-strip">
         <V2Stat label="Clarity" value={`${metrics.clarity}%`} detail="Intent and role parsed" />
-        <V2Stat label="Token estimate" value="3,840 tok" detail="within budget" />
+        <V2Stat label="Prompt Size" value={promptSize} detail="local estimate" />
         <V2Stat label="Output format" value={`${metrics.format}%`} detail={outputType} />
         <V2Stat label="Engine" value={generationModel} detail="active routing" compact />
       </section>
+
+      {isGenerating && <V2GenerateLoader attachments={attachments} model={model} outputType={outputType} />}
 
       <section className="v2-studio-grid">
         <div className="v2-card v2-composer">
@@ -1105,13 +1108,44 @@ function V2Builder(props) {
           exportFile={exportFile}
           narrative={narrative}
           exportStatus={exportStatus}
+          isGenerating={isGenerating}
         />
       </section>
     </div>
   );
 }
 
-function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource, generationModel, copyText, savePrompt, exportFile, narrative, exportStatus }) {
+function V2GenerateLoader({ attachments, model, outputType }) {
+  const steps = [
+    ["Parse intent", "Role, audience, tone, and task boundaries"],
+    [attachments.length ? "Read context" : "Scan context", attachments.length ? `${attachments.length} file(s) queued for extraction` : "No attachments, using narration only"],
+    ["Route model", `${model} with fallback safety`],
+    ["Build guardrails", `${outputType} format and constraints`],
+    ["Package result", "Copy, save, and export targets"],
+  ];
+
+  return (
+    <section className="v2-generate-loader" aria-live="polite">
+      <div className="v2-loader-orb"><Sparkles size={20} /></div>
+      <div className="v2-loader-main">
+        <span className="v2-eyebrow">Live pipeline</span>
+        <strong>Optimizing your prompt...</strong>
+        <div className="v2-loader-bar"><i /></div>
+      </div>
+      <div className="v2-loader-steps">
+        {steps.map(([title, body], index) => (
+          <div key={title} style={{ "--delay": `${index * 0.18}s` }}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <strong>{title}</strong>
+            <small>{body}</small>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource, generationModel, copyText, savePrompt, exportFile, narrative, exportStatus, isGenerating }) {
   return (
     <aside className="v2-output-stack">
       <div className="v2-card v2-readiness">
@@ -1151,6 +1185,14 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
           <button>Schema</button>
         </div>
         <pre>{prompt}</pre>
+        {isGenerating && (
+          <div className="v2-stream-preview">
+            <span>Streaming preview</span>
+            <i />
+            <i />
+            <i />
+          </div>
+        )}
         <div className="v2-actions wrap">
           <button className="v2-btn" onClick={() => exportFile("docx", prompt, narrative)}><FileText size={16} />DOCX</button>
           <button className="v2-btn" onClick={() => exportFile("pptx", prompt, narrative)}><BookOpenText size={16} />PPTX</button>

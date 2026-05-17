@@ -708,6 +708,134 @@ button {
   min-height: 190px;
 }
 
+.v2-generate-loader {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto minmax(220px, 0.8fr) minmax(0, 1.4fr);
+  gap: 16px;
+  align-items: center;
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid var(--ac-line);
+  border-radius: var(--r-md);
+  background:
+    radial-gradient(circle at 12% 50%, var(--ac-soft), transparent 26%),
+    linear-gradient(180deg, oklch(0.185 0.016 220 / 0.78), oklch(0.145 0.014 220 / 0.64));
+  box-shadow: 0 16px 50px oklch(0 0 0 / 0.22);
+}
+
+.v2-generate-loader::after {
+  content: "";
+  position: absolute;
+  inset: -80% -30%;
+  background: linear-gradient(115deg, transparent 42%, oklch(1 0 0 / 0.08), transparent 58%);
+  animation: v2-loader-sweep 2.8s linear infinite;
+}
+
+.v2-loader-orb,
+.v2-loader-main,
+.v2-loader-steps {
+  position: relative;
+  z-index: 1;
+}
+
+.v2-loader-orb {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  color: oklch(0.12 0.012 220);
+  background: linear-gradient(135deg, var(--ac), var(--ac-2));
+  box-shadow: 0 0 32px var(--ac-soft);
+  animation: v2-loader-pulse 1.8s ease-in-out infinite;
+}
+
+.v2-loader-main strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 400;
+}
+
+.v2-loader-bar {
+  height: 6px;
+  margin-top: 13px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--bg-3);
+}
+
+.v2-loader-bar i {
+  display: block;
+  width: 42%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--ac), var(--ac-2));
+  animation: v2-loader-progress 1.45s ease-in-out infinite;
+}
+
+.v2-loader-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-loader-steps div {
+  min-height: 84px;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+  background: oklch(0.135 0.012 220 / 0.62);
+  animation: v2-step-glow 1.8s ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+
+.v2-loader-steps span {
+  color: var(--ac);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.v2-loader-steps strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--fg);
+  font-size: 12.5px;
+}
+
+.v2-loader-steps small {
+  display: block;
+  margin-top: 4px;
+  color: var(--fg-mute);
+  line-height: 1.35;
+}
+
+@keyframes v2-loader-sweep {
+  from { transform: translateX(-25%); }
+  to { transform: translateX(25%); }
+}
+
+@keyframes v2-loader-pulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 var(--ac-glow)); }
+  50% { transform: scale(1.04); filter: drop-shadow(0 0 12px var(--ac-glow)); }
+}
+
+@keyframes v2-loader-progress {
+  0% { transform: translateX(-105%); width: 36%; }
+  55% { width: 58%; }
+  100% { transform: translateX(250%); width: 36%; }
+}
+
+@keyframes v2-step-glow {
+  0%, 100% { border-color: var(--line-soft); }
+  50% { border-color: var(--ac-line); background: oklch(0.84 0.13 195 / 0.07); }
+}
+
 .v2-search kbd {
   padding: 2px 6px;
   border-radius: 6px;
@@ -1141,6 +1269,46 @@ button {
   grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
 }
 
+.v2-stream-preview {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+  background: oklch(0.135 0.012 220 / 0.74);
+}
+
+.v2-stream-preview span {
+  color: var(--ac);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.v2-stream-preview i {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--bg-3), var(--ac-soft), var(--bg-3));
+  background-size: 220% 100%;
+  animation: v2-skeleton 1.2s ease-in-out infinite;
+}
+
+.v2-stream-preview i:nth-child(3) {
+  width: 82%;
+}
+
+.v2-stream-preview i:nth-child(4) {
+  width: 64%;
+}
+
+@keyframes v2-skeleton {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 220% 50%; }
+}
+
 .v2-settings-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
@@ -1384,6 +1552,7 @@ button {
   .v2-template-grid,
   .v2-compare-grid,
   .v2-summary-grid,
+  .v2-loader-steps,
   .v2-mode-grid,
   .v2-info-grid,
   .v2-two {
@@ -1392,6 +1561,10 @@ button {
 
   .v2-card {
     padding: 16px;
+  }
+
+  .v2-generate-loader {
+    grid-template-columns: 1fr;
   }
 }
 
