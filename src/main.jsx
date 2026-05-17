@@ -467,8 +467,6 @@ ${source}
 }
 
 function App() {
-  const designV2Enabled = import.meta.env.VITE_DESIGN_V2 === "true";
-  const isV2Preview = window.location.pathname === "/v2-preview";
   const [active, setActive] = useState("Builder");
   const [category, setCategory] = useState("Marketing");
   const [tone, setTone] = useState("Profesional");
@@ -866,35 +864,7 @@ function App() {
     optimizePrompt,
   };
 
-  if (isV2Preview) return <V2Preview />;
-
-  return (
-    <div className="app-shell" data-theme={designV2Enabled ? "v2" : undefined}>
-      <aside className="sidebar">
-        <Brand />
-        <Nav active={active} setActive={setActive} />
-        <div className="sidebar-card">
-          <Gauge size={18} />
-          <div>
-            <strong>Prompt Score</strong>
-            <p>Struktur, konteks, dan format dicek sebelum dipakai.</p>
-          </div>
-        </div>
-      </aside>
-
-      <main className="workspace">
-        <Topbar active={active} setActive={setActive} />
-        {active === "Builder" && <BuilderView {...shared} />}
-        {active === "Optimizer" && <OptimizerView {...shared} />}
-        {active === "Templates" && <TemplatesView {...shared} />}
-        {active === "Library" && <LibraryView {...shared} />}
-        {active === "Compare" && <CompareView {...shared} />}
-        {active === "Settings" && <SettingsView {...shared} />}
-      </main>
-
-      <BottomNav active={active} setActive={setActive} />
-    </div>
-  );
+  return <V2App {...shared} />;
 }
 
 function V2Preview() {
@@ -952,6 +922,454 @@ function V2TokenSection({ title, tokens }) {
         ))}
       </div>
     </section>
+  );
+}
+
+function V2App(props) {
+  const { active, setActive, settingsStatus, generationStatus, generationSource, generationModel, metrics } = props;
+  return (
+    <div className="v2-shell" data-theme="v2">
+      <aside className="v2-sidebar">
+        <div className="v2-brand">
+          <div className="v2-brand-mark"><Sparkles size={20} /></div>
+          <div>
+            <strong>PromptLab</strong>
+            <span>AI prompt workspace</span>
+          </div>
+        </div>
+        <nav className="v2-nav">
+          {navItems().map(([item, Icon]) => (
+            <button key={item} className={active === item ? "active" : ""} onClick={() => setActive(item)} title={item}>
+              <Icon size={18} />
+              <span>{item}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="v2-side-card">
+          <span>Current score</span>
+          <strong>{metrics.score}/100</strong>
+          <p>{statusLabel(generationStatus, generationSource)} · {generationModel}</p>
+        </div>
+      </aside>
+
+      <main className="v2-main">
+        <V2Header active={active} setActive={setActive} settingsStatus={settingsStatus} />
+        {active === "Builder" && <V2Builder {...props} />}
+        {active === "Optimizer" && <V2Optimizer {...props} />}
+        {active === "Templates" && <V2Templates {...props} />}
+        {active === "Library" && <V2Library {...props} />}
+        {active === "Compare" && <V2Compare {...props} />}
+        {active === "Settings" && <V2Settings {...props} />}
+      </main>
+      <BottomNav active={active} setActive={setActive} />
+    </div>
+  );
+}
+
+function V2Header({ active, setActive, settingsStatus }) {
+  const subtitles = {
+    Builder: "Parse intent, lock guardrails, and ship model-ready prompts.",
+    Optimizer: "Diff prompt lama ke versi yang lebih tajam dan aman dipakai.",
+    Templates: "Mulai dari pola prompt yang sudah siap produksi.",
+    Library: "Kelola prompt terbaik sebagai asset kerja yang bisa dipakai ulang.",
+    Compare: "Bandingkan beberapa model dan versi prompt sebelum dikirim.",
+    Settings: "Atur provider, endpoint, model, timeout, dan fallback.",
+  };
+  return (
+    <header className="v2-headerbar">
+      <div>
+        <span className="v2-eyebrow">PromptLab / {active}</span>
+        <strong>{subtitles[active] || subtitles.Builder}</strong>
+      </div>
+      <div className="v2-header-actions">
+        <button className="v2-search" onClick={() => setActive("Library")}>
+          <Search size={15} />
+          <span>Search library</span>
+        </button>
+        <span className={`v2-health ${settingsStatus?.ok ? "ready" : ""}`}>
+          {settingsStatus?.ok ? "Provider ready" : "Local fallback ready"}
+        </span>
+        <button className="v2-icon-btn" onClick={() => setActive("Settings")} title="Settings">
+          <Settings size={18} />
+        </button>
+      </div>
+    </header>
+  );
+}
+
+function V2PageIntro({ eyebrow, title, copy, children }) {
+  return (
+    <section className="v2-hero">
+      <div className="v2-hero-copy">
+        <span className="v2-eyebrow">{eyebrow}</span>
+        <h1>{title}</h1>
+        <p>{copy}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function V2Builder(props) {
+  const {
+    category, setCategory, tone, setTone, model, setModel, outputType, setOutputType,
+    narrative, setNarrative, attachments, addAttachments, removeAttachment, prompt,
+    metrics, generationStatus, generationSource, generationModel, warningMessage, errorMessage, copied,
+    copyText, savePrompt, generatePrompt, isGenerating, exportStatus, exportFile,
+  } = props;
+
+  return (
+    <div className="v2-screen">
+      <V2PageIntro
+        eyebrow="Studio v2"
+        title={<>The cleanest <em>prompt</em>, before you hit run.</>}
+        copy="Ubah ide mentah, file, dan screenshot menjadi instruksi presisi untuk Claude, ChatGPT, Gemini, dan model kreatif lainnya."
+      >
+        <div className="v2-hero-status">
+          <span>Readiness</span>
+          <strong>{metrics.score}</strong>
+          <small>{statusLabel(generationStatus, generationSource)}</small>
+        </div>
+      </V2PageIntro>
+
+      <section className="v2-stats-strip">
+        <V2Stat label="Clarity" value={`${metrics.clarity}%`} detail="Intent & role terbaca" />
+        <V2Stat label="Context" value={`${metrics.context}%`} detail={`${attachments.length} attachment`} />
+        <V2Stat label="Output format" value={`${metrics.format}%`} detail={outputType} />
+        <V2Stat label="Engine" value={generationModel} detail="routing aktif" compact />
+      </section>
+
+      <section className="v2-studio-grid">
+        <div className="v2-card v2-composer">
+          <div className="v2-card-head">
+            <div>
+              <h2>Prompt Studio</h2>
+              <p>Tulis bebas, pilih target AI, lampirkan bahan, lalu generate.</p>
+            </div>
+            <Bot size={22} />
+          </div>
+          <label className="v2-label">Narasi user</label>
+          <textarea className="v2-textarea large" value={narrative} onChange={(event) => setNarrative(event.target.value)} />
+          <label className="v2-attach">
+            <input type="file" multiple onChange={(event) => addAttachments(event.target.files)} />
+            <Paperclip size={18} />
+            <span><strong>Attach gambar, screenshot, atau file</strong><small>PDF, DOCX, PPTX, TXT, JPG, PNG. Gambar dibaca OCR saat generate.</small></span>
+          </label>
+          {attachments.length > 0 && (
+            <div className="v2-file-list">
+              {attachments.map((file) => (
+                <button key={file.id} onClick={() => removeAttachment(file.id)}>
+                  <FileText size={14} /> {file.name} <X size={14} />
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="v2-field-grid">
+            <V2ChipGroup label="Kategori" options={categories} value={category} onChange={setCategory} />
+            <V2ChipGroup label="Tone" options={tones} value={tone} onChange={setTone} />
+            <V2ChipGroup label="Target AI" options={models} value={model} onChange={setModel} />
+            <V2ChipGroup label="Jenis Output" options={outputTypes} value={outputType} onChange={setOutputType} />
+          </div>
+          <div className="v2-actions">
+            <button className="v2-btn primary" onClick={() => generatePrompt()} disabled={isGenerating}>
+              <Sparkles size={17} /> {isGenerating ? "Generating..." : "Generate Prompt"}
+            </button>
+            <button className="v2-btn" onClick={() => savePrompt(prompt, narrative)}><Save size={17} />Save</button>
+            <button className="v2-btn" onClick={() => copyText(prompt)}>{copied ? <Check size={17} /> : <Clipboard size={17} />}Copy</button>
+          </div>
+          {warningMessage && <p className="v2-note warn">{warningMessage}</p>}
+          {errorMessage && <p className="v2-note error">{errorMessage}</p>}
+        </div>
+
+        <V2ReadinessOutput
+          prompt={prompt}
+          metrics={metrics}
+          generationStatus={generationStatus}
+          generationSource={generationSource}
+          generationModel={generationModel}
+          copyText={copyText}
+          savePrompt={savePrompt}
+          exportFile={exportFile}
+          narrative={narrative}
+          exportStatus={exportStatus}
+        />
+      </section>
+    </div>
+  );
+}
+
+function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource, generationModel, copyText, savePrompt, exportFile, narrative, exportStatus }) {
+  return (
+    <aside className="v2-output-stack">
+      <div className="v2-card v2-readiness">
+        <div className="v2-card-head">
+          <div>
+            <span className="v2-eyebrow">AI Readiness Console</span>
+            <h2>PromptLab Intelligence</h2>
+          </div>
+          <Sparkles size={20} />
+        </div>
+        <div className="v2-score-row">
+          <div className="v2-ring" style={{ "--score": `${metrics.score * 3.6}deg` }}><span>{metrics.score}</span></div>
+          <div>
+            <h3>Readiness Score</h3>
+            <p>Struktur, konteks, format, dan batasan dicek sebelum prompt dipakai.</p>
+          </div>
+        </div>
+        <V2Metric label="Clarity" value={metrics.clarity} />
+        <V2Metric label="Context" value={metrics.context} />
+        <V2Metric label="Output format" value={metrics.format} />
+        <div className="v2-checklist">
+          {["Intent parsed", "Guardrails active", "Export ready"].map((item, index) => (
+            <div key={item}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item}</strong><small>Validated locally</small></div>
+          ))}
+        </div>
+      </div>
+      <div className="v2-card v2-output-card">
+        <div className="v2-prompt-toolbar">
+          <strong>Optimized Prompt</strong>
+          <span>{statusLabel(generationStatus, generationSource)} · {generationModel}</span>
+          <button onClick={() => copyText(prompt)} title="Copy"><Clipboard size={16} /></button>
+          <button onClick={() => savePrompt(prompt, narrative)} title="Save"><Archive size={16} /></button>
+        </div>
+        <pre>{prompt}</pre>
+        <div className="v2-actions wrap">
+          <button className="v2-btn" onClick={() => exportFile("docx", prompt, narrative)}><FileText size={16} />DOCX</button>
+          <button className="v2-btn" onClick={() => exportFile("pptx", prompt, narrative)}><BookOpenText size={16} />PPTX</button>
+          <span className="v2-small">{exportStatus || "Export menyimpan prompt final sebagai file kerja."}</span>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizerError, optimizerWarning, optimizePrompt, copyText, savePrompt, exportFile }) {
+  const [rawPrompt, setRawPrompt] = useState("Buat prompt yang lebih bagus untuk konten Instagram produk kopi susu.");
+  const [mode, setMode] = useState("Lebih Jelas");
+  const result = optimizerResult || buildLocalOptimizedPrompt(rawPrompt, mode, "Claude", "Profesional");
+  const beforeScore = scorePrompt(rawPrompt);
+  const afterScore = scorePrompt(result);
+  const summary = [
+    ["Role", beforeScore.score > 60 ? "dipertajam" : "ditambahkan"],
+    ["Context", `${Math.max(0, afterScore.context - beforeScore.context)} pt naik`],
+    ["Format", "schema output dikunci"],
+    ["Guardrail", "anti salah deliverable"],
+    ["Tone", "lebih konsisten"],
+    ["Export", "siap DOCX"],
+  ];
+  return (
+    <div className="v2-screen">
+      <V2PageIntro eyebrow="Optimizer" title="Prompt lama, dipoles jadi instruksi yang menang." copy="Lihat perubahan sebelum dan sesudah, lengkap dengan summary kualitas." />
+      <section className="v2-diff-grid">
+        <div className="v2-card">
+          <div className="v2-card-head"><h2>Input</h2><span className="v2-score-badge">{beforeScore.score}</span></div>
+          <textarea className="v2-textarea" value={rawPrompt} onChange={(event) => setRawPrompt(event.target.value)} />
+          <V2ChipGroup label="Mode Optimasi" options={optimizerModes} value={mode} onChange={setMode} />
+          <div className="v2-actions">
+            <button className="v2-btn primary" onClick={() => optimizePrompt(rawPrompt, mode)} disabled={isOptimizing}><Zap size={17} />{isOptimizing ? "Optimizing..." : "Optimize"}</button>
+            <button className="v2-btn" onClick={() => copyText(rawPrompt)}><Clipboard size={17} />Copy original</button>
+          </div>
+          {optimizerWarning && <p className="v2-note warn">{optimizerWarning}</p>}
+          {optimizerError && <p className="v2-note error">{optimizerError}</p>}
+        </div>
+        <div className="v2-card v2-output-card">
+          <div className="v2-card-head"><div><h2>Optimized Result</h2><p>{optimizerSource}</p></div><span className="v2-score-badge hot">{afterScore.score}</span></div>
+          <pre>{result}</pre>
+          <div className="v2-actions wrap">
+            <button className="v2-btn" onClick={() => copyText(result)}><Clipboard size={16} />Copy</button>
+            <button className="v2-btn" onClick={() => savePrompt(result, rawPrompt)}><Save size={16} />Save</button>
+            <button className="v2-btn" onClick={() => exportFile("docx", result, rawPrompt)}><FileText size={16} />DOCX</button>
+          </div>
+        </div>
+      </section>
+      <section className="v2-summary-grid">
+        {summary.map(([label, value]) => <V2Stat key={label} label={label} value={value} detail="change summary" />)}
+      </section>
+    </div>
+  );
+}
+
+function V2Templates({ setBuilderFromTemplate, search, setSearch }) {
+  const [filter, setFilter] = useState("Semua");
+  const options = ["Semua", ...new Set(templates.map((item) => item.category))];
+  const filtered = templates.filter((item) => {
+    const q = `${item.title} ${item.category} ${item.outputType} ${item.model} ${item.prompt}`.toLowerCase();
+    return (filter === "Semua" || item.category === filter) && q.includes(search.toLowerCase());
+  });
+  return (
+    <div className="v2-screen">
+      <V2PageIntro eyebrow="Template Gallery" title="Featured prompts for serious output." copy="Filter cepat untuk aplikasi, laporan, PPT, konten, coding, dan visual prompt.">
+        <div className="v2-hero-status"><span>Templates</span><strong>{filtered.length}</strong><small>ready to use</small></div>
+      </V2PageIntro>
+      <div className="v2-toolbar">
+        <div className="v2-search wide"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari template..." /></div>
+        <div className="v2-chip-row">{options.map((item) => <button key={item} className={`v2-chip ${filter === item ? "active" : ""}`} onClick={() => setFilter(item)}>{item}</button>)}</div>
+      </div>
+      <section className="v2-template-grid">
+        {filtered.slice(0, 9).map((template) => (
+          <button className="v2-template-card" key={template.title} onClick={() => setBuilderFromTemplate(template)}>
+            <span>{template.category}</span>
+            <strong>{template.title}</strong>
+            <p>{template.prompt}</p>
+            <small>{template.model} · {template.outputType}</small>
+          </button>
+        ))}
+      </section>
+    </div>
+  );
+}
+
+function V2Library(props) {
+  const {
+    filteredLibrary, selectedLibrary, selectedLibraryId, setSelectedLibraryId, search, setSearch,
+    updateLibraryItem, deleteLibraryItem, duplicateLibraryItem, copyText, setCompareA, setCompareB,
+    setActive, setNarrative, setCategory, setOutputType, exportFile,
+  } = props;
+  const currentItem = filteredLibrary.find((item) => item.id === selectedLibraryId) || filteredLibrary[0] || selectedLibrary;
+  const rows = filteredLibrary.slice(0, 8);
+  const formatDate = (timestamp) => timestamp ? new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(timestamp) : "-";
+  const useInBuilder = (item) => {
+    setNarrative(item.content);
+    if (categories.includes(item.tag)) setCategory(item.tag);
+    if (outputTypes.includes(item.folder)) setOutputType(item.folder);
+    setActive("Builder");
+  };
+  return (
+    <div className="v2-screen">
+      <V2PageIntro eyebrow="Library" title="Prompt archive that behaves like a workspace." copy="Cari, edit, duplikasi, export, dan kirim prompt ke Compare atau Builder.">
+        <div className="v2-hero-status"><span>Saved</span><strong>{filteredLibrary.length}</strong><small>prompts</small></div>
+      </V2PageIntro>
+      <section className="v2-stats-strip">
+        <V2Stat label="Total" value={filteredLibrary.length} detail="stored prompts" />
+        <V2Stat label="Categories" value={new Set(filteredLibrary.map((i) => i.tag)).size} detail="active tags" />
+        <V2Stat label="Last updated" value={formatDate(currentItem?.updatedAt || currentItem?.createdAt)} detail={currentItem?.title || "-"} compact />
+      </section>
+      <section className="v2-library-grid">
+        <div className="v2-card">
+          <div className="v2-toolbar compact"><div className="v2-search wide"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari prompt..." /></div></div>
+          <div className="v2-table">
+            {rows.map((item) => (
+              <button key={item.id} className={currentItem?.id === item.id ? "active" : ""} onClick={() => setSelectedLibraryId(item.id)}>
+                <span>{item.title}<small>{item.tag} · {formatDate(item.updatedAt || item.createdAt)}</small></span>
+                <em>{item.folder}</em>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="v2-card v2-editor">
+          {currentItem ? (
+            <>
+              <label className="v2-label">Judul</label>
+              <input className="v2-input" value={currentItem.title} onChange={(event) => updateLibraryItem(currentItem.id, { title: event.target.value })} />
+              <div className="v2-two">
+                <div><label className="v2-label">Folder</label><input className="v2-input" value={currentItem.folder} onChange={(event) => updateLibraryItem(currentItem.id, { folder: event.target.value })} /></div>
+                <div><label className="v2-label">Tag</label><input className="v2-input" value={currentItem.tag} onChange={(event) => updateLibraryItem(currentItem.id, { tag: event.target.value })} /></div>
+              </div>
+              <label className="v2-label">Isi Prompt</label>
+              <textarea className="v2-textarea" value={currentItem.content} onChange={(event) => updateLibraryItem(currentItem.id, { content: event.target.value })} />
+              <div className="v2-actions wrap">
+                <button className="v2-btn primary" onClick={() => useInBuilder(currentItem)}><PenLine size={16} />Use in Builder</button>
+                <button className="v2-btn" onClick={() => copyText(currentItem.content)}><Clipboard size={16} />Copy</button>
+                <button className="v2-btn" onClick={() => duplicateLibraryItem(currentItem)}><Plus size={16} />Duplicate</button>
+                <button className="v2-btn" onClick={() => { setCompareA(currentItem.content); setActive("Compare"); }}><ArrowRightLeft size={16} />Compare A</button>
+                <button className="v2-btn" onClick={() => { setCompareB(currentItem.content); setActive("Compare"); }}><ArrowRightLeft size={16} />Compare B</button>
+                <button className="v2-btn" onClick={() => exportFile("docx", currentItem.content, currentItem.title)}><FileText size={16} />DOCX</button>
+                <button className="v2-btn danger" onClick={() => deleteLibraryItem(currentItem.id)}><Trash2 size={16} />Delete</button>
+              </div>
+            </>
+          ) : <p className="v2-small">Belum ada prompt tersimpan.</p>}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function V2Compare({ compareA, setCompareA, compareB, setCompareB, setNarrative, savePrompt, copyText, setActive }) {
+  const modelsToShow = ["ChatGPT", "Claude", "Gemini"];
+  const prompts = [compareA, compareB].filter(Boolean);
+  const basePrompt = prompts[0] || "Paste prompt di panel A/B untuk membandingkan kualitas instruksi.";
+  const scoreA = scorePrompt(compareA || "");
+  const scoreB = scorePrompt(compareB || "");
+  const winnerPrompt = scoreA.score >= scoreB.score ? compareA : compareB;
+  return (
+    <div className="v2-screen">
+      <V2PageIntro eyebrow="Compare Lab" title="Side-by-side model readiness matrix." copy="Tiga model card, dua prompt input, dan score matrix lokal untuk memilih versi paling siap." />
+      <section className="v2-compare-grid">
+        {modelsToShow.map((name, index) => {
+          const score = Math.min(99, Math.max(42, scorePrompt(basePrompt).score + index * 3));
+          return (
+            <div className="v2-card v2-model-card" key={name}>
+              <div className="v2-card-head"><h2>{name}</h2><span className="v2-score-badge">{score}</span></div>
+              <p>{basePrompt.slice(0, 180)}{basePrompt.length > 180 ? "..." : ""}</p>
+              <V2Metric label="Reasoning fit" value={score} />
+              <V2Metric label="Format safety" value={Math.min(99, score + 4)} />
+            </div>
+          );
+        })}
+      </section>
+      <section className="v2-diff-grid">
+        <div className="v2-card">
+          <div className="v2-card-head"><h2>Prompt A</h2><span className="v2-score-badge">{scoreA.score}</span></div>
+          <textarea className="v2-textarea" value={compareA} onChange={(event) => setCompareA(event.target.value)} placeholder="Paste prompt A..." />
+        </div>
+        <div className="v2-card">
+          <div className="v2-card-head"><h2>Prompt B</h2><span className="v2-score-badge hot">{scoreB.score}</span></div>
+          <textarea className="v2-textarea" value={compareB} onChange={(event) => setCompareB(event.target.value)} placeholder="Paste prompt B..." />
+        </div>
+      </section>
+      <div className="v2-card v2-score-matrix">
+        <div><strong>Matrix</strong><span>A</span><span>B</span></div>
+        {["Clarity", "Context", "Output format"].map((row) => (
+          <div key={row}><strong>{row}</strong><span>{scoreA[row === "Clarity" ? "clarity" : row === "Context" ? "context" : "format"]}%</span><span>{scoreB[row === "Clarity" ? "clarity" : row === "Context" ? "context" : "format"]}%</span></div>
+        ))}
+        <div className="v2-actions wrap">
+          <button className="v2-btn primary" disabled={!winnerPrompt?.trim()} onClick={() => { setNarrative(winnerPrompt); setActive("Builder"); }}><PenLine size={16} />Use winner</button>
+          <button className="v2-btn" disabled={!winnerPrompt?.trim()} onClick={() => savePrompt(winnerPrompt, "Compare winner")}><Save size={16} />Save</button>
+          <button className="v2-btn" disabled={!winnerPrompt?.trim()} onClick={() => copyText(winnerPrompt)}><Clipboard size={16} />Copy</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function V2Settings(props) {
+  return (
+    <div className="v2-screen v2-settings-screen">
+      <V2PageIntro eyebrow="Model Command Center" title="Provider, endpoint, routing, and saved settings." copy="Setting LLM lengkap tetap tersimpan di browser dan dipakai saat generate lewat backend." />
+      <SettingsView {...props} />
+    </div>
+  );
+}
+
+function V2Stat({ label, value, detail, compact }) {
+  return (
+    <div className={`v2-stat ${compact ? "compact" : ""}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+    </div>
+  );
+}
+
+function V2ChipGroup({ label, options, value, onChange }) {
+  return (
+    <div className="v2-chip-group">
+      <span>{label}</span>
+      <div className="v2-chip-row">
+        {options.map((option) => (
+          <button key={option} className={`v2-chip ${value === option ? "active" : ""}`} onClick={() => onChange(option)}>{option}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function V2Metric({ label, value }) {
+  return (
+    <div className="v2-metric">
+      <div><span>{label}</span><strong>{value}%</strong></div>
+      <i><b style={{ width: `${value}%` }} /></i>
+    </div>
   );
 }
 
