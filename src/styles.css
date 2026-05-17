@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap");
+
 :root {
   color: #f4f8ff;
   background: #070b13;
@@ -20,6 +22,41 @@
     sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+
+[data-theme="v2"] {
+  --bg-0: oklch(0.135 0.012 220);
+  --bg-1: oklch(0.165 0.014 220);
+  --bg-2: oklch(0.195 0.016 220);
+  --bg-3: oklch(0.225 0.018 220);
+  --bg-input: oklch(0.155 0.014 220);
+  --line-soft: oklch(0.225 0.016 218);
+  --line: oklch(0.265 0.02 215);
+  --line-strong: oklch(0.34 0.024 210);
+  --fg: oklch(0.975 0.005 220);
+  --fg-2: oklch(0.88 0.008 220);
+  --fg-mute: oklch(0.66 0.014 220);
+  --fg-subtle: oklch(0.48 0.014 220);
+  --fg-faint: oklch(0.36 0.014 220);
+  --ac: oklch(0.84 0.13 195);
+  --ac-2: oklch(0.74 0.14 178);
+  --ac-3: oklch(0.62 0.15 200);
+  --ac-soft: oklch(0.84 0.13 195 / 0.14);
+  --ac-line: oklch(0.84 0.13 195 / 0.32);
+  --ac-glow: oklch(0.84 0.13 195 / 0.55);
+  --pos: oklch(0.78 0.16 158);
+  --warn: oklch(0.82 0.16 78);
+  --neg: oklch(0.72 0.18 22);
+  --r-sm: 6px;
+  --r: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --font-display: "Instrument Serif", Georgia, serif;
+  --font-ui: "Geist", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+  color: var(--fg);
+  font-family: var(--font-ui);
 }
 
 * {
@@ -60,6 +97,135 @@ input {
 
 button {
   border: 0;
+}
+
+.v2-preview {
+  min-height: 100vh;
+  padding: 48px;
+  color: var(--fg);
+  background:
+    radial-gradient(circle at 80% 0%, var(--ac-soft), transparent 34%),
+    var(--bg-0);
+  font-family: var(--font-ui);
+}
+
+.v2-preview-hero,
+.v2-preview-section,
+.v2-type-card {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  background:
+    linear-gradient(180deg, oklch(0.185 0.016 220 / 0.6), oklch(0.165 0.014 220 / 0.4));
+}
+
+.v2-preview-hero {
+  margin-bottom: 20px;
+  padding: 40px 36px;
+}
+
+.v2-eyebrow {
+  color: var(--ac);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.v2-preview h1,
+.v2-preview h2,
+.v2-preview h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+
+.v2-preview h1 {
+  max-width: 760px;
+  margin-top: 12px;
+  font-size: clamp(40px, 5.4vw, 76px);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+}
+
+.v2-preview h1 em,
+.v2-preview h3 em {
+  color: var(--ac);
+}
+
+.v2-preview p {
+  max-width: 64ch;
+  margin: 14px 0 0;
+  color: var(--fg-2);
+  font-size: 15.5px;
+  line-height: 1.55;
+}
+
+.v2-preview-section {
+  margin-top: 16px;
+  padding: 20px;
+}
+
+.v2-preview-section h2 {
+  margin-bottom: 14px;
+  font-size: 26px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.v2-token-grid,
+.v2-radius-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.v2-token-card,
+.v2-radius-swatch {
+  padding: 12px;
+  color: var(--fg-2);
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+}
+
+.v2-token-swatch {
+  height: 64px;
+  margin-bottom: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+}
+
+.v2-radius-swatch {
+  min-height: 84px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--ac-soft), var(--bg-2));
+}
+
+.v2-type-card {
+  padding: 20px;
+}
+
+.v2-type-card h3 {
+  font-size: 38px;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+
+.v2-type-card code {
+  display: block;
+  margin-top: 16px;
+  padding: 14px;
+  color: var(--ac);
+  background: var(--bg-input);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+  font-family: var(--font-mono);
+  font-size: 12.8px;
+  line-height: 1.65;
 }
 
 .app-shell {

@@ -467,6 +467,8 @@ ${source}
 }
 
 function App() {
+  const designV2Enabled = import.meta.env.VITE_DESIGN_V2 === "true";
+  const isV2Preview = window.location.pathname === "/v2-preview";
   const [active, setActive] = useState("Builder");
   const [category, setCategory] = useState("Marketing");
   const [tone, setTone] = useState("Profesional");
@@ -864,8 +866,10 @@ function App() {
     optimizePrompt,
   };
 
+  if (isV2Preview) return <V2Preview />;
+
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-theme={designV2Enabled ? "v2" : undefined}>
       <aside className="sidebar">
         <Brand />
         <Nav active={active} setActive={setActive} />
@@ -890,6 +894,64 @@ function App() {
 
       <BottomNav active={active} setActive={setActive} />
     </div>
+  );
+}
+
+function V2Preview() {
+  const surfaceTokens = ["bg-0", "bg-1", "bg-2", "bg-3", "bg-input"];
+  const lineTokens = ["line-soft", "line", "line-strong"];
+  const textTokens = ["fg", "fg-2", "fg-mute", "fg-subtle", "fg-faint"];
+  const accentTokens = ["ac", "ac-2", "ac-3", "ac-soft", "ac-line", "ac-glow"];
+  const semanticTokens = ["pos", "warn", "neg"];
+  const radiusTokens = ["r-sm", "r", "r-md", "r-lg", "r-xl"];
+
+  return (
+    <main className="v2-preview" data-theme="v2">
+      <section className="v2-preview-hero">
+        <span className="v2-eyebrow">PromptLab v2 tokens</span>
+        <h1>The cleanest <em>prompt</em>, before you hit run.</h1>
+        <p>Swatch grid untuk validasi R1: OKLCH palette, font stack, radius, dan control samples.</p>
+      </section>
+      <V2TokenSection title="Surfaces" tokens={surfaceTokens} />
+      <V2TokenSection title="Lines" tokens={lineTokens} />
+      <V2TokenSection title="Text" tokens={textTokens} />
+      <V2TokenSection title="Accent" tokens={accentTokens} />
+      <V2TokenSection title="Semantic" tokens={semanticTokens} />
+      <section className="v2-preview-section">
+        <h2>Radius</h2>
+        <div className="v2-radius-grid">
+          {radiusTokens.map((token) => (
+            <div className="v2-radius-swatch" style={{ borderRadius: `var(--${token})` }} key={token}>
+              <span>--{token}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="v2-preview-section">
+        <h2>Typography</h2>
+        <div className="v2-type-card">
+          <h3>Instrument Serif <em>italic accent</em></h3>
+          <p>Geist drives the product interface. Geist Mono carries tokens, prompts, shortcuts, and technical rhythm.</p>
+          <code>&lt;role&gt; senior prompt engineer &lt;/role&gt;</code>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function V2TokenSection({ title, tokens }) {
+  return (
+    <section className="v2-preview-section">
+      <h2>{title}</h2>
+      <div className="v2-token-grid">
+        {tokens.map((token) => (
+          <div className="v2-token-card" key={token}>
+            <div className="v2-token-swatch" style={{ background: `var(--${token})` }} />
+            <span>--{token}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
