@@ -1144,6 +1144,24 @@ function V2GenerateLoader({ attachments, model, outputType }) {
   );
 }
 
+function V2MiniPipeline({ eyebrow = "Working", title, steps }) {
+  return (
+    <section className="v2-mini-pipeline" aria-live="polite">
+      <div className="v2-mini-orb"><Sparkles size={16} /></div>
+      <div className="v2-mini-copy">
+        <span className="v2-eyebrow">{eyebrow}</span>
+        <strong>{title}</strong>
+        <div className="v2-loader-bar"><i /></div>
+      </div>
+      <div className="v2-mini-steps">
+        {steps.map((step, index) => (
+          <div className="v2-mini-step" key={step} style={{ "--delay": `${index * 0.16}s` }}>{step}</div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource, generationModel, copyText, savePrompt, exportFile, narrative, exportStatus, isGenerating }) {
   const [actionFeedback, setActionFeedback] = useState("");
   const confirmAction = (label, action) => {
@@ -1209,6 +1227,13 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
           <button className="v2-btn" onClick={() => exportFile("pptx", prompt, narrative)}><BookOpenText size={16} />PPTX</button>
           <span className="v2-small">{exportStatus || "Export saves the final prompt as a working file."}</span>
         </div>
+        {exportStatus?.startsWith("Preparing") && (
+          <V2MiniPipeline
+            eyebrow="Export"
+            title="Packaging your file..."
+            steps={["Format", "Render", "Download"]}
+          />
+        )}
       </div>
     </aside>
   );
@@ -1235,17 +1260,32 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
         <div className="v2-card">
           <div className="v2-card-head"><h2>Input</h2><span className="v2-score-badge">{beforeScore.score}</span></div>
           <textarea className="v2-textarea" value={rawPrompt} onChange={(event) => setRawPrompt(event.target.value)} />
-          <V2ChipGroup label="Mode Optimasi" options={optimizerModes} value={mode} onChange={setMode} />
+          <V2ChipGroup label="Optimization Mode" options={optimizerModes} value={mode} onChange={setMode} />
           <div className="v2-actions">
             <button className="v2-btn primary" onClick={() => optimizePrompt(rawPrompt, mode)} disabled={isOptimizing}><Zap size={17} />{isOptimizing ? "Optimizing..." : "Optimize"}</button>
             <button className="v2-btn" onClick={() => copyText(rawPrompt)}><Clipboard size={17} />Copy original</button>
           </div>
+          {isOptimizing && (
+            <V2MiniPipeline
+              eyebrow="Optimizer pipeline"
+              title="Rebuilding prompt structure..."
+              steps={["Audit", "Rewrite", "Guard", "Score"]}
+            />
+          )}
           {optimizerWarning && <p className="v2-note warn">{optimizerWarning}</p>}
           {optimizerError && <p className="v2-note error">{optimizerError}</p>}
         </div>
         <div className="v2-card v2-output-card">
           <div className="v2-card-head"><div><h2>Optimized Result</h2><p>{optimizerSource}</p></div><span className="v2-score-badge hot">{afterScore.score}</span></div>
           <pre>{result}</pre>
+          {isOptimizing && (
+            <div className="v2-stream-preview">
+              <span>Optimizing preview</span>
+              <i />
+              <i />
+              <i />
+            </div>
+          )}
           <div className="v2-actions wrap">
             <button className="v2-btn" onClick={() => copyText(result)}><Clipboard size={16} />Copy</button>
             <button className="v2-btn" onClick={() => savePrompt(result, rawPrompt)}><Save size={16} />Save</button>
@@ -1538,6 +1578,13 @@ function V2Settings(props) {
             <button className="v2-btn" onClick={refreshHealth}><Gauge size={16} />Health</button>
             <button className="v2-btn" onClick={() => navigator.clipboard?.writeText(apiBase).catch(() => {})}><Clipboard size={16} />Copy API Base</button>
           </div>
+          {isTestingProvider && (
+            <V2MiniPipeline
+              eyebrow="Provider test"
+              title="Checking model route..."
+              steps={["Endpoint", "Auth", "Model", "Response"]}
+            />
+          )}
           {settingsSavedAt && <p className="v2-note">Settings last saved at {settingsSavedAt}</p>}
           {providerTestStatus && <p className="v2-note">{providerTestStatus}</p>}
         </div>

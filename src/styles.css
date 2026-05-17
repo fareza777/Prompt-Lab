@@ -725,6 +725,71 @@ button {
   box-shadow: 0 16px 50px oklch(0 0 0 / 0.22);
 }
 
+.v2-mini-pipeline {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--ac-line);
+  border-radius: var(--r);
+  background:
+    radial-gradient(circle at 8% 50%, var(--ac-soft), transparent 28%),
+    oklch(0.145 0.014 220 / 0.78);
+}
+
+.v2-mini-orb {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: oklch(0.12 0.012 220);
+  background: linear-gradient(135deg, var(--ac), var(--ac-2));
+  box-shadow: 0 0 24px var(--ac-soft);
+  animation: v2-loader-pulse 1.8s ease-in-out infinite;
+}
+
+.v2-mini-copy strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.v2-mini-copy .v2-loader-bar {
+  margin-top: 9px;
+}
+
+.v2-mini-steps {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.v2-mini-step {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 11px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--fg-2);
+  background: var(--bg-input);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  animation: v2-step-glow 1.8s ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+
 .v2-generate-loader::after {
   content: "";
   position: absolute;
@@ -1577,6 +1642,10 @@ button {
   }
 
   .v2-generate-loader {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-mini-pipeline {
     grid-template-columns: 1fr;
   }
 }
