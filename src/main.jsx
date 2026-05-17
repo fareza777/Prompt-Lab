@@ -243,6 +243,103 @@ function inferRole(category) {
   return roles[category] || "professional prompt engineer";
 }
 
+function inferIntentBlueprint(narrative, category, outputType, attachments = []) {
+  const text = `${narrative || ""} ${category || ""} ${outputType || ""}`.toLowerCase();
+  const asksApp = /\b(app|aplikasi|dashboard|website|web app|sistem|platform|software|frontend|backend|full-stack|fullstack|tool|tools|editor|builder|kasir|pos)\b/i.test(text) || /application code/i.test(outputType);
+  const asksPresentation = /\b(ppt|powerpoint|presentation|presentasi|slides?)\b/i.test(text);
+  const asksDocument = /\b(word|docx|document|dokumen|report|laporan|proposal)\b/i.test(text);
+  const asksImage = /\b(image|gambar|foto|photo|visual|edit foto|photo editor|midjourney|desain)\b/i.test(text);
+
+  const domainRules = [
+    {
+      match: /\b(edit foto|photo editor|image editor|gambar|foto)\b/i,
+      domain: "Creative photo tool",
+      archetype: "canvas editor with upload, controls, preview, undo, and export",
+      expansions: ["image upload", "canvas preview", "adjustment controls", "preset filters", "undo/redo", "export/download"],
+    },
+    {
+      match: /\b(kasir|pos|point of sale|checkout|struk|stok|inventory)\b/i,
+      domain: "Retail POS system",
+      archetype: "transaction workspace with catalog, cart, receipts, stock, and reports",
+      expansions: ["product catalog", "cart flow", "payment state", "receipt output", "stock movement", "daily summary"],
+    },
+    {
+      match: /\b(dashboard|analytics|reporting|monitoring|admin)\b/i,
+      domain: "Operational dashboard",
+      archetype: "scan-friendly dashboard with metrics, filters, table, detail panel, and alerts",
+      expansions: ["metric strip", "filter controls", "data table", "detail drawer", "empty/loading/error states", "export"],
+    },
+    {
+      match: /\b(landing page|jualan|marketing|campaign|instagram|umkm|brand)\b/i,
+      domain: "Marketing conversion system",
+      archetype: "conversion page or campaign asset with audience, offer, proof, CTA, and variants",
+      expansions: ["audience profile", "value proposition", "offer hierarchy", "CTA", "content variants", "quality checklist"],
+    },
+    {
+      match: /\b(survey|form|formulir|questionnaire|registration|pendaftaran)\b/i,
+      domain: "Form and workflow app",
+      archetype: "guided input flow with validation, progress, saved responses, and admin review",
+      expansions: ["step form", "field validation", "progress state", "response storage", "admin table", "confirmation screen"],
+    },
+  ];
+
+  const matched = domainRules.find((rule) => rule.match.test(text));
+  const fallbackDomain = asksApp
+    ? "Application builder"
+    : asksPresentation
+      ? "Presentation planner"
+      : asksDocument
+        ? "Document system"
+        : asksImage
+          ? "Visual prompt system"
+          : `${category || "General"} prompt workflow`;
+
+  const deliverable = asksApp
+    ? "Runnable application specification"
+    : asksPresentation
+      ? "Slide-by-slide presentation prompt"
+      : asksDocument
+        ? "Structured document prompt"
+        : outputType || "Ready-to-use AI prompt";
+
+  const baseExpansions = matched?.expansions || [
+    "intent summary",
+    "audience and context",
+    "output structure",
+    "constraints",
+    "quality checks",
+  ];
+
+  const implementationFrames = asksApp
+    ? ["project structure", "frontend screens", "backend/API or mock API", "data model", "user flows", "validation states", "local run steps", "acceptance criteria"]
+    : asksPresentation
+      ? ["audience", "story arc", "slide sequence", "visual guidance", "speaker notes", "export criteria"]
+      : asksDocument
+        ? ["document outline", "section goals", "source handling", "tables/examples", "review checklist"]
+        : ["role", "context", "task", "format", "guardrails", "iteration notes"];
+
+  return {
+    domain: matched?.domain || fallbackDomain,
+    archetype: matched?.archetype || (asksApp ? "product brief that can become a working app" : "structured prompt brief"),
+    deliverable,
+    expansions: baseExpansions,
+    implementationFrames,
+    attachmentSignal: attachments.length ? `${attachments.length} context file(s)` : "No attachment context",
+    qualityGates: ["intent locked", "domain expanded", "missing details inferred", "output type protected", "acceptance testable"],
+  };
+}
+
+function formatIntentBlueprint(blueprint) {
+  return `PromptLab Intent Engine:
+- Detected domain: ${blueprint.domain}
+- Product archetype: ${blueprint.archetype}
+- Final deliverable: ${blueprint.deliverable}
+- Context signal: ${blueprint.attachmentSignal}
+- Domain expansion: ${blueprint.expansions.join(", ")}
+- Implementation frame: ${blueprint.implementationFrames.join(", ")}
+- Quality gates: ${blueprint.qualityGates.join(", ")}`;
+}
+
 function isClaudeTarget(model) {
   return /claude/i.test(model);
 }
@@ -258,6 +355,7 @@ function buildClaudePrompt({
   const cleanNarrative =
     narrative.trim() ||
     "I want to create a high-quality output from the available context.";
+  const blueprint = inferIntentBlueprint(cleanNarrative, category, outputType, attachments);
   const documentBlock = attachments.length
     ? `<documents>
 ${attachments
@@ -282,24 +380,31 @@ ${file.excerpt ? file.excerpt : "Content is not available in the local preview. 
 ${cleanNarrative}
 </task>
 
+<promptlab_intent_engine>
+${formatIntentBlueprint(blueprint)}
+</promptlab_intent_engine>
+
 Act as a ${inferRole(category)}.
 
 Goal:
+- First decompose the user's raw request through the PromptLab Intent Engine.
+- Produce a stronger prompt than a direct chatbot answer would produce.
 - Produce the exact deliverable requested in <task>.
 - Use the selected output type as the primary boundary: ${outputType}.
 - Use attached documents as source material, not as the deliverable type.
 
 Execution steps:
-1. Identify the requested deliverable.
-2. Extract only relevant facts from <documents>, if present.
-3. Build the answer in the exact order named under Output.
-4. Include concrete details, examples, tables, diagrams, file structure, or visual instructions when they support the deliverable.
-5. Ask up to 3 specific questions only when a missing fact blocks the work.
+1. Capture the user's real intent beyond the literal words.
+2. Expand the domain using the archetype and domain expansion list.
+3. Infer missing professional details, without inventing private facts.
+4. Frame the work as an executable brief with implementation details.
+5. Build the answer in the exact order named under Output.
+6. Ask up to 3 specific questions only when a missing fact blocks the work.
 
 Output:
-1. Scope summary: 2-4 bullets.
-2. Final deliverable: complete content for ${outputType}.
-3. Quality checklist: 5 checks.
+1. PromptLab Intent Engine Brief: domain, archetype, inferred scope, assumptions.
+2. Final executable prompt: complete prompt for ${outputType}.
+3. Quality gate: 5 checks that prove the prompt is not generic.
 4. Next iteration: 1-3 useful improvements.
 
 Length:
@@ -375,19 +480,26 @@ Attachment instructions:
 - Use attachment content as context, not as the deliverable type
 - Do not invent details that are not visible or unavailable in the attachment`
     : "";
+  const blueprint = inferIntentBlueprint(cleanNarrative, category, outputType, attachments);
 
   return `Act as a ${inferRole(category)}.
 
-Transform the following request into the best possible output for ${model}:
+You are using the PromptLab Intent Engine, a meta-prompt layer that makes this result stronger than sending the raw request directly to a chatbot.
+
+${formatIntentBlueprint(blueprint)}
+
+Transform the following raw request into a professional, executable prompt for ${model}:
 "${cleanNarrative}"${attachmentContext}
 
 Requested output type:
 - ${outputType}
 
 Goal:
-- Understand the main context from the user's request
-- Produce a clear, practical, ready-to-use output
-- Avoid generic answers
+- Capture intent beyond the literal wording
+- Expand the domain into expected features, flows, states, and constraints
+- Infer missing professional details carefully and label assumptions
+- Produce a clear, practical, ready-to-use prompt
+- Avoid generic chatbot-style answers
 
 Language style:
 - ${tone}
@@ -395,16 +507,17 @@ Language style:
 - Suitable for the intended audience
 
 Output format:
-1. Request summary
-2. Strategic recommendation
-3. Main output according to the requested output type
-4. Quality checklist
+1. PromptLab Intent Engine Brief
+2. Final executable prompt according to the requested output type
+3. Implementation or delivery checklist
+4. Acceptance criteria
 5. Next iteration suggestions
 
 Constraints:
 - Ask at most 3 clarifying questions only when critical information is missing
 - If the information is sufficient, provide the final answer directly
-- Use concrete examples, not generic theory`;
+- Use concrete examples, not generic theory
+- Preserve the selected output type and do not change it because of attachments`;
 }
 
 function scorePrompt(prompt) {
@@ -1031,6 +1144,10 @@ function V2Builder(props) {
     copyText, savePrompt, generatePrompt, isGenerating, exportStatus, exportFile,
   } = props;
   const promptSize = `${Math.max(1, Math.round(prompt.length / 4)).toLocaleString("en-US")} est. tokens`;
+  const intentBlueprint = useMemo(
+    () => inferIntentBlueprint(narrative, category, outputType, attachments),
+    [narrative, category, outputType, attachments]
+  );
 
   return (
     <div className="v2-screen">
@@ -1078,6 +1195,7 @@ function V2Builder(props) {
               ))}
             </div>
           )}
+          <V2IntentEnginePanel blueprint={intentBlueprint} />
           <div className="v2-field-grid">
             <V2ChipGroup label="Category" options={categories} value={category} onChange={setCategory} />
             <V2ChipGroup label="Tone" options={tones} value={tone} onChange={setTone} />
@@ -1114,13 +1232,36 @@ function V2Builder(props) {
   );
 }
 
+function V2IntentEnginePanel({ blueprint }) {
+  const visibleFrames = blueprint.implementationFrames.slice(0, 4);
+  return (
+    <section className="v2-intent-panel">
+      <div className="v2-intent-orbit"><BrainCircuit size={18} /></div>
+      <div className="v2-intent-main">
+        <span className="v2-eyebrow">PromptLab Intent Engine</span>
+        <h3>{blueprint.domain}</h3>
+        <p>{blueprint.archetype}</p>
+        <div className="v2-intent-tags">
+          <span>{blueprint.deliverable}</span>
+          <span>{blueprint.attachmentSignal}</span>
+        </div>
+      </div>
+      <div className="v2-intent-stack">
+        {visibleFrames.map((item) => (
+          <span key={item}>{item}</span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function V2GenerateLoader({ attachments, model, outputType }) {
   const steps = [
-    ["Parse intent", "Role, audience, tone, and task boundaries"],
-    [attachments.length ? "Read context" : "Scan context", attachments.length ? `${attachments.length} file(s) queued for extraction` : "No attachments, using narration only"],
+    ["Capture intent", "Read beyond the literal request"],
+    ["Expand domain", "Add expected features, states, and flows"],
+    [attachments.length ? "Read context" : "Infer gaps", attachments.length ? `${attachments.length} file(s) queued for extraction` : "Professional assumptions only"],
     ["Route model", `${model} with fallback safety`],
-    ["Build guardrails", `${outputType} format and constraints`],
-    ["Package result", "Copy, save, and export targets"],
+    ["Lock brief", `${outputType} format, guardrails, and criteria`],
   ];
 
   return (

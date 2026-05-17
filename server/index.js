@@ -341,7 +341,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
             {
               type: "input_text",
               text:
-                "You are PromptLab, a senior prompt engineer. Create one excellent ready-to-use prompt in Indonesian. Preserve the user's requested deliverable exactly. If the user asks for PPT, create a prompt for PPT. If the user asks for a Word report, create a prompt for a Word-style report. Return only the final prompt, no chatty preface.",
+                "You are PromptLab Intent Engine, a senior prompt architect. Do not merely restate the raw user request. Decompose intent, expand the domain, infer missing professional implementation details carefully, lock the deliverable type, then create one excellent ready-to-use prompt in Indonesian. Preserve the user's requested deliverable exactly. If the user asks for PPT, create a prompt for PPT. If the user asks for a Word report, create a prompt for a Word-style report. Return only the final prompt, no chatty preface.",
             },
           ],
         },
@@ -542,7 +542,7 @@ async function createOpenRouterCompletion(payload, attachments, runtime = getRun
     {
       role: "system",
       content:
-        "You are PromptLab, a senior prompt engineer. Create one excellent ready-to-use prompt in Indonesian. Preserve the user's requested deliverable exactly. If the user selects Kode Aplikasi, create a prompt for building runnable application code. If the user asks for PPT, create a prompt for PPT. If the user asks for a Word report, create a prompt for a Word-style report. Return only the final prompt, no chatty preface.",
+        "You are PromptLab Intent Engine, a senior prompt architect. Do not merely restate the raw user request. Decompose intent, expand the domain, infer missing professional implementation details carefully, lock the deliverable type, then create one excellent ready-to-use prompt in Indonesian. Preserve the user's requested deliverable exactly. If the user selects Application Code/Kode Aplikasi, create a prompt for building runnable application code. If the user asks for PPT, create a prompt for PPT. If the user asks for a Word report, create a prompt for a Word-style report. Return only the final prompt, no chatty preface.",
     },
     {
       role: "user",
@@ -768,7 +768,7 @@ function getDeliverableGuard(payload, attachments) {
   const asksApp =
     /\b(aplikasi|app|web app|website|dashboard|sistem|platform|software|frontend|backend|full-stack|fullstack|ui\/ux|ui ux)\b/i.test(
       `${payload.narrative} ${payload.outputType}`
-    ) || /kode aplikasi/i.test(payload.outputType);
+    ) || /kode aplikasi|application code/i.test(payload.outputType);
   const asksWord =
     (/\b(word|docx|laporan word|dokumen word|file word)\b/i.test(payload.narrative) &&
       /\b(buat|hasilkan|output|export|susun|tulis)\b/i.test(payload.narrative)) ||
@@ -802,6 +802,61 @@ function getDeliverableGuard(payload, attachments) {
   }
 
   return lines.map((line) => `- ${line}`).join("\n");
+}
+
+function getIntentEngineInstruction(payload, attachments) {
+  const text = `${payload.narrative || ""} ${payload.category || ""} ${payload.outputType || ""}`.toLowerCase();
+  const asksApp =
+    /\b(aplikasi|app|web app|website|dashboard|sistem|platform|software|frontend|backend|full-stack|fullstack|tool|editor|builder|kasir|pos)\b/i.test(text) ||
+    /kode aplikasi|application code/i.test(payload.outputType || "");
+  const asksPresentation = /\b(ppt|powerpoint|presentasi|presentation|slide|slides)\b/i.test(text);
+  const asksDocument = /\b(word|docx|dokumen|document|laporan|report|proposal)\b/i.test(text);
+
+  const domain = getIntentDomain(text, asksApp, asksPresentation, asksDocument);
+  const frames = asksApp
+    ? [
+        "struktur proyek",
+        "frontend/screen utama",
+        "backend/API atau mock API",
+        "data model",
+        "state dan validasi",
+        "loading/empty/error states",
+        "cara menjalankan lokal",
+        "acceptance criteria yang bisa dites",
+      ]
+    : asksPresentation
+      ? ["audiens", "alur cerita", "outline slide", "visual per slide", "speaker notes", "kriteria export"]
+      : asksDocument
+        ? ["outline dokumen", "tujuan per bagian", "sumber data", "tabel/contoh", "review checklist"]
+        : ["role", "context", "task", "output format", "constraints", "quality checklist"];
+
+  return `PromptLab Intent Engine wajib dipakai sebelum menulis prompt final:
+- Tangkap maksud asli user, bukan hanya kalimat literal.
+- Domain terdeteksi: ${domain}.
+- Pecah kebutuhan menjadi intent, target pengguna, output, fitur/komponen utama, interaksi, validasi, edge cases, dan kriteria sukses.
+- Tambahkan detail profesional yang wajar bila user belum menyebutkannya, tetapi tandai sebagai asumsi.
+- Kunci jenis output: ${payload.outputType || "tidak dipilih"}. Jangan ubah karena lampiran.
+- Context signal: ${attachments.length ? `${attachments.length} lampiran tersedia sebagai konteks` : "tidak ada lampiran"}.
+- Frame wajib: ${frames.join(", ")}.
+
+Struktur prompt final wajib:
+1. PromptLab Intent Engine Brief
+2. Final Executable Prompt
+3. Implementation/Delivery Checklist
+4. Acceptance Criteria
+5. Clarifying Questions hanya jika benar-benar menghalangi pekerjaan`;
+}
+
+function getIntentDomain(text, asksApp, asksPresentation, asksDocument) {
+  if (/\b(edit foto|photo editor|image editor|gambar|foto)\b/i.test(text)) return "creative photo editing tool";
+  if (/\b(kasir|pos|point of sale|checkout|struk|stok|inventory)\b/i.test(text)) return "retail POS system";
+  if (/\b(dashboard|analytics|reporting|monitoring|admin)\b/i.test(text)) return "operational dashboard";
+  if (/\b(landing page|jualan|marketing|campaign|instagram|umkm|brand)\b/i.test(text)) return "marketing conversion workflow";
+  if (/\b(survey|form|formulir|questionnaire|registration|pendaftaran)\b/i.test(text)) return "form and workflow system";
+  if (asksApp) return "runnable application";
+  if (asksPresentation) return "presentation planning";
+  if (asksDocument) return "structured document";
+  return "general prompt workflow";
 }
 
 async function normalizeFile(file, modelSettings = {}) {
@@ -887,6 +942,7 @@ function buildOpenAIContent(payload, attachments) {
   const conditionalInstructions = getConditionalInstructions(payload, attachments);
   const deliverableGuard = getDeliverableGuard(payload, attachments);
   const targetGuidance = getTargetModelGuidance(payload.modelTarget);
+  const intentEngine = getIntentEngineInstruction(payload, attachments);
   const content = [
     {
       type: "input_text",
@@ -899,6 +955,8 @@ Kategori: ${payload.category}
 Tone: ${payload.tone}
 Target AI: ${payload.modelTarget}
 Jenis Output: ${payload.outputType || "Tidak dipilih"}
+
+${intentEngine}
 
 Prompt final wajib punya:
 - Role yang tepat
@@ -952,6 +1010,7 @@ function buildOpenRouterContent(payload, attachments) {
   const conditionalInstructions = getConditionalInstructions(payload, attachments);
   const deliverableGuard = getDeliverableGuard(payload, attachments);
   const targetGuidance = getTargetModelGuidance(payload.modelTarget);
+  const intentEngine = getIntentEngineInstruction(payload, attachments);
   const baseText = `Buat prompt terbaik untuk kebutuhan berikut.
 
 Narasi user:
@@ -961,6 +1020,8 @@ Kategori: ${payload.category}
 Tone: ${payload.tone}
 Target AI: ${payload.modelTarget}
 Jenis Output: ${payload.outputType || "Tidak dipilih"}
+
+${intentEngine}
 
 Prompt final wajib punya:
 - Role yang tepat
@@ -1023,6 +1084,7 @@ function buildFallbackPrompt(payload, attachments) {
   const conditionalInstructions = getConditionalInstructions(payload, attachments);
   const deliverableGuard = getDeliverableGuard(payload, attachments);
   const targetGuidance = getTargetModelGuidance(payload.modelTarget);
+  const intentEngine = getIntentEngineInstruction(payload, attachments);
   const attachmentText = attachments.length
     ? `
 
@@ -1038,6 +1100,8 @@ ${attachments
     : "";
 
   return `Bertindaklah sebagai prompt engineer profesional untuk kategori ${payload.category}.
+
+${intentEngine}
 
 Ubah kebutuhan berikut menjadi prompt siap pakai untuk ${payload.modelTarget}:
 "${payload.narrative || "Jelaskan kebutuhan user berdasarkan konteks yang tersedia."}"${attachmentText}

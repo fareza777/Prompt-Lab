@@ -880,6 +880,98 @@ button {
   line-height: 1.25;
 }
 
+.v2-intent-panel {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(220px, 0.62fr);
+  gap: 14px;
+  align-items: center;
+  margin: 14px 0 18px;
+  padding: 14px;
+  border: 1px solid var(--ac-line);
+  border-radius: var(--r-md);
+  background:
+    linear-gradient(135deg, oklch(0.19 0.018 220 / 0.88), oklch(0.135 0.014 220 / 0.78)),
+    radial-gradient(circle at 12% 20%, var(--ac-soft), transparent 32%);
+}
+
+.v2-intent-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(oklch(1 0 0 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(1 0 0 / 0.035) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: linear-gradient(90deg, transparent, black 20%, black 75%, transparent);
+  pointer-events: none;
+}
+
+.v2-intent-orbit,
+.v2-intent-main,
+.v2-intent-stack {
+  position: relative;
+  z-index: 1;
+}
+
+.v2-intent-orbit {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  color: var(--ac);
+  background: oklch(0.13 0.016 220 / 0.78);
+  border: 1px solid var(--ac-line);
+  box-shadow: 0 0 26px var(--ac-soft);
+}
+
+.v2-intent-main h3 {
+  margin: 4px 0 3px;
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+}
+
+.v2-intent-main p {
+  margin: 0;
+  color: var(--fg-2);
+  line-height: 1.45;
+}
+
+.v2-intent-tags,
+.v2-intent-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.v2-intent-tags {
+  margin-top: 10px;
+}
+
+.v2-intent-tags span,
+.v2-intent-stack span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--fg-2);
+  background: var(--bg-input);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.v2-intent-tags span:first-child {
+  color: oklch(0.12 0.012 220);
+  background: linear-gradient(135deg, var(--ac), var(--ac-2));
+}
+
 @keyframes v2-loader-sweep {
   from { transform: translateX(-25%); }
   to { transform: translateX(25%); }
@@ -1646,6 +1738,10 @@ button {
   }
 
   .v2-mini-pipeline {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-intent-panel {
     grid-template-columns: 1fr;
   }
 }
