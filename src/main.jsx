@@ -949,10 +949,16 @@ function V2App(props) {
             </button>
           ))}
         </nav>
+        <div className="v2-recent-list">
+          <span>Recent</span>
+          <button>Campaign brief</button>
+          <button>Claude app build</button>
+          <button>Slide outline</button>
+        </div>
         <div className="v2-side-card">
-          <span>Current score</span>
-          <strong>{metrics.score}/100</strong>
-          <p>{statusLabel(generationStatus, generationSource)} · {generationModel}</p>
+          <span>Quota</span>
+          <strong>12.4k / 50k</strong>
+          <p>Resets May 31 · Upgrade</p>
         </div>
       </aside>
 
@@ -986,9 +992,11 @@ function V2Header({ active, setActive, settingsStatus }) {
         <strong>{subtitles[active] || subtitles.Builder}</strong>
       </div>
       <div className="v2-header-actions">
+        <span className="v2-sync"><i /> Synced</span>
         <button className="v2-search" onClick={() => setActive("Library")}>
           <Search size={15} />
           <span>Search library</span>
+          <kbd>⌘K</kbd>
         </button>
         <span className={`v2-health ${settingsStatus?.ok ? "ready" : ""}`}>
           {settingsStatus?.ok ? "Provider ready" : "Local fallback ready"}
@@ -996,6 +1004,7 @@ function V2Header({ active, setActive, settingsStatus }) {
         <button className="v2-icon-btn" onClick={() => setActive("Settings")} title="Settings">
           <Settings size={18} />
         </button>
+        <div className="v2-avatar">F</div>
       </div>
     </header>
   );
@@ -1038,7 +1047,7 @@ function V2Builder(props) {
 
       <section className="v2-stats-strip">
         <V2Stat label="Clarity" value={`${metrics.clarity}%`} detail="Intent and role parsed" />
-        <V2Stat label="Context" value={`${metrics.context}%`} detail={`${attachments.length} attachment`} />
+        <V2Stat label="Token estimate" value="3,840 tok" detail="within budget" />
         <V2Stat label="Output format" value={`${metrics.format}%`} detail={outputType} />
         <V2Stat label="Engine" value={generationModel} detail="active routing" compact />
       </section>
@@ -1136,11 +1145,16 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
           <button onClick={() => copyText(prompt)} title="Copy"><Clipboard size={16} /></button>
           <button onClick={() => savePrompt(prompt, narrative)} title="Save"><Archive size={16} /></button>
         </div>
+        <div className="v2-output-tabs">
+          <button className="active">Optimized <em>v1</em></button>
+          <button>Narration</button>
+          <button>Schema</button>
+        </div>
         <pre>{prompt}</pre>
         <div className="v2-actions wrap">
           <button className="v2-btn" onClick={() => exportFile("docx", prompt, narrative)}><FileText size={16} />DOCX</button>
           <button className="v2-btn" onClick={() => exportFile("pptx", prompt, narrative)}><BookOpenText size={16} />PPTX</button>
-          <span className="v2-small">{exportStatus || "Export menyimpan prompt final sebagai file kerja."}</span>
+          <span className="v2-small">{exportStatus || "Export saves the final prompt as a working file."}</span>
         </div>
       </div>
     </aside>
