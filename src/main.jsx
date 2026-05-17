@@ -1035,7 +1035,7 @@ function V2Builder(props) {
   return (
     <div className="v2-screen">
       <V2PageIntro
-        eyebrow="Studio v2"
+        eyebrow="Builder"
         title={<>The cleanest <em>prompt</em>, before you hit run.</>}
         copy="Turn raw ideas, files, and screenshots into precise instructions for Claude, ChatGPT, Gemini, and other creative models."
       >
@@ -1052,8 +1052,6 @@ function V2Builder(props) {
         <V2Stat label="Output format" value={`${metrics.format}%`} detail={outputType} />
         <V2Stat label="Engine" value={generationModel} detail="active routing" compact />
       </section>
-
-      {isGenerating && <V2GenerateLoader attachments={attachments} model={model} outputType={outputType} />}
 
       <section className="v2-studio-grid">
         <div className="v2-card v2-composer">
@@ -1093,6 +1091,7 @@ function V2Builder(props) {
             <button className="v2-btn" onClick={() => savePrompt(prompt, narrative)}><Save size={17} />Save</button>
             <button className="v2-btn" onClick={() => copyText(prompt)}>{copied ? <Check size={17} /> : <Clipboard size={17} />}Copy</button>
           </div>
+          {isGenerating && <V2GenerateLoader attachments={attachments} model={model} outputType={outputType} />}
           {warningMessage && <p className="v2-note warn">{warningMessage}</p>}
           {errorMessage && <p className="v2-note error">{errorMessage}</p>}
         </div>
@@ -1146,6 +1145,13 @@ function V2GenerateLoader({ attachments, model, outputType }) {
 }
 
 function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource, generationModel, copyText, savePrompt, exportFile, narrative, exportStatus, isGenerating }) {
+  const [actionFeedback, setActionFeedback] = useState("");
+  const confirmAction = (label, action) => {
+    action();
+    setActionFeedback(label);
+    window.setTimeout(() => setActionFeedback(""), 1500);
+  };
+
   return (
     <aside className="v2-output-stack">
       <div className="v2-card v2-readiness">
@@ -1176,8 +1182,13 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
         <div className="v2-prompt-toolbar">
           <strong>Optimized Prompt</strong>
           <span>{statusLabel(generationStatus, generationSource)} · {generationModel}</span>
-          <button onClick={() => copyText(prompt)} title="Copy"><Clipboard size={16} /></button>
-          <button onClick={() => savePrompt(prompt, narrative)} title="Save"><Archive size={16} /></button>
+          {actionFeedback && <em>{actionFeedback}</em>}
+          <button type="button" onClick={() => confirmAction("Copied", () => copyText(prompt))} title="Copy prompt" aria-label="Copy prompt">
+            <Clipboard size={16} />
+          </button>
+          <button type="button" onClick={() => confirmAction("Saved", () => savePrompt(prompt, narrative))} title="Save prompt" aria-label="Save prompt">
+            <Archive size={16} />
+          </button>
         </div>
         <div className="v2-output-tabs">
           <button className="active">Optimized <em>v1</em></button>

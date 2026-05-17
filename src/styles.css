@@ -712,11 +712,11 @@ button {
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-columns: auto minmax(220px, 0.8fr) minmax(0, 1.4fr);
-  gap: 16px;
+  grid-template-columns: auto minmax(190px, 0.65fr) minmax(0, 1fr);
+  gap: 12px;
   align-items: center;
-  margin: 16px 0;
-  padding: 16px;
+  margin: 14px 0 0;
+  padding: 12px;
   border: 1px solid var(--ac-line);
   border-radius: var(--r-md);
   background:
@@ -741,8 +741,8 @@ button {
 }
 
 .v2-loader-orb {
-  width: 54px;
-  height: 54px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   border-radius: 16px;
@@ -757,7 +757,7 @@ button {
   margin-top: 6px;
   color: var(--fg);
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 400;
 }
 
@@ -781,12 +781,12 @@ button {
 .v2-loader-steps {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .v2-loader-steps div {
-  min-height: 84px;
-  padding: 10px;
+  min-height: 72px;
+  padding: 8px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r);
   background: oklch(0.135 0.012 220 / 0.62);
@@ -805,14 +805,14 @@ button {
   display: block;
   margin-top: 8px;
   color: var(--fg);
-  font-size: 12.5px;
+  font-size: 12px;
 }
 
 .v2-loader-steps small {
   display: block;
   margin-top: 4px;
   color: var(--fg-mute);
-  line-height: 1.35;
+  line-height: 1.25;
 }
 
 @keyframes v2-loader-sweep {
@@ -1111,6 +1111,19 @@ button {
   margin-right: auto;
   color: var(--fg-mute);
   font-size: 12px;
+}
+
+.v2-prompt-toolbar em {
+  padding: 5px 8px;
+  border: 1px solid var(--ac-line);
+  border-radius: 999px;
+  color: var(--ac);
+  background: var(--ac-soft);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .v2-prompt-toolbar button {
