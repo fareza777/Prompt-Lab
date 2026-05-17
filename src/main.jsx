@@ -1010,7 +1010,6 @@ function BuilderPanel({
   generatePrompt,
   savePrompt,
   isGenerating,
-  setBuilderFromTemplate,
 }) {
   return (
     <div className="builder-panel">
@@ -1039,15 +1038,6 @@ function BuilderPanel({
           <Save size={18} />
           Save
         </button>
-      </div>
-      <div className="template-strip">
-        {templates.slice(0, 4).map((template) => (
-          <button key={template.title} onClick={() => setBuilderFromTemplate(template)}>
-            <span>{template.category}</span>
-            <strong>{template.title}</strong>
-            <small>{template.model} · {template.outputType}</small>
-          </button>
-        ))}
       </div>
     </div>
   );
