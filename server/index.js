@@ -839,12 +839,9 @@ function getIntentEngineInstruction(payload, attachments) {
 - Context signal: ${attachments.length ? `${attachments.length} lampiran tersedia sebagai konteks` : "tidak ada lampiran"}.
 - Frame wajib: ${frames.join(", ")}.
 
-Struktur prompt final wajib:
-1. PromptLab Intent Engine Brief
-2. Final Executable Prompt
-3. Implementation/Delivery Checklist
-4. Acceptance Criteria
-5. Clarifying Questions hanya jika benar-benar menghalangi pekerjaan`;
+Gunakan brief ini sebagai proses berpikir internal.
+Jangan masukkan judul "PromptLab Intent Engine Brief" ke output final.
+Output yang dikembalikan harus langsung berupa Final Executable Prompt yang siap dicopy user, berisi role, context, task, requirements, constraints, output format, implementation/delivery checklist, acceptance criteria, dan clarifying questions hanya jika benar-benar menghalangi pekerjaan.`;
 }
 
 function getIntentDomain(text, asksApp, asksPresentation, asksDocument) {

@@ -402,10 +402,9 @@ Execution steps:
 6. Ask up to 3 specific questions only when a missing fact blocks the work.
 
 Output:
-1. PromptLab Intent Engine Brief: domain, archetype, inferred scope, assumptions.
-2. Final executable prompt: complete prompt for ${outputType}.
-3. Quality gate: 5 checks that prove the prompt is not generic.
-4. Next iteration: 1-3 useful improvements.
+Return only the final executable prompt for ${outputType}.
+Do not include the PromptLab Intent Engine Brief in the copied prompt.
+The brief is internal context and is already shown separately in the UI.
 
 Length:
 - Keep bullets under 18 words unless technical detail requires more.
@@ -507,11 +506,9 @@ Language style:
 - Suitable for the intended audience
 
 Output format:
-1. PromptLab Intent Engine Brief
-2. Final executable prompt according to the requested output type
-3. Implementation or delivery checklist
-4. Acceptance criteria
-5. Next iteration suggestions
+Return only the final executable prompt according to the requested output type.
+Inside that prompt, include the sections needed by the target AI, such as role, context, task, requirements, constraints, output format, implementation checklist, and acceptance criteria.
+Do not include the PromptLab Intent Engine Brief in the copied prompt.
 
 Constraints:
 - Ask at most 3 clarifying questions only when critical information is missing
