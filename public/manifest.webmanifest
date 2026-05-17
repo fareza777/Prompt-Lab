@@ -1,0 +1,19 @@
+{
+  "name": "PromptLab",
+  "short_name": "PromptLab",
+  "description": "Ubah narasi biasa, gambar, screenshot, dan file menjadi prompt AI profesional.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#172033",
+  "theme_color": "#172033",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "utilities", "education"],
+  "icons": [
+    {
+      "src": "/promptlab-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

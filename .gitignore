@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.env.local
+*.log
+promptlab-*.png
+test-export.*
+api-test.txt
