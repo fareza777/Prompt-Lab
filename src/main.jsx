@@ -252,6 +252,12 @@ function inferIntentBlueprint(narrative, category, outputType, attachments = [])
 
   const domainRules = [
     {
+      match: /\b(informasi|survey|survei|kuesioner|questionnaire|form|formulir)\b/i,
+      domain: "Survey and form intelligence",
+      archetype: "structured analysis flow with fields, responses, validation, segmentation, and summary output",
+      expansions: ["question mapping", "response structure", "validation", "segmentation", "summary", "export"],
+    },
+    {
       match: /\b(edit foto|photo editor|image editor|gambar|foto)\b/i,
       domain: "Creative photo tool",
       archetype: "canvas editor with upload, controls, preview, undo, and export",
@@ -309,6 +315,19 @@ function inferIntentBlueprint(narrative, category, outputType, attachments = [])
     "constraints",
     "quality checks",
   ];
+  const attachmentTypes = attachments.reduce((acc, file) => {
+    const type = file.kind || (file.type?.startsWith("image/") ? "image" : "file");
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {});
+  const attachmentSummary = Object.entries(attachmentTypes)
+    .map(([type, count]) => `${count} ${type}`)
+    .join(", ");
+  const attachmentNames = attachments
+    .slice(0, 3)
+    .map((file) => file.name)
+    .filter(Boolean)
+    .join(", ");
 
   const implementationFrames = asksApp
     ? ["project structure", "frontend screens", "backend/API or mock API", "data model", "user flows", "validation states", "local run steps", "acceptance criteria"]
@@ -324,7 +343,8 @@ function inferIntentBlueprint(narrative, category, outputType, attachments = [])
     deliverable,
     expansions: baseExpansions,
     implementationFrames,
-    attachmentSignal: attachments.length ? `${attachments.length} context file(s)` : "No attachment context",
+    attachmentSignal: attachments.length ? `${attachments.length} attachment(s): ${attachmentSummary}` : "No attachment context",
+    attachmentNames,
     qualityGates: ["intent locked", "domain expanded", "missing details inferred", "output type protected", "acceptance testable"],
   };
 }
@@ -335,6 +355,7 @@ function formatIntentBlueprint(blueprint) {
 - Product archetype: ${blueprint.archetype}
 - Final deliverable: ${blueprint.deliverable}
 - Context signal: ${blueprint.attachmentSignal}
+${blueprint.attachmentNames ? `- Attachment names: ${blueprint.attachmentNames}` : ""}
 - Domain expansion: ${blueprint.expansions.join(", ")}
 - Implementation frame: ${blueprint.implementationFrames.join(", ")}
 - Quality gates: ${blueprint.qualityGates.join(", ")}`;
@@ -428,14 +449,17 @@ ${file.excerpt ? file.excerpt : "Content is not available in the local preview. 
 ${cleanNarrative}
 </task>
 
-<promptlab_intent_engine>
-${formatIntentBlueprint(blueprint)}
-</promptlab_intent_engine>
-
 Act as a ${inferRole(category)}.
 
+Interpreted brief:
+- Domain: ${blueprint.domain}
+- Archetype: ${blueprint.archetype}
+- Deliverable: ${blueprint.deliverable}
+- Context: ${blueprint.attachmentSignal}${blueprint.attachmentNames ? ` (${blueprint.attachmentNames})` : ""}
+- Implementation frame: ${blueprint.implementationFrames.join(", ")}
+
 Goal:
-- First decompose the user's raw request through the PromptLab Intent Engine.
+- First decompose the user's raw request into intent, domain, assumptions, and delivery requirements.
 - Produce a stronger prompt than a direct chatbot answer would produce.
 - Produce the exact deliverable requested in <task>.
 - Use the selected output type as the primary boundary: ${outputType}.
@@ -531,12 +555,15 @@ Attachment instructions:
 
   return `Act as a ${inferRole(category)}.
 
-You are using the PromptLab Intent Engine, a meta-prompt layer that makes this result stronger than sending the raw request directly to a chatbot.
-
-${formatIntentBlueprint(blueprint)}
-
 Transform the following raw request into a professional, executable prompt for ${model}:
 "${cleanNarrative}"${attachmentContext}
+
+Interpreted brief:
+- Domain: ${blueprint.domain}
+- Archetype: ${blueprint.archetype}
+- Deliverable: ${blueprint.deliverable}
+- Context: ${blueprint.attachmentSignal}${blueprint.attachmentNames ? ` (${blueprint.attachmentNames})` : ""}
+- Implementation frame: ${blueprint.implementationFrames.join(", ")}
 
 Requested output type:
 - ${outputType}
@@ -1392,6 +1419,7 @@ function V2IntentEnginePanel({ blueprint, eyebrow = "PromptLab Intent Engine" })
         <div className="v2-intent-tags">
           <span>{blueprint.deliverable}</span>
           <span>{blueprint.attachmentSignal}</span>
+          {blueprint.attachmentNames && <span>{blueprint.attachmentNames}</span>}
         </div>
       </div>
       <div className="v2-intent-stack">

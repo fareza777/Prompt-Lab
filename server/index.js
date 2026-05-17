@@ -1193,6 +1193,7 @@ function getIntentEngineInstruction(payload, attachments) {
   const asksDocument = /\b(word|docx|dokumen|document|laporan|report|proposal)\b/i.test(text);
 
   const domain = getIntentDomain(text, asksApp, asksPresentation, asksDocument);
+  const attachmentManifest = buildAttachmentManifest(attachments);
   const frames = asksApp
     ? [
         "struktur proyek",
@@ -1217,6 +1218,10 @@ function getIntentEngineInstruction(payload, attachments) {
 - Tambahkan detail profesional yang wajar bila user belum menyebutkannya, tetapi tandai sebagai asumsi.
 - Kunci jenis output: ${payload.outputType || "tidak dipilih"}. Jangan ubah karena lampiran.
 - Context signal: ${attachments.length ? `${attachments.length} lampiran tersedia sebagai konteks` : "tidak ada lampiran"}.
+${attachmentManifest ? `- Attachment manifest:\n${attachmentManifest}` : "- Attachment manifest: none."}
+- Jika isi/OCR lampiran tersedia, gunakan sebagai konteks utama untuk intent, domain expansion, fitur, data, tabel, visual, dan constraints.
+- Jika lampiran berupa foto/screenshot, baca teks/OCR dan tafsirkan UI, tabel, instruksi, atau konteks visual yang tampak.
+- Jika lampiran berupa dokumen, jadikan isi dokumen sebagai sumber fakta utama, tetapi jangan menjadikan tipe file sebagai jenis output.
 - Frame wajib: ${frames.join(", ")}.
 
 Gunakan brief ini sebagai proses berpikir internal.
@@ -1224,7 +1229,21 @@ Jangan masukkan judul "PromptLab Intent Engine Brief" ke output final.
 Output yang dikembalikan harus langsung berupa Final Executable Prompt yang siap dicopy user, berisi role, context, task, requirements, constraints, output format, implementation/delivery checklist, acceptance criteria, dan clarifying questions hanya jika benar-benar menghalangi pekerjaan.`;
 }
 
+function buildAttachmentManifest(attachments = []) {
+  if (!attachments.length) return "";
+  return attachments
+    .slice(0, 8)
+    .map((file, index) => {
+      const source = file.excerpt
+        ? `extracted context: ${file.excerpt.slice(0, 700)}`
+        : "extracted context: not available yet; use file metadata and ask only if blocked";
+      return `  ${index + 1}. ${file.filename} (${file.kind}, ${file.mime}, ${formatBytes(file.size)}) - ${source}`;
+    })
+    .join("\n");
+}
+
 function getIntentDomain(text, asksApp, asksPresentation, asksDocument) {
+  if (/\b(informasi|survey|survei|kuesioner|questionnaire|form|formulir)\b/i.test(text)) return "survey or form analysis";
   if (/\b(edit foto|photo editor|image editor|gambar|foto)\b/i.test(text)) return "creative photo editing tool";
   if (/\b(kasir|pos|point of sale|checkout|struk|stok|inventory)\b/i.test(text)) return "retail POS system";
   if (/\b(dashboard|analytics|reporting|monitoring|admin)\b/i.test(text)) return "operational dashboard";
