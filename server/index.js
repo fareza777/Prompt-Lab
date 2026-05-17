@@ -242,7 +242,7 @@ app.post("/api/optimize-prompt", async (req, res) => {
               {
                 type: "input_text",
                 text:
-                  "You are PromptLab Optimizer. Improve an existing prompt in Indonesian. Return only the optimized prompt plus a concise improvement checklist.",
+                  "You are PromptLab Optimizer Engine. Improve an existing prompt in Indonesian using the selected optimization mode as a meta-prompt layer. Preserve the original deliverable and return only the final optimized prompt ready to copy. Do not include a separate engine brief.",
               },
             ],
           },
@@ -595,7 +595,7 @@ async function createOpenRouterOptimizeCompletion(payload, runtime = getRuntimeP
     {
       role: "system",
       content:
-        "You are PromptLab Optimizer, a senior prompt engineer. Improve the user's prompt in Indonesian. Preserve the original intent, do not change the requested deliverable, and return only the optimized prompt plus a short checklist.",
+        "You are PromptLab Optimizer Engine, a senior prompt architect. Improve the user's prompt in Indonesian using the selected optimization mode as a meta-prompt layer. Preserve the original intent, do not change the requested deliverable, and return only the final optimized prompt ready to copy. Do not include a separate engine brief.",
     },
     {
       role: "user",
@@ -697,6 +697,7 @@ function formatProviderError(error) {
 
 function buildOptimizerInstruction(payload) {
   const targetGuidance = getTargetModelGuidance(payload.targetModel);
+  const optimizerEngine = getOptimizerEngineInstruction(payload);
   return `Optimalkan prompt berikut.
 
 Mode optimasi:
@@ -708,6 +709,8 @@ Target AI:
 Tone:
 - ${payload.tone}
 
+${optimizerEngine}
+
 Prompt lama:
 ${payload.prompt}
 
@@ -716,11 +719,62 @@ Tugas:
 - Jangan mengubah permintaan aplikasi menjadi dokumen teknis, jangan mengubah permintaan PPT menjadi Word, dan jangan mengubah permintaan Word menjadi PPT.
 - Tambahkan role, konteks, tujuan, format output, batasan, dan instruksi klarifikasi bila belum ada.
 - Buat prompt final yang bisa langsung dicopy ke AI.
+- Terapkan mode optimasi secara spesifik, bukan rewrite generik.
+- Jangan masukkan judul "PromptLab Optimizer Engine" ke output final.
 ${targetGuidance}
 
 Format jawaban:
-1. Prompt Final
-2. Checklist Perbaikan`;
+Return only the final optimized prompt, ready to copy. Do not include a separate engine brief.`;
+}
+
+function getOptimizerEngineInstruction(payload) {
+  const mode = String(payload.mode || "").toLowerCase();
+  const profiles = [
+    {
+      test: /clear|jelas/,
+      name: "Clarity optimizer",
+      goal: "perjelas ambiguitas, role, konteks, tugas, output order, dan success criteria",
+      frames: ["ambiguity audit", "role/context lock", "output order", "success criteria"],
+    },
+    {
+      test: /short|singkat/,
+      name: "Compression optimizer",
+      goal: "ringkas repetisi tanpa membuang maksud, deliverable, constraints, dan quality gates",
+      frames: ["deduplicate", "preserve intent", "tighten wording", "keep constraints"],
+    },
+    {
+      test: /detail/,
+      name: "Deep brief optimizer",
+      goal: "tambahkan requirement, edge cases, validasi, dan acceptance criteria",
+      frames: ["requirement expansion", "edge cases", "validation", "acceptance criteria"],
+    },
+    {
+      test: /academic|akademik/,
+      name: "Academic optimizer",
+      goal: "ubah instruksi longgar menjadi struktur formal, objektif, dan evidence-aware",
+      frames: ["formal scope", "evidence handling", "section order", "citation guardrails"],
+    },
+    {
+      test: /marketing/,
+      name: "Marketing optimizer",
+      goal: "kuatkan audiens, offer, proof, CTA, tone, dan conversion objective",
+      frames: ["audience", "offer", "proof", "CTA"],
+    },
+    {
+      test: /coding|kode/,
+      name: "Implementation optimizer",
+      goal: "ubah prompt coding menjadi spesifikasi runnable dengan file, UI, API, state, tests, dan local run steps",
+      frames: ["file structure", "UI/API/data", "states", "tests"],
+    },
+  ];
+  const profile = profiles.find((item) => item.test.test(mode)) || profiles[0];
+  return `PromptLab Optimizer Engine:
+- Mode engine: ${profile.name}.
+- Tujuan mode: ${profile.goal}.
+- Frame rewrite wajib: ${profile.frames.join(", ")}.
+- Preserve: maksud asli, jenis deliverable, target AI, dan fakta yang sudah ada.
+- Improve: role, context, task, requirements, constraints, output format, quality checks.
+- Output final harus langsung berupa prompt hasil optimize yang siap dicopy.`;
 }
 
 function isClaudeTarget(modelTarget) {
@@ -1132,6 +1186,10 @@ function buildLocalOptimizedPrompt(payload) {
     return buildClaudeOptimizedPrompt(payload, source);
   }
   const modeInstruction = {
+    Clearer: "perjelas konteks, tujuan, format output, dan batasan agar AI tidak menebak.",
+    Shorter: "padatkan instruksi tanpa menghilangkan role, tujuan, format, dan constraints.",
+    "More Detailed": "tambahkan konteks, cakupan kerja, acceptance criteria, dan instruksi kualitas.",
+    Academic: "gunakan bahasa formal, objektif, berbasis data, dan struktur akademik.",
     "Lebih Jelas": "perjelas konteks, tujuan, format output, dan batasan agar AI tidak menebak.",
     "Lebih Singkat": "padatkan instruksi tanpa menghilangkan role, tujuan, format, dan constraints.",
     "Lebih Detail": "tambahkan konteks, cakupan kerja, acceptance criteria, dan instruksi kualitas.",
@@ -1139,6 +1197,7 @@ function buildLocalOptimizedPrompt(payload) {
     Marketing: "kuatkan audiens, value proposition, pesan utama, CTA, dan batasan brand voice.",
     Coding: "kuatkan spesifikasi fitur, stack, struktur file, acceptance criteria, dan instruksi testing.",
   }[payload.mode] || "rapikan struktur prompt agar lebih siap dipakai.";
+  const optimizerEngine = getOptimizerEngineInstruction(payload);
 
   return `**Prompt Final**
 
@@ -1146,6 +1205,8 @@ function buildLocalOptimizedPrompt(payload) {
 
 **Context:** User memiliki kebutuhan berikut dan ingin hasil yang langsung bisa digunakan:
 ${source}
+
+${optimizerEngine}
 
 **Objective:** Kerjakan kebutuhan tersebut dengan kualitas tinggi. Pertahankan jenis output yang diminta dalam prompt lama, lalu ${modeInstruction}
 
@@ -1162,6 +1223,7 @@ ${source}
 - Jangan mengarang data yang tidak diberikan.
 - Jika konteks sudah cukup, langsung kerjakan tanpa meminta file/informasi ulang.
 - Jika perlu bertanya, batasi maksimal 3 pertanyaan yang benar-benar krusial.
+- Jangan tampilkan bagian PromptLab Optimizer Engine di output final provider; gunakan hanya sebagai logika internal.
 
 **Target AI:** Optimalkan untuk ${payload.targetModel}.
 
@@ -1173,6 +1235,10 @@ ${source}
 
 function buildClaudeOptimizedPrompt(payload, source) {
   const modeInstruction = {
+    Clearer: "Name the exact scope, output order, boundaries, and success criteria.",
+    Shorter: "Keep the prompt compact while preserving scope, output order, and boundaries.",
+    "More Detailed": "Add explicit steps, acceptance criteria, and concrete output caps.",
+    Academic: "Use formal academic structure, evidence mapping, and concise claims.",
     "Lebih Jelas": "Name the exact scope, output order, boundaries, and success criteria.",
     "Lebih Singkat": "Keep the prompt compact while preserving scope, output order, and boundaries.",
     "Lebih Detail": "Add explicit steps, acceptance criteria, and concrete output caps.",
@@ -1180,10 +1246,15 @@ function buildClaudeOptimizedPrompt(payload, source) {
     Marketing: "Define audience, offer, proof, CTA, voice, and conversion goal.",
     Coding: "Define stack, file structure, implementation steps, tests, and acceptance criteria.",
   }[payload.mode] || "Make the task clear, direct, and detailed.";
+  const optimizerEngine = getOptimizerEngineInstruction(payload);
 
   return `<task>
 Optimize this prompt for Claude while preserving its original deliverable.
 </task>
+
+<promptlab_optimizer_engine>
+${optimizerEngine}
+</promptlab_optimizer_engine>
 
 <original_prompt>
 ${source}
@@ -1204,8 +1275,7 @@ Execution steps:
 5. Add tool/search instructions only when the task needs current or external facts.
 
 Output:
-1. Prompt Final
-2. Checklist Perbaikan
+Return only the final optimized prompt. Do not include a separate engine brief.
 
 Style:
 - Use ${payload.tone} Indonesian.

@@ -340,6 +340,54 @@ function formatIntentBlueprint(blueprint) {
 - Quality gates: ${blueprint.qualityGates.join(", ")}`;
 }
 
+function inferOptimizerBlueprint(rawPrompt, mode) {
+  const modeMap = {
+    Clearer: {
+      domain: "Clarity optimizer",
+      archetype: "audit ambiguity, sharpen role/context/task, and make success criteria explicit",
+      deliverable: "Clearer final prompt",
+      implementationFrames: ["ambiguity audit", "role/context lock", "output order", "success criteria"],
+    },
+    Shorter: {
+      domain: "Compression optimizer",
+      archetype: "remove repetition while preserving deliverable, constraints, and quality gates",
+      deliverable: "Compact final prompt",
+      implementationFrames: ["deduplicate", "preserve intent", "tighten wording", "keep constraints"],
+    },
+    "More Detailed": {
+      domain: "Deep brief optimizer",
+      archetype: "expand missing requirements, edge cases, validation, and acceptance criteria",
+      deliverable: "Detailed final prompt",
+      implementationFrames: ["requirement expansion", "edge cases", "validation", "acceptance criteria"],
+    },
+    Academic: {
+      domain: "Academic optimizer",
+      archetype: "convert loose instructions into formal, evidence-aware academic structure",
+      deliverable: "Academic final prompt",
+      implementationFrames: ["formal scope", "evidence handling", "section order", "citation guardrails"],
+    },
+    Marketing: {
+      domain: "Marketing optimizer",
+      archetype: "strengthen audience, offer, proof, CTA, tone, and conversion objective",
+      deliverable: "Marketing-ready final prompt",
+      implementationFrames: ["audience", "offer", "proof", "CTA"],
+    },
+    Coding: {
+      domain: "Implementation optimizer",
+      archetype: "turn coding requests into runnable specs with files, UI, API, state, tests, and local run steps",
+      deliverable: "Developer-ready final prompt",
+      implementationFrames: ["file structure", "UI/API/data", "states", "tests"],
+    },
+  };
+  const selected = modeMap[mode] || modeMap.Clearer;
+  return {
+    ...selected,
+    attachmentSignal: rawPrompt.trim() ? "Existing prompt loaded" : "Waiting for source prompt",
+    expansions: ["intent preservation", "deliverable guard", "mode-specific rewrite", "copy-ready output"],
+    qualityGates: ["original intent preserved", "mode applied", "format locked", "fallback-safe"],
+  };
+}
+
 function isClaudeTarget(model) {
   return /claude/i.test(model);
 }
@@ -537,9 +585,10 @@ function scorePrompt(prompt) {
 
 function buildLocalOptimizedPrompt(rawPrompt, mode, targetModel, tone) {
   const source = rawPrompt.trim() || "Write the old prompt here.";
+  const optimizerBlueprint = inferOptimizerBlueprint(source, mode);
   if (isClaudeTarget(targetModel)) {
     return buildClaudePrompt({
-      narrative: `Optimize this prompt for Claude while preserving the original deliverable:\n\n${source}`,
+      narrative: `Optimize this prompt for Claude using ${mode} mode while preserving the original deliverable. Apply this optimizer blueprint internally and return only the final optimized prompt:\n\n${formatIntentBlueprint(optimizerBlueprint)}\n\nSource prompt:\n${source}`,
       category: "Business",
       tone,
       outputType: "Optimized Claude Prompt",
@@ -555,6 +604,8 @@ function buildLocalOptimizedPrompt(rawPrompt, mode, targetModel, tone) {
 **Context:** The user's original prompt is:
 ${source}
 
+**PromptLab Optimizer Engine:** Apply ${optimizerBlueprint.domain}. Use this only as internal rewrite logic: ${optimizerBlueprint.archetype}.
+
 **Objective:** Optimize the prompt using "${mode}" mode for ${targetModel}. Preserve the original intent and requested output type. Do not turn an app request into a document, a PPT request into Word, or a Word request into PPT unless the user explicitly asks for it.
 
 **Output Format:**
@@ -569,6 +620,7 @@ ${source}
 - Do not invent data that was not provided.
 - Use attachments as context when available, not as the output type selector.
 - If the information is sufficient, proceed without asking for the file again.
+- Return only the final optimized prompt. Do not include a separate engine brief.
 
 **Improvement Checklist**
 - Role, context, objective, output, and constraints are explicit.
@@ -1229,13 +1281,13 @@ function V2Builder(props) {
   );
 }
 
-function V2IntentEnginePanel({ blueprint }) {
+function V2IntentEnginePanel({ blueprint, eyebrow = "PromptLab Intent Engine" }) {
   const visibleFrames = blueprint.implementationFrames.slice(0, 4);
   return (
     <section className="v2-intent-panel">
       <div className="v2-intent-orbit"><BrainCircuit size={18} /></div>
       <div className="v2-intent-main">
-        <span className="v2-eyebrow">PromptLab Intent Engine</span>
+        <span className="v2-eyebrow">{eyebrow}</span>
         <h3>{blueprint.domain}</h3>
         <p>{blueprint.archetype}</p>
         <div className="v2-intent-tags">
@@ -1347,9 +1399,9 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
           </button>
         </div>
         <div className="v2-output-tabs">
-          <button className="active">Optimized <em>v1</em></button>
-          <button>Narration</button>
-          <button>Schema</button>
+          <button className="active">Final Prompt <em>v1</em></button>
+          <button type="button">Ready to Copy</button>
+          <button type="button">Exportable</button>
         </div>
         <pre>{prompt}</pre>
         {isGenerating && (
@@ -1383,6 +1435,7 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
   const result = optimizerResult || buildLocalOptimizedPrompt(rawPrompt, mode, "Claude", "Professional");
   const beforeScore = scorePrompt(rawPrompt);
   const afterScore = scorePrompt(result);
+  const optimizerBlueprint = useMemo(() => inferOptimizerBlueprint(rawPrompt, mode), [rawPrompt, mode]);
   const summary = [
     ["Role", beforeScore.score > 60 ? "sharpened" : "added"],
     ["Context", `${Math.max(0, afterScore.context - beforeScore.context)} pt gain`],
@@ -1398,6 +1451,7 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
         <div className="v2-card">
           <div className="v2-card-head"><h2>Input</h2><span className="v2-score-badge">{beforeScore.score}</span></div>
           <textarea className="v2-textarea" value={rawPrompt} onChange={(event) => setRawPrompt(event.target.value)} />
+          <V2IntentEnginePanel blueprint={optimizerBlueprint} eyebrow="PromptLab Optimizer Engine" />
           <V2ChipGroup label="Optimization Mode" options={optimizerModes} value={mode} onChange={setMode} />
           <div className="v2-actions">
             <button className="v2-btn primary" onClick={() => optimizePrompt(rawPrompt, mode)} disabled={isOptimizing}><Zap size={17} />{isOptimizing ? "Optimizing..." : "Optimize"}</button>
