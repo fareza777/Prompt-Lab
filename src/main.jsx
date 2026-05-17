@@ -583,6 +583,53 @@ function scorePrompt(prompt) {
   };
 }
 
+function buildLocalCompareResult(promptA, promptB) {
+  const scoreA = scorePrompt(promptA || "");
+  const scoreB = scorePrompt(promptB || "");
+  const winner = scoreA.score > scoreB.score ? "A" : scoreB.score > scoreA.score ? "B" : "tie";
+  return {
+    winner,
+    winner_label: winner === "A" ? "Prompt A" : winner === "B" ? "Prompt B" : "Tie",
+    summary: winner === "tie" ? "Both prompts are close by local readiness scoring." : `Prompt ${winner} has stronger local readiness.`,
+    scores: {
+      A: {
+        clarity: scoreA.clarity,
+        context: scoreA.context,
+        format: scoreA.format,
+        constraints: Math.max(40, scoreA.score - 4),
+        risk: Math.max(8, 100 - scoreA.score),
+        overall: scoreA.score,
+      },
+      B: {
+        clarity: scoreB.clarity,
+        context: scoreB.context,
+        format: scoreB.format,
+        constraints: Math.max(40, scoreB.score - 4),
+        risk: Math.max(8, 100 - scoreB.score),
+        overall: scoreB.score,
+      },
+    },
+    risks: {
+      A: getLocalPromptRisks(promptA),
+      B: getLocalPromptRisks(promptB),
+    },
+    recommendations: ["Lock the output format.", "Add acceptance criteria.", "Make constraints explicit."],
+    best_for: {
+      A: scoreA.context >= scoreB.context ? "Richer context" : "Short draft",
+      B: scoreB.context >= scoreA.context ? "Richer context" : "Short draft",
+    },
+    merged_prompt: `${scoreA.score >= scoreB.score ? promptA : promptB}\n\nQuality gates:\n- Preserve the requested deliverable.\n- Follow the output format.\n- State assumptions.\n- Ask clarifying questions only if blocked.`,
+  };
+}
+
+function getLocalPromptRisks(prompt = "") {
+  const risks = [];
+  if (!/role|act as|bertindak/i.test(prompt)) risks.push("Role is not explicit.");
+  if (!/format|output|struktur|json|markdown/i.test(prompt)) risks.push("Output format is not locked.");
+  if (!/constraint|batasan|jangan|must|wajib/i.test(prompt)) risks.push("Constraints are weak.");
+  return risks.length ? risks : ["No major local risks detected."];
+}
+
 function buildLocalOptimizedPrompt(rawPrompt, mode, targetModel, tone) {
   const source = rawPrompt.trim() || "Write the old prompt here.";
   const optimizerBlueprint = inferOptimizerBlueprint(source, mode);
@@ -650,6 +697,11 @@ function App() {
   const [selectedLibraryId, setSelectedLibraryId] = useState("");
   const [compareA, setCompareA] = useState("");
   const [compareB, setCompareB] = useState("");
+  const [compareResult, setCompareResult] = useState(null);
+  const [compareSource, setCompareSource] = useState("local");
+  const [compareWarning, setCompareWarning] = useState("");
+  const [compareError, setCompareError] = useState("");
+  const [isComparing, setIsComparing] = useState(false);
   const [settingsStatus, setSettingsStatus] = useState(null);
   const [generationMode, setGenerationMode] = useState(
     () => localStorage.getItem("promptlab-generation-mode") || "Balanced"
@@ -713,6 +765,12 @@ function App() {
   useEffect(() => {
     if (active === "Settings") refreshHealth();
   }, [active]);
+
+  useEffect(() => {
+    setCompareResult(null);
+    setCompareWarning("");
+    setCompareError("");
+  }, [compareA, compareB]);
 
   function setBuilderFromTemplate(template) {
     setNarrative(template.prompt);
@@ -846,6 +904,41 @@ function App() {
       return fallback;
     } finally {
       setIsOptimizing(false);
+    }
+  }
+
+  async function comparePrompts() {
+    setIsComparing(true);
+    setCompareError("");
+    setCompareWarning("");
+
+    try {
+      const response = await fetch(`${apiBase}/api/compare-prompts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          promptA: compareA,
+          promptB: compareB,
+          targetModel: model,
+          useCase: outputType,
+          generationMode,
+          ...modelSettings,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to compare prompts.");
+      setCompareResult(data.result || null);
+      setCompareSource(data.model || data.source || "AI judge");
+      setCompareWarning(data.warning || "");
+      return data.result;
+    } catch (error) {
+      const fallback = buildLocalCompareResult(compareA, compareB);
+      setCompareResult(fallback);
+      setCompareSource("Local judge");
+      setCompareError(error.message || "Compare provider unavailable, using local judge.");
+      return fallback;
+    } finally {
+      setIsComparing(false);
     }
   }
 
@@ -1007,6 +1100,12 @@ function App() {
     setCompareA,
     compareB,
     setCompareB,
+    compareResult,
+    compareSource,
+    compareWarning,
+    compareError,
+    isComparing,
+    comparePrompts,
     settingsStatus,
     refreshHealth,
     generationMode,
@@ -1144,7 +1243,7 @@ function V2Header({ active, setActive, settingsStatus }) {
     Optimizer: "Diff an old prompt into a sharper, safer instruction.",
     Templates: "Start from production-ready prompt patterns.",
     Library: "Manage your best prompts as reusable work assets.",
-    Compare: "Compare models and prompt versions before sending them.",
+    Compare: "Run an AI judge on two prompt versions before sending them.",
     Settings: "Configure provider, endpoint, model, timeout, and fallback.",
   };
   return (
@@ -1587,28 +1686,72 @@ function V2Library(props) {
   );
 }
 
-function V2Compare({ compareA, setCompareA, compareB, setCompareB, setNarrative, savePrompt, copyText, setActive }) {
-  const modelsToShow = ["ChatGPT", "Claude", "Gemini"];
+function V2Compare({
+  compareA,
+  setCompareA,
+  compareB,
+  setCompareB,
+  setNarrative,
+  savePrompt,
+  copyText,
+  setActive,
+  compareResult,
+  compareSource,
+  compareWarning,
+  compareError,
+  isComparing,
+  comparePrompts,
+}) {
   const prompts = [compareA, compareB].filter(Boolean);
   const basePrompt = prompts[0] || "Paste prompt di panel A/B untuk membandingkan kualitas instruksi.";
   const scoreA = scorePrompt(compareA || "");
   const scoreB = scorePrompt(compareB || "");
-  const winnerPrompt = scoreA.score >= scoreB.score ? compareA : compareB;
+  const localWinner = scoreA.score >= scoreB.score ? "A" : "B";
+  const winnerKey = compareResult?.winner && compareResult.winner !== "tie" ? compareResult.winner : localWinner;
+  const winnerPrompt = winnerKey === "A" ? compareA : compareB;
+  const mergedPrompt = compareResult?.merged_prompt || winnerPrompt;
+  const aiScores = compareResult?.scores;
+  const compareCards = [
+    {
+      key: "A",
+      title: "Prompt A",
+      score: aiScores?.A?.overall ?? scoreA.score,
+      bestFor: compareResult?.best_for?.A || "Local readiness preview",
+      risks: compareResult?.risks?.A || getLocalPromptRisks(compareA),
+    },
+    {
+      key: "B",
+      title: "Prompt B",
+      score: aiScores?.B?.overall ?? scoreB.score,
+      bestFor: compareResult?.best_for?.B || "Local readiness preview",
+      risks: compareResult?.risks?.B || getLocalPromptRisks(compareB),
+    },
+    {
+      key: "J",
+      title: "AI Judge",
+      score: compareResult ? Math.max(aiScores?.A?.overall || 0, aiScores?.B?.overall || 0) : Math.min(99, Math.max(42, scorePrompt(basePrompt).score + 6)),
+      bestFor: compareResult?.summary || "Run AI Compare to let the active model judge both prompts.",
+      risks: compareResult?.recommendations || ["Waiting for AI judge."],
+    },
+  ];
   return (
     <div className="v2-screen">
-      <V2PageIntro eyebrow="Compare Lab" title="Side-by-side model readiness matrix." copy="Three model cards, two prompt inputs, and a local score matrix to choose the strongest version." />
+      <V2PageIntro eyebrow="Compare Lab" title="Prompt Battle Lab with an AI judge." copy="Compare two prompt versions locally, then ask the active model to pick the stronger prompt without executing it." />
       <section className="v2-compare-grid">
-        {modelsToShow.map((name, index) => {
-          const score = Math.min(99, Math.max(42, scorePrompt(basePrompt).score + index * 3));
-          return (
-            <div className="v2-card v2-model-card" key={name}>
-              <div className="v2-card-head"><h2>{name}</h2><span className="v2-score-badge">{score}</span></div>
-              <p>{basePrompt.slice(0, 180)}{basePrompt.length > 180 ? "..." : ""}</p>
-              <V2Metric label="Reasoning fit" value={score} />
-              <V2Metric label="Format safety" value={Math.min(99, score + 4)} />
+        {compareCards.map((card) => (
+          <div className={`v2-card v2-model-card ${winnerKey === card.key ? "winner" : ""}`} key={card.key}>
+            <div className="v2-card-head">
+              <h2>{card.title}</h2>
+              <span className={`v2-score-badge ${winnerKey === card.key ? "hot" : ""}`}>{card.score}</span>
             </div>
-          );
-        })}
+            <p>{card.bestFor}</p>
+            <V2Metric label="Readiness" value={card.score} />
+            <V2Metric label="Risk control" value={Math.max(0, 100 - (card.risks?.length || 1) * 12)} />
+            <ul className="v2-risk-list">
+              {(card.risks || []).slice(0, 2).map((risk) => <li key={risk}>{risk}</li>)}
+            </ul>
+          </div>
+        ))}
       </section>
       <section className="v2-diff-grid">
         <div className="v2-card">
@@ -1621,15 +1764,43 @@ function V2Compare({ compareA, setCompareA, compareB, setCompareB, setNarrative,
         </div>
       </section>
       <div className="v2-card v2-score-matrix">
-        <div><strong>Matrix</strong><span>A</span><span>B</span></div>
-        {["Clarity", "Context", "Output format"].map((row) => (
-          <div key={row}><strong>{row}</strong><span>{scoreA[row === "Clarity" ? "clarity" : row === "Context" ? "context" : "format"]}%</span><span>{scoreB[row === "Clarity" ? "clarity" : row === "Context" ? "context" : "format"]}%</span></div>
+        <div><strong>AI Judge Matrix</strong><span>A</span><span>B</span></div>
+        {[
+          ["Clarity", "clarity"],
+          ["Context", "context"],
+          ["Output format", "format"],
+          ["Constraints", "constraints"],
+          ["Risk", "risk"],
+          ["Overall", "overall"],
+        ].map(([row, key]) => (
+          <div key={row}>
+            <strong>{row}</strong>
+            <span>{aiScores?.A?.[key] ?? (key === "overall" ? scoreA.score : scoreA[key] || Math.max(40, scoreA.score - 4))}%</span>
+            <span>{aiScores?.B?.[key] ?? (key === "overall" ? scoreB.score : scoreB[key] || Math.max(40, scoreB.score - 4))}%</span>
+          </div>
         ))}
+        {compareResult?.summary && <p className="v2-judge-summary">{compareResult.summary}</p>}
+        {compareWarning && <p className="v2-note warn">{compareWarning}</p>}
+        {compareError && <p className="v2-note error">{compareError}</p>}
+        {isComparing && (
+          <V2MiniPipeline
+            eyebrow="AI Compare"
+            title="Judging both prompts..."
+            steps={["Audit A", "Audit B", "Score", "Pick winner"]}
+          />
+        )}
         <div className="v2-actions wrap">
+          <button className="v2-btn primary" disabled={!compareA.trim() || !compareB.trim() || isComparing} onClick={comparePrompts}><Sparkles size={16} />{isComparing ? "Comparing..." : "Run AI Compare"}</button>
           <button className="v2-btn primary" disabled={!winnerPrompt?.trim()} onClick={() => { setNarrative(winnerPrompt); setActive("Builder"); }}><PenLine size={16} />Use winner</button>
+          <button className="v2-btn" disabled={!mergedPrompt?.trim()} onClick={() => { setNarrative(mergedPrompt); setActive("Builder"); }}><Wand2 size={16} />Use merged</button>
           <button className="v2-btn" disabled={!winnerPrompt?.trim()} onClick={() => savePrompt(winnerPrompt, "Compare winner")}><Save size={16} />Save</button>
           <button className="v2-btn" disabled={!winnerPrompt?.trim()} onClick={() => copyText(winnerPrompt)}><Clipboard size={16} />Copy</button>
         </div>
+        {compareResult?.recommendations?.length > 0 && (
+          <div className="v2-judge-recs">
+            {compareResult.recommendations.slice(0, 4).map((item) => <span key={item}>{item}</span>)}
+          </div>
+        )}
       </div>
     </div>
   );

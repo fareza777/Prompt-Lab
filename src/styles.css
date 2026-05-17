@@ -1413,9 +1413,28 @@ button {
   min-height: 260px;
 }
 
+.v2-model-card.winner {
+  border-color: var(--ac-line);
+  box-shadow: 0 0 0 1px var(--ac-line), 0 0 42px var(--ac-soft);
+}
+
 .v2-model-card p {
   min-height: 78px;
   margin-bottom: 16px;
+}
+
+.v2-risk-list {
+  display: grid;
+  gap: 7px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.v2-risk-list li {
+  color: var(--fg-mute);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .v2-score-matrix {
@@ -1433,6 +1452,31 @@ button {
 .v2-score-matrix span {
   color: var(--fg-2);
   font-family: var(--font-mono);
+}
+
+.v2-judge-summary {
+  margin: 14px 0 0;
+  color: var(--fg-2);
+  line-height: 1.55;
+}
+
+.v2-judge-recs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.v2-judge-recs span {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  padding: 0 11px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--fg-2);
+  background: var(--bg-input);
+  font-size: 12px;
 }
 
 .v2-settings-screen .content-grid {
