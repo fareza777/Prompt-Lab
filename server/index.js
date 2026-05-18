@@ -363,7 +363,13 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
 app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res) => {
   try {
     const payload = normalizePayload(req.body);
-    const attachments = await Promise.all((req.files || []).map((file) => normalizeFile(file, payload.modelSettings)));
+    const manifestAttachments = normalizeAttachmentManifest(req.body.attachmentManifest);
+    const uploadedAttachments = await Promise.all((req.files || []).map((file) => normalizeFile(file, payload.modelSettings)));
+    const uploadedNames = new Set(uploadedAttachments.map((file) => file.filename));
+    const attachments = [
+      ...uploadedAttachments,
+      ...manifestAttachments.filter((file) => !uploadedNames.has(file.filename)),
+    ].slice(0, 8);
     const runtime = getRuntimeProvider(payload.modelSettings);
 
     if (runtime.provider !== "openai") {
@@ -503,6 +509,24 @@ function normalizeComparePayload(body) {
     targetModel: String(body.targetModel || "General").slice(0, 80),
     useCase: String(body.useCase || "").slice(0, 1200),
   };
+}
+
+function normalizeAttachmentManifest(value) {
+  if (!value) return [];
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.slice(0, 8).map((item) => ({
+      dataUrl: "",
+      excerpt: String(item.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 1200),
+      filename: String(item.filename || item.name || "attachment").slice(0, 180),
+      kind: String(item.kind || "file").slice(0, 60),
+      mime: String(item.mime || item.type || "application/octet-stream").slice(0, 120),
+      size: Number(item.size || 0),
+    }));
+  } catch {
+    return [];
+  }
 }
 
 function normalizeModelSettings(body = {}) {
@@ -1373,7 +1397,7 @@ ${targetGuidance}${conditionalInstructions}`,
   ];
 
   for (const file of attachments) {
-    if (file.mime.startsWith("image/")) {
+    if (file.mime.startsWith("image/") && file.dataUrl) {
       content.push({
         type: "input_image",
         image_url: file.dataUrl,
@@ -1382,7 +1406,7 @@ ${targetGuidance}${conditionalInstructions}`,
       continue;
     }
 
-    if (file.mime === "application/pdf") {
+    if (file.mime === "application/pdf" && file.dataUrl) {
       content.push({
         type: "input_file",
         filename: file.filename,
@@ -1435,7 +1459,7 @@ ${deliverableGuard}
 - Jika isi lampiran tersedia, gunakan isi tersebut sebagai konteks utama.
 ${targetGuidance}${conditionalInstructions}`;
 
-  const hasImage = attachments.some((file) => file.mime.startsWith("image/"));
+  const hasImage = attachments.some((file) => file.mime.startsWith("image/") && file.dataUrl);
   if (!hasImage) {
     const attachmentText = attachments
       .map((file) =>
@@ -1455,7 +1479,7 @@ ${targetGuidance}${conditionalInstructions}`;
   ];
 
   for (const file of attachments) {
-    if (file.mime.startsWith("image/")) {
+    if (file.mime.startsWith("image/") && file.dataUrl) {
       content.push({
         type: "image_url",
         image_url: {

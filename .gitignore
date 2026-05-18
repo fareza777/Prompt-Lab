@@ -6,3 +6,5 @@ dist
 promptlab-*.png
 test-export.*
 api-test.txt
+
+.vercel

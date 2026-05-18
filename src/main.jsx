@@ -230,6 +230,7 @@ const defaultLibrary = [
 ];
 
 const readableFileTypes = ["application/json", "text/csv", "text/markdown", "text/plain"];
+const SERVERLESS_UPLOAD_LIMIT = 3.8 * 1024 * 1024;
 
 function inferRole(category) {
   const roles = {
@@ -500,6 +501,43 @@ function formatBytes(size) {
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function readApiJson(response) {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    const shortText = text.replace(/\s+/g, " ").trim().slice(0, 180);
+    if (/request entity too large|payload too large/i.test(shortText)) {
+      throw new Error("Upload terlalu besar untuk server Vercel. PromptLab mengirim metadata file saja atau gunakan backend lokal untuk ekstraksi penuh.");
+    }
+    throw new Error(shortText || "Server returned a non-JSON response.");
+  }
+}
+
+function getAttachmentUploadPlan(attachments, apiBase) {
+  const totalSize = attachments.reduce((sum, item) => sum + (item.file?.size || 0), 0);
+  const serverlessTarget = !apiBase || /vercel\.app/i.test(apiBase) || (!import.meta.env.DEV && !/localhost|127\.0\.0\.1|tail/i.test(apiBase));
+  const sendRawFiles = !serverlessTarget || totalSize <= SERVERLESS_UPLOAD_LIMIT;
+  return {
+    sendRawFiles,
+    totalSize,
+    warning: sendRawFiles
+      ? ""
+      : `Total lampiran ${formatBytes(totalSize)} terlalu besar untuk upload Vercel. Generate tetap jalan dengan metadata file; untuk ekstraksi isi penuh gunakan file lebih kecil atau backend lokal/Tailscale.`,
+  };
+}
+
+function buildAttachmentManifestForApi(attachments) {
+  return attachments.map((file) => ({
+    excerpt: file.excerpt || "",
+    filename: file.name,
+    kind: file.kind,
+    mime: file.type || "application/octet-stream",
+    size: file.file?.size || 0,
+  }));
 }
 
 function normalizeLibrary(raw) {
@@ -871,21 +909,25 @@ function App() {
       formData.append("baseUrl", modelSettings.baseUrl);
       formData.append("apiKey", modelSettings.apiKey);
       formData.append("timeoutMs", modelSettings.timeoutMs);
-      attachments.forEach((item) => formData.append("attachments", item.file));
+      const uploadPlan = getAttachmentUploadPlan(attachments, apiBase);
+      formData.append("attachmentManifest", JSON.stringify(buildAttachmentManifestForApi(attachments)));
+      if (uploadPlan.sendRawFiles) {
+        attachments.forEach((item) => formData.append("attachments", item.file));
+      }
 
       const response = await fetch(`${apiBase}/api/generate-prompt`, {
         method: "POST",
         body: formData,
       });
 
-      const data = await response.json();
+      const data = await readApiJson(response);
       if (!response.ok) throw new Error(data.error || "Failed to generate prompt.");
 
       setGeneratedPrompt(data.prompt || localPrompt);
       setGenerationSource(data.source || "server");
       setGenerationModel(data.model || (data.source === "fallback" ? "Local fallback" : "Local draft"));
       setGenerationStatus(data.modelStatus || data.source || "server");
-      setWarningMessage(data.warning || "");
+      setWarningMessage([uploadPlan.warning, data.warning].filter(Boolean).join(" "));
       return data.prompt || localPrompt;
     } catch (error) {
       setGeneratedPrompt(localPrompt);
@@ -917,7 +959,7 @@ function App() {
           ...modelSettings,
         }),
       });
-      const data = await response.json();
+      const data = await readApiJson(response);
       if (!response.ok) throw new Error(data.error || "Failed to optimize prompt.");
       setOptimizerResult(data.prompt || buildLocalOptimizedPrompt(rawPrompt, mode, model, tone));
       setOptimizerSource(data.source || "server");
@@ -952,7 +994,7 @@ function App() {
           ...modelSettings,
         }),
       });
-      const data = await response.json();
+      const data = await readApiJson(response);
       if (!response.ok) throw new Error(data.error || "Failed to compare prompts.");
       setCompareResult(data.result || null);
       setCompareSource(data.model || data.source || "AI judge");
@@ -1008,7 +1050,7 @@ function App() {
         ocrModel: modelSettings.ocrModel || "",
       });
       const response = await fetch(`${apiBase}/api/health?${params}`);
-      const data = await response.json();
+      const data = await readApiJson(response);
       setSettingsStatus(data);
       setProviderTestStatus(data.ok ? "Health check OK" : "Health check failed");
     } catch {
@@ -1026,7 +1068,7 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(modelSettings),
       });
-      const data = await response.json();
+      const data = await readApiJson(response);
       if (!response.ok || !data.ok) throw new Error(data.error || "Provider test failed.");
       setProviderTestStatus(`OK: ${data.model || modelSettings.primaryModel}`);
       setSettingsStatus((status) => ({
