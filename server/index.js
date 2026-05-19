@@ -215,10 +215,12 @@ app.post("/api/optimize-prompt", async (req, res) => {
     if (runtime.provider !== "openai" && runtime.client) {
       try {
         const completion = await createOpenRouterOptimizeCompletion(payload, runtime);
+        const optimizedRaw = completion.choices?.[0]?.message?.content || "";
+        const optimizedPrompt = sanitizePromptOutput(optimizedRaw) || buildLocalOptimizedPrompt(payload);
         res.json({
           source: runtime.provider,
           model: completion.model,
-          prompt: completion.choices?.[0]?.message?.content || buildLocalOptimizedPrompt(payload),
+          prompt: optimizedPrompt,
         });
         return;
       } catch (error) {
@@ -257,9 +259,10 @@ app.post("/api/optimize-prompt", async (req, res) => {
           },
         ],
       });
+      const sanitizedOptimizerPrompt = sanitizePromptOutput(response.output_text);
       res.json({
         source: "openai",
-        prompt: response.output_text || buildLocalOptimizedPrompt(payload),
+        prompt: sanitizedOptimizerPrompt || buildLocalOptimizedPrompt(payload),
       });
       return;
     }
@@ -385,19 +388,55 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       }
 
       try {
-        const generation = await createOpenRouterCompletion(payload, attachments, runtime);
-        const completion = generation.completion;
-        const prompt =
-          completion.choices?.[0]?.message?.content ||
-          buildFallbackPrompt(payload, attachments);
+        let generation = await createOpenRouterCompletion(payload, attachments, runtime);
+        let completion = generation.completion;
+        let rawPrompt = completion.choices?.[0]?.message?.content || "";
+        let prompt = sanitizePromptOutput(rawPrompt);
+        let retried = false;
+
+        if (isPromptTooShort(prompt)) {
+          retried = true;
+          try {
+            generation = await createOpenRouterCompletion(payload, attachments, runtime);
+            completion = generation.completion;
+            rawPrompt = completion.choices?.[0]?.message?.content || "";
+            prompt = sanitizePromptOutput(rawPrompt);
+          } catch (retryError) {
+            console.warn("retry-on-empty failed", retryError.status || retryError.code || retryError.message);
+          }
+        }
+
+        if (isPromptTooShort(prompt)) {
+          prompt = buildFallbackPrompt(payload, attachments);
+        }
+
+        let qualityNote = "";
+        if (payload.qualityMode === "premium" && !isPromptTooShort(prompt)) {
+          const primaryModel = payload.modelSettings?.primaryModel || runtime.defaultModel;
+          const fallbackModels = getOpenRouterFallbackModels(primaryModel, payload.generationMode, payload.modelSettings?.fallbackModels);
+          const timing = getOpenRouterTiming(payload.generationMode);
+          if (payload.modelSettings?.timeoutMs) timing.primaryTimeoutMs = payload.modelSettings.timeoutMs;
+          try {
+            const refined = await runCritiqueRefinePass({ runtime, payload, attachments, basePrompt: prompt, timing, primaryModel, fallbackModels });
+            if (refined && !isPromptTooShort(refined) && refined !== prompt) {
+              prompt = refined;
+              qualityNote = "Premium Quality Mode: critique+refine pass diterapkan.";
+            }
+          } catch (refineError) {
+            console.warn("premium critique pass failed", refineError.message);
+          }
+        }
+
+        const warnings = [];
+        if (generation.usedFallbackModel) warnings.push(`Primary model sedang limit/error (${generation.primaryError}). Fallback model dipakai.`);
+        if (retried) warnings.push("Output awal terlalu pendek, di-regenerate ulang.");
+        if (qualityNote) warnings.push(qualityNote);
 
         res.json({
           source: runtime.provider,
           model: completion.model,
           modelStatus: generation.usedFallbackModel ? "fallback-model" : "primary-model",
-          warning: generation.usedFallbackModel
-            ? `Primary model sedang limit/error (${generation.primaryError}). Fallback model dipakai.`
-            : "",
+          warning: warnings.join(" "),
           prompt,
         });
       } catch (error) {
@@ -424,29 +463,78 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       return;
     }
 
-    const response = await runtime.client.responses.create({
+    const systemPrompt =
+      "You are PromptLab Intent Engine, a senior prompt architect. Do not merely restate the raw user request. Decompose intent, expand the domain, infer missing professional implementation details carefully, lock the deliverable type, then create one excellent ready-to-use prompt in Indonesian. Preserve the user's requested deliverable exactly. If the user asks for PPT, create a prompt for PPT. If the user asks for a Word report, create a prompt for a Word-style report. Return only the final prompt, no chatty preface.";
+
+    const callOpenAI = () => runtime.client.responses.create({
       model: payload.modelSettings.primaryModel || runtime.defaultModel,
       input: [
-        {
-          role: "system",
-          content: [
-            {
-              type: "input_text",
-              text:
-                "You are PromptLab Intent Engine, a senior prompt architect. Do not merely restate the raw user request. Decompose intent, expand the domain, infer missing professional implementation details carefully, lock the deliverable type, then create one excellent ready-to-use prompt in Indonesian. Preserve the user's requested deliverable exactly. If the user asks for PPT, create a prompt for PPT. If the user asks for a Word report, create a prompt for a Word-style report. Return only the final prompt, no chatty preface.",
-            },
-          ],
-        },
-        {
-          role: "user",
-          content: buildOpenAIContent(payload, attachments),
-        },
+        { role: "system", content: [{ type: "input_text", text: systemPrompt }] },
+        { role: "user", content: buildOpenAIContent(payload, attachments) },
       ],
     });
 
+    let response = await callOpenAI();
+    let openaiPrompt = sanitizePromptOutput(response.output_text);
+    const openaiWarnings = [];
+    if (isPromptTooShort(openaiPrompt)) {
+      try {
+        response = await callOpenAI();
+        openaiPrompt = sanitizePromptOutput(response.output_text);
+        openaiWarnings.push("Output awal terlalu pendek, di-regenerate ulang.");
+      } catch (retryError) {
+        console.warn("openai retry-on-empty failed", retryError.message);
+      }
+    }
+    if (isPromptTooShort(openaiPrompt)) {
+      openaiPrompt = buildFallbackPrompt(payload, attachments);
+    }
+
+    if (payload.qualityMode === "premium" && !isPromptTooShort(openaiPrompt)) {
+      try {
+        const critiqueRes = await runtime.client.responses.create({
+          model: payload.modelSettings.primaryModel || runtime.defaultModel,
+          input: [
+            {
+              role: "system",
+              content: [{ type: "input_text", text: "You are PromptLab Quality Critic. Audit a prompt as a senior prompt engineer. Output strict bullet points in Indonesian listing 3-6 concrete defects. No preface, no praise, no rewrites." }],
+            },
+            {
+              role: "user",
+              content: [{ type: "input_text", text: `Audit prompt berikut. Fokus pada role specificity, output format quantification, constraints konkret, konsistensi deliverable (${payload.outputType || "tidak dipilih"}), frasa kosong/placeholder, acceptance criteria.\n\n---\n${openaiPrompt}\n---\n\nOutput hanya bullet points cacat.` }],
+            },
+          ],
+        });
+        const critique = critiqueRes.output_text || "";
+        if (critique.trim()) {
+          const refineRes = await runtime.client.responses.create({
+            model: payload.modelSettings.primaryModel || runtime.defaultModel,
+            input: [
+              {
+                role: "system",
+                content: [{ type: "input_text", text: "You are PromptLab Refiner. Rewrite a prompt to fix all listed defects. Output only the final improved prompt in Indonesian, ready to copy. No preface, no critique, no brief, no commentary." }],
+              },
+              {
+                role: "user",
+                content: [{ type: "input_text", text: `Perbaiki prompt di bawah berdasarkan critique. Pertahankan deliverable (${payload.outputType || "tidak dipilih"}) dan target AI (${payload.modelTarget}).\n\nCritique:\n${critique}\n\nPrompt asli:\n---\n${openaiPrompt}\n---\n\nOutput: prompt final saja.` }],
+              },
+            ],
+          });
+          const refined = sanitizePromptOutput(refineRes.output_text);
+          if (refined && !isPromptTooShort(refined)) {
+            openaiPrompt = refined;
+            openaiWarnings.push("Premium Quality Mode: critique+refine pass diterapkan.");
+          }
+        }
+      } catch (refineError) {
+        console.warn("openai premium critique pass failed", refineError.message);
+      }
+    }
+
     res.json({
       source: "openai",
-      prompt: response.output_text || buildFallbackPrompt(payload, attachments),
+      prompt: openaiPrompt,
+      warning: openaiWarnings.join(" "),
     });
   } catch (error) {
     console.error("generate-prompt failed", error.message);
@@ -485,8 +573,123 @@ function normalizePayload(body) {
     modelTarget: String(body.model || "ChatGPT").slice(0, 80),
     narrative: String(body.narrative || "").slice(0, 6000),
     outputType: String(body.outputType || "").slice(0, 80),
+    qualityMode: normalizeQualityMode(body.qualityMode),
     tone: String(body.tone || "Profesional").slice(0, 80),
   };
+}
+
+function normalizeQualityMode(value) {
+  const mode = String(value || "standard").toLowerCase();
+  if (mode === "premium" || mode === "true" || mode === "1") return "premium";
+  return "standard";
+}
+
+const MIN_PROMPT_LENGTH = 280;
+
+function isPromptTooShort(text) {
+  if (!text || typeof text !== "string") return true;
+  return text.trim().length < MIN_PROMPT_LENGTH;
+}
+
+async function runCritiqueRefinePass({ runtime, payload, attachments, basePrompt, timing, primaryModel, fallbackModels }) {
+  const critiqueMessages = [
+    {
+      role: "system",
+      content:
+        "You are PromptLab Quality Critic. Audit a prompt as a senior prompt engineer. Output strict bullet points in Indonesian listing concrete defects (max 6). No preface, no praise, no rewrites.",
+    },
+    {
+      role: "user",
+      content: `Audit prompt berikut. Sebutkan 3-6 cacat paling kritis. Fokus pada:
+- Role specificity (jabatan + domain + level)
+- Output format quantification (jumlah, panjang, struktur eksplisit)
+- Constraints konkret (≥3)
+- Konsistensi deliverable: ${payload.outputType || "tidak dipilih"}
+- Frasa kosong / placeholder yang tidak di-instantiate
+- Acceptance criteria atau quality gates yang hilang
+
+Prompt yang diaudit:
+---
+${basePrompt}
+---
+
+Output hanya bullet points cacat, tanpa pengantar.`,
+    },
+  ];
+
+  let critique = "";
+  try {
+    const critiqueRes = await withTimeout(runtime.client.chat.completions.create(
+      {
+        model: primaryModel,
+        messages: critiqueMessages,
+        max_tokens: 600,
+        temperature: 0.2,
+      },
+      { timeout: timing.primaryTimeoutMs }
+    ), timing.primaryTimeoutMs, primaryModel);
+    critique = critiqueRes.choices?.[0]?.message?.content || "";
+  } catch (error) {
+    if (shouldTryFallbackModel(error) && fallbackModels.length > 0) {
+      try {
+        const fb = await tryOpenRouterFallbackModels(runtime.client, fallbackModels, critiqueMessages, timing.fallbackTimeoutMs, 600, 0.2);
+        critique = fb.completion.choices?.[0]?.message?.content || "";
+      } catch {
+        critique = "";
+      }
+    }
+  }
+
+  if (!critique.trim()) return basePrompt;
+
+  const refineMessages = [
+    {
+      role: "system",
+      content:
+        "You are PromptLab Refiner. Rewrite a prompt to fix all listed defects. Output only the final improved prompt in Indonesian, ready to copy. No preface, no critique, no brief, no commentary.",
+    },
+    {
+      role: "user",
+      content: `Perbaiki prompt di bawah berdasarkan critique. Pertahankan deliverable (${payload.outputType || "tidak dipilih"}) dan target AI (${payload.modelTarget}). Hasilkan prompt final yang langsung siap dicopy.
+
+Critique:
+${critique}
+
+Prompt asli:
+---
+${basePrompt}
+---
+
+Output: prompt final saja.`,
+    },
+  ];
+
+  try {
+    const refineRes = await withTimeout(runtime.client.chat.completions.create(
+      {
+        model: primaryModel,
+        messages: refineMessages,
+        max_tokens: 2400,
+        temperature: 0.4,
+      },
+      { timeout: timing.primaryTimeoutMs }
+    ), timing.primaryTimeoutMs, primaryModel);
+    const refined = refineRes.choices?.[0]?.message?.content || "";
+    const sanitized = sanitizePromptOutput(refined);
+    return sanitized && !isPromptTooShort(sanitized) ? sanitized : basePrompt;
+  } catch (error) {
+    if (shouldTryFallbackModel(error) && fallbackModels.length > 0) {
+      try {
+        const fb = await tryOpenRouterFallbackModels(runtime.client, fallbackModels, refineMessages, timing.fallbackTimeoutMs, 2400, 0.4);
+        const refined = fb.completion.choices?.[0]?.message?.content || "";
+        const sanitized = sanitizePromptOutput(refined);
+        return sanitized && !isPromptTooShort(sanitized) ? sanitized : basePrompt;
+      } catch {
+        return basePrompt;
+      }
+    }
+    return basePrompt;
+  }
 }
 
 function normalizeOptimizePayload(body) {
@@ -518,7 +721,7 @@ function normalizeAttachmentManifest(value) {
     if (!Array.isArray(parsed)) return [];
     return parsed.slice(0, 8).map((item) => ({
       dataUrl: "",
-      excerpt: String(item.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 1200),
+      excerpt: String(item.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 4000),
       filename: String(item.filename || item.name || "attachment").slice(0, 180),
       kind: String(item.kind || "file").slice(0, 60),
       mime: String(item.mime || item.type || "application/octet-stream").slice(0, 120),
@@ -685,6 +888,7 @@ async function createOpenRouterCompletion(payload, attachments, runtime = getRun
         model: primaryModel,
         messages,
         max_tokens: 2200,
+        temperature: 0.4,
       },
       { timeout: timing.primaryTimeoutMs }
     ), timing.primaryTimeoutMs, primaryModel);
@@ -738,6 +942,7 @@ async function createOpenRouterOptimizeCompletion(payload, runtime = getRuntimeP
         model: primaryModel,
         messages,
         max_tokens: 1600,
+        temperature: 0.4,
       },
       { timeout: timing.primaryTimeoutMs }
     ), timing.primaryTimeoutMs, primaryModel);
@@ -778,6 +983,7 @@ async function createOpenRouterCompareCompletion(payload, runtime = getRuntimePr
         model: primaryModel,
         messages,
         max_tokens: 1800,
+        temperature: 0.2,
       },
       { timeout: timing.primaryTimeoutMs }
     ), timing.primaryTimeoutMs, primaryModel);
@@ -794,7 +1000,8 @@ async function createOpenRouterCompareCompletion(payload, runtime = getRuntimePr
       fallbackModels,
       messages,
       timing.fallbackTimeoutMs,
-      1800
+      1800,
+      0.2
     );
     return {
       completion,
@@ -816,7 +1023,7 @@ function getOpenRouterFallbackModels(primaryModel = getDefaultOpenRouterModel(),
   return models.slice(0, 3);
 }
 
-async function tryOpenRouterFallbackModels(client, models, messages, timeoutMs, maxTokens = 2200) {
+async function tryOpenRouterFallbackModels(client, models, messages, timeoutMs, maxTokens = 2200, temperature = 0.4) {
   const errors = [];
   let lastError = null;
 
@@ -828,6 +1035,7 @@ async function tryOpenRouterFallbackModels(client, models, messages, timeoutMs, 
           model,
           messages,
           max_tokens: maxTokens,
+          temperature,
         },
         { timeout: timeoutMs }
       ), timeoutMs, model);
@@ -1208,6 +1416,37 @@ function getDeliverableGuard(payload, attachments) {
   return lines.map((line) => `- ${line}`).join("\n");
 }
 
+function getAntiGenericGuard() {
+  return `
+
+Anti-generic guardrails (WAJIB diterapkan ke prompt final):
+- LARANG frasa kosong: "leverage", "synergy", "best practices", "world-class", "cutting-edge", "next-level", "game-changing", "seamless", "robust solution", "kelas dunia", "terdepan", "revolusioner".
+- LARANG role generik seperti "an expert", "a professional", "AI assistant", "asisten AI"; role wajib spesifik (jabatan + domain + level senior + industri).
+- LARANG placeholder yang harus diisi user: "[your brand]", "[insert here]", "[topik]", "[isi konteks]"; semua placeholder wajib di-instantiate dari narasi atau ditandai sebagai asumsi eksplisit.
+- LARANG menutup prompt dengan rangkaian pertanyaan ke user; pertanyaan klarifikasi hanya boleh muncul jika benar-benar memblokir pekerjaan (maks 3 dan ditandai sebagai opsional).
+- LARANG output yang tidak bisa langsung dieksekusi; setiap output_format WAJIB punya minimal satu batasan kuantitatif (jumlah kata, jumlah bullet, jumlah slide, durasi, ukuran section).
+- Konstanta numerik (harga, durasi, jumlah, deadline) wajib di-pull dari narasi/lampiran; jika tidak ada, tandai sebagai "asumsi: <nilai>" dan jangan dikarang sebagai fakta.`;
+}
+
+function sanitizePromptOutput(text) {
+  if (!text || typeof text !== "string") return text;
+  let cleaned = text.trim();
+  cleaned = cleaned.replace(/^```(?:markdown|md|xml|text|plaintext)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+  const leakPatterns = [
+    /^PromptLab Intent Engine Brief[\s\S]*?(?=\n(?:<role>|\*\*Role:?\*\*|Role:|# Role|## Role))/i,
+    /^Intent Engine Brief[\s\S]*?(?=\n(?:<role>|\*\*Role:?\*\*|Role:|# Role|## Role))/i,
+    /^(?:Berikut|Berikut ini|Here is|Here's)[^\n]*?(?:prompt|hasil)[^\n]*?:\s*\n+/i,
+    /^Sebelum (?:menulis|membuat)[^\n]*?:\s*\n+/i,
+    /^(?:Catatan|Note):[^\n]*\n+(?=<role>|\*\*Role|Role:|# Role|## Role)/i,
+  ];
+  for (const pattern of leakPatterns) {
+    cleaned = cleaned.replace(pattern, "");
+  }
+  cleaned = cleaned.replace(/^\s*(?:PromptLab\s+)?Intent Engine[^\n]*\n+/i, "");
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
+  return cleaned.trim();
+}
+
 function getIntentEngineInstruction(payload, attachments) {
   const text = `${payload.narrative || ""} ${payload.category || ""} ${payload.outputType || ""}`.toLowerCase();
   const asksApp =
@@ -1259,7 +1498,7 @@ function buildAttachmentManifest(attachments = []) {
     .slice(0, 8)
     .map((file, index) => {
       const source = file.excerpt
-        ? `extracted context: ${file.excerpt.slice(0, 700)}`
+        ? `extracted context: ${file.excerpt.slice(0, 2000)}`
         : "extracted context: not available yet; use file metadata and ask only if blocked";
       return `  ${index + 1}. ${file.filename} (${file.kind}, ${file.mime}, ${formatBytes(file.size)}) - ${source}`;
     })
@@ -1296,13 +1535,13 @@ async function normalizeFile(file, modelSettings = {}) {
 
   if (isDocx) {
     const result = await mammoth.extractRawText({ buffer: file.buffer });
-    excerpt = result.value.replace(/\s+/g, " ").trim().slice(0, 6000);
+    excerpt = result.value.replace(/\s+/g, " ").trim().slice(0, 15000);
   } else if (isPptx) {
     excerpt = await extractPptxText(file.buffer);
   } else if (isXlsx) {
     excerpt = await extractXlsxText(file.buffer);
   } else if (isReadable) {
-    excerpt = file.buffer.toString("utf8").replace(/\s+/g, " ").trim().slice(0, 1200);
+    excerpt = file.buffer.toString("utf8").replace(/\s+/g, " ").trim().slice(0, 4000);
   } else if (isImage) {
     excerpt = await extractImageText(file, modelSettings).catch((error) => {
       console.warn("image OCR skipped", file.originalname, error.status || error.code || error.message);
@@ -1363,6 +1602,7 @@ function buildOpenAIContent(payload, attachments) {
   const deliverableGuard = getDeliverableGuard(payload, attachments);
   const targetGuidance = getTargetModelGuidance(payload.modelTarget);
   const intentEngine = getIntentEngineInstruction(payload, attachments);
+  const antiGeneric = getAntiGenericGuard();
   const content = [
     {
       type: "input_text",
@@ -1379,20 +1619,22 @@ Jenis Output: ${payload.outputType || "Tidak dipilih"}
 ${intentEngine}
 
 Prompt final wajib punya:
-- Role yang tepat
+- Role yang tepat (spesifik: jabatan + domain + level senior, bukan "expert/AI assistant")
 - Konteks dari narasi dan lampiran
 - Tujuan yang jelas
-- Format output
-- Batasan/constraints
-- Instruksi agar AI bertanya hanya bila informasi penting belum cukup
+- Format output dengan minimal satu batasan kuantitatif (jumlah, panjang, durasi, struktur)
+- Batasan/constraints konkret (≥3 item)
+- Acceptance criteria atau quality gates
+- Instruksi agar AI bertanya hanya bila informasi penting benar-benar memblokir
 
 Aturan penting:
 - Ikuti jenis deliverable yang diminta user secara eksplisit: Word, PPT, email, caption, kode, gambar, tabel, atau format lain.
 - Jangan mengganti deliverable ke format lain kecuali user memintanya.
 - Jangan mengarahkan AI untuk meminta file ulang jika isi lampiran sudah tersedia di bawah.
+- Output WAJIB langsung berupa prompt final yang siap dicopy. Jangan menyertakan preface seperti "Berikut prompt-nya:", brief internal, atau judul "Intent Engine".
 ${deliverableGuard}
 - Jika isi lampiran tersedia, gunakan isi tersebut sebagai konteks utama.
-${targetGuidance}${conditionalInstructions}`,
+${targetGuidance}${conditionalInstructions}${antiGeneric}`,
     },
   ];
 
@@ -1431,6 +1673,7 @@ function buildOpenRouterContent(payload, attachments) {
   const deliverableGuard = getDeliverableGuard(payload, attachments);
   const targetGuidance = getTargetModelGuidance(payload.modelTarget);
   const intentEngine = getIntentEngineInstruction(payload, attachments);
+  const antiGeneric = getAntiGenericGuard();
   const baseText = `Buat prompt terbaik untuk kebutuhan berikut.
 
 Narasi user:
@@ -1444,20 +1687,22 @@ Jenis Output: ${payload.outputType || "Tidak dipilih"}
 ${intentEngine}
 
 Prompt final wajib punya:
-- Role yang tepat
+- Role yang tepat (spesifik: jabatan + domain + level senior, bukan "expert/AI assistant")
 - Konteks dari narasi dan lampiran
 - Tujuan yang jelas
-- Format output
-- Batasan/constraints
-- Instruksi agar AI bertanya hanya bila informasi penting belum cukup
+- Format output dengan minimal satu batasan kuantitatif (jumlah, panjang, durasi, struktur)
+- Batasan/constraints konkret (≥3 item)
+- Acceptance criteria atau quality gates
+- Instruksi agar AI bertanya hanya bila informasi penting benar-benar memblokir
 
 Aturan penting:
 - Ikuti jenis deliverable yang diminta user secara eksplisit: Word, PPT, email, caption, kode, gambar, tabel, atau format lain.
 - Jangan mengganti deliverable ke format lain kecuali user memintanya.
 - Jangan mengarahkan AI untuk meminta file ulang jika isi lampiran sudah tersedia di bawah.
+- Output WAJIB langsung berupa prompt final yang siap dicopy. Jangan menyertakan preface seperti "Berikut prompt-nya:", brief internal, atau judul "Intent Engine".
 ${deliverableGuard}
 - Jika isi lampiran tersedia, gunakan isi tersebut sebagai konteks utama.
-${targetGuidance}${conditionalInstructions}`;
+${targetGuidance}${conditionalInstructions}${antiGeneric}`;
 
   const hasImage = attachments.some((file) => file.mime.startsWith("image/") && file.dataUrl);
   if (!hasImage) {
@@ -1683,7 +1928,7 @@ async function extractPptxText(buffer) {
     }
   }
 
-  return slides.join(" ").replace(/\s+/g, " ").trim().slice(0, 6000);
+  return slides.join(" ").replace(/\s+/g, " ").trim().slice(0, 15000);
 }
 
 async function extractXlsxText(buffer) {
@@ -1715,7 +1960,7 @@ async function extractXlsxText(buffer) {
     }
   }
 
-  return rows.join(" ").replace(/\s+/g, " ").trim().slice(0, 6000);
+  return rows.join(" ").replace(/\s+/g, " ").trim().slice(0, 15000);
 }
 
 function decodeXml(value) {

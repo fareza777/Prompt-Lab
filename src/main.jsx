@@ -771,6 +771,9 @@ function App() {
   const [generationMode, setGenerationMode] = useState(
     () => localStorage.getItem("promptlab-generation-mode") || "Balanced"
   );
+  const [qualityMode, setQualityMode] = useState(
+    () => localStorage.getItem("promptlab-quality-mode") || "standard"
+  );
   const [modelSettings, setModelSettings] = useState(() => {
     try {
       return { ...defaultModelSettings, ...JSON.parse(localStorage.getItem("promptlab-model-settings")) };
@@ -810,6 +813,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem("promptlab-generation-mode", generationMode);
   }, [generationMode]);
+
+  useEffect(() => {
+    localStorage.setItem("promptlab-quality-mode", qualityMode);
+  }, [qualityMode]);
 
   useEffect(() => {
     if (!generationModes.includes(generationMode)) setGenerationMode("Balanced");
@@ -902,6 +909,7 @@ function App() {
       formData.append("model", model);
       formData.append("outputType", customOutputType);
       formData.append("generationMode", generationMode);
+      formData.append("qualityMode", qualityMode);
       formData.append("primaryModel", modelSettings.primaryModel);
       formData.append("fallbackModels", modelSettings.fallbackModels);
       formData.append("ocrModel", modelSettings.ocrModel);
@@ -1179,6 +1187,8 @@ function App() {
     refreshHealth,
     generationMode,
     setGenerationMode,
+    qualityMode,
+    setQualityMode,
     modelSettings,
     setModelSettings,
     saveModelSettings,
@@ -1883,6 +1893,8 @@ function V2Settings(props) {
     apiBase,
     generationMode,
     setGenerationMode,
+    qualityMode,
+    setQualityMode,
     modelSettings,
     setModelSettings,
     saveModelSettings,
@@ -1935,6 +1947,24 @@ function V2Settings(props) {
             <span>Active Mode</span>
             <strong>{generationMode}</strong>
             <p>{activeProfile.bestFor}</p>
+          </div>
+          <div className="v2-mode-grid" style={{ marginTop: 16 }}>
+            <button
+              className={qualityMode === "standard" ? "active" : ""}
+              onClick={() => setQualityMode && setQualityMode("standard")}
+            >
+              <span>Quality</span>
+              <strong>Standard</strong>
+              <small>Single pass. Cepat, hemat token, output baseline.</small>
+            </button>
+            <button
+              className={qualityMode === "premium" ? "active" : ""}
+              onClick={() => setQualityMode && setQualityMode("premium")}
+            >
+              <span>Quality</span>
+              <strong>Premium</strong>
+              <small>Critique + refine pass. ~2x token, output lebih tajam — ideal untuk model gratis.</small>
+            </button>
           </div>
           <div className="v2-info-grid">
             <V2Info label="API Base" value={apiBase || "Same-origin Vercel API"} />
@@ -2742,6 +2772,8 @@ function SettingsView({
   apiBase,
   generationMode,
   setGenerationMode,
+  qualityMode,
+  setQualityMode,
   modelSettings,
   setModelSettings,
   saveModelSettings,
@@ -2783,6 +2815,29 @@ function SettingsView({
           <span>Mode aktif</span>
           <strong>{generationMode}</strong>
           <p>{activeProfile.bestFor}</p>
+        </div>
+        <div className="settings-mode" style={{ marginTop: 12 }}>
+          <span>Premium Quality Mode</span>
+          <strong>{qualityMode === "premium" ? "ON · critique+refine pass" : "OFF · single pass"}</strong>
+          <p>
+            {qualityMode === "premium"
+              ? "Setiap prompt akan di-audit critic dan di-refine ulang. Lebih lambat & lebih banyak token, tapi hasil lebih tajam (cocok untuk model gratis/kecil)."
+              : "Generate sekali jalan tanpa critique pass. Cepat dan hemat token."}
+          </p>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button
+              className={qualityMode === "standard" ? "selected" : ""}
+              onClick={() => setQualityMode("standard")}
+            >
+              Standard
+            </button>
+            <button
+              className={qualityMode === "premium" ? "selected" : ""}
+              onClick={() => setQualityMode("premium")}
+            >
+              Premium
+            </button>
+          </div>
         </div>
         <div className="settings-grid">
           <InfoBox label="API Base" value={apiBase} />
