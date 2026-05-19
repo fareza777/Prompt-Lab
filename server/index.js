@@ -363,7 +363,13 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
   }
 });
 
+const VERCEL_FUNCTION_BUDGET_MS = Number(process.env.VERCEL_FUNCTION_BUDGET_MS || 55000);
+const RETRY_ON_EMPTY_RESERVE_MS = 18000;
+const PREMIUM_PASS_RESERVE_MS = 32000;
+
 app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res) => {
+  const startedAt = Date.now();
+  const remainingBudget = () => Math.max(0, VERCEL_FUNCTION_BUDGET_MS - (Date.now() - startedAt));
   try {
     const payload = normalizePayload(req.body);
     const manifestAttachments = normalizeAttachmentManifest(req.body.attachmentManifest);
@@ -394,7 +400,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         let prompt = sanitizePromptOutput(rawPrompt);
         let retried = false;
 
-        if (isPromptTooShort(prompt)) {
+        if (isPromptTooShort(prompt) && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
           retried = true;
           try {
             generation = await createOpenRouterCompletion(payload, attachments, runtime);
@@ -411,7 +417,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         }
 
         let qualityNote = "";
-        if (payload.qualityMode === "premium" && !isPromptTooShort(prompt)) {
+        if (payload.qualityMode === "premium" && !isPromptTooShort(prompt) && remainingBudget() > PREMIUM_PASS_RESERVE_MS) {
           const primaryModel = payload.modelSettings?.primaryModel || runtime.defaultModel;
           const fallbackModels = getOpenRouterFallbackModels(primaryModel, payload.generationMode, payload.modelSettings?.fallbackModels);
           const timing = getOpenRouterTiming(payload.generationMode);
@@ -477,7 +483,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
     let response = await callOpenAI();
     let openaiPrompt = sanitizePromptOutput(response.output_text);
     const openaiWarnings = [];
-    if (isPromptTooShort(openaiPrompt)) {
+    if (isPromptTooShort(openaiPrompt) && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
       try {
         response = await callOpenAI();
         openaiPrompt = sanitizePromptOutput(response.output_text);
@@ -490,7 +496,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       openaiPrompt = buildFallbackPrompt(payload, attachments);
     }
 
-    if (payload.qualityMode === "premium" && !isPromptTooShort(openaiPrompt)) {
+    if (payload.qualityMode === "premium" && !isPromptTooShort(openaiPrompt) && remainingBudget() > PREMIUM_PASS_RESERVE_MS) {
       try {
         const critiqueRes = await runtime.client.responses.create({
           model: payload.modelSettings.primaryModel || runtime.defaultModel,
@@ -856,8 +862,8 @@ function getOpenRouterTiming(mode) {
     };
   }
   return {
-    fallbackTimeoutMs: Number(process.env.OPENROUTER_BALANCED_FALLBACK_TIMEOUT_MS || 55000),
-    primaryTimeoutMs: Number(process.env.OPENROUTER_BALANCED_PRIMARY_TIMEOUT_MS || 40000),
+    fallbackTimeoutMs: Number(process.env.OPENROUTER_BALANCED_FALLBACK_TIMEOUT_MS || 35000),
+    primaryTimeoutMs: Number(process.env.OPENROUTER_BALANCED_PRIMARY_TIMEOUT_MS || 28000),
   };
 }
 
