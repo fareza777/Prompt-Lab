@@ -873,6 +873,7 @@ function getOpenRouterTiming(mode) {
 }
 
 async function createOpenRouterCompletion(payload, attachments, runtime = getRuntimeProvider(payload.modelSettings)) {
+  const startedAt = Date.now();
   const messages = [
     {
       role: "system",
@@ -910,6 +911,9 @@ async function createOpenRouterCompletion(payload, attachments, runtime = getRun
     };
   } catch (error) {
     if (!shouldTryFallbackModel(error) || fallbackModels.length === 0) throw error;
+    if (Date.now() - startedAt > VERCEL_FUNCTION_BUDGET_MS - 14000) {
+      throw error;
+    }
     const primaryError = formatProviderError(error);
     const { completion, errors } = await tryOpenRouterFallbackModels(
       runtime.client,
