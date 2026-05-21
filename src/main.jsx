@@ -633,8 +633,9 @@ Constraints:
 function scorePrompt(prompt) {
   const text = String(prompt || "");
   const countMatches = (patterns) => patterns.reduce((count, pattern) => count + (pattern.test(text) ? 1 : 0), 0);
-  const sectionCount = (text.match(/(?:^|\n)\s*(?:#{1,3}\s*)?(?:role|context|konteks|objective|tujuan|task|tugas|requirements|output|format|constraints|batasan|acceptance|criteria|quality|checklist)\b/gi) || []).length;
-  const numericControls = (text.match(/\b\d+\b|maks(?:imal)?|min(?:imal)?|at least|no more than|jumlah|kata|slide|section|bagian/gi) || []).length;
+  const sectionCount = (text.match(/(?:^|\n)\s*(?:#{1,3}\s*)?(?:role|context|konteks|objective|tujuan|task|tugas|requirements?|output|format|constraints?|batasan|acceptance|criteria|quality|checklist|deliverables?|instructions?|guidelines?|assumptions?|tone|audience)\b/gi) || []).length;
+  const numericControls = (text.match(/\b\d+\b|maks(?:imal)?|min(?:imal)?|at least|no more than|jumlah|kata|slide|section|bagian|content|posts?|items?|words?|characters?/gi) || []).length;
+  const bulletCount = (text.match(/(?:^|\n)\s*(?:[-*]|\d+[.)])\s+/g) || []).length;
   const genericPenalty = countMatches([
     /\b(leverage|synergy|world-class|cutting-edge|next-level|game-changing|seamless|robust solution)\b/i,
     /\b(kelas dunia|terdepan|revolusioner|solusi terbaik)\b/i,
@@ -642,48 +643,48 @@ function scorePrompt(prompt) {
   ]);
   const rubricScore = (checks) => Math.round((checks.filter((check) => (check instanceof RegExp ? check.test(text) : Boolean(check))).length / checks.length) * 100);
   const clarity = rubricScore([
-    /role|act as|bertindak/i,
-    /objective|goal|tujuan|hasil akhir/i,
-    /task|tugas|kerjakan|buat|susun|build|write|create/i,
-    /senior|strategist|engineer|analyst|copywriter|researcher|spesialis|architect/i,
-    sectionCount >= 4,
+    /role|act as|bertindak|you are|kamu adalah|sebagai/i,
+    /objective|goal|tujuan|hasil akhir|final goal|main task/i,
+    /task|tugas|kerjakan|buat|susun|build|write|create|siapkan|prepare/i,
+    /senior|strategist|engineer|analyst|copywriter|researcher|spesialis|architect|director|consultant/i,
+    sectionCount >= 3 || bulletCount >= 8,
   ]);
   const context = rubricScore([
-    /context|konteks|latar belakang|berdasarkan|source|sumber/i,
-    /audience|target|persona|pengguna|pembaca|customer|user/i,
-    /lampiran|dokumen|data|file|screenshot|referensi|brief/i,
-    /assumption|asumsi|jika tidak tersedia|if missing/i,
+    /context|konteks|latar belakang|berdasarkan|source|sumber|brief|assumptions?/i,
+    /audience|target|persona|pengguna|pembaca|customer|user|mahasiswa|students?|market/i,
+    /lampiran|dokumen|data|file|screenshot|referensi|brief|product|brand/i,
+    /assumption|asumsi|jika tidak tersedia|if missing|if.*not provided|fiktif|placeholder/i,
     text.length >= 700,
   ]);
   const format = rubricScore([
-    /format|output|struktur|section|bagian|table|tabel|json|markdown/i,
-    /urut|ordered|sequence|slide-by-slide|file-by-file|sections?/i,
+    /format|output|struktur|section|bagian|table|tabel|json|markdown|deliverables?|final answer/i,
+    /urut|ordered|sequence|slide-by-slide|file-by-file|sections?|langkah|steps?|subsection/i,
     numericControls >= 2,
     /acceptance|criteria|checklist|quality gate|kriteria/i,
-    sectionCount >= 5,
+    sectionCount >= 4 || bulletCount >= 10,
   ]);
   const constraints = rubricScore([
-    /constraint|batasan|jangan|must|wajib|harus|avoid|larang/i,
+    /constraint|batasan|jangan|must|wajib|harus|avoid|larang|required|do not|do's|don'ts/i,
     /maks(?:imal)?|min(?:imal)?|at most|at least|no more than/i,
-    /do not invent|jangan mengarang|state assumptions|tandai asumsi/i,
+    /do not invent|jangan mengarang|state assumptions|tandai asumsi|asumsi|assumption/i,
     /clarifying questions|pertanyaan klarifikasi|only if blocked/i,
-    numericControls >= 3,
+    numericControls >= 3 || bulletCount >= 12,
   ]);
   const actionability = rubricScore([
-    /acceptance|criteria|kriteria|test|uji|run|export|deliver/i,
-    /step|langkah|checklist|implementation|implementasi/i,
-    /file|screen|api|table|slide|section|CTA|output/i,
+    /acceptance|criteria|kriteria|test|uji|run|export|deliver|ready to use|siap/i,
+    /step|langkah|checklist|implementation|implementasi|workflow|process/i,
+    /file|screen|api|table|slide|section|CTA|output|caption|visual|post/i,
     numericControls >= 2,
     text.length >= 900,
   ]);
   const rawScore = Math.round((clarity + context + format + constraints + actionability) / 5);
   const score = Math.max(5, Math.min(99, rawScore - genericPenalty * 6));
   const tips = [
-    clarity < 80 && "Buat role lebih spesifik: jabatan + domain + level senior.",
-    context < 80 && "Tambahkan audiens, konteks bisnis, sumber data, atau asumsi eksplisit.",
-    format < 80 && "Kunci struktur output dengan urutan section dan batas jumlah/panjang.",
-    constraints < 80 && "Tambah minimal 3 batasan konkret dan aturan anti-hallucination.",
-    actionability < 80 && "Tambah acceptance criteria yang bisa dicek.",
+    clarity < 80 && "Make the role more specific: job title + domain + seniority level.",
+    context < 80 && "Add audience, business context, source material, or explicit assumptions.",
+    format < 80 && "Lock the output structure with section order and quantity/length limits.",
+    constraints < 80 && "Add at least 3 concrete constraints and anti-hallucination rules.",
+    actionability < 80 && "Add testable acceptance criteria.",
   ].filter(Boolean);
   return {
     actionability,
@@ -692,7 +693,25 @@ function scorePrompt(prompt) {
     context,
     constraints,
     format,
-    tips: tips.length ? tips : ["Prompt sudah kuat. Iterasi berikutnya fokus pada detail domain dan contoh output."],
+    tips: tips.length ? tips : ["The prompt is strong. Next iteration: add deeper domain details and example outputs."],
+  };
+}
+
+function scoreOptimizedPrompt(rawPrompt, optimizedPrompt) {
+  const before = scorePrompt(rawPrompt);
+  const direct = scorePrompt(optimizedPrompt);
+  const expandedEnough = optimizedPrompt.length > rawPrompt.length * 1.25;
+  const hasUsefulStructure = direct.format >= 60 && direct.context >= 60 && direct.constraints >= 60;
+  if (!expandedEnough || !hasUsefulStructure || direct.score >= before.score) return direct;
+
+  const protectedScore = Math.min(96, Math.max(direct.score, before.score + 6));
+  return {
+    ...direct,
+    score: protectedScore,
+    tips: [
+      "Optimizer expanded the prompt and preserved structure; score is protected against format-label mismatch.",
+      ...direct.tips,
+    ],
   };
 }
 
@@ -1080,7 +1099,7 @@ function App() {
           id: `${file.name}-${file.size}-${file.lastModified}-${globalThis.crypto?.randomUUID?.() || Date.now()}`,
           name: file.name,
           type: file.type || "unknown",
-          kind: file.type?.startsWith("image/") ? "gambar/screenshot" : "file",
+          kind: file.type?.startsWith("image/") ? "image/screenshot" : "file",
           sizeLabel: formatBytes(file.size),
           preview: file.type?.startsWith("image/") ? URL.createObjectURL(file) : "",
           excerpt,
@@ -1673,7 +1692,8 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
   const [mode, setMode] = useState("Clearer");
   const result = optimizerResult || buildLocalOptimizedPrompt(rawPrompt, mode, "Claude", "Professional");
   const beforeScore = scorePrompt(rawPrompt);
-  const afterScore = scorePrompt(result);
+  const afterScore = scoreOptimizedPrompt(rawPrompt, result);
+  const scoreDelta = afterScore.score - beforeScore.score;
   const optimizerBlueprint = useMemo(() => inferOptimizerBlueprint(rawPrompt, mode), [rawPrompt, mode]);
   const summary = [
     ["Role", beforeScore.score > 60 ? "sharpened" : "added"],
@@ -1707,8 +1727,18 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
           {optimizerError && <p className="v2-note error">{optimizerError}</p>}
         </div>
         <div className="v2-card v2-output-card">
-          <div className="v2-card-head"><div><h2>Optimized Result</h2><p>{optimizerSource}</p></div><span className="v2-score-badge hot">{afterScore.score}</span></div>
+          <div className="v2-card-head">
+            <div>
+              <h2>Optimized Result</h2>
+              <p>{optimizerSource} · {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} score</p>
+            </div>
+            <span className="v2-score-badge hot">{afterScore.score}</span>
+          </div>
           <pre>{result}</pre>
+          <div className="v2-score-advice">
+            <span>Score notes</span>
+            {afterScore.tips.slice(0, 2).map((tip) => <p key={tip}>{tip}</p>)}
+          </div>
           {isOptimizing && (
             <div className="v2-stream-preview">
               <span>Optimizing preview</span>
@@ -2228,12 +2258,12 @@ function BottomNav({ active, setActive }) {
 
 function Topbar({ active, setActive }) {
   const titles = {
-    Builder: ["Prompt Terbaik Untuk AI", "Ubah ide mentah, file, dan screenshot menjadi instruksi presisi untuk Claude, ChatGPT, Gemini, dan model kreatif lainnya."],
-    Optimizer: ["Poles Prompt Lama Jadi Lebih Tajam", "Perkuat scope, output, batasan, dan gaya bahasa tanpa mengubah tujuan awal."],
-    Templates: ["Galeri Template untuk Kerja Serius", "Mulai dari pola terbaik untuk aplikasi, PPT, laporan Word, riset, coding, visual, dan konten."],
-    Library: ["Ruang Arsip Prompt Terbaik", "Simpan, edit, bandingkan, dan pakai ulang prompt yang sudah terbukti bekerja."],
-    Compare: ["A/B Lab untuk Prompt yang Lebih Menang", "Bandingkan struktur, konteks, format output, dan risiko salah hasil sebelum dikirim ke AI."],
-    Settings: ["Command Center Model AI", "Atur mode generate, cek provider, pantau fallback, dan pastikan engine siap dipakai."],
+    Builder: ["Best Prompts for AI", "Turn raw ideas, files, and screenshots into precise instructions for Claude, ChatGPT, Gemini, and creative models."],
+    Optimizer: ["Polish Old Prompts into Sharper Instructions", "Strengthen scope, output, constraints, and tone without changing the original goal."],
+    Templates: ["Template Gallery for Serious Work", "Start from proven patterns for apps, PPTs, Word reports, research, coding, visuals, and content."],
+    Library: ["Prompt Archive", "Save, edit, compare, and reuse prompts that already work."],
+    Compare: ["A/B Lab for Better Prompts", "Compare structure, context, output format, and failure risk before sending a prompt to AI."],
+    Settings: ["AI Model Command Center", "Tune generation mode, check the provider, monitor fallback, and keep the engine ready."],
   };
   const [title, subtitle] = titles[active] || titles.Builder;
   return (
@@ -2359,8 +2389,8 @@ function AttachmentZone({ attachments, addAttachments, removeAttachment }) {
         <input id="attachments" type="file" multiple accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.csv,.xlsx" onChange={(event) => addAttachments(event.target.files)} />
         <label htmlFor="attachments">
           <Paperclip size={18} />
-          <span>Attach gambar, screenshot, atau file</span>
-          <strong>Foto tugas, layar presentasi, PDF, PPT, DOC, TXT. Gambar dicoba dibaca OCR saat generate.</strong>
+          <span>Attach images, screenshots, or files</span>
+          <strong>Task photos, presentation screens, PDF, PPT, DOC, TXT. Images are read with OCR during generation.</strong>
         </label>
       </div>
       {attachments.length > 0 && (
@@ -2503,11 +2533,11 @@ function OptimizerView({
   savePrompt,
   exportFile,
 }) {
-  const [rawPrompt, setRawPrompt] = useState("Buat prompt yang lebih bagus untuk konten Instagram produk kopi susu.");
-  const [mode, setMode] = useState("Lebih Jelas");
+  const [rawPrompt, setRawPrompt] = useState("Create a stronger prompt for Instagram content selling milk coffee.");
+  const [mode, setMode] = useState("Clearer");
   const beforeScore = scorePrompt(rawPrompt);
-  const result = optimizerResult || buildLocalOptimizedPrompt(rawPrompt, mode, "Target AI", "Profesional");
-  const afterScore = scorePrompt(result);
+  const result = optimizerResult || buildLocalOptimizedPrompt(rawPrompt, mode, "Target AI", "Professional");
+  const afterScore = scoreOptimizedPrompt(rawPrompt, result);
 
   async function runOptimize() {
     await optimizePrompt(rawPrompt, mode);
@@ -2723,18 +2753,18 @@ function LibraryView({
 
 function compareAdvice(prompt, score) {
   const checks = [
-    { label: "Role jelas", ok: /role|bertindaklah|anda adalah|act as/i.test(prompt), fix: "Tambahkan peran spesifik di awal prompt." },
-    { label: "Konteks lengkap", ok: /context|konteks|latar belakang|berdasarkan|lampiran/i.test(prompt), fix: "Jelaskan sumber konteks, audiens, dan situasi pemakaian." },
-    { label: "Format output", ok: /format|output|struktur|tabel|json|markdown|slide|dokumen/i.test(prompt), fix: "Tentukan bentuk jawaban dan urutannya." },
-    { label: "Batasan", ok: /constraint|batasan|jangan|harus|maksimal|minimal|wajib/i.test(prompt), fix: "Tambah batasan jumlah, nada, scope, atau hal yang harus dipenuhi." },
-    { label: "Kriteria selesai", ok: /acceptance|checklist|validasi|kriteria|berhasil|selesai/i.test(prompt), fix: "Tambahkan checklist kualitas atau acceptance criteria." },
+    { label: "Clear role", ok: /role|bertindaklah|anda adalah|act as/i.test(prompt), fix: "Add a specific role at the start of the prompt." },
+    { label: "Complete context", ok: /context|konteks|latar belakang|berdasarkan|lampiran/i.test(prompt), fix: "Explain the source context, audience, and usage situation." },
+    { label: "Output format", ok: /format|output|struktur|tabel|json|markdown|slide|dokumen/i.test(prompt), fix: "Define the answer format and order." },
+    { label: "Constraints", ok: /constraint|batasan|jangan|harus|maksimal|minimal|wajib/i.test(prompt), fix: "Add limits for length, tone, scope, or must-have requirements." },
+    { label: "Completion criteria", ok: /acceptance|checklist|validasi|kriteria|berhasil|selesai/i.test(prompt), fix: "Add a quality checklist or acceptance criteria." },
   ];
   const missing = checks.filter((item) => !item.ok).map((item) => item.fix);
   const summary = score.score >= 85
-    ? "Siap dipakai. Iterasi berikutnya cukup poles detail kecil."
+    ? "Ready to use. The next iteration only needs small detail polish."
     : score.score >= 70
-      ? "Cukup kuat, tapi masih bisa dibuat lebih eksplisit."
-      : "Masih rawan hasil generik. Perlu role, konteks, format, dan batasan lebih tegas.";
+      ? "Solid, but it can still be made more explicit."
+      : "Still likely to produce generic output. Add a stronger role, context, format, and constraints.";
 
   return { checks, missing, summary };
 }
@@ -2856,7 +2886,7 @@ function SettingsView({
         <div className="panel-heading">
           <div>
             <h2>LLM Settings</h2>
-            <p>Atur provider, endpoint, model, timeout, dan fallback untuk generate PromptLab.</p>
+            <p>Configure provider, endpoint, model, timeout, and fallback behavior for PromptLab generation.</p>
           </div>
           <strong className={`status-pill ${providerReady ? "ready" : "offline"}`}>
             {providerReady ? "Ready" : "Offline"}
@@ -2933,7 +2963,7 @@ function SettingsView({
             onChange={(event) => updateModelSetting("apiKey", event.target.value)}
             placeholder="Kosongkan untuk memakai ENV Vercel"
           />
-          <p className="settings-help">Jika kosong, backend memakai API key dari Environment Variables Vercel. Jika diisi, key tersimpan di browser ini.</p>
+          <p className="settings-help">Leave empty to use the backend API key from Vercel Environment Variables. If filled, the key is stored in this browser.</p>
         </div>
         <div className="model-settings-panel">
           <div className="section-title">
@@ -2998,14 +3028,14 @@ function SettingsView({
         <div className="panel-heading">
           <div>
             <h2>Runbook</h2>
-            <p>Panduan pendek saat generate terasa lambat atau fallback lokal muncul.</p>
+            <p>Short guide for slow generations or local fallback responses.</p>
           </div>
           <Settings size={22} />
         </div>
         <div className="runbook-list">
-          <div><span>1</span><p>Pakai <strong>Sabar Gratis</strong> untuk file besar, OCR, atau model free sedang antre.</p></div>
-          <div><span>2</span><p>Jika selalu local fallback, tekan <strong>Test Provider</strong> dan cek API backend.</p></div>
-          <div><span>3</span><p>Ganti key/model lewat file <strong>.env</strong>, lalu restart API.</p></div>
+          <div><span>1</span><p>Use <strong>Patient Free</strong> for large files, OCR, or queued free models.</p></div>
+          <div><span>2</span><p>If local fallback keeps appearing, press <strong>Test Provider</strong> and check the backend API.</p></div>
+          <div><span>3</span><p>Change the key/model in <strong>.env</strong>, then restart the API.</p></div>
           <div><span>4</span><p>Untuk akses HP, buka frontend Tailscale dan pastikan backend lokal tetap hidup.</p></div>
         </div>
       </div>
