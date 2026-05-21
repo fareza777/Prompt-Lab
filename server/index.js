@@ -13,7 +13,6 @@ import JSZip from "jszip";
 import mammoth from "mammoth";
 import multer from "multer";
 import OpenAI from "openai";
-import pptxgen from "pptxgenjs";
 
 const app = express();
 const port = Number(process.env.PORT || 8787);
@@ -186,6 +185,7 @@ app.post("/api/export/docx", async (req, res) => {
 app.post("/api/export/pptx", async (req, res) => {
   try {
     const { title, content } = normalizeExportPayload(req.body);
+    const { default: pptxgen } = await import("pptxgenjs");
     const pptx = new pptxgen();
     pptx.layout = "LAYOUT_WIDE";
     pptx.author = "PromptLab";
