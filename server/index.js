@@ -13,7 +13,6 @@ import JSZip from "jszip";
 import mammoth from "mammoth";
 import multer from "multer";
 import OpenAI from "openai";
-import { PDFParse } from "pdf-parse";
 import pptxgen from "pptxgenjs";
 
 const app = express();
@@ -1762,6 +1761,7 @@ async function normalizeFile(file, modelSettings = {}) {
 }
 
 async function extractPdfText(buffer) {
+  const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: buffer });
   try {
     const result = await parser.getText();
