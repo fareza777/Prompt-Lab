@@ -631,20 +631,68 @@ Constraints:
 }
 
 function scorePrompt(prompt) {
-  const checks = [
-    prompt.includes("Act as") || prompt.includes("Role"),
-    prompt.includes("Goal") || prompt.includes("Objective"),
-    prompt.includes("Language style") || prompt.includes("Tone"),
-    prompt.includes("Format") || prompt.includes("Output"),
-    prompt.includes("Constraints"),
-    prompt.length > 500,
-  ];
-  const score = Math.round((checks.filter(Boolean).length / checks.length) * 100);
+  const text = String(prompt || "");
+  const countMatches = (patterns) => patterns.reduce((count, pattern) => count + (pattern.test(text) ? 1 : 0), 0);
+  const sectionCount = (text.match(/(?:^|\n)\s*(?:#{1,3}\s*)?(?:role|context|konteks|objective|tujuan|task|tugas|requirements|output|format|constraints|batasan|acceptance|criteria|quality|checklist)\b/gi) || []).length;
+  const numericControls = (text.match(/\b\d+\b|maks(?:imal)?|min(?:imal)?|at least|no more than|jumlah|kata|slide|section|bagian/gi) || []).length;
+  const genericPenalty = countMatches([
+    /\b(leverage|synergy|world-class|cutting-edge|next-level|game-changing|seamless|robust solution)\b/i,
+    /\b(kelas dunia|terdepan|revolusioner|solusi terbaik)\b/i,
+    /\[(?:your|insert|topik|isi|brand|context)[^\]]*\]/i,
+  ]);
+  const rubricScore = (checks) => Math.round((checks.filter((check) => (check instanceof RegExp ? check.test(text) : Boolean(check))).length / checks.length) * 100);
+  const clarity = rubricScore([
+    /role|act as|bertindak/i,
+    /objective|goal|tujuan|hasil akhir/i,
+    /task|tugas|kerjakan|buat|susun|build|write|create/i,
+    /senior|strategist|engineer|analyst|copywriter|researcher|spesialis|architect/i,
+    sectionCount >= 4,
+  ]);
+  const context = rubricScore([
+    /context|konteks|latar belakang|berdasarkan|source|sumber/i,
+    /audience|target|persona|pengguna|pembaca|customer|user/i,
+    /lampiran|dokumen|data|file|screenshot|referensi|brief/i,
+    /assumption|asumsi|jika tidak tersedia|if missing/i,
+    text.length >= 700,
+  ]);
+  const format = rubricScore([
+    /format|output|struktur|section|bagian|table|tabel|json|markdown/i,
+    /urut|ordered|sequence|slide-by-slide|file-by-file|sections?/i,
+    numericControls >= 2,
+    /acceptance|criteria|checklist|quality gate|kriteria/i,
+    sectionCount >= 5,
+  ]);
+  const constraints = rubricScore([
+    /constraint|batasan|jangan|must|wajib|harus|avoid|larang/i,
+    /maks(?:imal)?|min(?:imal)?|at most|at least|no more than/i,
+    /do not invent|jangan mengarang|state assumptions|tandai asumsi/i,
+    /clarifying questions|pertanyaan klarifikasi|only if blocked/i,
+    numericControls >= 3,
+  ]);
+  const actionability = rubricScore([
+    /acceptance|criteria|kriteria|test|uji|run|export|deliver/i,
+    /step|langkah|checklist|implementation|implementasi/i,
+    /file|screen|api|table|slide|section|CTA|output/i,
+    numericControls >= 2,
+    text.length >= 900,
+  ]);
+  const rawScore = Math.round((clarity + context + format + constraints + actionability) / 5);
+  const score = Math.max(5, Math.min(99, rawScore - genericPenalty * 6));
+  const tips = [
+    clarity < 80 && "Buat role lebih spesifik: jabatan + domain + level senior.",
+    context < 80 && "Tambahkan audiens, konteks bisnis, sumber data, atau asumsi eksplisit.",
+    format < 80 && "Kunci struktur output dengan urutan section dan batas jumlah/panjang.",
+    constraints < 80 && "Tambah minimal 3 batasan konkret dan aturan anti-hallucination.",
+    actionability < 80 && "Tambah acceptance criteria yang bisa dicek.",
+  ].filter(Boolean);
   return {
+    actionability,
     score,
-    clarity: Math.min(98, score + 4),
-    context: Math.max(45, score - 3),
-    format: Math.min(99, score + 8),
+    clarity,
+    context,
+    constraints,
+    format,
+    tips: tips.length ? tips : ["Prompt sudah kuat. Iterasi berikutnya fokus pada detail domain dan contoh output."],
   };
 }
 
@@ -1485,19 +1533,23 @@ function V2IntentEnginePanel({ blueprint, eyebrow = "PromptLab Intent Engine" })
 
 function V2GenerateLoader({ attachments, model, outputType }) {
   const steps = [
-    ["Capture intent", "Read beyond the literal request"],
-    ["Expand domain", "Add expected features, states, and flows"],
-    [attachments.length ? "Read context" : "Infer gaps", attachments.length ? `${attachments.length} file(s) queued for extraction` : "Professional assumptions only"],
-    ["Route model", `${model} with fallback safety`],
-    ["Lock brief", `${outputType} format, guardrails, and criteria`],
+    ["Intent", "Parsing hidden objective"],
+    ["Context", attachments.length ? `${attachments.length} file(s) queued` : "Filling safe assumptions"],
+    ["Spec", "Building prompt schema"],
+    ["Model", `${model} routing`],
+    ["Guard", `${outputType} locked`],
   ];
 
   return (
     <section className="v2-generate-loader" aria-live="polite">
-      <div className="v2-loader-orb"><Sparkles size={20} /></div>
+      <div className="v2-loader-orb">
+        <Sparkles size={20} />
+        <span />
+      </div>
       <div className="v2-loader-main">
         <span className="v2-eyebrow">Live pipeline</span>
         <strong>Optimizing your prompt...</strong>
+        <p>Intent engine is scoring structure, context, constraints, and output control.</p>
         <div className="v2-loader-bar"><i /></div>
       </div>
       <div className="v2-loader-steps">
@@ -1559,6 +1611,12 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
         <V2Metric label="Clarity" value={metrics.clarity} />
         <V2Metric label="Context" value={metrics.context} />
         <V2Metric label="Output format" value={metrics.format} />
+        <V2Metric label="Constraints" value={metrics.constraints} />
+        <V2Metric label="Actionability" value={metrics.actionability} />
+        <div className="v2-score-advice">
+          <span>How to raise it</span>
+          {metrics.tips.slice(0, 3).map((tip) => <p key={tip}>{tip}</p>)}
+        </div>
         <div className="v2-checklist">
           {["Intent parsed", "Guardrails active", "Export ready"].map((item, index) => (
             <div key={item}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item}</strong><small>Validated locally</small></div>
