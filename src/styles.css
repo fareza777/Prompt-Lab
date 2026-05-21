@@ -621,6 +621,10 @@ button {
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
+.v2-summary-grid.quality {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .v2-stat,
 .v2-card {
   border: 1px solid var(--line-soft);
@@ -1048,9 +1052,49 @@ button {
   font-size: 12px;
 }
 
+.v2-textarea.mini {
+  min-height: 92px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
 .v2-input {
   min-height: 44px;
   padding: 0 13px;
+}
+
+.v2-template-builder {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 18px;
+}
+
+.v2-template-builder > div:first-child strong {
+  display: block;
+  margin: 5px 0;
+  color: var(--fg);
+  font-size: 18px;
+}
+
+.v2-template-builder > div:first-child p {
+  margin: 0;
+}
+
+.v2-template-builder-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(130px, 1fr)) auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.v2-template-builder-controls select {
+  min-height: 42px;
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--bg-input);
+  padding: 0 12px;
 }
 
 .v2-attach {
@@ -1408,6 +1452,27 @@ button {
   padding: 18px;
   border-radius: var(--r-lg);
   text-align: left;
+}
+
+.v2-template-actions {
+  display: flex;
+  gap: 8px;
+  align-self: end;
+  margin-top: 4px;
+}
+
+.v2-template-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  color: var(--fg);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+  background: var(--bg-input);
+  font-weight: 800;
+}
+
+.v2-template-actions button:hover {
+  border-color: var(--ac-line);
 }
 
 .v2-template-card strong {
@@ -1793,7 +1858,12 @@ button {
 
   .v2-template-grid,
   .v2-compare-grid,
-  .v2-summary-grid {
+  .v2-summary-grid,
+  .v2-summary-grid.quality {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .v2-template-builder-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1833,10 +1903,12 @@ button {
   .v2-template-grid,
   .v2-compare-grid,
   .v2-summary-grid,
+  .v2-summary-grid.quality,
   .v2-loader-steps,
   .v2-mode-grid,
   .v2-info-grid,
-  .v2-two {
+  .v2-two,
+  .v2-template-builder-controls {
     grid-template-columns: 1fr;
   }
 

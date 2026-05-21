@@ -39,6 +39,8 @@ const outputTypes = ["Application Code", "Word Document", "PPT", "Technical Desi
 const optimizerModes = ["Clearer", "Shorter", "More Detailed", "Academic", "Marketing", "Coding"];
 const generationModes = ["Fast", "Balanced", "Patient Free"];
 const providerOptions = ["openrouter", "openai", "custom"];
+const LIBRARY_LIMIT = 100;
+const CUSTOM_TEMPLATE_LIMIT = 40;
 const defaultModelSettings = {
   apiKey: "",
   baseUrl: "https://openrouter.ai/api/v1",
@@ -220,6 +222,96 @@ const templates = [
     tone: "Professional",
     prompt:
       "Create a prompt for an executive summary Word document from the attachment: context, problem, key data, solution, risks, recommendations, and supporting tables.",
+  },
+  {
+    title: "Play Store App Launch Plan",
+    category: "Business",
+    model: "Claude",
+    outputType: "Technical Design",
+    tone: "Professional",
+    prompt:
+      "Create a Play Store launch plan for a web app wrapper: app positioning, core features, login, membership, Play Billing requirements, rollout checklist, ASO copy, screenshots, and policy risks.",
+  },
+  {
+    title: "Membership SaaS Blueprint",
+    category: "Business",
+    model: "Claude",
+    outputType: "Technical Design",
+    tone: "Professional",
+    prompt:
+      "Design a membership system for a prompt-generation SaaS: user roles, free/pro/business plans, quotas, entitlements, billing states, admin controls, database schema, and abuse prevention.",
+  },
+  {
+    title: "Supabase Auth Implementation",
+    category: "Coding",
+    model: "Claude",
+    outputType: "Application Code",
+    tone: "Professional",
+    prompt:
+      "Implement Supabase Auth in this app with email and Google login, protected routes, user profile storage, session restore, logout, and clear error/loading states.",
+  },
+  {
+    title: "Prompt Marketplace Template",
+    category: "Business",
+    model: "ChatGPT",
+    outputType: "Content",
+    tone: "Persuasive",
+    prompt:
+      "Create a prompt marketplace listing with title, target user, pain point, benefits, included outputs, usage steps, SEO keywords, pricing angle, and conversion-focused description.",
+  },
+  {
+    title: "AI Agent SOP Builder",
+    category: "Business",
+    model: "Claude",
+    outputType: "Word Document",
+    tone: "Professional",
+    prompt:
+      "Turn the attached business process into an AI-agent SOP with objective, inputs, decision rules, escalation rules, quality checks, examples, and failure handling.",
+  },
+  {
+    title: "Landing Page Conversion Audit",
+    category: "Marketing",
+    model: "ChatGPT",
+    outputType: "Analysis",
+    tone: "Professional",
+    prompt:
+      "Audit this landing page for conversion: headline clarity, offer, trust proof, CTA, objections, mobile friction, copy gaps, UX risks, and prioritized fixes.",
+  },
+  {
+    title: "TikTok Short Video Pack",
+    category: "Content Creator",
+    model: "ChatGPT",
+    outputType: "Content",
+    tone: "Casual",
+    prompt:
+      "Create a 10-video TikTok content pack with hooks, scene-by-scene scripts, captions, visual direction, CTA, and variations for testing.",
+  },
+  {
+    title: "Image-to-Prompt Analyzer",
+    category: "Image AI",
+    model: "Midjourney",
+    outputType: "Content",
+    tone: "Creative",
+    prompt:
+      "Analyze the attached image and turn it into a reusable image-generation prompt with subject, style, composition, lighting, camera, color, texture, and negative prompt.",
+  },
+  {
+    title: "Research Literature Matrix",
+    category: "Academic",
+    model: "Gemini",
+    outputType: "Analysis",
+    tone: "Professional",
+    prompt:
+      "Create a literature review matrix from the attached papers: author, year, method, variables, findings, limitations, research gap, and thesis relevance.",
+  },
+  {
+    title: "Bug Report to Fix Plan",
+    category: "Coding",
+    model: "Claude",
+    outputType: "Technical Design",
+    tone: "Professional",
+    prompt:
+      "Turn this bug report into a fix plan with reproduction steps, suspected cause, files to inspect, patch strategy, regression tests, and rollout risk.",
   },
 ];
 
@@ -564,6 +656,53 @@ function normalizeLibrary(raw) {
   );
 }
 
+function normalizeCustomTemplates(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item, index) => ({
+      id: item.id || `custom-template-${index}-${Date.now()}`,
+      title: item.title || "Custom template",
+      category: categories.includes(item.category) ? item.category : "Business",
+      model: models.includes(item.model) ? item.model : "Claude",
+      outputType: outputTypes.includes(item.outputType) ? item.outputType : "Content",
+      tone: tones.includes(item.tone) ? item.tone : "Professional",
+      prompt: item.prompt || "",
+      custom: true,
+      createdAt: item.createdAt || Date.now(),
+    }))
+    .filter((item) => item.prompt.trim())
+    .slice(0, CUSTOM_TEMPLATE_LIMIT);
+}
+
+async function writeClipboard(text) {
+  const value = String(text || "");
+  if (!value.trim()) return false;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch {
+    // Fall through to the textarea copy path for browsers that block Clipboard API.
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  textarea.style.pointerEvents = "none";
+  document.body.appendChild(textarea);
+  textarea.select();
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } finally {
+    document.body.removeChild(textarea);
+  }
+  return copied;
+}
+
 function buildPrompt(narrative, category, tone, model, outputType, attachments) {
   if (isClaudeTarget(model)) {
     return buildClaudePrompt({ narrative, category, tone, outputType, attachments });
@@ -825,6 +964,7 @@ function App() {
   const [errorMessage, setErrorMessage] = useState("");
   const [warningMessage, setWarningMessage] = useState("");
   const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState("");
   const [search, setSearch] = useState("");
   const [selectedLibraryId, setSelectedLibraryId] = useState("");
   const [compareA, setCompareA] = useState("");
@@ -864,6 +1004,14 @@ function App() {
       return defaultLibrary;
     }
   });
+  const [customTemplates, setCustomTemplates] = useState(() => {
+    try {
+      return normalizeCustomTemplates(JSON.parse(localStorage.getItem("promptlab-custom-templates")));
+    } catch {
+      return [];
+    }
+  });
+  const allTemplates = useMemo(() => [...customTemplates, ...templates], [customTemplates]);
 
   const localPrompt = useMemo(
     () => buildPrompt(narrative, category, tone, model, outputType, attachments),
@@ -876,8 +1024,12 @@ function App() {
     : "";
 
   useEffect(() => {
-    localStorage.setItem("promptlab-library", JSON.stringify(library.slice(0, 60)));
+    localStorage.setItem("promptlab-library", JSON.stringify(library.slice(0, LIBRARY_LIMIT)));
   }, [library]);
+
+  useEffect(() => {
+    localStorage.setItem("promptlab-custom-templates", JSON.stringify(customTemplates.slice(0, CUSTOM_TEMPLATE_LIMIT)));
+  }, [customTemplates]);
 
   useEffect(() => {
     localStorage.setItem("promptlab-generation-mode", generationMode);
@@ -922,10 +1074,15 @@ function App() {
     setActive("Builder");
   }
 
-  function copyText(text = prompt) {
-    navigator.clipboard?.writeText(text).catch(() => {});
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1400);
+  async function copyText(text = prompt) {
+    const ok = await writeClipboard(text);
+    setCopied(ok);
+    setCopyStatus(ok ? "Copied" : "Copy failed");
+    window.setTimeout(() => {
+      setCopied(false);
+      setCopyStatus("");
+    }, 1600);
+    return ok;
   }
 
   function savePrompt(content = prompt, titleSeed = narrative) {
@@ -939,8 +1096,30 @@ function App() {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    setLibrary((items) => [item, ...items]);
+    setLibrary((items) => [item, ...items].slice(0, LIBRARY_LIMIT));
     setSelectedLibraryId(item.id);
+  }
+
+  function saveCustomTemplate(template) {
+    const cleanPrompt = String(template.prompt || "").trim();
+    if (!cleanPrompt) return null;
+    const item = {
+      id: globalThis.crypto?.randomUUID?.() || `${Date.now()}`,
+      title: String(template.title || "Custom template").trim() || "Custom template",
+      category: categories.includes(template.category) ? template.category : category,
+      model: models.includes(template.model) ? template.model : model,
+      outputType: outputTypes.includes(template.outputType) ? template.outputType : outputType,
+      tone: tones.includes(template.tone) ? template.tone : tone,
+      prompt: cleanPrompt,
+      custom: true,
+      createdAt: Date.now(),
+    };
+    setCustomTemplates((items) => [item, ...items].slice(0, CUSTOM_TEMPLATE_LIMIT));
+    return item;
+  }
+
+  function deleteCustomTemplate(id) {
+    setCustomTemplates((items) => items.filter((item) => item.id !== id));
   }
 
   function updateLibraryItem(id, patch) {
@@ -961,7 +1140,7 @@ function App() {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    setLibrary((items) => [copy, ...items]);
+    setLibrary((items) => [copy, ...items].slice(0, LIBRARY_LIMIT));
     setSelectedLibraryId(copy.id);
   }
 
@@ -1228,11 +1407,18 @@ function App() {
     warningMessage,
     errorMessage,
     copied,
+    copyStatus,
     copyText,
     savePrompt,
     generatePrompt,
     isGenerating,
     library,
+    libraryLimit: LIBRARY_LIMIT,
+    templates: allTemplates,
+    customTemplates,
+    customTemplateLimit: CUSTOM_TEMPLATE_LIMIT,
+    saveCustomTemplate,
+    deleteCustomTemplate,
     filteredLibrary,
     selectedLibrary,
     selectedLibraryId,
@@ -1695,13 +1881,12 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
   const afterScore = scoreOptimizedPrompt(rawPrompt, result);
   const scoreDelta = afterScore.score - beforeScore.score;
   const optimizerBlueprint = useMemo(() => inferOptimizerBlueprint(rawPrompt, mode), [rawPrompt, mode]);
-  const summary = [
-    ["Role", beforeScore.score > 60 ? "sharpened" : "added"],
-    ["Context", `${Math.max(0, afterScore.context - beforeScore.context)} pt gain`],
-    ["Format", "output schema locked"],
-    ["Guardrail", "deliverable protected"],
-    ["Tone", "more consistent"],
-    ["Export", "DOCX ready"],
+  const qualityBreakdown = [
+    ["Clarity", beforeScore.clarity, afterScore.clarity, "role and objective"],
+    ["Context", beforeScore.context, afterScore.context, "audience and assumptions"],
+    ["Format", beforeScore.format, afterScore.format, "output structure"],
+    ["Guardrails", beforeScore.constraints, afterScore.constraints, "limits and safety"],
+    ["Actionability", beforeScore.actionability, afterScore.actionability, "testable criteria"],
   ];
   return (
     <div className="v2-screen">
@@ -1754,37 +1939,102 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
           </div>
         </div>
       </section>
-      <section className="v2-summary-grid">
-        {summary.map(([label, value]) => <V2Stat key={label} label={label} value={value} detail="change summary" />)}
+      <section className="v2-summary-grid quality">
+        {qualityBreakdown.map(([label, before, after, detail]) => (
+          <V2Stat
+            key={label}
+            label={label}
+            value={`${before} -> ${after}`}
+            detail={`${after - before >= 0 ? "+" : ""}${after - before} · ${detail}`}
+          />
+        ))}
       </section>
     </div>
   );
 }
 
-function V2Templates({ setBuilderFromTemplate, search, setSearch }) {
+function V2Templates({
+  setBuilderFromTemplate,
+  search,
+  setSearch,
+  templates: availableTemplates,
+  customTemplates,
+  customTemplateLimit,
+  saveCustomTemplate,
+  deleteCustomTemplate,
+  narrative,
+  category,
+  model,
+  outputType,
+  tone,
+}) {
   const [filter, setFilter] = useState("All");
-  const options = ["All", ...new Set(templates.map((item) => item.category))];
-  const filtered = templates.filter((item) => {
+  const [templateDraft, setTemplateDraft] = useState({
+    title: "",
+    prompt: "",
+    category,
+    model,
+    outputType,
+    tone,
+  });
+  const options = ["All", ...new Set(availableTemplates.map((item) => item.category))];
+  const filtered = availableTemplates.filter((item) => {
     const q = `${item.title} ${item.category} ${item.outputType} ${item.model} ${item.prompt}`.toLowerCase();
     return (filter === "All" || item.category === filter) && q.includes(search.toLowerCase());
   });
+  const fillFromBuilder = () => {
+    setTemplateDraft({
+      title: `${outputType} Template`,
+      prompt: narrative,
+      category,
+      model,
+      outputType,
+      tone,
+    });
+  };
+  const createTemplate = () => {
+    const saved = saveCustomTemplate(templateDraft);
+    if (!saved) return;
+    setTemplateDraft((draft) => ({ ...draft, title: "", prompt: "" }));
+    setFilter("All");
+  };
   return (
     <div className="v2-screen">
       <V2PageIntro eyebrow="Template Gallery" title="Featured prompts for serious output." copy="Fast filters for apps, reports, slides, content, coding, and visual prompts.">
-        <div className="v2-hero-status"><span>Templates</span><strong>{filtered.length}</strong><small>ready to use</small></div>
+        <div className="v2-hero-status"><span>Templates</span><strong>{filtered.length}</strong><small>{customTemplates.length}/{customTemplateLimit} custom</small></div>
       </V2PageIntro>
+      <section className="v2-template-builder v2-card">
+        <div>
+          <span className="v2-eyebrow">Custom template</span>
+          <strong>Add your own reusable pattern</strong>
+          <p>Saved locally in this browser. Use membership/database later for cross-device sync.</p>
+        </div>
+        <input className="v2-input" value={templateDraft.title} onChange={(event) => setTemplateDraft((draft) => ({ ...draft, title: event.target.value }))} placeholder="Template title" />
+        <textarea className="v2-textarea mini" value={templateDraft.prompt} onChange={(event) => setTemplateDraft((draft) => ({ ...draft, prompt: event.target.value }))} placeholder="Paste the reusable prompt pattern..." />
+        <div className="v2-template-builder-controls">
+          <select value={templateDraft.category} onChange={(event) => setTemplateDraft((draft) => ({ ...draft, category: event.target.value }))}>{categories.map((item) => <option key={item}>{item}</option>)}</select>
+          <select value={templateDraft.model} onChange={(event) => setTemplateDraft((draft) => ({ ...draft, model: event.target.value }))}>{models.map((item) => <option key={item}>{item}</option>)}</select>
+          <select value={templateDraft.outputType} onChange={(event) => setTemplateDraft((draft) => ({ ...draft, outputType: event.target.value }))}>{outputTypes.map((item) => <option key={item}>{item}</option>)}</select>
+          <button className="v2-btn" type="button" onClick={fillFromBuilder}>Use Builder Draft</button>
+          <button className="v2-btn primary" type="button" onClick={createTemplate} disabled={!templateDraft.prompt.trim()}><Plus size={16} />Add Template</button>
+        </div>
+      </section>
       <div className="v2-toolbar">
         <div className="v2-search wide"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search templates..." /></div>
         <div className="v2-chip-row">{options.map((item) => <button key={item} className={`v2-chip ${filter === item ? "active" : ""}`} onClick={() => setFilter(item)}>{item}</button>)}</div>
       </div>
       <section className="v2-template-grid">
         {filtered.slice(0, 9).map((template) => (
-          <button className="v2-template-card" key={template.title} onClick={() => setBuilderFromTemplate(template)}>
+          <article className="v2-template-card" key={`${template.custom ? "custom" : "built-in"}-${template.title}`}>
             <span>{template.category}</span>
             <strong>{template.title}</strong>
             <p>{template.prompt}</p>
-            <small>{template.model} · {template.outputType}</small>
-          </button>
+            <small>{template.model} · {template.outputType}{template.custom ? " · Custom" : ""}</small>
+            <div className="v2-template-actions">
+              <button type="button" onClick={() => setBuilderFromTemplate(template)}>Use</button>
+              {template.custom && <button type="button" onClick={() => deleteCustomTemplate(template.id)}>Delete</button>}
+            </div>
+          </article>
         ))}
       </section>
     </div>
@@ -1796,6 +2046,7 @@ function V2Library(props) {
     filteredLibrary, selectedLibrary, selectedLibraryId, setSelectedLibraryId, search, setSearch,
     updateLibraryItem, deleteLibraryItem, duplicateLibraryItem, copyText, setCompareA, setCompareB,
     setActive, setNarrative, setCategory, setOutputType, exportFile,
+    libraryLimit, copyStatus,
   } = props;
   const currentItem = filteredLibrary.find((item) => item.id === selectedLibraryId) || filteredLibrary[0] || selectedLibrary;
   const rows = filteredLibrary.slice(0, 8);
@@ -1809,10 +2060,11 @@ function V2Library(props) {
   return (
     <div className="v2-screen">
       <V2PageIntro eyebrow="Library" title="Prompt archive that behaves like a workspace." copy="Search, edit, duplicate, export, and send prompts to Compare or Builder.">
-        <div className="v2-hero-status"><span>Saved</span><strong>{filteredLibrary.length}</strong><small>prompts</small></div>
+        <div className="v2-hero-status"><span>Saved</span><strong>{filteredLibrary.length}</strong><small>of {libraryLimit} local slots</small></div>
       </V2PageIntro>
       <section className="v2-stats-strip">
         <V2Stat label="Total" value={filteredLibrary.length} detail="stored prompts" />
+        <V2Stat label="Capacity" value={`${filteredLibrary.length}/${libraryLimit}`} detail="local browser storage" />
         <V2Stat label="Categories" value={new Set(filteredLibrary.map((i) => i.tag)).size} detail="active tags" />
         <V2Stat label="Last updated" value={formatDate(currentItem?.updatedAt || currentItem?.createdAt)} detail={currentItem?.title || "-"} compact />
       </section>
@@ -1841,7 +2093,7 @@ function V2Library(props) {
               <textarea className="v2-textarea" value={currentItem.content} onChange={(event) => updateLibraryItem(currentItem.id, { content: event.target.value })} />
               <div className="v2-actions wrap">
                 <button className="v2-btn primary" onClick={() => useInBuilder(currentItem)}><PenLine size={16} />Use in Builder</button>
-                <button className="v2-btn" onClick={() => copyText(currentItem.content)}><Clipboard size={16} />Copy</button>
+                <button className="v2-btn" onClick={() => copyText(currentItem.content)}>{copyStatus === "Copied" ? <Check size={16} /> : <Clipboard size={16} />}{copyStatus || "Copy"}</button>
                 <button className="v2-btn" onClick={() => duplicateLibraryItem(currentItem)}><Plus size={16} />Duplicate</button>
                 <button className="v2-btn" onClick={() => { setCompareA(currentItem.content); setActive("Compare"); }}><ArrowRightLeft size={16} />Compare A</button>
                 <button className="v2-btn" onClick={() => { setCompareB(currentItem.content); setActive("Compare"); }}><ArrowRightLeft size={16} />Compare B</button>
