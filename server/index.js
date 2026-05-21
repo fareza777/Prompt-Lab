@@ -1761,14 +1761,52 @@ async function normalizeFile(file, modelSettings = {}) {
 }
 
 async function extractPdfText(buffer) {
-  const { PDFParse } = await import("pdf-parse");
-  const parser = new PDFParse({ data: buffer });
-  try {
-    const result = await parser.getText();
-    return String(result.text || "").replace(/\s+/g, " ").trim().slice(0, 15000);
-  } finally {
-    await parser.destroy?.();
+  const raw = buffer.toString("latin1");
+  const chunks = [];
+  const literalStringPattern = /\(([^()\\]*(?:\\.[^()\\]*)*)\)\s*(?:Tj|'|"|\])/g;
+  const hexStringPattern = /<([0-9A-Fa-f\s]{4,})>\s*Tj/g;
+  let match;
+
+  while ((match = literalStringPattern.exec(raw)) && chunks.length < 1200) {
+    chunks.push(decodePdfLiteralString(match[1]));
   }
+
+  while ((match = hexStringPattern.exec(raw)) && chunks.length < 1400) {
+    chunks.push(decodePdfHexString(match[1]));
+  }
+
+  return chunks
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 15000);
+}
+
+function decodePdfLiteralString(value) {
+  return value
+    .replace(/\\([nrtbf()\\])/g, (_match, char) => {
+      const map = { b: "\b", f: "\f", n: "\n", r: "\r", t: "\t" };
+      return map[char] || char;
+    })
+    .replace(/\\(\d{1,3})/g, (_match, octal) => String.fromCharCode(Number.parseInt(octal, 8)))
+    .replace(/[^\S\r\n]+/g, " ")
+    .trim();
+}
+
+function decodePdfHexString(value) {
+  const clean = value.replace(/\s+/g, "");
+  const bytes = clean.match(/.{1,2}/g)?.map((hex) => Number.parseInt(hex, 16)) || [];
+  if (!bytes.length) return "";
+  const hasUtf16Bom = bytes[0] === 0xfe && bytes[1] === 0xff;
+  if (hasUtf16Bom) {
+    let output = "";
+    for (let index = 2; index + 1 < bytes.length; index += 2) {
+      output += String.fromCharCode((bytes[index] << 8) | bytes[index + 1]);
+    }
+    return output.trim();
+  }
+  return Buffer.from(bytes).toString("utf8").replace(/\u0000/g, "").trim();
 }
 
 async function extractImageText(file, modelSettings = {}) {
