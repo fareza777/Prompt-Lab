@@ -41,6 +41,32 @@ const generationModes = ["Fast", "Balanced", "Patient Free"];
 const providerOptions = ["openrouter", "openai", "custom"];
 const LIBRARY_LIMIT = 100;
 const CUSTOM_TEMPLATE_LIMIT = 40;
+const defaultAccountState = {
+  email: "",
+  name: "",
+  plan: "Free",
+  quotaUsed: 12400,
+  quotaLimit: 50000,
+  quotaReset: "May 31",
+  playBilling: "Not connected",
+};
+const membershipPlans = {
+  Free: {
+    quota: 50000,
+    price: "Rp0",
+    detail: "Basic generation, local library, manual exports.",
+  },
+  Pro: {
+    quota: 500000,
+    price: "Rp49k/mo",
+    detail: "Higher quota, OCR priority, DOCX/PPTX exports, saved templates.",
+  },
+  Business: {
+    quota: 2000000,
+    price: "Rp199k/mo",
+    detail: "Team workspace, shared library, admin quota, priority routing.",
+  },
+};
 const defaultModelSettings = {
   apiKey: "",
   baseUrl: "https://openrouter.ai/api/v1",
@@ -674,6 +700,18 @@ function normalizeCustomTemplates(raw) {
     .slice(0, CUSTOM_TEMPLATE_LIMIT);
 }
 
+function normalizeAccountState(raw) {
+  if (!raw || typeof raw !== "object") return defaultAccountState;
+  const plan = membershipPlans[raw.plan] ? raw.plan : "Free";
+  return {
+    ...defaultAccountState,
+    ...raw,
+    plan,
+    quotaLimit: Number(raw.quotaLimit || membershipPlans[plan].quota || defaultAccountState.quotaLimit),
+    quotaUsed: Number(raw.quotaUsed || 0),
+  };
+}
+
 async function writeClipboard(text) {
   const value = String(text || "");
   if (!value.trim()) return false;
@@ -1011,6 +1049,13 @@ function App() {
       return [];
     }
   });
+  const [accountState, setAccountState] = useState(() => {
+    try {
+      return normalizeAccountState(JSON.parse(localStorage.getItem("promptlab-account")));
+    } catch {
+      return defaultAccountState;
+    }
+  });
   const allTemplates = useMemo(() => [...customTemplates, ...templates], [customTemplates]);
 
   const localPrompt = useMemo(
@@ -1030,6 +1075,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem("promptlab-custom-templates", JSON.stringify(customTemplates.slice(0, CUSTOM_TEMPLATE_LIMIT)));
   }, [customTemplates]);
+
+  useEffect(() => {
+    localStorage.setItem("promptlab-account", JSON.stringify(accountState));
+  }, [accountState]);
 
   useEffect(() => {
     localStorage.setItem("promptlab-generation-mode", generationMode);
@@ -1120,6 +1169,32 @@ function App() {
 
   function deleteCustomTemplate(id) {
     setCustomTemplates((items) => items.filter((item) => item.id !== id));
+  }
+
+  function updateMembershipPlan(plan) {
+    const selected = membershipPlans[plan] || membershipPlans.Free;
+    setAccountState((account) => ({
+      ...account,
+      plan,
+      quotaLimit: selected.quota,
+      quotaUsed: Math.min(account.quotaUsed || 0, selected.quota),
+    }));
+  }
+
+  function mockSignIn() {
+    setAccountState((account) => ({
+      ...account,
+      name: account.name || "Fajar M Reza",
+      email: account.email || "fajar@example.com",
+    }));
+  }
+
+  function signOut() {
+    setAccountState((account) => ({
+      ...defaultAccountState,
+      plan: account.plan,
+      quotaLimit: membershipPlans[account.plan]?.quota || defaultAccountState.quotaLimit,
+    }));
   }
 
   function updateLibraryItem(id, patch) {
@@ -1454,6 +1529,12 @@ function App() {
     exportStatus,
     exportFile,
     apiBase,
+    accountState,
+    setAccountState,
+    membershipPlans,
+    updateMembershipPlan,
+    mockSignIn,
+    signOut,
     setBuilderFromTemplate,
     optimizerResult,
     optimizerSource,
@@ -1525,7 +1606,8 @@ function V2TokenSection({ title, tokens }) {
 }
 
 function V2App(props) {
-  const { active, setActive, settingsStatus, generationStatus, generationSource, generationModel, metrics, isGenerating } = props;
+  const { active, setActive, settingsStatus, generationStatus, generationSource, generationModel, isGenerating, accountState } = props;
+  const quotaPercent = Math.min(100, Math.round(((accountState.quotaUsed || 0) / Math.max(1, accountState.quotaLimit || 1)) * 100));
   return (
     <div className="v2-shell" data-theme="v2">
       <aside className="v2-sidebar">
@@ -1550,6 +1632,14 @@ function V2App(props) {
           <button>Claude app build</button>
           <button>Slide outline</button>
         </div>
+        <button className="v2-quota-card" type="button" onClick={() => setActive("Settings")}>
+          <div>
+            <span>Quota</span>
+            <em>{(accountState.quotaUsed / 1000).toFixed(1)}k / {(accountState.quotaLimit / 1000).toFixed(0)}k</em>
+          </div>
+          <i><b style={{ width: `${quotaPercent}%` }} /></i>
+          <small>Resets {accountState.quotaReset} · <strong>{accountState.plan}</strong></small>
+        </button>
         <div className="v2-side-card">
           <span>Session</span>
           <strong>{isGenerating ? "Generating" : "Ready"}</strong>
@@ -1708,6 +1798,7 @@ function V2Builder(props) {
           narrative={narrative}
           exportStatus={exportStatus}
           isGenerating={isGenerating}
+          accountState={props.accountState}
         />
       </section>
     </div>
@@ -1790,7 +1881,7 @@ function V2MiniPipeline({ eyebrow = "Working", title, steps }) {
   );
 }
 
-function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource, generationModel, copyText, savePrompt, exportFile, narrative, exportStatus, isGenerating }) {
+function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource, generationModel, copyText, savePrompt, exportFile, narrative, exportStatus, isGenerating, accountState }) {
   const [actionFeedback, setActionFeedback] = useState("");
   const confirmAction = (label, action) => {
     action();
@@ -1824,10 +1915,10 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
           <span>How to raise it</span>
           {metrics.tips.slice(0, 3).map((tip) => <p key={tip}>{tip}</p>)}
         </div>
-        <div className="v2-checklist">
-          {["Intent parsed", "Guardrails active", "Export ready"].map((item, index) => (
-            <div key={item}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item}</strong><small>Validated locally</small></div>
-          ))}
+        <div className="v2-playstore-mini">
+          <span>Play Store prep</span>
+          <strong>{accountState.plan} membership route</strong>
+          <p>Quota and account state are ready for backend auth, database entitlements, and Google Play Billing validation.</p>
         </div>
       </div>
       <div className="v2-card v2-output-card">
@@ -2244,6 +2335,12 @@ function V2Settings(props) {
     providerTestStatus,
     isTestingProvider,
     testProvider,
+    accountState,
+    setAccountState,
+    membershipPlans,
+    updateMembershipPlan,
+    mockSignIn,
+    signOut,
   } = props;
   const fallbackModels = modelSettings.fallbackModels
     .split(/[\n,]/)
@@ -2252,6 +2349,7 @@ function V2Settings(props) {
   const providerReady = Boolean(settingsStatus?.ok && settingsStatus?.ai);
   const activeProfile = modeProfiles[generationMode] || modeProfiles.Balanced;
   const updateModelSetting = (key, value) => setModelSettings((settings) => ({ ...settings, [key]: value }));
+  const quotaPercent = Math.min(100, Math.round(((accountState.quotaUsed || 0) / Math.max(1, accountState.quotaLimit || 1)) * 100));
 
   return (
     <div className="v2-screen v2-settings-screen">
@@ -2268,6 +2366,64 @@ function V2Settings(props) {
       </V2PageIntro>
 
       <section className="v2-settings-grid">
+        <div className="v2-card v2-settings-card v2-account-card">
+          <div className="v2-card-head">
+            <div>
+              <h2>Account & Membership</h2>
+              <p>Migration-ready local state for login, quotas, subscriptions, and Play Store entitlement checks.</p>
+            </div>
+            <span className={`v2-health ${accountState.email ? "ready" : ""}`}>{accountState.email ? "Signed in" : "Guest"}</span>
+          </div>
+          <div className="v2-account-grid">
+            <label>
+              <span>Email</span>
+              <input className="v2-input" value={accountState.email} onChange={(event) => setAccountState((account) => ({ ...account, email: event.target.value }))} placeholder="user@email.com" />
+            </label>
+            <label>
+              <span>Name</span>
+              <input className="v2-input" value={accountState.name} onChange={(event) => setAccountState((account) => ({ ...account, name: event.target.value }))} placeholder="Member name" />
+            </label>
+          </div>
+          <div className="v2-plan-grid">
+            {Object.entries(membershipPlans).map(([plan, info]) => (
+              <button key={plan} className={accountState.plan === plan ? "active" : ""} onClick={() => updateMembershipPlan(plan)}>
+                <span>{plan}</span>
+                <strong>{info.price}</strong>
+                <small>{info.detail}</small>
+              </button>
+            ))}
+          </div>
+          <div className="v2-quota-meter">
+            <div><span>Quota</span><strong>{(accountState.quotaUsed / 1000).toFixed(1)}k / {(accountState.quotaLimit / 1000).toFixed(0)}k tokens</strong></div>
+            <i><b style={{ width: `${quotaPercent}%` }} /></i>
+            <small>Resets {accountState.quotaReset}. Backend should decrement usage after every successful generation.</small>
+          </div>
+          <div className="v2-actions wrap">
+            <button className="v2-btn primary" onClick={mockSignIn}>Mock Sign In</button>
+            <button className="v2-btn" onClick={signOut}>Sign Out</button>
+          </div>
+        </div>
+
+        <div className="v2-card v2-settings-card">
+          <div className="v2-card-head">
+            <div>
+              <h2>Play Store Migration</h2>
+              <p>Use this checklist before wrapping the app as TWA/Capacitor for Google Play.</p>
+            </div>
+            <Rocket size={20} />
+          </div>
+          <div className="v2-playstore-grid">
+            <V2Info label="Android shell" value="TWA first, Capacitor if native billing UI is needed" />
+            <V2Info label="Auth backend" value="Supabase Auth or Clerk" />
+            <V2Info label="Database" value="profiles, plans, subscriptions, usage_events" />
+            <V2Info label="Billing" value="Google Play Billing for in-app digital memberships" />
+          </div>
+          <div className="v2-runbook-row"><span>1</span><p>Create Android package with Digital Asset Links for <strong>promptlab-six-phi.vercel.app</strong>.</p></div>
+          <div className="v2-runbook-row"><span>2</span><p>Move library/templates/quota from localStorage to database after login.</p></div>
+          <div className="v2-runbook-row"><span>3</span><p>Validate Play Billing purchase tokens on the backend before unlocking Pro/Business.</p></div>
+          <div className="v2-runbook-row"><span>4</span><p>Do not link to outside payment inside the Android app for digital membership.</p></div>
+        </div>
+
         <div className="v2-card v2-settings-card">
           <div className="v2-card-head">
             <div>

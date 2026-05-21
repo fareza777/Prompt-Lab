@@ -348,6 +348,60 @@ button {
   background: linear-gradient(180deg, var(--bg-2), oklch(0.145 0.013 220));
 }
 
+.v2-quota-card {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 132px;
+  display: grid;
+  gap: 8px;
+  padding: 13px;
+  color: var(--fg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: oklch(0.155 0.014 220 / 0.88);
+  text-align: left;
+}
+
+.v2-quota-card div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.v2-quota-card em {
+  color: var(--fg-subtle);
+  font-style: normal;
+}
+
+.v2-quota-card i,
+.v2-quota-meter i {
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: oklch(0.24 0.016 220);
+}
+
+.v2-quota-card b,
+.v2-quota-meter b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--ac), var(--ac-2));
+}
+
+.v2-quota-card small {
+  color: var(--fg-mute);
+  font-size: 11px;
+}
+
+.v2-quota-card small strong {
+  color: var(--ac);
+}
+
 .v2-recent-list {
   display: grid;
   gap: 6px;
@@ -382,6 +436,7 @@ button {
 }
 
 .v2-side-card span,
+.v2-quota-card span,
 .v2-eyebrow,
 .v2-stat span,
 .v2-template-card span {
@@ -1356,6 +1411,35 @@ button {
   color: var(--fg-mute);
 }
 
+.v2-playstore-mini {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--ac-line);
+  border-radius: var(--r);
+  background: linear-gradient(135deg, var(--ac-soft), var(--bg-input));
+}
+
+.v2-playstore-mini span {
+  color: var(--ac);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.v2-playstore-mini strong {
+  color: var(--fg);
+}
+
+.v2-playstore-mini p {
+  margin: 0;
+  color: var(--fg-mute);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
 .v2-output-card pre {
   max-height: 430px;
   margin: 0;
@@ -1835,6 +1919,97 @@ button {
   margin: 0;
 }
 
+.v2-account-card {
+  grid-column: span 2;
+}
+
+.v2-account-grid,
+.v2-playstore-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.v2-account-grid label span {
+  display: block;
+  margin: 0 0 7px;
+  color: var(--fg-mute);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.v2-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.v2-plan-grid button {
+  min-height: 124px;
+  padding: 14px;
+  color: var(--fg-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+  background: var(--bg-input);
+  text-align: left;
+}
+
+.v2-plan-grid button.active {
+  color: var(--fg);
+  border-color: var(--ac-line);
+  background: linear-gradient(135deg, oklch(0.22 0.04 245 / 0.88), oklch(0.2 0.04 188 / 0.82));
+}
+
+.v2-plan-grid span {
+  color: var(--ac);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.v2-plan-grid strong {
+  display: block;
+  margin: 8px 0;
+  font-size: 22px;
+}
+
+.v2-plan-grid small {
+  color: var(--fg-mute);
+  line-height: 1.45;
+}
+
+.v2-quota-meter {
+  display: grid;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+  background: var(--bg-input);
+}
+
+.v2-quota-meter div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v2-quota-meter span {
+  color: var(--fg-mute);
+  font-weight: 800;
+}
+
+.v2-quota-meter strong {
+  color: var(--fg);
+}
+
+.v2-quota-meter small {
+  color: var(--fg-mute);
+  line-height: 1.45;
+}
+
 @media (max-width: 1180px) {
   .v2-shell {
     grid-template-columns: 1fr;
@@ -1854,6 +2029,10 @@ button {
   .v2-settings-grid,
   .v2-settings-screen .content-grid {
     grid-template-columns: 1fr;
+  }
+
+  .v2-account-card {
+    grid-column: auto;
   }
 
   .v2-template-grid,
@@ -1908,7 +2087,10 @@ button {
   .v2-mode-grid,
   .v2-info-grid,
   .v2-two,
-  .v2-template-builder-controls {
+  .v2-template-builder-controls,
+  .v2-account-grid,
+  .v2-playstore-grid,
+  .v2-plan-grid {
     grid-template-columns: 1fr;
   }
 
