@@ -45,7 +45,7 @@ const defaultModelSettings = {
   fallbackModels:
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free\nopenai/gpt-oss-20b:free\nqwen/qwen3-next-80b-a3b-instruct:free",
   ocrModel: "baidu/qianfan-ocr-fast:free",
-  primaryModel: "google/gemma-4-26b-a4b-it:free",
+  primaryModel: "deepseek/deepseek-v4-flash",
   provider: "openrouter",
   timeoutMs: "40000",
 };
@@ -2885,7 +2885,7 @@ function SettingsView({
             className="text-input"
             value={modelSettings.primaryModel}
             onChange={(event) => updateModelSetting("primaryModel", event.target.value)}
-            placeholder="google/gemma-4-26b-a4b-it:free"
+            placeholder="deepseek/deepseek-v4-flash"
           />
           <label className="field-label">OCR / Vision model</label>
           <input

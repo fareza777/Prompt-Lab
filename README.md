@@ -47,7 +47,7 @@ Environment variables yang perlu diisi di Vercel:
 ```bash
 AI_PROVIDER=openrouter
 OPENROUTER_API_KEY=isi_key_di_sini
-OPENROUTER_MODEL=google/gemma-4-26b-a4b-it:free
+OPENROUTER_MODEL=deepseek/deepseek-v4-flash
 OPENROUTER_OCR_MODEL=baidu/qianfan-ocr-fast:free
 APP_URL=https://domain-vercel-kamu.vercel.app
 ```
@@ -102,7 +102,7 @@ Untuk memakai OpenRouter, isi `.env` seperti ini:
 ```bash
 AI_PROVIDER=openrouter
 OPENROUTER_API_KEY=isi_key_di_sini
-OPENROUTER_MODEL=google/gemma-4-26b-a4b-it:free
+OPENROUTER_MODEL=deepseek/deepseek-v4-flash
 OPENROUTER_FALLBACK_MODEL=nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
 PORT=8787
 ```

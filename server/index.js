@@ -13,6 +13,7 @@ import JSZip from "jszip";
 import mammoth from "mammoth";
 import multer from "multer";
 import OpenAI from "openai";
+import { PDFParse } from "pdf-parse";
 import pptxgen from "pptxgenjs";
 
 const app = express();
@@ -570,6 +571,11 @@ if (isDirectRun) {
 }
 
 export default app;
+export {
+  buildPromptSpecInstruction,
+  getDomainPromptPack,
+  scorePromptText,
+};
 
 function normalizePayload(body) {
   return {
@@ -834,7 +840,7 @@ function sanitizeModelName(value) {
 }
 
 function getDefaultOpenRouterModel() {
-  return process.env.OPENROUTER_MODEL || "google/gemma-4-26b-a4b-it:free";
+  return process.env.OPENROUTER_MODEL || "deepseek/deepseek-v4-flash";
 }
 
 function getDefaultOcrModel() {
@@ -1086,6 +1092,16 @@ function formatProviderError(error) {
 function buildOptimizerInstruction(payload) {
   const targetGuidance = getTargetModelGuidance(payload.targetModel);
   const optimizerEngine = getOptimizerEngineInstruction(payload);
+  const specInstruction = buildPromptSpecInstruction(
+    {
+      narrative: payload.prompt,
+      category: payload.mode,
+      modelTarget: payload.targetModel,
+      outputType: "Optimized Prompt",
+      tone: payload.tone,
+    },
+    []
+  );
   return `Optimalkan prompt berikut.
 
 Mode optimasi:
@@ -1098,6 +1114,8 @@ Tone:
 - ${payload.tone}
 
 ${optimizerEngine}
+
+${specInstruction}
 
 Prompt lama:
 ${payload.prompt}
@@ -1163,6 +1181,107 @@ function getOptimizerEngineInstruction(payload) {
 - Preserve: maksud asli, jenis deliverable, target AI, dan fakta yang sudah ada.
 - Improve: role, context, task, requirements, constraints, output format, quality checks.
 - Output final harus langsung berupa prompt hasil optimize yang siap dicopy.`;
+}
+
+function buildPromptSpecInstruction(payload, attachments = []) {
+  const pack = getDomainPromptPack(payload);
+  const attachmentManifest = buildAttachmentManifest(attachments);
+  return `Prompt Spec JSON planning step:
+- Before writing the final prompt, internally create this JSON object:
+{
+  "detected_domain": "${pack.domain}",
+  "deliverable": "${payload.outputType || "not selected"}",
+  "target_ai": "${payload.modelTarget || payload.targetModel || "General"}",
+  "role": "specific senior role for this domain",
+  "audience": "target user or reader",
+  "objective": "single measurable objective",
+  "source_context": ["facts from narrative", "facts from attachments"],
+  "requirements": ["domain-specific requirement 1", "domain-specific requirement 2"],
+  "constraints": ["concrete constraint 1", "concrete constraint 2", "concrete constraint 3"],
+  "output_format": ["section 1", "section 2", "section 3"],
+  "assumptions": ["explicit assumption when user omits a needed detail"],
+  "acceptance_criteria": ["testable quality gate 1", "testable quality gate 2"],
+  "clarifying_questions": ["only if a missing fact blocks execution"]
+}
+
+Domain pack to apply:
+- Domain: ${pack.domain}
+- Role hint: ${pack.role}
+- Requirements: ${pack.requirements.join("; ")}
+- Constraints: ${pack.constraints.join("; ")}
+- Output controls: ${pack.outputControls.join("; ")}
+- Quality gates: ${pack.qualityGates.join("; ")}
+${attachmentManifest ? `- Attachment context:\n${attachmentManifest}` : "- Attachment context: none."}
+
+Render rule:
+- Do not output the JSON.
+- Use the JSON only to render one final executable prompt.
+- The final prompt must preserve the selected deliverable: ${payload.outputType || "not selected"}.`;
+}
+
+function getDomainPromptPack(payload = {}) {
+  const text = `${payload.narrative || ""} ${payload.category || ""} ${payload.outputType || ""}`.toLowerCase();
+  const asksApp =
+    /\b(aplikasi|app|web app|website|dashboard|sistem|platform|software|frontend|backend|full-stack|fullstack|tool|editor|builder|kasir|pos)\b/i.test(text) ||
+    /kode aplikasi|application code/i.test(payload.outputType || "");
+  const asksPresentation = /\b(ppt|powerpoint|presentasi|presentation|slide|slides)\b/i.test(text);
+  const asksDocument = /\b(word|docx|dokumen|document|laporan|report|proposal)\b/i.test(text);
+  const domain = getIntentDomain(text, asksApp, asksPresentation, asksDocument);
+
+  const packs = {
+    "marketing conversion workflow": {
+      role: "senior conversion strategist for Indonesian SMEs",
+      requirements: ["define audience segment", "state offer and proof", "map objections", "write CTA path", "include channel-specific variants"],
+      constraints: ["avoid unverifiable claims", "make CTA explicit", "state assumptions for missing brand facts"],
+      outputControls: ["ordered landing page sections", "copy limits per section", "variant count when useful"],
+      qualityGates: ["message matches audience", "offer is concrete", "CTA is measurable", "no generic buzzwords"],
+    },
+    "runnable application": {
+      role: "senior full-stack product engineer",
+      requirements: ["define stack", "list screens", "specify data model", "map API or mock API", "include states and validation", "include local run steps"],
+      constraints: ["avoid vague architecture", "include empty/loading/error states", "keep implementation runnable"],
+      outputControls: ["folder structure", "file-by-file plan", "acceptance tests", "manual QA steps"],
+      qualityGates: ["app can run locally", "core flow is testable", "UI states are covered", "data contracts are explicit"],
+    },
+    "presentation planning": {
+      role: "senior presentation strategist",
+      requirements: ["define audience", "build story arc", "create slide sequence", "specify visual per slide", "include speaker notes"],
+      constraints: ["lock slide count", "avoid generic visuals", "tie visuals to source facts"],
+      outputControls: ["slide-by-slide table", "visual guidance", "speaker notes", "export criteria"],
+      qualityGates: ["narrative flows logically", "each slide has one job", "visuals support claims"],
+    },
+    "structured document": {
+      role: "senior technical and editorial document writer",
+      requirements: ["define document purpose", "map sections", "state evidence handling", "include tables or examples", "add review checklist"],
+      constraints: ["do not invent facts", "mark assumptions", "preserve citation or source needs"],
+      outputControls: ["document outline", "section goals", "word-count guidance", "quality checklist"],
+      qualityGates: ["sections are complete", "claims are traceable", "recommendations are actionable"],
+    },
+    "creative photo editing tool": {
+      role: "senior AI visual prompt director",
+      requirements: ["define subject", "composition", "lighting", "style", "negative prompt", "export ratio"],
+      constraints: ["avoid impossible edits", "preserve identity when required", "state missing visual assumptions"],
+      outputControls: ["main prompt", "negative prompt", "style variants", "quality settings"],
+      qualityGates: ["visual intent is inspectable", "constraints reduce artifacts", "output settings are explicit"],
+    },
+    "survey or form analysis": {
+      role: "senior research analyst",
+      requirements: ["map questions", "segment responses", "rank findings", "identify limitations", "recommend next actions"],
+      constraints: ["do not overclaim", "separate data from interpretation", "flag missing sample details"],
+      outputControls: ["findings table", "priority ranking", "risk notes", "recommendations"],
+      qualityGates: ["insights cite available data", "limitations are visible", "actions are prioritized"],
+    },
+  };
+
+  const fallback = {
+    role: "senior prompt architect",
+    requirements: ["lock intent", "define audience", "specify output format", "state constraints", "add quality gates"],
+    constraints: ["avoid generic wording", "preserve deliverable", "ask only blocking questions"],
+    outputControls: ["role", "context", "task", "requirements", "constraints", "acceptance criteria"],
+    qualityGates: ["specific", "actionable", "testable", "ready to copy"],
+  };
+
+  return { domain, ...(packs[domain] || fallback) };
 }
 
 function buildCompareInstruction(payload) {
@@ -1306,16 +1425,87 @@ function buildLocalCompareResult(payload) {
 
 function scorePromptText(prompt) {
   const text = String(prompt || "");
-  const checks = {
-    clarity: /role|act as|bertindak|tujuan|objective|goal/i.test(text) ? 86 : 46,
-    context: /context|konteks|audience|target|user|lampiran|data/i.test(text) ? 84 : 42,
-    format: /format|output|section|struktur|json|table|markdown/i.test(text) ? 88 : 45,
-    constraints: /constraint|batasan|jangan|must|wajib|acceptance|criteria/i.test(text) ? 84 : 40,
+  const countMatches = (patterns) => patterns.reduce((count, pattern) => count + (pattern.test(text) ? 1 : 0), 0);
+  const sectionCount = (text.match(/(?:^|\n)\s*(?:#{1,3}\s*)?(?:role|context|konteks|objective|tujuan|task|tugas|requirements|output|format|constraints|batasan|acceptance|criteria|quality|checklist)\b/gi) || []).length;
+  const numericControls = (text.match(/\b\d+\b|maks(?:imal)?|min(?:imal)?|at least|no more than|jumlah|kata|slide|section|bagian/gi) || []).length;
+  const genericPenalty = countMatches([
+    /\b(leverage|synergy|world-class|cutting-edge|next-level|game-changing|seamless|robust solution)\b/i,
+    /\b(kelas dunia|terdepan|revolusioner|solusi terbaik)\b/i,
+    /\[(?:your|insert|topik|isi|brand|context)[^\]]*\]/i,
+  ]);
+
+  const clarity = rubricScore([
+    /role|act as|bertindak/i,
+    /objective|goal|tujuan|hasil akhir/i,
+    /task|tugas|kerjakan|buat|susun|build|write/i,
+    /senior|strategist|engineer|analyst|copywriter|researcher|spesialis/i,
+    sectionCount >= 4,
+  ], text);
+  const context = rubricScore([
+    /context|konteks|latar belakang|berdasarkan|source|sumber/i,
+    /audience|target|persona|pengguna|pembaca|customer/i,
+    /lampiran|dokumen|data|file|screenshot|referensi/i,
+    /assumption|asumsi|jika tidak tersedia/i,
+    text.length >= 700,
+  ], text);
+  const format = rubricScore([
+    /format|output|struktur|section|bagian|table|tabel|json|markdown/i,
+    /urut|ordered|sequence|slide-by-slide|file-by-file/i,
+    numericControls >= 2,
+    /acceptance|criteria|checklist|quality gate|kriteria/i,
+    sectionCount >= 5,
+  ], text);
+  const constraints = rubricScore([
+    /constraint|batasan|jangan|must|wajib|harus|avoid|larang/i,
+    /maks(?:imal)?|min(?:imal)?|at most|at least|no more than/i,
+    /do not invent|jangan mengarang|state assumptions|tandai asumsi/i,
+    /clarifying questions|pertanyaan klarifikasi|only if blocked/i,
+    numericControls >= 3,
+  ], text);
+  const hallucinationResistance = rubricScore([
+    /jangan mengarang|do not invent|verify|source|citation|evidence|fakta/i,
+    /asumsi|assumption|unknown|tidak tersedia/i,
+    /clarifying questions|pertanyaan klarifikasi/i,
+    /acceptance|quality gate|validasi/i,
+    /lampiran|source|sumber|data/i,
+  ], text);
+  const actionability = rubricScore([
+    /acceptance|criteria|kriteria|test|uji|run|export|deliver/i,
+    /step|langkah|checklist|implementation|implementasi/i,
+    /file|screen|api|table|slide|section|CTA|output/i,
+    numericControls >= 2,
+    text.length >= 900,
+  ], text);
+
+  const rawOverall = Math.round((clarity + context + format + constraints + hallucinationResistance + actionability) / 6);
+  const penalty = genericPenalty * 6;
+  const overall = Math.max(5, Math.min(99, rawOverall - penalty));
+  const risk = Math.max(5, Math.min(95, 100 - overall + genericPenalty * 4));
+  const details = [
+    clarity < 70 ? "Role/objective masih kurang spesifik." : "Role dan tujuan cukup jelas.",
+    context < 70 ? "Konteks, audiens, atau asumsi perlu diperkuat." : "Konteks cukup terkunci.",
+    format < 70 ? "Format output belum cukup terkendali." : "Format output cukup terkendali.",
+    constraints < 70 ? "Constraints masih lemah atau kurang terukur." : "Constraints cukup konkret.",
+    hallucinationResistance < 70 ? "Perlu guardrail anti-hallucination yang lebih eksplisit." : "Guardrail fakta/asumsi cukup baik.",
+    actionability < 70 ? "Acceptance criteria atau langkah eksekusi perlu ditambah." : "Prompt cukup actionable.",
+  ];
+
+  return {
+    actionability,
+    clarity,
+    constraints,
+    context,
+    details,
+    format,
+    hallucinationResistance,
+    overall,
+    risk,
   };
-  const lengthBoost = Math.min(10, Math.floor(text.length / 500));
-  const risk = Math.max(8, 100 - Math.round((checks.clarity + checks.context + checks.format + checks.constraints) / 4));
-  const overall = Math.min(99, Math.round((checks.clarity + checks.context + checks.format + checks.constraints) / 4) + lengthBoost);
-  return { ...checks, risk, overall };
+}
+
+function rubricScore(checks, text) {
+  const passed = checks.filter((check) => (check instanceof RegExp ? check.test(text) : Boolean(check))).length;
+  return Math.round((passed / checks.length) * 100);
 }
 
 function getPromptRiskList(prompt) {
@@ -1537,11 +1727,17 @@ async function normalizeFile(file, modelSettings = {}) {
   const isXlsx =
     mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
     /\.xlsx$/i.test(file.originalname);
+  const isPdf = mime === "application/pdf" || /\.pdf$/i.test(file.originalname);
   let excerpt = "";
 
   if (isDocx) {
     const result = await mammoth.extractRawText({ buffer: file.buffer });
     excerpt = result.value.replace(/\s+/g, " ").trim().slice(0, 15000);
+  } else if (isPdf) {
+    excerpt = await extractPdfText(file.buffer).catch((error) => {
+      console.warn("pdf extraction skipped", file.originalname, error.message);
+      return "";
+    });
   } else if (isPptx) {
     excerpt = await extractPptxText(file.buffer);
   } else if (isXlsx) {
@@ -1563,6 +1759,16 @@ async function normalizeFile(file, modelSettings = {}) {
     mime,
     size: file.size,
   };
+}
+
+async function extractPdfText(buffer) {
+  const parser = new PDFParse({ data: buffer });
+  try {
+    const result = await parser.getText();
+    return String(result.text || "").replace(/\s+/g, " ").trim().slice(0, 15000);
+  } finally {
+    await parser.destroy?.();
+  }
 }
 
 async function extractImageText(file, modelSettings = {}) {
@@ -1608,6 +1814,7 @@ function buildOpenAIContent(payload, attachments) {
   const deliverableGuard = getDeliverableGuard(payload, attachments);
   const targetGuidance = getTargetModelGuidance(payload.modelTarget);
   const intentEngine = getIntentEngineInstruction(payload, attachments);
+  const promptSpec = buildPromptSpecInstruction(payload, attachments);
   const antiGeneric = getAntiGenericGuard();
   const content = [
     {
@@ -1623,6 +1830,8 @@ Target AI: ${payload.modelTarget}
 Jenis Output: ${payload.outputType || "Tidak dipilih"}
 
 ${intentEngine}
+
+${promptSpec}
 
 Prompt final wajib punya:
 - Role yang tepat (spesifik: jabatan + domain + level senior, bukan "expert/AI assistant")
@@ -1679,6 +1888,7 @@ function buildOpenRouterContent(payload, attachments) {
   const deliverableGuard = getDeliverableGuard(payload, attachments);
   const targetGuidance = getTargetModelGuidance(payload.modelTarget);
   const intentEngine = getIntentEngineInstruction(payload, attachments);
+  const promptSpec = buildPromptSpecInstruction(payload, attachments);
   const antiGeneric = getAntiGenericGuard();
   const baseText = `Buat prompt terbaik untuk kebutuhan berikut.
 
@@ -1691,6 +1901,8 @@ Target AI: ${payload.modelTarget}
 Jenis Output: ${payload.outputType || "Tidak dipilih"}
 
 ${intentEngine}
+
+${promptSpec}
 
 Prompt final wajib punya:
 - Role yang tepat (spesifik: jabatan + domain + level senior, bukan "expert/AI assistant")
@@ -1756,6 +1968,7 @@ function buildFallbackPrompt(payload, attachments) {
   const deliverableGuard = getDeliverableGuard(payload, attachments);
   const targetGuidance = getTargetModelGuidance(payload.modelTarget);
   const intentEngine = getIntentEngineInstruction(payload, attachments);
+  const pack = getDomainPromptPack(payload);
   const attachmentText = attachments.length
     ? `
 
@@ -1773,6 +1986,14 @@ ${attachments
   return `Bertindaklah sebagai prompt engineer profesional untuk kategori ${payload.category}.
 
 ${intentEngine}
+
+Domain pack:
+- Domain: ${pack.domain}
+- Role hint: ${pack.role}
+- Requirements: ${pack.requirements.join("; ")}
+- Constraints: ${pack.constraints.join("; ")}
+- Output controls: ${pack.outputControls.join("; ")}
+- Quality gates: ${pack.qualityGates.join("; ")}
 
 Ubah kebutuhan berikut menjadi prompt siap pakai untuk ${payload.modelTarget}:
 "${payload.narrative || "Jelaskan kebutuhan user berdasarkan konteks yang tersedia."}"${attachmentText}
