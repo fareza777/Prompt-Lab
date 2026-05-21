@@ -852,7 +852,9 @@ function App() {
   );
   const prompt = generatedPrompt || localPrompt;
   const metrics = useMemo(() => scorePrompt(prompt), [prompt]);
-  const apiBase = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
+  const apiBase = import.meta.env.DEV
+    ? import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787"
+    : "";
 
   useEffect(() => {
     localStorage.setItem("promptlab-library", JSON.stringify(library.slice(0, 60)));
