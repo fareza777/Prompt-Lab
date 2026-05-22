@@ -38,7 +38,16 @@ if (existsSync(manifestPath)) {
 
 try {
   const response = await fetch(`${productionUrl.replace(/\/$/, "")}/manifest.webmanifest`, { redirect: "follow" });
-  failed += check("production manifest reachable", response.ok, `${response.status}`) ? 0 : 1;
+  let validProductionManifest = false;
+  if (response.ok) {
+    try {
+      const manifest = await response.json();
+      validProductionManifest = manifest.display === "standalone" && manifest.icons?.some((icon) => icon.type === "image/png");
+    } catch {
+      validProductionManifest = false;
+    }
+  }
+  failed += check("production manifest reachable", validProductionManifest, `${response.status}`) ? 0 : 1;
 } catch (error) {
   failed += 1;
   check("production manifest reachable", false, error.message);
