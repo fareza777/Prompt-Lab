@@ -28,6 +28,7 @@
     "vite": "latest"
   },
   "devDependencies": {
+    "@bubblewrap/cli": "^1.24.1",
     "playwright": "^1.59.1"
   }
 }

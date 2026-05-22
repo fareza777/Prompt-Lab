@@ -7,7 +7,7 @@ This folder tracks the Android / Google Play migration work for PromptLab.
 Use Trusted Web Activity (TWA) first because PromptLab is already deployed as a responsive web app:
 
 - Production URL: `https://promptlab-six-phi.vercel.app/`
-- Suggested Android package: `com.fareza.promptlab`
+- Android package: `app.promptlab.twa`
 - App name: `PromptLab`
 - Display mode: standalone / fullscreen browser surface
 
@@ -22,8 +22,13 @@ Use Trusted Web Activity (TWA) first because PromptLab is already deployed as a 
 
 2. Create the Android wrapper.
    - Recommended: Bubblewrap / TWA.
-   - Install Android Studio, Android SDK, and JDK 17.
-   - Then run Bubblewrap from this repo or import a generated TWA project.
+   - Local tools installed on this machine:
+     - JDK 17: `C:\Users\USER\promptlab-android-tools\jdk17`
+     - Android SDK: `C:\Users\USER\promptlab-android-tools\android-sdk`
+     - Bubblewrap CLI: `@bubblewrap/cli`
+   - Generated Android project: `android-app/` (ignored by Git).
+   - Signed APK: `android-app/app/build/outputs/apk/release/PromptLab-release-signed.apk`
+   - Signed AAB: `android-app/app/build/outputs/bundle/release/PromptLab-release-signed.aab`
 
 3. Configure Digital Asset Links.
    - Build/sign the Android app.
@@ -31,6 +36,9 @@ Use Trusted Web Activity (TWA) first because PromptLab is already deployed as a 
    - Copy `playstore/assetlinks.template.json` to `public/.well-known/assetlinks.json`.
    - Replace the fingerprint placeholder.
    - Deploy Vercel.
+   - Current upload-key SHA-256:
+     `17:C1:58:CB:70:B7:33:AF:03:6F:B3:61:8D:1A:5F:93:D3:61:04:10:5E:90:84:4D:5C:DA:16:69:A7:9F:28:99`
+   - After creating the Play Console app, also add the Google Play App Signing SHA-256 fingerprint.
 
 4. Prepare Play Console.
    - Create app entry.
@@ -46,4 +54,3 @@ Use Trusted Web Activity (TWA) first because PromptLab is already deployed as a 
 ## Billing Policy Note
 
 If users buy digital access, credits, prompt-generation quota, Pro, or Business inside the Android app, use Google Play Billing. Do not link to outside payment from the Play Store app for digital membership.
-

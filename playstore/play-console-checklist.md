@@ -3,7 +3,7 @@
 ## App Setup
 
 - App name: `PromptLab`
-- Package name: `com.fareza.promptlab`
+- Package name: `app.promptlab.twa`
 - Default language: English
 - App/category: Productivity
 - Website: `https://promptlab-six-phi.vercel.app/`
@@ -40,4 +40,3 @@ Full description:
 - Product IDs:
   - `promptlab_pro_monthly`
   - `promptlab_business_monthly`
-

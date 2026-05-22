@@ -1,7 +1,7 @@
 {
   "appName": "PromptLab",
   "launcherName": "PromptLab",
-  "packageId": "com.fareza.promptlab",
+  "packageId": "app.promptlab.twa",
   "host": "promptlab-six-phi.vercel.app",
   "startUrl": "/",
   "themeColor": "#061011",
