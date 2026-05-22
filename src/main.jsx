@@ -480,7 +480,7 @@ function inferIntentBlueprint(narrative, category, outputType, attachments = [])
 }
 
 function formatIntentBlueprint(blueprint) {
-  return `PromptLab Intent Engine:
+  return `Intent brief:
 - Detected domain: ${blueprint.domain}
 - Product archetype: ${blueprint.archetype}
 - Final deliverable: ${blueprint.deliverable}
@@ -605,8 +605,7 @@ Execution steps:
 
 Output:
 Return only the final executable prompt for ${outputType}.
-Do not include the PromptLab Intent Engine Brief in the copied prompt.
-The brief is internal context and is already shown separately in the UI.
+Do not include internal analysis notes in the final answer.
 
 Length:
 - Keep bullets under 18 words unless technical detail requires more.
@@ -827,7 +826,7 @@ Language style:
 Output format:
 Return only the final executable prompt according to the requested output type.
 Inside that prompt, include the sections needed by the target AI, such as role, context, task, requirements, constraints, output format, implementation checklist, and acceptance criteria.
-Do not include the PromptLab Intent Engine Brief in the copied prompt.
+Do not include internal analysis notes in the final answer.
 
 Constraints:
 - Ask at most 3 clarifying questions only when critical information is missing
@@ -1764,7 +1763,16 @@ function V2TokenSection({ title, tokens }) {
 
 function V2App(props) {
   const { active, setActive, settingsStatus, generationStatus, generationSource, generationModel, isGenerating, accountState } = props;
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("promptlab-onboarded"));
   const quotaPercent = Math.min(100, Math.round(((accountState.quotaUsed || 0) / Math.max(1, accountState.quotaLimit || 1)) * 100));
+  const finishOnboarding = (nextActive = "Builder") => {
+    localStorage.setItem("promptlab-onboarded", "true");
+    setShowOnboarding(false);
+    setActive(nextActive);
+  };
+  if (showOnboarding && !accountState.userId) {
+    return <V2Onboarding onAuth={() => finishOnboarding("Settings")} onGuest={() => finishOnboarding("Builder")} />;
+  }
   return (
     <div className="v2-shell" data-theme="v2">
       <aside className="v2-sidebar">
@@ -1815,6 +1823,27 @@ function V2App(props) {
       </main>
       <BottomNav active={active} setActive={setActive} />
     </div>
+  );
+}
+
+function V2Onboarding({ onAuth, onGuest }) {
+  return (
+    <main className="v2-onboarding" data-theme="v2">
+      <section className="v2-onboarding-card">
+        <span className="v2-eyebrow">PromptLab</span>
+        <h1>Build better prompts from ideas, files, and screenshots.</h1>
+        <p>Generate, optimize, score, save, and reuse prompts for ChatGPT, Claude, Gemini, and creative AI tools.</p>
+        <div className="v2-onboarding-points">
+          <div><Sparkles size={18} /><strong>Generate</strong><span>Turn rough requests into structured prompts.</span></div>
+          <div><Gauge size={18} /><strong>Improve</strong><span>Check clarity, context, format, constraints, and actionability.</span></div>
+          <div><Library size={18} /><strong>Sync later</strong><span>Create an account to keep library and membership data across devices.</span></div>
+        </div>
+        <div className="v2-actions">
+          <button className="v2-btn primary" onClick={onAuth}>Sign In / Create Account</button>
+          <button className="v2-btn" onClick={onGuest}>Continue as Guest</button>
+        </div>
+      </section>
+    </main>
   );
 }
 
@@ -1872,12 +1901,6 @@ function V2Builder(props) {
     metrics, generationStatus, generationSource, generationModel, warningMessage, errorMessage, copied,
     copyText, savePrompt, generatePrompt, isGenerating, exportStatus, exportFile,
   } = props;
-  const promptSize = `${Math.max(1, Math.round(prompt.length / 4)).toLocaleString("en-US")} est. tokens`;
-  const intentBlueprint = useMemo(
-    () => inferIntentBlueprint(narrative, category, outputType, attachments),
-    [narrative, category, outputType, attachments]
-  );
-
   return (
     <div className="v2-screen">
       <V2PageIntro
@@ -1891,13 +1914,6 @@ function V2Builder(props) {
           <small>{statusLabel(generationStatus, generationSource)}</small>
         </div>
       </V2PageIntro>
-
-      <section className="v2-stats-strip">
-        <V2Stat label="Clarity" value={`${metrics.clarity}%`} detail="Intent and role parsed" />
-        <V2Stat label="Prompt Size" value={promptSize} detail="local estimate" />
-        <V2Stat label="Output format" value={`${metrics.format}%`} detail={outputType} />
-        <V2Stat label="Engine" value={generationModel} detail="active routing" compact />
-      </section>
 
       <section className="v2-studio-grid">
         <div className="v2-card v2-composer">
@@ -1924,7 +1940,6 @@ function V2Builder(props) {
               ))}
             </div>
           )}
-          <V2IntentEnginePanel blueprint={intentBlueprint} />
           <div className="v2-field-grid">
             <V2ChipGroup label="Category" options={categories} value={category} onChange={setCategory} />
             <V2ChipGroup label="Tone" options={tones} value={tone} onChange={setTone} />
@@ -2040,6 +2055,7 @@ function V2MiniPipeline({ eyebrow = "Working", title, steps }) {
 
 function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource, generationModel, copyText, savePrompt, exportFile, narrative, exportStatus, isGenerating, accountState }) {
   const [actionFeedback, setActionFeedback] = useState("");
+  const outputStatus = compactGenerationStatus(generationStatus, generationSource, generationModel);
   const confirmAction = (label, action) => {
     action();
     setActionFeedback(label);
@@ -2051,16 +2067,16 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
       <div className="v2-card v2-readiness">
         <div className="v2-card-head">
           <div>
-            <span className="v2-eyebrow">AI Readiness Console</span>
-            <h2>PromptLab Intelligence</h2>
+            <span className="v2-eyebrow">Prompt Check</span>
+            <h2>Readiness Score</h2>
           </div>
           <Sparkles size={20} />
         </div>
         <div className="v2-score-row">
           <div className="v2-ring" style={{ "--score": `${metrics.score * 3.6}deg` }}><span>{metrics.score}</span></div>
           <div>
-            <h3>Readiness Score</h3>
-            <p>Structure, context, format, and constraints are checked before the prompt is used.</p>
+            <h3>{metrics.score >= 85 ? "Ready to use" : "Needs work"}</h3>
+            <p>Local rule-based score from five prompt quality checks.</p>
           </div>
         </div>
         <V2Metric label="Clarity" value={metrics.clarity} />
@@ -2069,19 +2085,14 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
         <V2Metric label="Constraints" value={metrics.constraints} />
         <V2Metric label="Actionability" value={metrics.actionability} />
         <div className="v2-score-advice">
-          <span>How to raise it</span>
+          <span>{metrics.tips.length ? "Next improvement" : "Quality note"}</span>
           {metrics.tips.slice(0, 3).map((tip) => <p key={tip}>{tip}</p>)}
-        </div>
-        <div className="v2-playstore-mini">
-          <span>Play Store prep</span>
-          <strong>{accountState.plan} membership route</strong>
-          <p>Quota and account state are ready for backend auth, database entitlements, and Google Play Billing validation.</p>
         </div>
       </div>
       <div className="v2-card v2-output-card">
         <div className="v2-prompt-toolbar">
           <strong>Optimized Prompt</strong>
-          <span>{statusLabel(generationStatus, generationSource)} · {generationModel}</span>
+          {outputStatus && <span>{outputStatus}</span>}
           {actionFeedback && <em>{actionFeedback}</em>}
           <button type="button" onClick={() => confirmAction("Copied", () => copyText(prompt))} title="Copy prompt" aria-label="Copy prompt">
             <Clipboard size={16} />
@@ -2091,9 +2102,7 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
           </button>
         </div>
         <div className="v2-output-tabs">
-          <button className="active">Final Prompt <em>v1</em></button>
-          <button type="button">Ready to Copy</button>
-          <button type="button">Exportable</button>
+          <button className="active">Prompt</button>
         </div>
         <pre>{prompt}</pre>
         {isGenerating && (
@@ -2585,7 +2594,7 @@ function V2PublicSettings(props) {
       <V2PageIntro
         eyebrow="User Settings"
         title="Account, membership, and prompt defaults."
-        copy="Public settings stay focused on daily use. Admin-only provider routing is separated from the user experience."
+        copy="Manage login, plan, quota, default prompt style, saved data, and support."
       >
         <div className="v2-hero-status">
           <span>{accountState.email ? "Signed in" : "Session"}</span>
@@ -2609,7 +2618,7 @@ function V2PublicSettings(props) {
             <div className="v2-card-head">
               <div>
                 <h2>Profile</h2>
-                <p>Basic identity shown in PromptLab. Backend login will sync this across devices later.</p>
+                <p>Sign in to keep account, plan, and saved work tied to your email.</p>
               </div>
               <span className={`v2-health ${accountState.email ? "ready" : ""}`}>{accountState.email ? "Signed in" : "Guest"}</span>
             </div>
@@ -2671,7 +2680,7 @@ function V2PublicSettings(props) {
             <div className="v2-card-head">
               <div>
                 <h2>Session Summary</h2>
-                <p>Local state until production auth and database sync are connected.</p>
+                <p>Current account limits and saved prompt counts.</p>
               </div>
               <User size={20} />
             </div>
@@ -3227,6 +3236,14 @@ function statusLabel(status, source) {
   if (source === "openrouter") return "OpenRouter";
   if (source === "openai") return "OpenAI";
   return "Local draft";
+}
+
+function compactGenerationStatus(status, source, modelName) {
+  const route = statusLabel(status, source);
+  const model = String(modelName || "").trim();
+  if (!model || model.toLowerCase() === route.toLowerCase()) return route;
+  if (route === "Local draft" && model === "Local draft") return "Local draft";
+  return `${route} · ${model}`;
 }
 
 function ResultPanel({
