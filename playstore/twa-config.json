@@ -1,0 +1,23 @@
+{
+  "appName": "PromptLab",
+  "launcherName": "PromptLab",
+  "packageId": "com.fareza.promptlab",
+  "host": "promptlab-six-phi.vercel.app",
+  "startUrl": "/",
+  "themeColor": "#061011",
+  "navigationColor": "#061011",
+  "backgroundColor": "#061011",
+  "displayMode": "standalone",
+  "orientation": "portrait-primary",
+  "signing": {
+    "keystorePath": "playstore/signing/promptlab-release.jks",
+    "keyAlias": "promptlab"
+  },
+  "billing": {
+    "requiredForAndroidDigitalMembership": true,
+    "subscriptions": [
+      "promptlab_pro_monthly",
+      "promptlab_business_monthly"
+    ]
+  }
+}

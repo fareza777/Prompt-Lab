@@ -8,3 +8,11 @@ test-export.*
 api-test.txt
 
 .vercel
+
+# Android / Play Store signing artifacts
+*.jks
+*.keystore
+*.aab
+*.apk
+android-app/
+playstore/signing/

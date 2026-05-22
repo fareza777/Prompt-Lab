@@ -1,5 +1,13 @@
-const CACHE_NAME = "promptlab-v2";
-const ASSETS = ["/", "/index.html", "/manifest.webmanifest", "/promptlab-icon.svg"];
+const CACHE_NAME = "promptlab-playstore-v1";
+const ASSETS = [
+  "/",
+  "/index.html",
+  "/manifest.webmanifest",
+  "/promptlab-icon.svg",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/icons/maskable-512.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
