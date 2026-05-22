@@ -9,11 +9,15 @@ import {
   Check,
   Clipboard,
   Clock3,
+  CreditCard,
+  Database,
   FileText,
   FolderOpen,
   Gauge,
+  KeyRound,
   Layers3,
   Library,
+  LifeBuoy,
   Menu,
   MessageSquareText,
   Paperclip,
@@ -24,8 +28,10 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   Trash2,
+  User,
   Wand2,
   X,
   Zap,
@@ -39,6 +45,7 @@ const outputTypes = ["Application Code", "Word Document", "PPT", "Technical Desi
 const optimizerModes = ["Clearer", "Shorter", "More Detailed", "Academic", "Marketing", "Coding"];
 const generationModes = ["Fast", "Balanced", "Patient Free"];
 const providerOptions = ["openrouter", "openai", "custom"];
+const adminEmails = ["fajar.mreza@gmail.com"];
 const LIBRARY_LIMIT = 100;
 const CUSTOM_TEMPLATE_LIMIT = 40;
 const defaultAccountState = {
@@ -1668,7 +1675,7 @@ function V2Header({ active, setActive, settingsStatus }) {
     Templates: "Start from production-ready prompt patterns.",
     Library: "Manage your best prompts as reusable work assets.",
     Compare: "Run an AI judge on two prompt versions before sending them.",
-    Settings: "Configure provider, endpoint, model, timeout, and fallback.",
+    Settings: "Manage account, membership, prompt defaults, privacy, and support.",
   };
   return (
     <header className="v2-headerbar">
@@ -2350,6 +2357,16 @@ function V2Settings(props) {
   const activeProfile = modeProfiles[generationMode] || modeProfiles.Balanced;
   const updateModelSetting = (key, value) => setModelSettings((settings) => ({ ...settings, [key]: value }));
   const quotaPercent = Math.min(100, Math.round(((accountState.quotaUsed || 0) / Math.max(1, accountState.quotaLimit || 1)) * 100));
+  return (
+    <V2PublicSettings
+      {...props}
+      activeProfile={activeProfile}
+      fallbackModels={fallbackModels}
+      providerReady={providerReady}
+      quotaPercent={quotaPercent}
+      updateModelSetting={updateModelSetting}
+    />
+  );
 
   return (
     <div className="v2-screen v2-settings-screen">
@@ -2569,6 +2586,401 @@ function V2Settings(props) {
         </div>
       </section>
     </div>
+  );
+}
+
+function V2PublicSettings(props) {
+  const {
+    accountState,
+    setAccountState,
+    membershipPlans,
+    updateMembershipPlan,
+    mockSignIn,
+    signOut,
+    library,
+    customTemplates,
+    category,
+    setCategory,
+    tone,
+    setTone,
+    model,
+    setModel,
+    outputType,
+    setOutputType,
+    qualityMode,
+    setQualityMode,
+    fallbackModels,
+    providerReady,
+    quotaPercent,
+  } = props;
+  const [section, setSection] = useState("Account");
+  const isAdmin = adminEmails.includes(String(accountState.email || "").trim().toLowerCase());
+  const sections = [
+    ["Account", User],
+    ["Membership", CreditCard],
+    ["Prompt Defaults", SlidersHorizontal],
+    ["Data & Privacy", ShieldCheck],
+    ["Support", LifeBuoy],
+    ...(isAdmin ? [["Admin Console", KeyRound]] : []),
+  ];
+  const copyData = () => {
+    const data = { account: accountState, library, customTemplates, exportedAt: new Date().toISOString() };
+    navigator.clipboard?.writeText(JSON.stringify(data, null, 2)).catch(() => {});
+  };
+  const clearProfile = () => {
+    setAccountState(defaultAccountState);
+    localStorage.removeItem("promptlab-account");
+  };
+
+  return (
+    <div className="v2-screen v2-settings-screen">
+      <V2PageIntro
+        eyebrow="User Settings"
+        title="Account, membership, and prompt defaults."
+        copy="Public settings stay focused on daily use. Admin-only provider routing is separated from the user experience."
+      >
+        <div className="v2-hero-status">
+          <span>{accountState.email ? "Signed in" : "Session"}</span>
+          <strong>{accountState.plan}</strong>
+          <small>{accountState.email || "Guest mode"}</small>
+        </div>
+      </V2PageIntro>
+
+      <div className="v2-settings-tabs" role="tablist" aria-label="Settings sections">
+        {sections.map(([name, Icon]) => (
+          <button key={name} className={section === name ? "active" : ""} onClick={() => setSection(name)}>
+            <Icon size={16} />
+            <span>{name}</span>
+          </button>
+        ))}
+      </div>
+
+      {section === "Account" && (
+        <section className="v2-settings-grid public">
+          <div className="v2-card v2-settings-card v2-account-card">
+            <div className="v2-card-head">
+              <div>
+                <h2>Profile</h2>
+                <p>Basic identity shown in PromptLab. Backend login will sync this across devices later.</p>
+              </div>
+              <span className={`v2-health ${accountState.email ? "ready" : ""}`}>{accountState.email ? "Signed in" : "Guest"}</span>
+            </div>
+            <div className="v2-account-grid">
+              <label>
+                <span>Email</span>
+                <input className="v2-input" value={accountState.email} onChange={(event) => setAccountState((account) => ({ ...account, email: event.target.value }))} placeholder="user@email.com" />
+              </label>
+              <label>
+                <span>Name</span>
+                <input className="v2-input" value={accountState.name} onChange={(event) => setAccountState((account) => ({ ...account, name: event.target.value }))} placeholder="Member name" />
+              </label>
+            </div>
+            <div className="v2-actions wrap">
+              <button className="v2-btn primary" onClick={mockSignIn}>Mock Sign In</button>
+              <button className="v2-btn" onClick={signOut}>Sign Out</button>
+            </div>
+          </div>
+
+          <div className="v2-card v2-settings-card">
+            <div className="v2-card-head">
+              <div>
+                <h2>Session Summary</h2>
+                <p>Local state until production auth and database sync are connected.</p>
+              </div>
+              <User size={20} />
+            </div>
+            <div className="v2-info-grid">
+              <V2Info label="Plan" value={accountState.plan} />
+              <V2Info label="Billing" value={accountState.playBilling} />
+              <V2Info label="Library" value={`${library.length}/${LIBRARY_LIMIT} saved`} />
+              <V2Info label="Templates" value={`${customTemplates.length}/${CUSTOM_TEMPLATE_LIMIT} custom`} />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {section === "Membership" && (
+        <section className="v2-settings-grid public">
+          <div className="v2-card v2-settings-card v2-account-card">
+            <div className="v2-card-head">
+              <div>
+                <h2>Membership</h2>
+                <p>Plans, usage, and upgrade path. Model provider controls stay admin-only.</p>
+              </div>
+              <span className="v2-score-badge">{accountState.plan}</span>
+            </div>
+            <div className="v2-plan-grid">
+              {Object.entries(membershipPlans).map(([plan, info]) => (
+                <button key={plan} className={accountState.plan === plan ? "active" : ""} onClick={() => updateMembershipPlan(plan)}>
+                  <span>{plan}</span>
+                  <strong>{info.price}</strong>
+                  <small>{info.detail}</small>
+                </button>
+              ))}
+            </div>
+            <div className="v2-quota-meter">
+              <div><span>Quota</span><strong>{(accountState.quotaUsed / 1000).toFixed(1)}k / {(accountState.quotaLimit / 1000).toFixed(0)}k tokens</strong></div>
+              <i><b style={{ width: `${quotaPercent}%` }} /></i>
+              <small>Resets {accountState.quotaReset}. Production should decrement usage after successful generation.</small>
+            </div>
+          </div>
+
+          <div className="v2-card v2-settings-card">
+            <div className="v2-card-head">
+              <div>
+                <h2>Play Store Billing</h2>
+                <p>Digital memberships sold inside Android must use Google Play Billing.</p>
+              </div>
+              <CreditCard size={20} />
+            </div>
+            <div className="v2-runbook-row"><span>1</span><p>Free plan stays available without payment.</p></div>
+            <div className="v2-runbook-row"><span>2</span><p>Pro and Business unlock after backend verifies Play purchase tokens.</p></div>
+            <div className="v2-runbook-row"><span>3</span><p>Do not link to outside payment pages inside the Android app.</p></div>
+          </div>
+        </section>
+      )}
+
+      {section === "Prompt Defaults" && (
+        <section className="v2-settings-grid public">
+          <div className="v2-card v2-settings-card v2-account-card">
+            <div className="v2-card-head">
+              <div>
+                <h2>Prompt Defaults</h2>
+                <p>Personalize Builder defaults without exposing infrastructure settings.</p>
+              </div>
+              <SlidersHorizontal size={20} />
+            </div>
+            <V2ChipGroup label="Default category" options={categories} value={category} onChange={setCategory} />
+            <V2ChipGroup label="Default tone" options={tones} value={tone} onChange={setTone} />
+            <V2ChipGroup label="Preferred AI" options={models} value={model} onChange={setModel} />
+            <V2ChipGroup label="Default output" options={outputTypes} value={outputType} onChange={setOutputType} />
+          </div>
+
+          <div className="v2-card v2-settings-card">
+            <div className="v2-card-head">
+              <div>
+                <h2>Quality Preference</h2>
+                <p>Simple quality setting users can understand.</p>
+              </div>
+              <Gauge size={20} />
+            </div>
+            <div className="v2-mode-grid two">
+              <button className={qualityMode === "standard" ? "active" : ""} onClick={() => setQualityMode && setQualityMode("standard")}>
+                <span>Quality</span>
+                <strong>Standard</strong>
+                <small>Fast single pass for daily work.</small>
+              </button>
+              <button className={qualityMode === "premium" ? "active" : ""} onClick={() => setQualityMode && setQualityMode("premium")}>
+                <span>Quality</span>
+                <strong>Premium</strong>
+                <small>Critique and refine pass for sharper output.</small>
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {section === "Data & Privacy" && (
+        <section className="v2-settings-grid public">
+          <div className="v2-card v2-settings-card">
+            <div className="v2-card-head">
+              <div>
+                <h2>Library & Data</h2>
+                <p>Controls for local browser data and future account sync.</p>
+              </div>
+              <Database size={20} />
+            </div>
+            <div className="v2-info-grid">
+              <V2Info label="Saved prompts" value={library.length} />
+              <V2Info label="Custom templates" value={customTemplates.length} />
+            </div>
+            <div className="v2-actions wrap">
+              <button className="v2-btn primary" onClick={copyData}><Clipboard size={16} />Copy My Data</button>
+              <button className="v2-btn" onClick={clearProfile}><Trash2 size={16} />Clear Local Profile</button>
+            </div>
+            <p className="v2-small">Full account deletion should be handled by the auth/database backend once login is live.</p>
+          </div>
+
+          <div className="v2-card v2-settings-card">
+            <div className="v2-card-head">
+              <div>
+                <h2>Privacy Controls</h2>
+                <p>Plain-language policy points for files, AI processing, and saved prompts.</p>
+              </div>
+              <ShieldCheck size={20} />
+            </div>
+            <div className="v2-runbook-row"><span>1</span><p>Uploaded files are used to generate prompts and should not be shown to other users.</p></div>
+            <div className="v2-runbook-row"><span>2</span><p>Saved library items are local until login sync is connected.</p></div>
+            <div className="v2-runbook-row"><span>3</span><p>Privacy policy and account deletion links are required before production.</p></div>
+          </div>
+        </section>
+      )}
+
+      {section === "Support" && (
+        <section className="v2-settings-grid public">
+          <div className="v2-card v2-settings-card">
+            <div className="v2-card-head">
+              <div>
+                <h2>Support</h2>
+                <p>Help users report issues without exposing operational controls.</p>
+              </div>
+              <LifeBuoy size={20} />
+            </div>
+            <div className="v2-runbook-row"><span>1</span><p>Report generation errors with a screenshot and prompt category.</p></div>
+            <div className="v2-runbook-row"><span>2</span><p>For billing issues, include the Google Play order ID after Play Billing is connected.</p></div>
+            <div className="v2-runbook-row"><span>3</span><p>For data requests, use the account email shown in Profile.</p></div>
+          </div>
+
+          <div className="v2-card v2-settings-card">
+            <div className="v2-card-head">
+              <div>
+                <h2>About PromptLab</h2>
+                <p>Production metadata users expect in a Play Store app.</p>
+              </div>
+              <Rocket size={20} />
+            </div>
+            <div className="v2-info-grid">
+              <V2Info label="Version" value="1.0 internal" />
+              <V2Info label="Platform" value="Web + Android TWA" />
+              <V2Info label="App package" value="app.promptlab.twa" />
+              <V2Info label="Website" value="promptlab-six-phi.vercel.app" />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {section === "Admin Console" && isAdmin && (
+        <V2AdminSettings {...props} fallbackModels={fallbackModels} providerReady={providerReady} />
+      )}
+    </div>
+  );
+}
+
+function V2AdminSettings(props) {
+  const {
+    settingsStatus,
+    refreshHealth,
+    apiBase,
+    generationMode,
+    setGenerationMode,
+    modelSettings,
+    setModelSettings,
+    saveModelSettings,
+    settingsSavedAt,
+    providerTestStatus,
+    isTestingProvider,
+    testProvider,
+    fallbackModels,
+    providerReady,
+  } = props;
+  const activeProfile = modeProfiles[generationMode] || modeProfiles.Balanced;
+  const updateModelSetting = (key, value) => setModelSettings((settings) => ({ ...settings, [key]: value }));
+
+  return (
+    <section className="v2-settings-grid">
+      <div className="v2-card v2-settings-card v2-account-card">
+        <div className="v2-card-head">
+          <div>
+            <h2>Admin Console</h2>
+            <p>Internal controls for provider routing, model fallback, Play Store readiness, and operations.</p>
+          </div>
+          <span className={`v2-health ${providerReady ? "ready" : ""}`}>{providerReady ? "Ready" : "Offline"}</span>
+        </div>
+        <div className="v2-info-grid">
+          <V2Info label="API Base" value={apiBase || "Same-origin Vercel API"} />
+          <V2Info label="Provider" value={settingsStatus?.provider || modelSettings.provider || "-"} />
+          <V2Info label="Last Active Model" value={settingsStatus?.model || modelSettings.primaryModel || "-"} />
+          <V2Info label="OCR Model" value={modelSettings.ocrModel || settingsStatus?.ocrModel || "-"} />
+        </div>
+      </div>
+
+      <div className="v2-card v2-settings-card">
+        <div className="v2-card-head">
+          <div>
+            <h2>Generation Mode</h2>
+            <p>Choose how aggressively PromptLab waits before using fallback models.</p>
+          </div>
+          <Gauge size={20} />
+        </div>
+        <div className="v2-mode-grid">
+          {generationModes.map((mode) => (
+            <button key={mode} className={generationMode === mode ? "active" : ""} onClick={() => setGenerationMode(mode)}>
+              <span>{mode}</span>
+              <strong>{modeProfiles[mode].label}</strong>
+              <small>{modeProfiles[mode].detail}</small>
+            </button>
+          ))}
+        </div>
+        <div className="v2-settings-summary">
+          <span>Active Mode</span>
+          <strong>{generationMode}</strong>
+          <p>{activeProfile.bestFor}</p>
+        </div>
+      </div>
+
+      <div className="v2-card v2-settings-card">
+        <div className="v2-card-head">
+          <div>
+            <h2>Provider & Endpoint</h2>
+            <p>Use Vercel env values by default, or override them from this browser.</p>
+          </div>
+          <button className="v2-btn" onClick={() => setModelSettings(defaultModelSettings)}>Reset</button>
+        </div>
+        <V2ChipGroup label="Provider" options={providerOptions} value={modelSettings.provider} onChange={(item) => updateModelSetting("provider", item)} />
+        <label className="v2-label">Base URL / Endpoint</label>
+        <input className="v2-input" value={modelSettings.baseUrl} onChange={(event) => updateModelSetting("baseUrl", event.target.value)} placeholder="https://openrouter.ai/api/v1" />
+        <label className="v2-label">API Key Override, Optional</label>
+        <input className="v2-input" type="password" value={modelSettings.apiKey} onChange={(event) => updateModelSetting("apiKey", event.target.value)} placeholder="Leave empty to use Vercel Environment Variables" />
+        <p className="v2-small">Production keys should live in Vercel Environment Variables. Browser overrides are for admin testing only.</p>
+      </div>
+
+      <div className="v2-card v2-settings-card">
+        <div className="v2-card-head">
+          <div>
+            <h2>Model Routing</h2>
+            <p>Primary model, OCR model, timeout, and fallback chain.</p>
+          </div>
+          <span className="v2-score-badge">{modelSettings.timeoutMs || "auto"} ms</span>
+        </div>
+        <label className="v2-label">Primary Model</label>
+        <input className="v2-input" value={modelSettings.primaryModel} onChange={(event) => updateModelSetting("primaryModel", event.target.value)} />
+        <label className="v2-label">OCR / Vision Model</label>
+        <input className="v2-input" value={modelSettings.ocrModel} onChange={(event) => updateModelSetting("ocrModel", event.target.value)} />
+        <label className="v2-label">Primary Timeout, ms</label>
+        <input className="v2-input" value={modelSettings.timeoutMs} onChange={(event) => updateModelSetting("timeoutMs", event.target.value.replace(/[^\d]/g, ""))} />
+        <label className="v2-label">Fallback Models, One Model Per Line</label>
+        <textarea className="v2-textarea small" value={modelSettings.fallbackModels} onChange={(event) => updateModelSetting("fallbackModels", event.target.value)} />
+      </div>
+
+      <div className="v2-card v2-settings-card">
+        <div className="v2-card-head">
+          <div>
+            <h2>Fallback Chain</h2>
+            <p>PromptLab tries these models when the primary route fails or times out.</p>
+          </div>
+          <span className="v2-score-badge hot">{fallbackModels.length}</span>
+        </div>
+        <div className="v2-fallback-list">
+          {(fallbackModels.length ? fallbackModels : ["No fallback models configured"]).map((modelName, index) => (
+            <div key={`${modelName}-${index}`}>
+              <span>{index + 1}</span>
+              <strong>{modelName}</strong>
+            </div>
+          ))}
+        </div>
+        <div className="v2-actions wrap">
+          <button className="v2-btn primary" onClick={saveModelSettings}><Save size={16} />Save Settings</button>
+          <button className="v2-btn primary" onClick={testProvider} disabled={isTestingProvider}><Zap size={16} />{isTestingProvider ? "Testing..." : "Test Provider"}</button>
+          <button className="v2-btn" onClick={refreshHealth}><Gauge size={16} />Health</button>
+          <button className="v2-btn" onClick={() => navigator.clipboard?.writeText(apiBase).catch(() => {})}><Clipboard size={16} />Copy API Base</button>
+        </div>
+        {isTestingProvider && (
+          <V2MiniPipeline eyebrow="Provider test" title="Checking model route..." steps={["Endpoint", "Auth", "Model", "Response"]} />
+        )}
+        {settingsSavedAt && <p className="v2-note">Settings last saved at {settingsSavedAt}</p>}
+        {providerTestStatus && <p className="v2-note">{providerTestStatus}</p>}
+      </div>
+    </section>
   );
 }
 
