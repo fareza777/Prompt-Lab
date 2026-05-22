@@ -1968,12 +1968,38 @@ button {
   gap: 12px;
 }
 
+.v2-account-password {
+  grid-column: 1 / -1;
+}
+
 .v2-account-grid label span {
   display: block;
   margin: 0 0 7px;
   color: var(--fg-mute);
   font-size: 12px;
   font-weight: 800;
+}
+
+.v2-auth-status {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: var(--bg-input);
+}
+
+.v2-auth-status span {
+  color: var(--fg-mute);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.v2-auth-status strong {
+  color: var(--warn);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .v2-plan-grid {

@@ -37,6 +37,7 @@ import {
   Zap,
 } from "lucide-react";
 import "./styles.css";
+import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
 const categories = ["Marketing", "Content Creator", "Business", "Coding", "Academic", "Image AI"];
 const tones = ["Professional", "Casual", "Persuasive", "Creative"];
@@ -45,12 +46,13 @@ const outputTypes = ["Application Code", "Word Document", "PPT", "Technical Desi
 const optimizerModes = ["Clearer", "Shorter", "More Detailed", "Academic", "Marketing", "Coding"];
 const generationModes = ["Fast", "Balanced", "Patient Free"];
 const providerOptions = ["openrouter", "openai", "custom"];
-const adminEmails = ["fajar.mreza@gmail.com"];
 const LIBRARY_LIMIT = 100;
 const CUSTOM_TEMPLATE_LIMIT = 40;
 const defaultAccountState = {
+  userId: "",
   email: "",
   name: "",
+  role: "user",
   plan: "Free",
   quotaUsed: 12400,
   quotaLimit: 50000,
@@ -714,9 +716,27 @@ function normalizeAccountState(raw) {
     ...defaultAccountState,
     ...raw,
     plan,
+    role: raw.role === "admin" ? "admin" : "user",
     quotaLimit: Number(raw.quotaLimit || membershipPlans[plan].quota || defaultAccountState.quotaLimit),
     quotaUsed: Number(raw.quotaUsed || 0),
   };
+}
+
+function profileToAccount(profile, user) {
+  const plan = membershipPlans[profile?.plan] ? profile.plan : "Free";
+  return normalizeAccountState({
+    userId: user?.id || profile?.id || "",
+    email: profile?.email || user?.email || "",
+    name: profile?.full_name || user?.user_metadata?.full_name || "",
+    role: profile?.role === "admin" ? "admin" : "user",
+    plan,
+    quotaUsed: Number(profile?.quota_used || 0),
+    quotaLimit: Number(profile?.quota_limit || membershipPlans[plan].quota || defaultAccountState.quotaLimit),
+    quotaReset: profile?.quota_reset_at
+      ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(profile.quota_reset_at))
+      : defaultAccountState.quotaReset,
+    playBilling: profile?.play_billing || defaultAccountState.playBilling,
+  });
 }
 
 async function writeClipboard(text) {
@@ -1063,6 +1083,9 @@ function App() {
       return defaultAccountState;
     }
   });
+  const [authStatus, setAuthStatus] = useState(isSupabaseConfigured ? "Checking session..." : "Supabase not configured");
+  const [authError, setAuthError] = useState("");
+  const [isAuthBusy, setIsAuthBusy] = useState(false);
   const allTemplates = useMemo(() => [...customTemplates, ...templates], [customTemplates]);
 
   const localPrompt = useMemo(
@@ -1086,6 +1109,45 @@ function App() {
   useEffect(() => {
     localStorage.setItem("promptlab-account", JSON.stringify(accountState));
   }, [accountState]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    let mounted = true;
+
+    async function bootstrapSession() {
+      const { data, error } = await supabase.auth.getSession();
+      if (!mounted) return;
+      if (error) {
+        setAuthError(error.message);
+        setAuthStatus("Session check failed");
+        return;
+      }
+      const user = data.session?.user;
+      if (user) {
+        setAuthStatus("Signed in");
+        await loadUserProfile(user);
+      } else {
+        setAuthStatus("Signed out");
+      }
+    }
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user;
+      if (user) {
+        setAuthStatus("Signed in");
+        loadUserProfile(user);
+      } else {
+        setAccountState(defaultAccountState);
+        setAuthStatus("Signed out");
+      }
+    });
+
+    bootstrapSession();
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("promptlab-generation-mode", generationMode);
@@ -1188,20 +1250,101 @@ function App() {
     }));
   }
 
-  function mockSignIn() {
-    setAccountState((account) => ({
-      ...account,
-      name: account.name || "Fajar M Reza",
-      email: account.email || "fajar@example.com",
-    }));
+  async function loadUserProfile(user) {
+    if (!supabase || !user?.id) return;
+    setAuthError("");
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      setAuthError(`Profile error: ${error.message}`);
+      setAccountState((account) => ({
+        ...account,
+        userId: user.id,
+        email: user.email || account.email,
+        name: user.user_metadata?.full_name || account.name,
+      }));
+      return;
+    }
+
+    if (data) {
+      setAccountState(profileToAccount(data, user));
+      return;
+    }
+
+    const draftProfile = {
+      id: user.id,
+      email: user.email || "",
+      full_name: user.user_metadata?.full_name || "",
+    };
+    const { data: inserted, error: insertError } = await supabase
+      .from("profiles")
+      .insert(draftProfile)
+      .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
+      .maybeSingle();
+
+    if (insertError) {
+      setAuthError(`Profile create error: ${insertError.message}`);
+      setAccountState(profileToAccount(draftProfile, user));
+      return;
+    }
+
+    setAccountState(profileToAccount(inserted || draftProfile, user));
   }
 
-  function signOut() {
-    setAccountState((account) => ({
-      ...defaultAccountState,
-      plan: account.plan,
-      quotaLimit: membershipPlans[account.plan]?.quota || defaultAccountState.quotaLimit,
-    }));
+  async function signInWithPassword(email, password) {
+    if (!supabase) {
+      setAuthError("Supabase belum dikonfigurasi.");
+      return;
+    }
+    setIsAuthBusy(true);
+    setAuthError("");
+    setAuthStatus("Signing in...");
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    setIsAuthBusy(false);
+    if (error) {
+      setAuthError(error.message);
+      setAuthStatus("Sign in failed");
+      return;
+    }
+    setAuthStatus("Signed in");
+    await loadUserProfile(data.user);
+  }
+
+  async function signUpWithPassword(email, password, fullName) {
+    if (!supabase) {
+      setAuthError("Supabase belum dikonfigurasi.");
+      return;
+    }
+    setIsAuthBusy(true);
+    setAuthError("");
+    setAuthStatus("Creating account...");
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName || "" } },
+    });
+    setIsAuthBusy(false);
+    if (error) {
+      setAuthError(error.message);
+      setAuthStatus("Sign up failed");
+      return;
+    }
+    if (data.user && data.session) {
+      setAuthStatus("Signed in");
+      await loadUserProfile(data.user);
+    } else {
+      setAuthStatus("Check your email to confirm your account.");
+    }
+  }
+
+  async function signOut() {
+    if (supabase) await supabase.auth.signOut();
+    setAccountState(defaultAccountState);
+    setAuthStatus("Signed out");
   }
 
   function updateLibraryItem(id, patch) {
@@ -1538,9 +1681,14 @@ function App() {
     apiBase,
     accountState,
     setAccountState,
+    authStatus,
+    authError,
+    isAuthBusy,
+    isSupabaseConfigured,
     membershipPlans,
     updateMembershipPlan,
-    mockSignIn,
+    signInWithPassword,
+    signUpWithPassword,
     signOut,
     setBuilderFromTemplate,
     optimizerResult,
@@ -2344,9 +2492,14 @@ function V2Settings(props) {
     testProvider,
     accountState,
     setAccountState,
+    authStatus,
+    authError,
+    isAuthBusy,
+    isSupabaseConfigured,
     membershipPlans,
     updateMembershipPlan,
-    mockSignIn,
+    signInWithPassword,
+    signUpWithPassword,
     signOut,
   } = props;
   const fallbackModels = modelSettings.fallbackModels
@@ -2368,225 +2521,6 @@ function V2Settings(props) {
     />
   );
 
-  return (
-    <div className="v2-screen v2-settings-screen">
-      <V2PageIntro
-        eyebrow="Model Command Center"
-        title="Provider, endpoint, routing, and saved settings."
-        copy="Configure the LLM stack used by PromptLab. Browser overrides are saved locally and sent to the backend during generation."
-      >
-        <div className="v2-hero-status">
-          <span>Provider</span>
-          <strong>{providerReady ? "Ready" : "Offline"}</strong>
-          <small>{modelSettings.provider}</small>
-        </div>
-      </V2PageIntro>
-
-      <section className="v2-settings-grid">
-        <div className="v2-card v2-settings-card v2-account-card">
-          <div className="v2-card-head">
-            <div>
-              <h2>Account & Membership</h2>
-              <p>Migration-ready local state for login, quotas, subscriptions, and Play Store entitlement checks.</p>
-            </div>
-            <span className={`v2-health ${accountState.email ? "ready" : ""}`}>{accountState.email ? "Signed in" : "Guest"}</span>
-          </div>
-          <div className="v2-account-grid">
-            <label>
-              <span>Email</span>
-              <input className="v2-input" value={accountState.email} onChange={(event) => setAccountState((account) => ({ ...account, email: event.target.value }))} placeholder="user@email.com" />
-            </label>
-            <label>
-              <span>Name</span>
-              <input className="v2-input" value={accountState.name} onChange={(event) => setAccountState((account) => ({ ...account, name: event.target.value }))} placeholder="Member name" />
-            </label>
-          </div>
-          <div className="v2-plan-grid">
-            {Object.entries(membershipPlans).map(([plan, info]) => (
-              <button key={plan} className={accountState.plan === plan ? "active" : ""} onClick={() => updateMembershipPlan(plan)}>
-                <span>{plan}</span>
-                <strong>{info.price}</strong>
-                <small>{info.detail}</small>
-              </button>
-            ))}
-          </div>
-          <div className="v2-quota-meter">
-            <div><span>Quota</span><strong>{(accountState.quotaUsed / 1000).toFixed(1)}k / {(accountState.quotaLimit / 1000).toFixed(0)}k tokens</strong></div>
-            <i><b style={{ width: `${quotaPercent}%` }} /></i>
-            <small>Resets {accountState.quotaReset}. Backend should decrement usage after every successful generation.</small>
-          </div>
-          <div className="v2-actions wrap">
-            <button className="v2-btn primary" onClick={mockSignIn}>Mock Sign In</button>
-            <button className="v2-btn" onClick={signOut}>Sign Out</button>
-          </div>
-        </div>
-
-        <div className="v2-card v2-settings-card">
-          <div className="v2-card-head">
-            <div>
-              <h2>Play Store Migration</h2>
-              <p>Use this checklist before wrapping the app as TWA/Capacitor for Google Play.</p>
-            </div>
-            <Rocket size={20} />
-          </div>
-          <div className="v2-playstore-grid">
-            <V2Info label="Android shell" value="TWA first, Capacitor if native billing UI is needed" />
-            <V2Info label="Auth backend" value="Supabase Auth or Clerk" />
-            <V2Info label="Database" value="profiles, plans, subscriptions, usage_events" />
-            <V2Info label="Billing" value="Google Play Billing for in-app digital memberships" />
-          </div>
-          <div className="v2-runbook-row"><span>1</span><p>Create Android package with Digital Asset Links for <strong>promptlab-six-phi.vercel.app</strong>.</p></div>
-          <div className="v2-runbook-row"><span>2</span><p>Move library/templates/quota from localStorage to database after login.</p></div>
-          <div className="v2-runbook-row"><span>3</span><p>Validate Play Billing purchase tokens on the backend before unlocking Pro/Business.</p></div>
-          <div className="v2-runbook-row"><span>4</span><p>Do not link to outside payment inside the Android app for digital membership.</p></div>
-        </div>
-
-        <div className="v2-card v2-settings-card">
-          <div className="v2-card-head">
-            <div>
-              <h2>Generation Mode</h2>
-              <p>Choose how aggressively PromptLab waits before using fallback models.</p>
-            </div>
-            <span className={`v2-health ${providerReady ? "ready" : ""}`}>{providerReady ? "Ready" : "Offline"}</span>
-          </div>
-          <div className="v2-mode-grid">
-            {generationModes.map((mode) => (
-              <button key={mode} className={generationMode === mode ? "active" : ""} onClick={() => setGenerationMode(mode)}>
-                <span>{mode}</span>
-                <strong>{modeProfiles[mode].label}</strong>
-                <small>{modeProfiles[mode].detail}</small>
-              </button>
-            ))}
-          </div>
-          <div className="v2-settings-summary">
-            <span>Active Mode</span>
-            <strong>{generationMode}</strong>
-            <p>{activeProfile.bestFor}</p>
-          </div>
-          <div className="v2-mode-grid" style={{ marginTop: 16 }}>
-            <button
-              className={qualityMode === "standard" ? "active" : ""}
-              onClick={() => setQualityMode && setQualityMode("standard")}
-            >
-              <span>Quality</span>
-              <strong>Standard</strong>
-              <small>Single pass. Cepat, hemat token, output baseline.</small>
-            </button>
-            <button
-              className={qualityMode === "premium" ? "active" : ""}
-              onClick={() => setQualityMode && setQualityMode("premium")}
-            >
-              <span>Quality</span>
-              <strong>Premium</strong>
-              <small>Critique + refine pass. ~2x token, output lebih tajam — ideal untuk model gratis.</small>
-            </button>
-          </div>
-          <div className="v2-info-grid">
-            <V2Info label="API Base" value={apiBase || "Same-origin Vercel API"} />
-            <V2Info label="Provider" value={settingsStatus?.provider || modelSettings.provider || "-"} />
-            <V2Info label="Last Active Model" value={settingsStatus?.model || modelSettings.primaryModel || "-"} />
-            <V2Info label="OCR Model" value={modelSettings.ocrModel || settingsStatus?.ocrModel || "-"} />
-          </div>
-        </div>
-
-        <div className="v2-card v2-settings-card">
-          <div className="v2-card-head">
-            <div>
-              <h2>Provider & Endpoint</h2>
-              <p>Use Vercel env values by default, or override them from this browser.</p>
-            </div>
-            <button className="v2-btn" onClick={() => setModelSettings(defaultModelSettings)}>Reset</button>
-          </div>
-          <V2ChipGroup label="Provider" options={providerOptions} value={modelSettings.provider} onChange={(item) => updateModelSetting("provider", item)} />
-          <label className="v2-label">Base URL / Endpoint</label>
-          <input
-            className="v2-input"
-            value={modelSettings.baseUrl}
-            onChange={(event) => updateModelSetting("baseUrl", event.target.value)}
-            placeholder="https://openrouter.ai/api/v1"
-          />
-          <label className="v2-label">API Key Override, Optional</label>
-          <input
-            className="v2-input"
-            type="password"
-            value={modelSettings.apiKey}
-            onChange={(event) => updateModelSetting("apiKey", event.target.value)}
-            placeholder="Leave empty to use Vercel Environment Variables"
-          />
-          <p className="v2-small">If empty, the backend uses the API key from Vercel Environment Variables. If filled, the key is stored only in this browser.</p>
-        </div>
-
-        <div className="v2-card v2-settings-card">
-          <div className="v2-card-head">
-            <div>
-              <h2>Model Routing</h2>
-              <p>Primary model, OCR model, timeout, and fallback chain.</p>
-            </div>
-            <span className="v2-score-badge">{modelSettings.timeoutMs || "auto"} ms</span>
-          </div>
-          <label className="v2-label">Primary Model</label>
-          <input className="v2-input" value={modelSettings.primaryModel} onChange={(event) => updateModelSetting("primaryModel", event.target.value)} />
-          <label className="v2-label">OCR / Vision Model</label>
-          <input className="v2-input" value={modelSettings.ocrModel} onChange={(event) => updateModelSetting("ocrModel", event.target.value)} />
-          <label className="v2-label">Primary Timeout, ms</label>
-          <input className="v2-input" value={modelSettings.timeoutMs} onChange={(event) => updateModelSetting("timeoutMs", event.target.value.replace(/[^\d]/g, ""))} />
-          <label className="v2-label">Fallback Models, One Model Per Line</label>
-          <textarea className="v2-textarea small" value={modelSettings.fallbackModels} onChange={(event) => updateModelSetting("fallbackModels", event.target.value)} />
-        </div>
-
-        <div className="v2-card v2-settings-card">
-          <div className="v2-card-head">
-            <div>
-              <h2>Fallback Chain</h2>
-              <p>PromptLab tries these models when the primary route fails or times out.</p>
-            </div>
-            <span className="v2-score-badge hot">{fallbackModels.length}</span>
-          </div>
-          <div className="v2-fallback-list">
-            {(fallbackModels.length ? fallbackModels : ["No fallback models configured"]).map((modelName, index) => (
-              <div key={`${modelName}-${index}`}>
-                <span>{index + 1}</span>
-                <strong>{modelName}</strong>
-              </div>
-            ))}
-          </div>
-          <div className="v2-actions wrap">
-            <button className="v2-btn primary" onClick={saveModelSettings}><Save size={16} />Save Settings</button>
-            <button className="v2-btn primary" onClick={testProvider} disabled={isTestingProvider}><Zap size={16} />{isTestingProvider ? "Testing..." : "Test Provider"}</button>
-            <button className="v2-btn" onClick={refreshHealth}><Gauge size={16} />Health</button>
-            <button className="v2-btn" onClick={() => navigator.clipboard?.writeText(apiBase).catch(() => {})}><Clipboard size={16} />Copy API Base</button>
-          </div>
-          {isTestingProvider && (
-            <V2MiniPipeline
-              eyebrow="Provider test"
-              title="Checking model route..."
-              steps={["Endpoint", "Auth", "Model", "Response"]}
-            />
-          )}
-          {settingsSavedAt && <p className="v2-note">Settings last saved at {settingsSavedAt}</p>}
-          {providerTestStatus && <p className="v2-note">{providerTestStatus}</p>}
-        </div>
-
-        <div className="v2-card v2-settings-card v2-runbook">
-          <div className="v2-card-head">
-            <div>
-              <h2>Runbook</h2>
-              <p>Quick checks when generation feels slow or fallback is used too often.</p>
-            </div>
-            <Settings size={20} />
-          </div>
-          {[
-            "Use Patient Free for large files, OCR, or slow free models.",
-            "If local fallback always appears, run Test Provider and check the backend.",
-            "For production changes, update Vercel Environment Variables and redeploy.",
-            "Increase primary timeout when a healthy primary model is being skipped too quickly.",
-          ].map((item, index) => (
-            <div className="v2-runbook-row" key={item}><span>{index + 1}</span><p>{item}</p></div>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
 }
 
 function V2PublicSettings(props) {
@@ -2595,7 +2529,12 @@ function V2PublicSettings(props) {
     setAccountState,
     membershipPlans,
     updateMembershipPlan,
-    mockSignIn,
+    authStatus,
+    authError,
+    isAuthBusy,
+    isSupabaseConfigured,
+    signInWithPassword,
+    signUpWithPassword,
     signOut,
     library,
     customTemplates,
@@ -2614,7 +2553,10 @@ function V2PublicSettings(props) {
     quotaPercent,
   } = props;
   const [section, setSection] = useState("Account");
-  const isAdmin = adminEmails.includes(String(accountState.email || "").trim().toLowerCase());
+  const [authEmail, setAuthEmail] = useState(accountState.email || "");
+  const [authName, setAuthName] = useState(accountState.name || "");
+  const [authPassword, setAuthPassword] = useState("");
+  const isAdmin = accountState.role === "admin";
   const sections = [
     ["Account", User],
     ["Membership", CreditCard],
@@ -2631,6 +2573,8 @@ function V2PublicSettings(props) {
     setAccountState(defaultAccountState);
     localStorage.removeItem("promptlab-account");
   };
+  const submitSignIn = () => signInWithPassword(authEmail.trim(), authPassword);
+  const submitSignUp = () => signUpWithPassword(authEmail.trim(), authPassword, authName.trim());
 
   return (
     <div className="v2-screen v2-settings-screen">
@@ -2668,16 +2612,32 @@ function V2PublicSettings(props) {
             <div className="v2-account-grid">
               <label>
                 <span>Email</span>
-                <input className="v2-input" value={accountState.email} onChange={(event) => setAccountState((account) => ({ ...account, email: event.target.value }))} placeholder="user@email.com" />
+                <input className="v2-input" value={accountState.userId ? accountState.email : authEmail} onChange={(event) => setAuthEmail(event.target.value)} placeholder="user@email.com" disabled={Boolean(accountState.userId)} />
               </label>
               <label>
                 <span>Name</span>
-                <input className="v2-input" value={accountState.name} onChange={(event) => setAccountState((account) => ({ ...account, name: event.target.value }))} placeholder="Member name" />
+                <input className="v2-input" value={accountState.userId ? accountState.name : authName} onChange={(event) => setAuthName(event.target.value)} placeholder="Member name" disabled={Boolean(accountState.userId)} />
               </label>
+              {!accountState.userId && (
+                <label className="v2-account-password">
+                  <span>Password</span>
+                  <input className="v2-input" type="password" value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} placeholder="Minimum 6 characters" />
+                </label>
+              )}
+            </div>
+            <div className="v2-auth-status">
+              <span>{isSupabaseConfigured ? authStatus : "Supabase env belum aktif"}</span>
+              {authError && <strong>{authError}</strong>}
             </div>
             <div className="v2-actions wrap">
-              <button className="v2-btn primary" onClick={mockSignIn}>Mock Sign In</button>
-              <button className="v2-btn" onClick={signOut}>Sign Out</button>
+              {accountState.userId ? (
+                <button className="v2-btn" onClick={signOut} disabled={isAuthBusy}>Sign Out</button>
+              ) : (
+                <>
+                  <button className="v2-btn primary" onClick={submitSignIn} disabled={isAuthBusy || !authEmail || authPassword.length < 6}>Sign In</button>
+                  <button className="v2-btn" onClick={submitSignUp} disabled={isAuthBusy || !authEmail || authPassword.length < 6}>Create Account</button>
+                </>
+              )}
             </div>
           </div>
 

@@ -50,6 +50,8 @@ OPENROUTER_API_KEY=isi_key_di_sini
 OPENROUTER_MODEL=deepseek/deepseek-v4-flash
 OPENROUTER_OCR_MODEL=baidu/qianfan-ocr-fast:free
 APP_URL=https://domain-vercel-kamu.vercel.app
+VITE_SUPABASE_URL=https://project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=sb_publishable_xxx
 ```
 
 Saat production, frontend otomatis memakai same-origin API (`/api/...`). Saat development, frontend memakai API lokal `http://127.0.0.1:8787`.
@@ -73,6 +75,17 @@ LLM settings juga bisa diubah dari halaman **Settings** di aplikasi:
 - Model utama, OCR model, fallback models, dan timeout
 
 Jika API key override dikosongkan, backend memakai Environment Variables Vercel. Jika diisi dari dashboard, key tersimpan di browser pengguna tersebut.
+
+## Login dan Membership
+
+PromptLab memakai Supabase Auth untuk login email/password. Setup tahap 1:
+
+1. Buka Supabase SQL Editor.
+2. Jalankan isi file `supabase/phase-1-auth.sql`.
+3. Isi `VITE_SUPABASE_URL` dan `VITE_SUPABASE_ANON_KEY` di `.env` lokal dan Vercel Production.
+4. Redeploy Vercel setelah env ditambahkan.
+
+Admin Console di aplikasi hanya muncul untuk user dengan `profiles.role = 'admin'`. Setelah akun admin dibuat lewat app, jalankan SQL opsional di bagian bawah `supabase/phase-1-auth.sql` untuk menaikkan role akun tersebut.
 
 Untuk provider custom OpenAI-compatible di Vercel, env opsional:
 
