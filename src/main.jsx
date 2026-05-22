@@ -11,6 +11,8 @@ import {
   Clock3,
   CreditCard,
   Database,
+  Eye,
+  EyeOff,
   FileText,
   FolderOpen,
   Gauge,
@@ -2553,9 +2555,11 @@ function V2PublicSettings(props) {
     quotaPercent,
   } = props;
   const [section, setSection] = useState("Account");
+  const [authMode, setAuthMode] = useState("sign-in");
   const [authEmail, setAuthEmail] = useState(accountState.email || "");
   const [authName, setAuthName] = useState(accountState.name || "");
   const [authPassword, setAuthPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const isAdmin = accountState.role === "admin";
   const sections = [
     ["Account", User],
@@ -2614,15 +2618,34 @@ function V2PublicSettings(props) {
                 <span>Email</span>
                 <input className="v2-input" value={accountState.userId ? accountState.email : authEmail} onChange={(event) => setAuthEmail(event.target.value)} placeholder="user@email.com" disabled={Boolean(accountState.userId)} />
               </label>
-              <label>
-                <span>Name</span>
-                <input className="v2-input" value={accountState.userId ? accountState.name : authName} onChange={(event) => setAuthName(event.target.value)} placeholder="Member name" disabled={Boolean(accountState.userId)} />
-              </label>
-              {!accountState.userId && (
-                <label className="v2-account-password">
-                  <span>Password</span>
-                  <input className="v2-input" type="password" value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} placeholder="Minimum 6 characters" />
+              {accountState.userId && (
+                <label>
+                  <span>Name</span>
+                  <input className="v2-input" value={accountState.name} placeholder="Member name" disabled />
                 </label>
+              )}
+              {!accountState.userId && (
+                <>
+                  <div className="v2-auth-mode" role="tablist" aria-label="Authentication mode">
+                    <button className={authMode === "sign-in" ? "active" : ""} onClick={() => setAuthMode("sign-in")}>Sign In</button>
+                    <button className={authMode === "create" ? "active" : ""} onClick={() => setAuthMode("create")}>Create Account</button>
+                  </div>
+                  {authMode === "create" && (
+                    <label>
+                      <span>Name</span>
+                      <input className="v2-input" value={authName} onChange={(event) => setAuthName(event.target.value)} placeholder="Your name" />
+                    </label>
+                  )}
+                  <label className="v2-account-password">
+                    <span>Password</span>
+                    <div className="v2-password-field">
+                      <input className="v2-input" type={showPassword ? "text" : "password"} value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} placeholder="Minimum 6 characters" />
+                      <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"}>
+                        {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                      </button>
+                    </div>
+                  </label>
+                </>
               )}
             </div>
             <div className="v2-auth-status">
@@ -2634,8 +2657,11 @@ function V2PublicSettings(props) {
                 <button className="v2-btn" onClick={signOut} disabled={isAuthBusy}>Sign Out</button>
               ) : (
                 <>
-                  <button className="v2-btn primary" onClick={submitSignIn} disabled={isAuthBusy || !authEmail || authPassword.length < 6}>Sign In</button>
-                  <button className="v2-btn" onClick={submitSignUp} disabled={isAuthBusy || !authEmail || authPassword.length < 6}>Create Account</button>
+                  {authMode === "sign-in" ? (
+                    <button className="v2-btn primary" onClick={submitSignIn} disabled={isAuthBusy || !authEmail || authPassword.length < 6}>Sign In</button>
+                  ) : (
+                    <button className="v2-btn primary" onClick={submitSignUp} disabled={isAuthBusy || !authEmail || !authName || authPassword.length < 6}>Create Account</button>
+                  )}
                 </>
               )}
             </div>
@@ -2795,15 +2821,15 @@ function V2PublicSettings(props) {
             <div className="v2-card-head">
               <div>
                 <h2>About PromptLab</h2>
-                <p>Production metadata users expect in a Play Store app.</p>
+                <p>PromptLab helps turn rough ideas, files, and screenshots into structured prompts that are clearer, safer, and ready to run.</p>
               </div>
               <Rocket size={20} />
             </div>
             <div className="v2-info-grid">
-              <V2Info label="Version" value="1.0 internal" />
-              <V2Info label="Platform" value="Web + Android TWA" />
-              <V2Info label="App package" value="app.promptlab.twa" />
-              <V2Info label="Website" value="promptlab-six-phi.vercel.app" />
+              <V2Info label="Builder" value="Intent-aware prompt generator" />
+              <V2Info label="Optimizer" value="Rewrite, score, and strengthen old prompts" />
+              <V2Info label="Templates" value="Production-ready patterns for common work" />
+              <V2Info label="Library" value="Save, compare, copy, and reuse your best prompts" />
             </div>
           </div>
         </section>

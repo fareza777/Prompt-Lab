@@ -1972,12 +1972,66 @@ button {
   grid-column: 1 / -1;
 }
 
+.v2-auth-mode {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  padding: 4px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: var(--bg-input);
+}
+
+.v2-auth-mode button {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: calc(var(--r-sm) - 3px);
+  background: transparent;
+  color: var(--fg-mute);
+  font-weight: 900;
+}
+
+.v2-auth-mode button.active {
+  background: rgba(66, 230, 216, 0.18);
+  color: var(--fg);
+}
+
 .v2-account-grid label span {
   display: block;
   margin: 0 0 7px;
   color: var(--fg-mute);
   font-size: 12px;
   font-weight: 800;
+}
+
+.v2-password-field {
+  position: relative;
+}
+
+.v2-password-field .v2-input {
+  padding-right: 48px;
+}
+
+.v2-password-field button {
+  position: absolute;
+  top: 50%;
+  right: 9px;
+  transform: translateY(-50%);
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--fg-mute);
+}
+
+.v2-password-field button:hover {
+  border-color: var(--line);
+  color: var(--fg);
 }
 
 .v2-auth-status {
