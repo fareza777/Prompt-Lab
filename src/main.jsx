@@ -39,6 +39,7 @@ import {
   Zap,
 } from "lucide-react";
 import "./styles.css";
+import { highlightWeakSegments, inferOptimizerChanges, countWords } from "./optimizerDiff";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
 const categories = ["Marketing", "Content Creator", "Business", "Coding", "Academic", "Image AI"];
@@ -1838,7 +1839,14 @@ function V2TokenSection({ title, tokens }) {
 }
 
 function V2App(props) {
-  const { active, setActive, settingsStatus, generationStatus, generationSource, generationModel, isGenerating, accountState } = props;
+  const { active, setActive, settingsStatus, generationStatus, generationSource, generationModel, isGenerating, accountState, library, setNarrative } = props;
+  const recentPrompts = useMemo(
+    () =>
+      [...(library || [])]
+        .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0))
+        .slice(0, 3),
+    [library]
+  );
   const [showOnboarding, setShowOnboarding] = useState(() => {
     const hasOnboarded = localStorage.getItem("promptlab-onboarded") === "true";
     const isGuest = localStorage.getItem("promptlab-guest") === "true";
@@ -1915,9 +1923,23 @@ function V2App(props) {
         </nav>
         <div className="v2-recent-list">
           <span>Recent</span>
-          <button>Campaign brief</button>
-          <button>Claude app build</button>
-          <button>Slide outline</button>
+          {recentPrompts.length > 0 ? (
+            recentPrompts.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  setNarrative(item.content);
+                  setActive("Builder");
+                }}
+                title={item.title}
+              >
+                {item.title}
+              </button>
+            ))
+          ) : (
+            <p className="v2-small">Save a prompt to see recents here.</p>
+          )}
         </div>
         <button className="v2-quota-card" type="button" onClick={() => setActive("Settings")}>
           <div>
@@ -1935,7 +1957,14 @@ function V2App(props) {
       </aside>
 
       <main className="v2-main">
-        <V2Header active={active} setActive={setActive} settingsStatus={settingsStatus} />
+        <V2Header
+          active={active}
+          setActive={setActive}
+          settingsStatus={settingsStatus}
+          isGenerating={isGenerating}
+          generationStatus={generationStatus}
+          generationSource={generationSource}
+        />
         {active === "Builder" && <V2Builder {...props} />}
         {active === "Optimizer" && <V2Optimizer {...props} />}
         {active === "Templates" && <V2Templates {...props} />}
@@ -2043,7 +2072,7 @@ function V2Onboarding({ onAuth, onGuest }) {
   );
 }
 
-function V2Header({ active, setActive, settingsStatus }) {
+function V2Header({ active, setActive, settingsStatus, isGenerating, generationStatus, generationSource }) {
   const subtitles = {
     Builder: "Parse intent, lock guardrails, and ship model-ready prompts.",
     Optimizer: "Diff an old prompt into a sharper, safer instruction.",
@@ -2052,6 +2081,9 @@ function V2Header({ active, setActive, settingsStatus }) {
     Compare: "Run an AI judge on two prompt versions before sending them.",
     Settings: "Manage account, membership, prompt defaults, privacy, and support.",
   };
+  const syncLabel = isGenerating
+    ? statusLabel(generationStatus, generationSource)
+    : "Synced";
   return (
     <header className="v2-headerbar">
       <div>
@@ -2059,7 +2091,7 @@ function V2Header({ active, setActive, settingsStatus }) {
         <strong>{subtitles[active] || subtitles.Builder}</strong>
       </div>
       <div className="v2-header-actions">
-        <span className="v2-sync"><i /> Synced</span>
+        <span className={`v2-sync ${isGenerating ? "busy" : ""}`}><i /> {syncLabel}</span>
         <button className="v2-search" onClick={() => setActive("Library")}>
           <Search size={15} />
           <span>Search library</span>
@@ -2112,7 +2144,7 @@ function V2Builder(props) {
       </V2PageIntro>
 
       <section className="v2-studio-grid">
-        <div className="v2-card v2-composer">
+        <div className="v2-card v2-composer v2-glass-card">
           <div className="v2-card-head">
             <div>
               <h2>Prompt Studio</h2>
@@ -2143,7 +2175,7 @@ function V2Builder(props) {
             <V2ChipGroup label="Output Type" options={outputTypes} value={outputType} onChange={setOutputType} />
           </div>
           <div className="v2-actions">
-            <button className="v2-btn primary" onClick={() => generatePrompt()} disabled={isGenerating}>
+            <button className="v2-btn primary v2-btn-cta" onClick={() => generatePrompt()} disabled={isGenerating}>
               <Sparkles size={17} /> {isGenerating ? "Generating..." : "Generate Prompt"}
             </button>
             <V2ActionBtn className="v2-btn" onAction={() => savePrompt(prompt, narrative)} successLabel={<><Check size={17} />Saved</>}>
@@ -2287,7 +2319,7 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
         <div className="v2-output-tabs">
           <button className="active">Prompt</button>
         </div>
-        <pre>{prompt}</pre>
+        <pre className={`v2-prompt-output ${isGenerating ? "is-streaming" : ""}`}>{prompt}</pre>
         {isGenerating && (
           <div className="v2-stream-preview">
             <span>Streaming preview</span>
@@ -2316,10 +2348,13 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
 function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizerError, optimizerWarning, optimizePrompt, clearOptimizerResult, copyText, savePrompt, exportFile }) {
   const [rawPrompt, setRawPrompt] = useState("Make this prompt stronger for Instagram content about a milk coffee product.");
   const [mode, setMode] = useState("Clearer");
+  const [diffView, setDiffView] = useState("split");
   const result = optimizerResult || buildLocalOptimizedPrompt(rawPrompt, mode, "Claude", "Professional");
   const beforeScore = scorePrompt(rawPrompt);
   const afterScore = scoreOptimizedPrompt(rawPrompt, result);
   const scoreDelta = afterScore.score - beforeScore.score;
+  const beforeSegments = useMemo(() => highlightWeakSegments(rawPrompt), [rawPrompt]);
+  const changes = useMemo(() => inferOptimizerChanges(rawPrompt, result, mode), [rawPrompt, result, mode]);
   const qualityBreakdown = [
     ["Clarity", beforeScore.clarity, afterScore.clarity, "role and objective"],
     ["Context", beforeScore.context, afterScore.context, "audience and assumptions"],
@@ -2327,11 +2362,30 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
     ["Guardrails", beforeScore.constraints, afterScore.constraints, "limits and safety"],
     ["Actionability", beforeScore.actionability, afterScore.actionability, "testable criteria"],
   ];
+  const diffViews = [
+    ["split", "Split diff"],
+    ["unified", "Unified"],
+    ["summary", "Summary"],
+  ];
   return (
     <div className="v2-screen">
       <V2PageIntro eyebrow="Optimizer" title="Old prompts, refined into winning instructions." copy="Review before and after quality changes with a compact improvement summary." />
+      <div className="v2-optimizer-toolbar">
+        <div className="v2-chip-row">
+          {diffViews.map(([id, label]) => (
+            <button key={id} type="button" className={`v2-chip ${diffView === id ? "active" : ""}`} onClick={() => setDiffView(id)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="v2-optimizer-meta">
+          <span>{changes.length} changes</span>
+          <span>{countWords(rawPrompt)} → {countWords(result)} words</span>
+          <span className={`v2-score-badge ${scoreDelta >= 0 ? "hot" : ""}`}>{scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta}</span>
+        </div>
+      </div>
       <section className="v2-diff-grid">
-        <div className="v2-card">
+        <div className="v2-card v2-glass-card">
           <div className="v2-card-head"><h2>Input</h2><span className="v2-score-badge">{beforeScore.score}</span></div>
           <textarea className="v2-textarea" value={rawPrompt} onChange={(event) => setRawPrompt(event.target.value)} />
           <V2ChipGroup
@@ -2344,7 +2398,7 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
             }}
           />
           <div className="v2-actions">
-            <button className="v2-btn primary" onClick={() => optimizePrompt(rawPrompt, mode)} disabled={isOptimizing}>
+            <button className="v2-btn primary v2-btn-cta" onClick={() => optimizePrompt(rawPrompt, mode)} disabled={isOptimizing}>
               <Zap size={17} />{isOptimizing ? "Optimizing..." : "Optimize"}
             </button>
             <V2ActionBtn className="v2-btn" onAction={() => copyText(rawPrompt)} successLabel={<><Check size={17} />Copied</>}>
@@ -2361,7 +2415,7 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
           {optimizerWarning && <p className="v2-note warn">{optimizerWarning}</p>}
           {optimizerError && <p className="v2-note error">{optimizerError}</p>}
         </div>
-        <div className="v2-card v2-output-card">
+        <div className="v2-card v2-output-card v2-glass-card">
           <div className="v2-card-head">
             <div>
               <h2>Optimized Result</h2>
@@ -2369,7 +2423,11 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
             </div>
             <span className="v2-score-badge hot">{afterScore.score}</span>
           </div>
-          <pre>{result}</pre>
+          {diffView !== "summary" ? (
+            <pre className={`v2-prompt-output ${isOptimizing ? "is-streaming" : ""}`}>{result}</pre>
+          ) : (
+            <p className="v2-small">Summary view focuses on the change map below. Switch to Split or Unified to read the full optimized prompt here.</p>
+          )}
           <div className="v2-score-advice">
             <span>Score notes</span>
             {afterScore.tips.slice(0, 2).map((tip) => <p key={tip}>{tip}</p>)}
@@ -2393,6 +2451,46 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
           </div>
         </div>
       </section>
+      {diffView !== "summary" && (
+        <section className={`v2-diff-panel ${diffView}`}>
+          <div className="v2-diff-col">
+            <div className="v2-diff-head">
+              <span>Before</span>
+              <span className="v2-score-badge">{beforeScore.score}</span>
+            </div>
+            <pre className="v2-prompt-output muted">
+              {beforeSegments.map((segment, index) => (
+                segment.weak ? <mark key={`weak-${index}`}>{segment.text}</mark> : <React.Fragment key={`plain-${index}`}>{segment.text}</React.Fragment>
+              ))}
+            </pre>
+          </div>
+          <div className="v2-diff-col">
+            <div className="v2-diff-head">
+              <span>{diffView === "unified" ? "After · unified stack" : "After"}</span>
+              <span className="v2-score-badge hot">{afterScore.score}</span>
+            </div>
+            <pre className={`v2-prompt-output ${isOptimizing ? "is-streaming" : ""}`}>{result}</pre>
+          </div>
+        </section>
+      )}
+      <section className={`v2-change-summary ${diffView === "summary" ? "featured" : ""}`}>
+        {changes.map((item, index) => (
+          <article key={`${item.label}-${index}`} className={`v2-change-card ${item.type}`}>
+            <span>{item.type}</span>
+            <strong>{item.label}</strong>
+            <p>{item.body}</p>
+          </article>
+        ))}
+      </section>
+      {diffView === "summary" && (
+        <section className="v2-card v2-output-card">
+          <div className="v2-card-head">
+            <h2>Optimized prompt</h2>
+            <span className="v2-score-badge hot">{afterScore.score}</span>
+          </div>
+          <pre className="v2-prompt-output">{result}</pre>
+        </section>
+      )}
       <section className="v2-card v2-compact-quality">
         <div className="v2-card-head">
           <div>
@@ -2444,6 +2542,8 @@ function V2Templates({
     const q = `${item.title} ${item.category} ${item.outputType} ${item.model} ${item.prompt}`.toLowerCase();
     return (filter === "All" || item.category === filter) && q.includes(search.toLowerCase());
   });
+  const featured = filtered[0];
+  const gridTemplates = featured ? filtered.slice(1, 10) : filtered.slice(0, 9);
   const fillFromBuilder = () => {
     setTemplateDraft({
       title: `${outputType} Template`,
@@ -2485,9 +2585,22 @@ function V2Templates({
         <div className="v2-search wide"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search templates..." /></div>
         <div className="v2-chip-row">{options.map((item) => <button key={item} className={`v2-chip ${filter === item ? "active" : ""}`} onClick={() => setFilter(item)}>{item}</button>)}</div>
       </div>
+      {featured && (
+        <section className="v2-featured-template v2-card v2-glass-card">
+          <div>
+            <span className="v2-eyebrow">Featured template</span>
+            <strong>{featured.title}</strong>
+            <p>{featured.prompt.length > 240 ? `${featured.prompt.slice(0, 240)}…` : featured.prompt}</p>
+            <small>{featured.category} · {featured.model} · {featured.outputType}{featured.custom ? " · Custom" : ""}</small>
+          </div>
+          <button className="v2-btn primary v2-btn-cta" type="button" onClick={() => setBuilderFromTemplate(featured)}>
+            <Sparkles size={16} />Use featured
+          </button>
+        </section>
+      )}
       <section className="v2-template-grid">
-        {filtered.slice(0, 9).map((template) => (
-          <article className="v2-template-card" key={`${template.custom ? "custom" : "built-in"}-${template.title}`}>
+        {gridTemplates.map((template) => (
+          <article className="v2-template-card v2-glass-card" key={`${template.custom ? "custom" : "built-in"}-${template.title}`}>
             <span>{template.category}</span>
             <strong>{template.title}</strong>
             <p>{template.prompt}</p>
@@ -2512,6 +2625,8 @@ function V2Library(props) {
   } = props;
   const currentItem = filteredLibrary.find((item) => item.id === selectedLibraryId) || filteredLibrary[0] || selectedLibrary;
   const rows = filteredLibrary.slice(0, 8);
+  const totalWords = filteredLibrary.reduce((sum, item) => sum + countWords(item.content), 0);
+  const folderCount = new Set(filteredLibrary.map((item) => item.folder).filter(Boolean)).size;
   const formatDate = (timestamp) => timestamp ? new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(timestamp) : "-";
   const useInBuilder = (item) => {
     setNarrative(item.content);
@@ -2524,8 +2639,14 @@ function V2Library(props) {
       <V2PageIntro eyebrow="Library" title="Prompt archive that behaves like a workspace." copy="Search, edit, duplicate, export, and send prompts to Compare or Builder.">
         <div className="v2-hero-status"><span>Saved</span><strong>{filteredLibrary.length}</strong><small>of {libraryLimit} local slots</small></div>
       </V2PageIntro>
+      <section className="v2-stats-strip">
+        <div className="v2-stat"><span>Saved prompts</span><strong>{filteredLibrary.length}</strong><small>of {libraryLimit} slots</small></div>
+        <div className="v2-stat"><span>Total words</span><strong>{totalWords.toLocaleString("id-ID")}</strong><small>across filtered items</small></div>
+        <div className="v2-stat"><span>Folders</span><strong>{folderCount}</strong><small>unique output groups</small></div>
+        <div className="v2-stat compact"><span>Last edit</span><strong>{currentItem ? formatDate(currentItem.updatedAt || currentItem.createdAt) : "—"}</strong><small>{currentItem?.tag || "No selection"}</small></div>
+      </section>
       <section className="v2-library-grid">
-        <div className="v2-card">
+        <div className="v2-card v2-glass-card">
           <div className="v2-library-summary">
             <strong>{filteredLibrary.length}/{libraryLimit}</strong>
             <span>saved prompts</span>
@@ -2541,7 +2662,7 @@ function V2Library(props) {
             ))}
           </div>
         </div>
-        <div className="v2-card v2-editor">
+        <div className="v2-card v2-editor v2-glass-card">
           {currentItem ? (
             <>
               <label className="v2-label">Judul</label>
@@ -2658,13 +2779,17 @@ function V2Compare({
           ["Constraints", "constraints"],
           ["Risk", "risk"],
           ["Overall", "overall"],
-        ].map(([row, key]) => (
-          <div key={row}>
-            <strong>{row}</strong>
-            <span>{aiScores?.A?.[key] ?? (key === "overall" ? scoreA.score : scoreA[key] || Math.max(40, scoreA.score - 4))}%</span>
-            <span>{aiScores?.B?.[key] ?? (key === "overall" ? scoreB.score : scoreB[key] || Math.max(40, scoreB.score - 4))}%</span>
-          </div>
-        ))}
+        ].map(([row, key]) => {
+          const scoreAValue = aiScores?.A?.[key] ?? (key === "overall" ? scoreA.score : scoreA[key] || Math.max(40, scoreA.score - 4));
+          const scoreBValue = aiScores?.B?.[key] ?? (key === "overall" ? scoreB.score : scoreB[key] || Math.max(40, scoreB.score - 4));
+          return (
+            <div key={row}>
+              <strong>{row}</strong>
+              <span className={scoreAValue >= scoreBValue ? "winner" : ""}>{scoreAValue}%</span>
+              <span className={scoreBValue > scoreAValue ? "winner" : ""}>{scoreBValue}%</span>
+            </div>
+          );
+        })}
         {compareResult?.summary && <p className="v2-judge-summary">{compareResult.summary}</p>}
         {compareWarning && <p className="v2-note warn">{compareWarning}</p>}
         {compareError && <p className="v2-note error">{compareError}</p>}
@@ -2913,9 +3038,14 @@ function V2PublicSettings(props) {
               </div>
               <span className="v2-score-badge">{accountState.plan}</span>
             </div>
-            <div className="v2-plan-grid">
+            <div className="v2-plan-grid premium">
               {Object.entries(membershipPlans).map(([plan, info]) => (
-                <button key={plan} className={accountState.plan === plan ? "active" : ""} type="button" disabled={accountState.plan !== plan}>
+                <button
+                  key={plan}
+                  className={`v2-plan-card ${accountState.plan === plan ? "active" : ""} ${plan === "Business" ? "featured" : ""}`}
+                  type="button"
+                  disabled={accountState.plan !== plan}
+                >
                   <span>{plan}</span>
                   <strong>{info.price}</strong>
                   <small>{info.detail}</small>
