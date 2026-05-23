@@ -9,7 +9,9 @@
     "test": "node --test",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "playstore:check": "node --use-system-ca scripts/check-playstore-readiness.mjs"
+    "playstore:check": "node --use-system-ca scripts/check-playstore-readiness.mjs",
+    "icons:generate": "node --use-system-ca scripts/generate-pwa-icons.mjs",
+    "playstore:build": "cd android-app && gradlew.bat bundleRelease"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.1",
@@ -30,6 +32,7 @@
   },
   "devDependencies": {
     "@bubblewrap/cli": "^1.24.1",
-    "playwright": "^1.59.1"
+    "playwright": "^1.59.1",
+    "sharp": "^0.34.5"
   }
 }

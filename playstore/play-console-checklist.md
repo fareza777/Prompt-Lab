@@ -7,7 +7,7 @@
 - Default language: English
 - App/category: Productivity
 - Website: `https://promptlab-six-phi.vercel.app/`
-- Privacy policy URL: required before production release
+- Privacy policy URL: `https://promptlab-six-phi.vercel.app/privacy`
 
 ## Store Listing Draft
 

@@ -2932,9 +2932,13 @@ function V2PublicSettings(props) {
               </div>
               <ShieldCheck size={20} />
             </div>
-            <div className="v2-runbook-row"><span>1</span><p>Uploaded files are used to generate prompts and should not be shown to other users.</p></div>
-            <div className="v2-runbook-row"><span>2</span><p>Saved library items are local until login sync is connected.</p></div>
-            <div className="v2-runbook-row"><span>3</span><p>Privacy policy and account deletion links are required before production.</p></div>
+            <div className="v2-runbook-row"><span>1</span><p>Uploaded files are used to generate prompts and are not shared with other users.</p></div>
+            <div className="v2-runbook-row"><span>2</span><p>Account quota and membership sync when you are signed in.</p></div>
+            <div className="v2-runbook-row"><span>3</span><p>Read the full privacy policy before using production builds.</p></div>
+            <div className="v2-actions wrap">
+              <a className="v2-btn primary" href="/privacy" target="_blank" rel="noreferrer"><ShieldCheck size={16} />Privacy Policy</a>
+              <a className="v2-btn" href="mailto:support@promptlab.app"><LifeBuoy size={16} />Request data deletion</a>
+            </div>
           </div>
         </section>
       )}
