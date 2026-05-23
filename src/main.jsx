@@ -1241,16 +1241,6 @@ function App() {
     setCustomTemplates((items) => items.filter((item) => item.id !== id));
   }
 
-  function updateMembershipPlan(plan) {
-    const selected = membershipPlans[plan] || membershipPlans.Free;
-    setAccountState((account) => ({
-      ...account,
-      plan,
-      quotaLimit: selected.quota,
-      quotaUsed: Math.min(account.quotaUsed || 0, selected.quota),
-    }));
-  }
-
   async function loadUserProfile(user) {
     if (!supabase || !user?.id) return;
     setAuthError("");
@@ -1348,6 +1338,30 @@ function App() {
     setAuthStatus("Signed out");
   }
 
+  async function getAuthHeaders() {
+    if (!supabase) return {};
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  function applyServerQuota(quota) {
+    if (!quota) return;
+    setAccountState((account) => normalizeAccountState({
+      ...account,
+      email: quota.email || account.email,
+      name: quota.fullName || account.name,
+      playBilling: quota.playBilling || account.playBilling,
+      plan: quota.plan || account.plan,
+      quotaLimit: quota.quotaLimit ?? account.quotaLimit,
+      quotaReset: quota.quotaResetAt
+        ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(quota.quotaResetAt))
+        : account.quotaReset,
+      quotaUsed: quota.quotaUsed ?? account.quotaUsed,
+      role: quota.role || account.role,
+    }));
+  }
+
   function updateLibraryItem(id, patch) {
     setLibrary((items) => items.map((item) => (item.id === id ? { ...item, ...patch, updatedAt: Date.now() } : item)));
   }
@@ -1399,6 +1413,7 @@ function App() {
 
       const response = await fetch(`${apiBase}/api/generate-prompt`, {
         method: "POST",
+        headers: await getAuthHeaders(),
         body: formData,
       });
 
@@ -1409,6 +1424,7 @@ function App() {
       setGenerationSource(data.source || "server");
       setGenerationModel(data.model || (data.source === "fallback" ? "Local fallback" : "Local draft"));
       setGenerationStatus(data.modelStatus || data.source || "server");
+      applyServerQuota(data.quota);
       setWarningMessage([uploadPlan.warning, data.warning].filter(Boolean).join(" "));
       return data.prompt || localPrompt;
     } catch (error) {
@@ -1687,7 +1703,6 @@ function App() {
     isAuthBusy,
     isSupabaseConfigured,
     membershipPlans,
-    updateMembershipPlan,
     signInWithPassword,
     signUpWithPassword,
     signOut,
@@ -2510,7 +2525,6 @@ function V2Settings(props) {
     isAuthBusy,
     isSupabaseConfigured,
     membershipPlans,
-    updateMembershipPlan,
     signInWithPassword,
     signUpWithPassword,
     signOut,
@@ -2541,7 +2555,6 @@ function V2PublicSettings(props) {
     accountState,
     setAccountState,
     membershipPlans,
-    updateMembershipPlan,
     authStatus,
     authError,
     isAuthBusy,
@@ -2708,17 +2721,18 @@ function V2PublicSettings(props) {
             </div>
             <div className="v2-plan-grid">
               {Object.entries(membershipPlans).map(([plan, info]) => (
-                <button key={plan} className={accountState.plan === plan ? "active" : ""} onClick={() => updateMembershipPlan(plan)}>
+                <button key={plan} className={accountState.plan === plan ? "active" : ""} type="button" disabled={accountState.plan !== plan}>
                   <span>{plan}</span>
                   <strong>{info.price}</strong>
                   <small>{info.detail}</small>
+                  <em>{accountState.plan === plan ? "Current plan" : "Unlock via Play Billing"}</em>
                 </button>
               ))}
             </div>
             <div className="v2-quota-meter">
               <div><span>Quota</span><strong>{(accountState.quotaUsed / 1000).toFixed(1)}k / {(accountState.quotaLimit / 1000).toFixed(0)}k tokens</strong></div>
               <i><b style={{ width: `${quotaPercent}%` }} /></i>
-              <small>Resets {accountState.quotaReset}. Production should decrement usage after successful generation.</small>
+              <small>Resets {accountState.quotaReset}. Usage is updated after each successful generation.</small>
             </div>
           </div>
 

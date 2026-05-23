@@ -13,6 +13,7 @@ import JSZip from "jszip";
 import mammoth from "mammoth";
 import multer from "multer";
 import OpenAI from "openai";
+import { createClient } from "@supabase/supabase-js";
 
 const app = express();
 const port = Number(process.env.PORT || 8787);
@@ -63,6 +64,9 @@ const openRouterPrimaryTimeoutMs = Number(process.env.OPENROUTER_PRIMARY_TIMEOUT
 const openRouterFallbackTimeoutMs = Number(process.env.OPENROUTER_FALLBACK_TIMEOUT_MS || 55000);
 const openRouterOcrModel = process.env.OPENROUTER_OCR_MODEL || "baidu/qianfan-ocr-fast:free";
 const openRouterOcrTimeoutMs = Number(process.env.OPENROUTER_OCR_TIMEOUT_MS || 45000);
+const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
+const quotaAuthEnabled = Boolean(supabaseUrl && supabaseAnonKey);
 const defaultOpenRouterFallbackModels = [
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   "openai/gpt-oss-20b:free",
@@ -370,6 +374,8 @@ const PREMIUM_PASS_RESERVE_MS = 32000;
 app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res) => {
   const startedAt = Date.now();
   const remainingBudget = () => Math.max(0, VERCEL_FUNCTION_BUDGET_MS - (Date.now() - startedAt));
+  let quotaSession = null;
+  let quotaEstimate = 0;
   try {
     const payload = normalizePayload(req.body);
     const manifestAttachments = normalizeAttachmentManifest(req.body.attachmentManifest);
@@ -380,15 +386,25 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       ...manifestAttachments.filter((file) => !uploadedNames.has(file.filename)),
     ].slice(0, 8);
     const runtime = getRuntimeProvider(payload.modelSettings);
+    quotaEstimate = estimateGenerationTokens(payload, attachments);
+    quotaSession = await getQuotaSession(req, quotaEstimate);
 
     if (runtime.provider !== "openai") {
       if (!runtime.client) {
+        const fallbackPrompt = buildFallbackPrompt(payload, attachments);
+        const quota = await recordUsage(quotaSession, {
+          eventType: "generate_local_fallback",
+          metadata: { model: "Local fallback", provider: "fallback", reason: "missing_provider_key" },
+          outputText: fallbackPrompt,
+          tokenEstimate: Math.max(quotaEstimate, estimateTextTokens(fallbackPrompt)),
+        });
         res.json({
           source: "fallback",
           model: "Local fallback",
           modelStatus: "local-fallback",
           warning: "API key provider belum aktif, memakai generator lokal.",
-          prompt: buildFallbackPrompt(payload, attachments),
+          prompt: fallbackPrompt,
+          quota,
         });
         return;
       }
@@ -415,7 +431,6 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         if (isPromptTooShort(prompt)) {
           prompt = buildFallbackPrompt(payload, attachments);
         }
-
         let qualityNote = "";
         if (payload.qualityMode === "premium" && !isPromptTooShort(prompt) && remainingBudget() > PREMIUM_PASS_RESERVE_MS) {
           const primaryModel = payload.modelSettings?.primaryModel || runtime.defaultModel;
@@ -437,6 +452,17 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         if (generation.usedFallbackModel) warnings.push(`Primary model sedang limit/error (${generation.primaryError}). Fallback model dipakai.`);
         if (retried) warnings.push("Output awal terlalu pendek, di-regenerate ulang.");
         if (qualityNote) warnings.push(qualityNote);
+        const quota = await recordUsage(quotaSession, {
+          eventType: "generate_prompt",
+          metadata: {
+            model: completion.model,
+            provider: runtime.provider,
+            qualityMode: payload.qualityMode,
+            usedFallbackModel: generation.usedFallbackModel,
+          },
+          outputText: prompt,
+          tokenEstimate: Math.max(quotaEstimate, estimateTextTokens(prompt)),
+        });
 
         res.json({
           source: runtime.provider,
@@ -444,27 +470,44 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
           modelStatus: generation.usedFallbackModel ? "fallback-model" : "primary-model",
           warning: warnings.join(" "),
           prompt,
+          quota,
         });
       } catch (error) {
         console.warn("openrouter fallback", error.status || error.code || error.message);
+        const fallbackPrompt = buildFallbackPrompt(payload, attachments);
+        const quota = await recordUsage(quotaSession, {
+          eventType: "generate_local_fallback",
+          metadata: { model: "Local fallback", provider: "fallback", reason: formatProviderError(error) },
+          outputText: fallbackPrompt,
+          tokenEstimate: Math.max(quotaEstimate, estimateTextTokens(fallbackPrompt)),
+        });
         res.json({
           source: "fallback",
           model: "Local fallback",
           modelStatus: "local-fallback",
           warning: "Provider AI sedang limit/overload, memakai generator lokal.",
-          prompt: buildFallbackPrompt(payload, attachments),
+          prompt: fallbackPrompt,
+          quota,
         });
       }
       return;
     }
 
     if (!runtime.client) {
+      const fallbackPrompt = buildFallbackPrompt(payload, attachments);
+      const quota = await recordUsage(quotaSession, {
+        eventType: "generate_local_fallback",
+        metadata: { model: "Local fallback", provider: "fallback", reason: "missing_openai_key" },
+        outputText: fallbackPrompt,
+        tokenEstimate: Math.max(quotaEstimate, estimateTextTokens(fallbackPrompt)),
+      });
       res.json({
         source: "fallback",
         model: "Local fallback",
         modelStatus: "local-fallback",
         warning: "OpenAI API key belum aktif, memakai generator lokal.",
-        prompt: buildFallbackPrompt(payload, attachments),
+        prompt: fallbackPrompt,
+        quota,
       });
       return;
     }
@@ -536,19 +579,31 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         console.warn("openai premium critique pass failed", refineError.message);
       }
     }
+    const quota = await recordUsage(quotaSession, {
+      eventType: "generate_prompt",
+      metadata: {
+        model: payload.modelSettings.primaryModel || runtime.defaultModel,
+        provider: "openai",
+        qualityMode: payload.qualityMode,
+      },
+      outputText: openaiPrompt,
+      tokenEstimate: Math.max(quotaEstimate, estimateTextTokens(openaiPrompt)),
+    });
 
     res.json({
       source: "openai",
       prompt: openaiPrompt,
       warning: openaiWarnings.join(" "),
+      quota,
     });
   } catch (error) {
     console.error("generate-prompt failed", error.message);
-    res.status(error.message === "Tipe file belum didukung." ? 400 : 500).json({
+    const status = error.statusCode || (error.message === "Tipe file belum didukung." ? 400 : 500);
+    res.status(status).json({
       error:
         error.message === "Tipe file belum didukung."
           ? error.message
-          : "Gagal membuat prompt. Coba lagi sebentar.",
+          : error.publicMessage || "Gagal membuat prompt. Coba lagi sebentar.",
     });
   }
 });
@@ -756,6 +811,88 @@ function normalizeModelSettings(body = {}) {
     provider: normalizeProvider(body.provider),
     timeoutMs: normalizeTimeout(body.timeoutMs),
   };
+}
+
+function extractBearerToken(req) {
+  const match = /^Bearer\s+(.+)$/i.exec(req.headers.authorization || "");
+  return match?.[1]?.trim() || "";
+}
+
+function createUserSupabaseClient(token) {
+  if (!quotaAuthEnabled || !token) return null;
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+}
+
+function publicQuota(profile) {
+  if (!profile) return null;
+  return {
+    email: profile.email,
+    fullName: profile.full_name || "",
+    plan: profile.plan || "Free",
+    playBilling: profile.play_billing || "Not linked",
+    quotaLimit: Number(profile.quota_limit || 0),
+    quotaResetAt: profile.quota_reset_at,
+    quotaUsed: Number(profile.quota_used || 0),
+    role: profile.role === "admin" ? "admin" : "user",
+  };
+}
+
+function publicApiError(message, statusCode = 400) {
+  const error = new Error(message);
+  error.publicMessage = message;
+  error.statusCode = statusCode;
+  return error;
+}
+
+async function getQuotaSession(req, estimatedTokens = 0) {
+  if (!quotaAuthEnabled) return null;
+  const token = extractBearerToken(req);
+  if (!token) throw publicApiError("Silakan sign in untuk generate dengan AI dan memakai quota.", 401);
+
+  const client = createUserSupabaseClient(token);
+  const { data: userData, error: userError } = await client.auth.getUser(token);
+  if (userError || !userData?.user) throw publicApiError("Session login tidak valid. Silakan sign in ulang.", 401);
+
+  const { data, error } = await client.rpc("get_my_entitlement");
+  if (error) throw publicApiError("Membership belum siap. Jalankan SQL quota terbaru di Supabase.", 503);
+  const profile = Array.isArray(data) ? data[0] : data;
+  if (!profile) throw publicApiError("Profile membership tidak ditemukan. Silakan sign out lalu sign in ulang.", 403);
+
+  if (Number(profile.quota_used || 0) + estimatedTokens > Number(profile.quota_limit || 0)) {
+    throw publicApiError("Quota token habis. Upgrade plan atau tunggu quota reset.", 402);
+  }
+
+  return { client, profile, user: userData.user };
+}
+
+async function recordUsage(quotaSession, { eventType, metadata, outputText, tokenEstimate }) {
+  if (!quotaSession?.client) return null;
+  const tokens = Math.max(1, Math.round(tokenEstimate || estimateTextTokens(outputText)));
+  const { data, error } = await quotaSession.client.rpc("record_usage_event", {
+    p_event_type: eventType,
+    p_metadata: metadata || {},
+    p_token_estimate: tokens,
+  });
+  if (error) {
+    const exceeded = /quota exceeded/i.test(error.message);
+    throw publicApiError(exceeded ? "Quota token habis. Upgrade plan atau tunggu quota reset." : "Gagal mencatat usage quota.", exceeded ? 402 : 503);
+  }
+  const profile = Array.isArray(data) ? data[0] : data;
+  return publicQuota(profile);
+}
+
+function estimateTextTokens(value = "") {
+  return Math.max(1, Math.ceil(String(value || "").length / 4));
+}
+
+function estimateGenerationTokens(payload, attachments = []) {
+  const attachmentText = attachments.map((file) => `${file.filename || ""} ${file.excerpt || ""}`).join("\n");
+  const baseText = [payload.narrative, payload.category, payload.tone, payload.modelTarget, payload.outputType, payload.qualityMode, attachmentText].join("\n");
+  const outputReserve = payload.qualityMode === "premium" ? 2600 : 1600;
+  return Math.min(12000, Math.max(600, estimateTextTokens(baseText) + outputReserve));
 }
 
 function normalizeProvider(value) {

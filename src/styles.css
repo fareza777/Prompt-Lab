@@ -2188,6 +2188,11 @@ button {
   background: linear-gradient(135deg, oklch(0.22 0.04 245 / 0.88), oklch(0.2 0.04 188 / 0.82));
 }
 
+.v2-plan-grid button:disabled:not(.active) {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
 .v2-plan-grid span {
   color: var(--ac);
   font-family: var(--font-mono);
@@ -2205,6 +2210,15 @@ button {
 .v2-plan-grid small {
   color: var(--fg-mute);
   line-height: 1.45;
+}
+
+.v2-plan-grid em {
+  display: block;
+  margin-top: 10px;
+  color: var(--fg-subtle);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 850;
 }
 
 .v2-quota-meter {

@@ -87,6 +87,18 @@ PromptLab memakai Supabase Auth untuk login email/password. Setup tahap 1:
 
 Admin Console di aplikasi hanya muncul untuk user dengan `profiles.role = 'admin'`. Setelah akun admin dibuat lewat app, jalankan SQL opsional di bagian bawah `supabase/phase-1-auth.sql` untuk menaikkan role akun tersebut.
 
+### Quota Token
+
+Quota dihitung di backend saat `/api/generate-prompt` berhasil:
+
+- Frontend mengirim Supabase access token lewat header `Authorization`.
+- Backend membaca entitlement user dari Supabase.
+- Jika quota tidak cukup, request ditolak sebelum memanggil model AI.
+- Jika berhasil, backend mencatat `usage_events` dan menaikkan `profiles.quota_used`.
+- Tombol plan di UI hanya membaca status database; upgrade Pro/Business harus lewat validasi Play Billing/backend, bukan klik lokal.
+
+Jika SQL sudah pernah dijalankan sebelum fitur quota ini, jalankan ulang `supabase/phase-1-auth.sql` agar fungsi `get_my_entitlement` dan `record_usage_event` tersedia.
+
 Untuk provider custom OpenAI-compatible di Vercel, env opsional:
 
 ```bash
