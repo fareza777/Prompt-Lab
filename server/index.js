@@ -66,7 +66,9 @@ const openRouterOcrModel = process.env.OPENROUTER_OCR_MODEL || "baidu/qianfan-oc
 const openRouterOcrTimeoutMs = Number(process.env.OPENROUTER_OCR_TIMEOUT_MS || 45000);
 const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const quotaAuthEnabled = Boolean(supabaseUrl && supabaseAnonKey) && process.env.QUOTA_AUTH_ENABLED !== "false";
+const quotaServiceRoleEnabled = Boolean(supabaseUrl && supabaseServiceRoleKey);
 const defaultOpenRouterFallbackModels = [
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   "openai/gpt-oss-20b:free",
@@ -831,6 +833,13 @@ function createUserSupabaseClient(token) {
   });
 }
 
+function createServiceRoleSupabaseClient() {
+  if (!quotaServiceRoleEnabled) return null;
+  return createClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
 function publicQuota(profile) {
   if (!profile) return null;
   return {
@@ -893,9 +902,69 @@ function mapQuotaRecordError(error) {
   return { message: "Gagal mencatat usage quota.", statusCode: 503 };
 }
 
+async function recordUsageWithServiceRole(quotaSession, { eventType, metadata, tokenEstimate }) {
+  const admin = createServiceRoleSupabaseClient();
+  const userId = quotaSession?.user?.id;
+  if (!admin || !userId) return null;
+
+  const tokens = Math.max(1, Math.round(tokenEstimate || 0));
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileError) throw publicApiError(`Gagal membaca profile quota: ${profileError.message}`, 503);
+  if (!profile) throw publicApiError("Profil akun belum siap. Sign out lalu sign in lagi.", 403);
+
+  let quotaUsed = Number(profile.quota_used || 0);
+  let quotaResetAt = profile.quota_reset_at;
+  const today = new Date().toISOString().slice(0, 10);
+  if (quotaResetAt && String(quotaResetAt) < today) {
+    quotaUsed = 0;
+    const resetDate = new Date();
+    resetDate.setDate(resetDate.getDate() + 30);
+    quotaResetAt = resetDate.toISOString().slice(0, 10);
+  }
+
+  const quotaLimit = Number(profile.quota_limit || 0);
+  if (quotaUsed + tokens > quotaLimit) {
+    throw publicApiError("Quota token habis. Upgrade plan atau tunggu quota reset.", 402);
+  }
+
+  const { error: usageError } = await admin.from("usage_events").insert({
+    user_id: userId,
+    event_type: String(eventType || "generation").slice(0, 80),
+    token_estimate: tokens,
+    metadata: metadata || {},
+  });
+  if (usageError) throw publicApiError(`Gagal mencatat usage quota: ${usageError.message}`, 503);
+
+  const nextQuotaUsed = quotaUsed + tokens;
+  const { data: updated, error: updateError } = await admin
+    .from("profiles")
+    .update({ quota_used: nextQuotaUsed, quota_reset_at: quotaResetAt })
+    .eq("id", userId)
+    .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
+    .single();
+
+  if (updateError) throw publicApiError(`Gagal update quota: ${updateError.message}`, 503);
+  return publicQuota(updated);
+}
+
 async function recordUsage(quotaSession, { eventType, metadata, outputText, tokenEstimate }) {
   if (!quotaSession?.client) return null;
   const tokens = Math.max(1, Math.round(tokenEstimate || estimateTextTokens(outputText)));
+
+  if (quotaServiceRoleEnabled) {
+    try {
+      return await recordUsageWithServiceRole(quotaSession, { eventType, metadata, tokenEstimate: tokens });
+    } catch (serviceError) {
+      console.warn("recordUsage service-role failed, trying rpc", serviceError.publicMessage || serviceError.message);
+      if (serviceError.statusCode === 402) throw serviceError;
+    }
+  }
+
   const { data, error } = await quotaSession.client.rpc("record_usage_event", {
     p_event_type: eventType,
     p_metadata: metadata || {},
@@ -909,7 +978,8 @@ async function recordUsage(quotaSession, { eventType, metadata, outputText, toke
       message: error.message,
     });
     const mapped = mapQuotaRecordError(error);
-    throw publicApiError(mapped.message, mapped.statusCode);
+    const detail = error.message ? `${mapped.message} (${error.message})` : mapped.message;
+    throw publicApiError(detail, mapped.statusCode);
   }
   const profile = Array.isArray(data) ? data[0] : data;
   return publicQuota(profile);

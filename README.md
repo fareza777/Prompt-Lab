@@ -106,7 +106,10 @@ Di Vercel Production, pastikan env backend juga terisi (bukan hanya `VITE_*`):
 ```bash
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-or-publishable-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key
 ```
+
+`SUPABASE_SERVICE_ROLE_KEY` ada di Supabase Dashboard → Project Settings → API → `service_role` (secret). Wajib untuk pencatatan quota yang stabil di server Vercel.
 
 Untuk provider custom OpenAI-compatible di Vercel, env opsional:
 
