@@ -55,6 +55,16 @@ Encrypted in transit: Yes. Users can request deletion via support email.
 - Product IDs: `promptlab_pro_monthly`, `promptlab_business_monthly`
 - Free tier: no purchase required
 
+## Graphics (local files)
+
+Generated in `playstore/assets/` — run `npm run playstore:assets` after `npm run build`.
+
+| File | Play Console field |
+|------|-------------------|
+| `app-icon-512.png` | App icon |
+| `feature-graphic-1024x500.png` | Feature graphic |
+| `screenshot-phone-*.png` | Phone screenshots (min. 2) |
+
 ## AAB upload
 
 Path after local build:

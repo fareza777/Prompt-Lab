@@ -11,6 +11,7 @@
     "preview": "vite preview --host 0.0.0.0",
     "playstore:check": "node --use-system-ca scripts/check-playstore-readiness.mjs",
     "icons:generate": "node --use-system-ca scripts/generate-pwa-icons.mjs",
+    "playstore:assets": "node --use-system-ca scripts/generate-playstore-assets.mjs && node --use-system-ca scripts/capture-playstore-screenshots.mjs",
     "playstore:build": "cd android-app && gradlew.bat bundleRelease"
   },
   "dependencies": {
