@@ -66,7 +66,7 @@ const openRouterOcrModel = process.env.OPENROUTER_OCR_MODEL || "baidu/qianfan-oc
 const openRouterOcrTimeoutMs = Number(process.env.OPENROUTER_OCR_TIMEOUT_MS || 45000);
 const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
-const quotaAuthEnabled = Boolean(supabaseUrl && supabaseAnonKey);
+const quotaAuthEnabled = Boolean(supabaseUrl && supabaseAnonKey) && process.env.QUOTA_AUTH_ENABLED !== "false";
 const defaultOpenRouterFallbackModels = [
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   "openai/gpt-oss-20b:free",
@@ -376,7 +376,6 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
   const remainingBudget = () => Math.max(0, VERCEL_FUNCTION_BUDGET_MS - (Date.now() - startedAt));
   let quotaSession = null;
   let quotaEstimate = 0;
-  let quotaSnapshot = null;
   try {
     const payload = normalizePayload(req.body);
     const manifestAttachments = normalizeAttachmentManifest(req.body.attachmentManifest);
@@ -389,28 +388,26 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
     const runtime = getRuntimeProvider(payload.modelSettings);
     quotaEstimate = estimateGenerationTokens(payload, attachments);
     quotaSession = await getQuotaSession(req, quotaEstimate);
-    quotaSnapshot = await recordUsage(quotaSession, {
-      eventType: "generate_prompt",
-      metadata: {
-        modelTarget: payload.modelTarget,
-        outputType: payload.outputType,
-        provider: runtime.provider,
-        reserved: true,
-      },
-      outputText: "",
-      tokenEstimate: quotaEstimate,
-    });
 
     if (runtime.provider !== "openai") {
       if (!runtime.client) {
         const fallbackPrompt = buildFallbackPrompt(payload, attachments);
-        res.json({
+        await finishGenerateResponse(res, quotaSession, {
+          eventType: "generate_prompt",
+          metadata: {
+            modelTarget: payload.modelTarget,
+            outputType: payload.outputType,
+            provider: runtime.provider,
+            source: "fallback",
+          },
+          outputText: fallbackPrompt,
+          tokenEstimate: quotaEstimate,
+        }, {
           source: "fallback",
           model: "Local fallback",
           modelStatus: "local-fallback",
           warning: "API key provider belum aktif, memakai generator lokal.",
           prompt: fallbackPrompt,
-          quota: quotaSnapshot,
         });
         return;
       }
@@ -459,24 +456,42 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         if (retried) warnings.push("Output awal terlalu pendek, di-regenerate ulang.");
         if (qualityNote) warnings.push(qualityNote);
 
-        res.json({
+        await finishGenerateResponse(res, quotaSession, {
+          eventType: "generate_prompt",
+          metadata: {
+            modelTarget: payload.modelTarget,
+            outputType: payload.outputType,
+            provider: runtime.provider,
+            source: runtime.provider,
+          },
+          outputText: prompt,
+          tokenEstimate: quotaEstimate,
+        }, {
           source: runtime.provider,
           model: completion.model,
           modelStatus: generation.usedFallbackModel ? "fallback-model" : "primary-model",
           warning: warnings.join(" "),
           prompt,
-          quota: quotaSnapshot,
         });
       } catch (error) {
         console.warn("openrouter fallback", error.status || error.code || error.message);
         const fallbackPrompt = buildFallbackPrompt(payload, attachments);
-        res.json({
+        await finishGenerateResponse(res, quotaSession, {
+          eventType: "generate_prompt",
+          metadata: {
+            modelTarget: payload.modelTarget,
+            outputType: payload.outputType,
+            provider: runtime.provider,
+            source: "fallback",
+          },
+          outputText: fallbackPrompt,
+          tokenEstimate: quotaEstimate,
+        }, {
           source: "fallback",
           model: "Local fallback",
           modelStatus: "local-fallback",
           warning: "Provider AI sedang limit/overload, memakai generator lokal.",
           prompt: fallbackPrompt,
-          quota: quotaSnapshot,
         });
       }
       return;
@@ -484,13 +499,22 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
 
     if (!runtime.client) {
       const fallbackPrompt = buildFallbackPrompt(payload, attachments);
-      res.json({
+      await finishGenerateResponse(res, quotaSession, {
+        eventType: "generate_prompt",
+        metadata: {
+          modelTarget: payload.modelTarget,
+          outputType: payload.outputType,
+          provider: runtime.provider,
+          source: "fallback",
+        },
+        outputText: fallbackPrompt,
+        tokenEstimate: quotaEstimate,
+      }, {
         source: "fallback",
         model: "Local fallback",
         modelStatus: "local-fallback",
         warning: "OpenAI API key belum aktif, memakai generator lokal.",
         prompt: fallbackPrompt,
-        quota: quotaSnapshot,
       });
       return;
     }
@@ -562,11 +586,20 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         console.warn("openai premium critique pass failed", refineError.message);
       }
     }
-    res.json({
+    await finishGenerateResponse(res, quotaSession, {
+      eventType: "generate_prompt",
+      metadata: {
+        modelTarget: payload.modelTarget,
+        outputType: payload.outputType,
+        provider: runtime.provider,
+        source: "openai",
+      },
+      outputText: openaiPrompt,
+      tokenEstimate: quotaEstimate,
+    }, {
       source: "openai",
       prompt: openaiPrompt,
       warning: openaiWarnings.join(" "),
-      quota: quotaSnapshot,
     });
   } catch (error) {
     console.error("generate-prompt failed", error.message);
@@ -840,6 +873,26 @@ async function getQuotaSession(req, estimatedTokens = 0) {
   return { client, profile, user: userData.user };
 }
 
+function mapQuotaRecordError(error) {
+  const message = String(error?.message || "");
+  if (/quota exceeded/i.test(message)) {
+    return { message: "Quota token habis. Upgrade plan atau tunggu quota reset.", statusCode: 402 };
+  }
+  if (/profile not found/i.test(message)) {
+    return { message: "Profil akun belum siap. Sign out lalu sign in lagi, atau jalankan SQL Supabase phase-3.", statusCode: 403 };
+  }
+  if (/authentication required/i.test(message)) {
+    return { message: "Session login tidak valid. Silakan sign in ulang.", statusCode: 401 };
+  }
+  if (/permission denied|row-level security|policy/i.test(message)) {
+    return {
+      message: "Database quota belum siap. Jalankan supabase/phase-3-production-fix.sql di Supabase SQL Editor.",
+      statusCode: 503,
+    };
+  }
+  return { message: "Gagal mencatat usage quota.", statusCode: 503 };
+}
+
 async function recordUsage(quotaSession, { eventType, metadata, outputText, tokenEstimate }) {
   if (!quotaSession?.client) return null;
   const tokens = Math.max(1, Math.round(tokenEstimate || estimateTextTokens(outputText)));
@@ -855,11 +908,33 @@ async function recordUsage(quotaSession, { eventType, metadata, outputText, toke
       hint: error.hint,
       message: error.message,
     });
-    const exceeded = /quota exceeded/i.test(error.message);
-    throw publicApiError(exceeded ? "Quota token habis. Upgrade plan atau tunggu quota reset." : "Gagal mencatat usage quota.", exceeded ? 402 : 503);
+    const mapped = mapQuotaRecordError(error);
+    throw publicApiError(mapped.message, mapped.statusCode);
   }
   const profile = Array.isArray(data) ? data[0] : data;
   return publicQuota(profile);
+}
+
+async function finishGenerateResponse(res, quotaSession, usagePayload, body) {
+  const softFail = process.env.QUOTA_RECORD_SOFT_FAIL !== "false";
+  let quota = null;
+  let warning = body.warning || "";
+
+  if (quotaSession) {
+    try {
+      quota = await recordUsage(quotaSession, usagePayload);
+    } catch (usageError) {
+      const note = usageError.publicMessage || usageError.message || "Gagal mencatat usage quota.";
+      if (softFail) {
+        warning = [warning, note].filter(Boolean).join(" ");
+        console.warn("recordUsage soft-failed", note);
+      } else {
+        throw usageError;
+      }
+    }
+  }
+
+  res.json({ ...body, warning, quota });
 }
 
 function estimateTextTokens(value = "") {

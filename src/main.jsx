@@ -1431,11 +1431,18 @@ function App() {
       setWarningMessage([uploadPlan.warning, data.warning].filter(Boolean).join(" "));
       return data.prompt || localPrompt;
     } catch (error) {
+      const message = error.message || "Backend belum tersedia, memakai prompt lokal.";
+      const quotaOnly = /usage quota|mencatat usage|quota token/i.test(message);
       setGeneratedPrompt(localPrompt);
       setGenerationSource("local");
       setGenerationModel("Local draft");
-      setGenerationStatus("local-error");
-      setErrorMessage(error.message || "Backend belum tersedia, memakai prompt lokal.");
+      setGenerationStatus(quotaOnly ? "local-quota-warning" : "local-error");
+      if (quotaOnly) {
+        setErrorMessage("");
+        setWarningMessage(message);
+      } else {
+        setErrorMessage(message);
+      }
       return localPrompt;
     } finally {
       setIsGenerating(false);

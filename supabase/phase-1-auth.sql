@@ -60,7 +60,6 @@ with check (
   and role = (select role from public.profiles where id = auth.uid())
   and plan = (select plan from public.profiles where id = auth.uid())
   and quota_limit = (select quota_limit from public.profiles where id = auth.uid())
-  and quota_used = (select quota_used from public.profiles where id = auth.uid())
 );
 
 drop policy if exists "usage_events_select_own" on public.usage_events;
@@ -222,6 +221,9 @@ begin
     v_profile.play_billing;
 end;
 $$;
+
+grant execute on function public.get_my_entitlement() to authenticated;
+grant execute on function public.record_usage_event(text, integer, jsonb) to authenticated;
 
 -- Optional: make your own account admin after you sign up once.
 -- update public.profiles set role = 'admin', plan = 'Business', quota_limit = 1000000 where email = 'fajar.mreza@gmail.com';

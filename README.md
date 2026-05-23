@@ -99,6 +99,15 @@ Quota dihitung di backend saat `/api/generate-prompt` berhasil:
 
 Jika SQL tahap 1 sudah pernah dijalankan sebelum fitur quota ini, cukup jalankan `supabase/phase-2-quota-upgrade.sql` agar fungsi `get_my_entitlement` dan `record_usage_event` tersedia.
 
+Jika generate gagal dengan **"Gagal mencatat usage quota"**, jalankan `supabase/phase-3-production-fix.sql` di Supabase SQL Editor (memperbaiki RLS policy yang memblokir update `quota_used`).
+
+Di Vercel Production, pastikan env backend juga terisi (bukan hanya `VITE_*`):
+
+```bash
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-or-publishable-key
+```
+
 Untuk provider custom OpenAI-compatible di Vercel, env opsional:
 
 ```bash
