@@ -52,8 +52,10 @@ const featureBase = await sharp(Buffer.from(featureSvg)).png().toBuffer();
 
 await sharp(featureBase)
   .composite([{ input: logoPng, left: logoInset, top: Math.round((500 - logoSize) / 2) }])
-  .png()
+  .resize(1024, 500, { fit: "fill" })
+  .png({ compressionLevel: 9 })
   .toFile(join(outDir, "feature-graphic-1024x500.png"));
 
-console.log("wrote feature-graphic-1024x500.png");
+const featureMeta = await sharp(join(outDir, "feature-graphic-1024x500.png")).metadata();
+console.log(`wrote feature-graphic-1024x500.png (${featureMeta.width}x${featureMeta.height})`);
 console.log(`\nUpload from: ${outDir}`);
