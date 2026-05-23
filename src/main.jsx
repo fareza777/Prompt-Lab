@@ -1491,6 +1491,13 @@ function App() {
     }
   }
 
+  function clearOptimizerResult() {
+    setOptimizerResult("");
+    setOptimizerSource("local");
+    setOptimizerError("");
+    setOptimizerWarning("");
+  }
+
   async function optimizePrompt(rawPrompt, mode) {
     setIsOptimizing(true);
     setOptimizerError("");
@@ -1766,6 +1773,7 @@ function App() {
     optimizerError,
     optimizerWarning,
     optimizePrompt,
+    clearOptimizerResult,
   };
 
   return <V2App {...shared} />;
@@ -2305,7 +2313,7 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
   );
 }
 
-function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizerError, optimizerWarning, optimizePrompt, copyText, savePrompt, exportFile }) {
+function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizerError, optimizerWarning, optimizePrompt, clearOptimizerResult, copyText, savePrompt, exportFile }) {
   const [rawPrompt, setRawPrompt] = useState("Make this prompt stronger for Instagram content about a milk coffee product.");
   const [mode, setMode] = useState("Clearer");
   const result = optimizerResult || buildLocalOptimizedPrompt(rawPrompt, mode, "Claude", "Professional");
@@ -2326,9 +2334,19 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
         <div className="v2-card">
           <div className="v2-card-head"><h2>Input</h2><span className="v2-score-badge">{beforeScore.score}</span></div>
           <textarea className="v2-textarea" value={rawPrompt} onChange={(event) => setRawPrompt(event.target.value)} />
-          <V2ChipGroup label="Optimization Mode" options={optimizerModes} value={mode} onChange={setMode} />
+          <V2ChipGroup
+            label="Optimization Mode"
+            options={optimizerModes}
+            value={mode}
+            onChange={(nextMode) => {
+              setMode(nextMode);
+              if (optimizerResult) clearOptimizerResult?.();
+            }}
+          />
           <div className="v2-actions">
-            <button className="v2-btn primary" onClick={() => optimizePrompt(rawPrompt, mode)} disabled={isOptimizing}><Zap size={17} />{isOptimizing ? "Optimizing..." : "Optimize"}</button>
+            <button className="v2-btn primary" onClick={() => optimizePrompt(rawPrompt, mode)} disabled={isOptimizing}>
+              <Zap size={17} />{isOptimizing ? "Optimizing..." : "Optimize"}
+            </button>
             <V2ActionBtn className="v2-btn" onAction={() => copyText(rawPrompt)} successLabel={<><Check size={17} />Copied</>}>
               <Clipboard size={17} />Copy original
             </V2ActionBtn>
@@ -2347,7 +2365,7 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
           <div className="v2-card-head">
             <div>
               <h2>Optimized Result</h2>
-              <p>{optimizerSource} · {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} score</p>
+              <p>{optimizerSource} · {mode} · {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} score</p>
             </div>
             <span className="v2-score-badge hot">{afterScore.score}</span>
           </div>
