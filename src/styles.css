@@ -873,16 +873,15 @@ button {
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-columns: auto minmax(220px, 0.7fr) minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
   align-items: center;
   margin: 14px 0 0;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--ac-line);
   border-radius: var(--r-md);
   background:
-    radial-gradient(circle at 8% 36%, oklch(0.74 0.16 190 / 0.18), transparent 28%),
-    radial-gradient(circle at 88% 62%, oklch(0.68 0.18 245 / 0.13), transparent 26%),
+    radial-gradient(circle at 10% 50%, oklch(0.74 0.16 190 / 0.18), transparent 34%),
     linear-gradient(180deg, oklch(0.185 0.016 220 / 0.78), oklch(0.145 0.014 220 / 0.64));
   box-shadow: 0 16px 50px oklch(0 0 0 / 0.22);
 }
@@ -955,9 +954,10 @@ button {
 .v2-generate-loader::after {
   content: "";
   position: absolute;
-  inset: -80% -30%;
-  background: linear-gradient(115deg, transparent 40%, oklch(1 0 0 / 0.1), transparent 60%);
-  animation: v2-loader-sweep 2.8s linear infinite;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 35%, oklch(1 0 0 / 0.08), transparent 65%);
+  transform: translateX(-100%);
+  animation: v2-loader-sweep 2.4s ease-in-out infinite;
 }
 
 .v2-generate-loader::before {
@@ -974,16 +974,15 @@ button {
 }
 
 .v2-loader-orb,
-.v2-loader-main,
-.v2-loader-steps {
+.v2-loader-main {
   position: relative;
   z-index: 1;
 }
 
 .v2-loader-orb {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   border-radius: 16px;
@@ -1003,15 +1002,14 @@ button {
 
 .v2-loader-main strong {
   display: block;
-  margin-top: 6px;
+  margin-top: 3px;
   color: var(--fg);
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 400;
+  font-size: 16px;
+  font-weight: 850;
 }
 
 .v2-loader-main p {
-  margin: 5px 0 0;
+  margin: 7px 0 0;
   color: var(--fg-mute);
   font-size: 12px;
   line-height: 1.35;
@@ -1027,48 +1025,14 @@ button {
 
 .v2-loader-bar i {
   display: block;
-  width: 42%;
+  width: 100%;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--ac), var(--ac-2));
-  animation: v2-loader-progress 1.45s ease-in-out infinite;
-}
-
-.v2-loader-steps {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.v2-loader-steps div {
-  min-height: 76px;
-  padding: 8px;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r);
-  background: oklch(0.135 0.012 220 / 0.62);
-  animation: v2-step-glow 1.8s ease-in-out infinite;
-  animation-delay: var(--delay);
-}
-
-.v2-loader-steps span {
-  color: var(--ac);
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 800;
-}
-
-.v2-loader-steps strong {
-  display: block;
-  margin-top: 8px;
-  color: var(--fg);
-  font-size: 12px;
-}
-
-.v2-loader-steps small {
-  display: block;
-  margin-top: 4px;
-  color: var(--fg-mute);
-  line-height: 1.25;
+  background:
+    linear-gradient(90deg, transparent 0%, var(--ac) 22%, var(--ac-2) 50%, var(--ac) 78%, transparent 100%),
+    linear-gradient(90deg, var(--ac), var(--ac-2));
+  background-size: 220% 100%, 100% 100%;
+  animation: v2-loader-progress 1.8s linear infinite;
 }
 
 .v2-intent-panel {
@@ -1164,8 +1128,8 @@ button {
 }
 
 @keyframes v2-loader-sweep {
-  from { transform: translateX(-25%); }
-  to { transform: translateX(25%); }
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
 }
 
 @keyframes v2-grid-drift {
@@ -1184,9 +1148,8 @@ button {
 }
 
 @keyframes v2-loader-progress {
-  0% { transform: translateX(-105%); width: 36%; }
-  55% { width: 58%; }
-  100% { transform: translateX(250%); width: 36%; }
+  from { background-position: 220% 0, 0 0; }
+  to { background-position: -220% 0, 0 0; }
 }
 
 @keyframes v2-step-glow {
@@ -2341,7 +2304,6 @@ button {
   .v2-compare-grid,
   .v2-summary-grid,
   .v2-summary-grid.quality,
-  .v2-loader-steps,
   .v2-mode-grid,
   .v2-info-grid,
   .v2-two,
@@ -2358,10 +2320,6 @@ button {
 
   .v2-card {
     padding: 14px;
-  }
-
-  .v2-generate-loader {
-    grid-template-columns: 1fr;
   }
 
   .v2-mini-pipeline {

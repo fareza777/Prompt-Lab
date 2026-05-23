@@ -392,7 +392,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
     if (runtime.provider !== "openai") {
       if (!runtime.client) {
         const fallbackPrompt = buildFallbackPrompt(payload, attachments);
-        const quota = await recordUsage(quotaSession, {
+        const usage = await recordUsageSafely(quotaSession, {
           eventType: "generate_local_fallback",
           metadata: { model: "Local fallback", provider: "fallback", reason: "missing_provider_key" },
           outputText: fallbackPrompt,
@@ -402,9 +402,9 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
           source: "fallback",
           model: "Local fallback",
           modelStatus: "local-fallback",
-          warning: "API key provider belum aktif, memakai generator lokal.",
+          warning: ["API key provider belum aktif, memakai generator lokal.", usage.warning].filter(Boolean).join(" "),
           prompt: fallbackPrompt,
-          quota,
+          quota: usage.quota,
         });
         return;
       }
@@ -452,7 +452,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         if (generation.usedFallbackModel) warnings.push(`Primary model sedang limit/error (${generation.primaryError}). Fallback model dipakai.`);
         if (retried) warnings.push("Output awal terlalu pendek, di-regenerate ulang.");
         if (qualityNote) warnings.push(qualityNote);
-        const quota = await recordUsage(quotaSession, {
+        const usage = await recordUsageSafely(quotaSession, {
           eventType: "generate_prompt",
           metadata: {
             model: completion.model,
@@ -463,6 +463,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
           outputText: prompt,
           tokenEstimate: Math.max(quotaEstimate, estimateTextTokens(prompt)),
         });
+        if (usage.warning) warnings.push(usage.warning);
 
         res.json({
           source: runtime.provider,
@@ -470,12 +471,12 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
           modelStatus: generation.usedFallbackModel ? "fallback-model" : "primary-model",
           warning: warnings.join(" "),
           prompt,
-          quota,
+          quota: usage.quota,
         });
       } catch (error) {
         console.warn("openrouter fallback", error.status || error.code || error.message);
         const fallbackPrompt = buildFallbackPrompt(payload, attachments);
-        const quota = await recordUsage(quotaSession, {
+        const usage = await recordUsageSafely(quotaSession, {
           eventType: "generate_local_fallback",
           metadata: { model: "Local fallback", provider: "fallback", reason: formatProviderError(error) },
           outputText: fallbackPrompt,
@@ -485,9 +486,9 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
           source: "fallback",
           model: "Local fallback",
           modelStatus: "local-fallback",
-          warning: "Provider AI sedang limit/overload, memakai generator lokal.",
+          warning: ["Provider AI sedang limit/overload, memakai generator lokal.", usage.warning].filter(Boolean).join(" "),
           prompt: fallbackPrompt,
-          quota,
+          quota: usage.quota,
         });
       }
       return;
@@ -495,7 +496,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
 
     if (!runtime.client) {
       const fallbackPrompt = buildFallbackPrompt(payload, attachments);
-      const quota = await recordUsage(quotaSession, {
+      const usage = await recordUsageSafely(quotaSession, {
         eventType: "generate_local_fallback",
         metadata: { model: "Local fallback", provider: "fallback", reason: "missing_openai_key" },
         outputText: fallbackPrompt,
@@ -505,9 +506,9 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         source: "fallback",
         model: "Local fallback",
         modelStatus: "local-fallback",
-        warning: "OpenAI API key belum aktif, memakai generator lokal.",
+        warning: ["OpenAI API key belum aktif, memakai generator lokal.", usage.warning].filter(Boolean).join(" "),
         prompt: fallbackPrompt,
-        quota,
+        quota: usage.quota,
       });
       return;
     }
@@ -579,7 +580,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         console.warn("openai premium critique pass failed", refineError.message);
       }
     }
-    const quota = await recordUsage(quotaSession, {
+    const usage = await recordUsageSafely(quotaSession, {
       eventType: "generate_prompt",
       metadata: {
         model: payload.modelSettings.primaryModel || runtime.defaultModel,
@@ -593,8 +594,8 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
     res.json({
       source: "openai",
       prompt: openaiPrompt,
-      warning: openaiWarnings.join(" "),
-      quota,
+      warning: [...openaiWarnings, usage.warning].filter(Boolean).join(" "),
+      quota: usage.quota,
     });
   } catch (error) {
     console.error("generate-prompt failed", error.message);
@@ -882,6 +883,19 @@ async function recordUsage(quotaSession, { eventType, metadata, outputText, toke
   }
   const profile = Array.isArray(data) ? data[0] : data;
   return publicQuota(profile);
+}
+
+async function recordUsageSafely(quotaSession, usagePayload) {
+  try {
+    return { quota: await recordUsage(quotaSession, usagePayload), warning: "" };
+  } catch (error) {
+    if (error.statusCode === 402) throw error;
+    console.warn("record usage failed", error.message);
+    return {
+      quota: null,
+      warning: "Prompt berhasil dibuat, tapi usage quota belum tersinkron. Coba refresh atau sign in ulang jika quota tidak berubah.",
+    };
+  }
 }
 
 function estimateTextTokens(value = "") {

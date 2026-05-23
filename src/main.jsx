@@ -2139,14 +2139,6 @@ function V2IntentEnginePanel({ blueprint, eyebrow = "PromptLab Intent Engine" })
 }
 
 function V2GenerateLoader({ attachments, model, outputType }) {
-  const steps = [
-    ["Intent", "Parsing hidden objective"],
-    ["Context", attachments.length ? `${attachments.length} file(s) queued` : "Filling safe assumptions"],
-    ["Spec", "Building prompt schema"],
-    ["Model", `${model} routing`],
-    ["Guard", `${outputType} locked`],
-  ];
-
   return (
     <section className="v2-generate-loader" aria-live="polite">
       <div className="v2-loader-orb">
@@ -2154,19 +2146,10 @@ function V2GenerateLoader({ attachments, model, outputType }) {
         <span />
       </div>
       <div className="v2-loader-main">
-        <span className="v2-eyebrow">Live pipeline</span>
-        <strong>Optimizing your prompt...</strong>
-        <p>Intent engine is scoring structure, context, constraints, and output control.</p>
+        <span className="v2-eyebrow">Generating</span>
+        <strong>Creating your prompt...</strong>
         <div className="v2-loader-bar"><i /></div>
-      </div>
-      <div className="v2-loader-steps">
-        {steps.map(([title, body], index) => (
-          <div key={title} style={{ "--delay": `${index * 0.18}s` }}>
-            <span>{String(index + 1).padStart(2, "0")}</span>
-            <strong>{title}</strong>
-            <small>{body}</small>
-          </div>
-        ))}
+        <p>{model} · {outputType}{attachments.length ? ` · ${attachments.length} attachment${attachments.length > 1 ? "s" : ""}` : ""}</p>
       </div>
     </section>
   );
