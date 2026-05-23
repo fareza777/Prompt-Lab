@@ -31,8 +31,22 @@ import {
   scrubPII,
   PROMPT_ENGINE_VERSION,
 } from "./prompt-engine-v2.js";
+import {
+  getLanguageLockInstruction,
+  getLanguageMeta,
+  resolveOutputLanguage,
+} from "../src/promptLanguage.js";
 
 const app = express();
+
+function enrichPayloadWithLanguage(payload, attachments = []) {
+  const outputLanguage = resolveOutputLanguage(
+    payload.narrative,
+    payload.prompt,
+    ...(attachments || []).map((file) => file.excerpt).filter(Boolean)
+  );
+  return { ...payload, outputLanguage };
+}
 const port = Number(process.env.PORT || 8787);
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -232,7 +246,7 @@ app.post("/api/export/pptx", async (req, res) => {
 
 app.post("/api/optimize-prompt", async (req, res) => {
   try {
-    const payload = normalizeOptimizePayload(req.body);
+    const payload = enrichPayloadWithLanguage(normalizeOptimizePayload(req.body));
     const runtime = getRuntimeProvider(payload.modelSettings);
 
     if (runtime.provider !== "openai" && runtime.client) {
@@ -427,14 +441,17 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
   let quotaSession = null;
   let quotaEstimate = 0;
   try {
-    const payload = normalizePayload(req.body);
+    const basePayload = normalizePayload(req.body);
     const manifestAttachments = normalizeAttachmentManifest(req.body.attachmentManifest);
-    const uploadedAttachments = await Promise.all((req.files || []).map((file) => normalizeFile(file, payload.modelSettings)));
+    const uploadedAttachments = await Promise.all(
+      (req.files || []).map((file) => normalizeFile(file, basePayload.modelSettings))
+    );
     const uploadedNames = new Set(uploadedAttachments.map((file) => file.filename));
     const attachments = [
       ...uploadedAttachments,
       ...manifestAttachments.filter((file) => !uploadedNames.has(file.filename)),
     ].slice(0, 8);
+    const payload = enrichPayloadWithLanguage(basePayload, attachments);
     const runtime = getRuntimeProvider(payload.modelSettings);
     quotaEstimate = estimateGenerationTokens(payload, attachments);
     quotaSession = await getQuotaSession(req, quotaEstimate);
@@ -527,15 +544,13 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         }
 
         // v2: dialect render + eval delta.
-        prompt = renderForModelDialect(prompt, payload.modelTarget);
+        prompt = renderForModelDialect(prompt, payload.modelTarget, payload.outputLanguage);
         const orEval = evalDelta(payload.narrative, prompt);
 
         const warnings = [];
         if (generation.usedFallbackModel) warnings.push(`Primary model sedang limit/error (${generation.primaryError}). Fallback model dipakai.`);
         if (retried) warnings.push("Output awal terlalu pendek, di-regenerate ulang.");
         if (qualityNote) warnings.push(qualityNote);
-        if (orEval.win) warnings.push(`Prompt skor naik +${orEval.delta} (baseline ${orEval.baseline} → optimized ${orEval.optimized}).`);
-
         await finishGenerateResponse(res, quotaSession, {
           eventType: "generate_prompt",
           metadata: {
@@ -680,12 +695,15 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
     // Premium tetap pakai pass lebih panjang via flag di runCritiqueRefinePass.
     if (payload.qualityMode === "premium" && !isPromptTooShort(openaiPrompt) && remainingBudget() > PREMIUM_PASS_RESERVE_MS) {
       try {
+        const premiumLang = getLanguageMeta(
+          payload.outputLanguage || resolveOutputLanguage(payload.narrative, openaiPrompt)
+        );
         const critiqueRes = await runtime.client.responses.create({
           model: payload.modelSettings.primaryModel || runtime.defaultModel,
           input: [
             {
               role: "system",
-              content: [{ type: "input_text", text: "You are PromptLab Quality Critic. Audit a prompt as a senior prompt engineer. Output strict bullet points in Indonesian listing 3-6 concrete defects. No preface, no praise, no rewrites." }],
+              content: [{ type: "input_text", text: premiumLang.criticSystem }],
             },
             {
               role: "user",
@@ -700,7 +718,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
             input: [
               {
                 role: "system",
-                content: [{ type: "input_text", text: "You are PromptLab Refiner. Rewrite a prompt to fix all listed defects. Output only the final improved prompt in Indonesian, ready to copy. No preface, no critique, no brief, no commentary." }],
+                content: [{ type: "input_text", text: premiumLang.refinerSystem }],
               },
               {
                 role: "user",
@@ -719,10 +737,9 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       }
     }
     // v2: dialect render layer untuk target model spesifik.
-    openaiPrompt = renderForModelDialect(openaiPrompt, payload.modelTarget);
+    openaiPrompt = renderForModelDialect(openaiPrompt, payload.modelTarget, payload.outputLanguage);
     // v2: eval delta untuk telemetri win-rate.
     const openaiEval = evalDelta(payload.narrative, openaiPrompt);
-    if (openaiEval.win) openaiWarnings.push(`Prompt skor naik +${openaiEval.delta} (baseline ${openaiEval.baseline} → optimized ${openaiEval.optimized}).`);
     await finishGenerateResponse(res, quotaSession, {
       eventType: "generate_prompt",
       metadata: {
@@ -811,11 +828,12 @@ function isPromptTooShort(text) {
 }
 
 async function runCritiqueRefinePass({ runtime, payload, attachments, basePrompt, timing, primaryModel, fallbackModels }) {
+  const langCode = payload.outputLanguage || resolveOutputLanguage(payload.narrative, payload.prompt, basePrompt);
+  const langMeta = getLanguageMeta(langCode);
   const critiqueMessages = [
     {
       role: "system",
-      content:
-        "You are PromptLab Quality Critic. Audit a prompt as a senior prompt engineer. Output strict bullet points in Indonesian listing concrete defects (max 6). No preface, no praise, no rewrites.",
+      content: langMeta.criticSystem,
     },
     {
       role: "user",
@@ -864,8 +882,7 @@ Output hanya bullet points cacat, tanpa pengantar.`,
   const refineMessages = [
     {
       role: "system",
-      content:
-        "You are PromptLab Refiner. Rewrite a prompt to fix all listed defects. Output only the final improved prompt in Indonesian, ready to copy. No preface, no critique, no brief, no commentary.",
+      content: langMeta.refinerSystem,
     },
     {
       role: "user",
@@ -1543,7 +1560,9 @@ Tugas:
 ${targetGuidance}
 
 Format jawaban:
-Return only the final optimized prompt, ready to copy. Do not include a separate engine brief.`;
+Return only the final optimized prompt, ready to copy. Do not include a separate engine brief.
+
+${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.prompt))}`;
 }
 
 function getOptimizerEngineInstruction(payload) {
@@ -1629,7 +1648,9 @@ ${attachmentManifest ? `- Attachment context:\n${attachmentManifest}` : "- Attac
 Render rule:
 - Do not output the JSON.
 - Use the JSON only to render one final executable prompt.
-- The final prompt must preserve the selected deliverable: ${payload.outputType || "not selected"}.`;
+- The final prompt must preserve the selected deliverable: ${payload.outputType || "not selected"}.
+
+${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative, payload.prompt))}`;
 }
 
 function getDomainPromptPack(payload = {}) {
@@ -2114,7 +2135,11 @@ ${attachmentManifest ? `- Attachment manifest:\n${attachmentManifest}` : "- Atta
 
 Gunakan brief ini sebagai proses berpikir internal.
 Jangan masukkan judul "PromptLab Intent Engine Brief" ke output final.
-Output yang dikembalikan harus langsung berupa Final Executable Prompt yang siap dicopy user, berisi role, context, task, requirements, constraints, output format, implementation/delivery checklist, acceptance criteria, dan clarifying questions hanya jika benar-benar menghalangi pekerjaan.`;
+Output yang dikembalikan harus langsung berupa Final Executable Prompt yang siap dicopy user, berisi role, context, task, requirements, constraints, output format, implementation/delivery checklist, acceptance criteria, dan clarifying questions hanya jika benar-benar menghalangi pekerjaan.
+
+${getLanguageLockInstruction(
+  payload.outputLanguage || resolveOutputLanguage(payload.narrative, ...(attachments || []).map((file) => file.excerpt))
+)}`;
 }
 
 function buildAttachmentManifest(attachments = []) {
@@ -2256,7 +2281,7 @@ async function extractImageText(file, modelSettings = {}) {
               {
                 type: "text",
                 text:
-                  "Extract all readable text from this image or screenshot. Return Indonesian text when visible. Preserve headings, bullet points, tables, labels, and numbers. If no text is readable, return an empty string.",
+                  "Extract all readable text from this image or screenshot. Preserve the original language shown in the image. Preserve headings, bullet points, tables, labels, and numbers. If no text is readable, return an empty string.",
               },
               {
                 type: "image_url",
@@ -2317,7 +2342,9 @@ Aturan penting:
 - Output WAJIB langsung berupa prompt final yang siap dicopy. Jangan menyertakan preface seperti "Berikut prompt-nya:", brief internal, atau judul "Intent Engine".
 ${deliverableGuard}
 - Jika isi lampiran tersedia, gunakan isi tersebut sebagai konteks utama.
-${targetGuidance}${conditionalInstructions}${antiGeneric}`,
+${targetGuidance}${conditionalInstructions}${antiGeneric}
+
+${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative))}`,
     },
   ];
 
@@ -2388,7 +2415,9 @@ Aturan penting:
 - Output WAJIB langsung berupa prompt final yang siap dicopy. Jangan menyertakan preface seperti "Berikut prompt-nya:", brief internal, atau judul "Intent Engine".
 ${deliverableGuard}
 - Jika isi lampiran tersedia, gunakan isi tersebut sebagai konteks utama.
-${targetGuidance}${conditionalInstructions}${antiGeneric}`;
+${targetGuidance}${conditionalInstructions}${antiGeneric}
+
+${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative))}`;
 
   const hasImage = attachments.some((file) => file.mime.startsWith("image/") && file.dataUrl);
   if (!hasImage) {
@@ -2437,6 +2466,7 @@ function buildFallbackPrompt(payload, attachments) {
   const targetGuidance = getTargetModelGuidance(payload.modelTarget);
   const intentEngine = getIntentEngineInstruction(payload, attachments);
   const pack = getDomainPromptPack(payload);
+  const langMeta = getLanguageMeta(payload.outputLanguage || resolveOutputLanguage(payload.narrative));
   const attachmentText = attachments.length
     ? `
 
@@ -2471,7 +2501,7 @@ Jenis Output:
 
 Gaya bahasa:
 - ${payload.tone}
-- Jelas, praktis, dan cocok untuk audiens Indonesia
+- ${langMeta.audienceLine}
 
 Susun prompt final dengan struktur:
 1. Role AI yang harus diambil
@@ -2486,11 +2516,15 @@ ${deliverableGuard}
 ${targetGuidance}
 ${conditionalInstructions}
 
+${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative))}
+
 Pastikan prompt tidak generik dan bisa langsung dicopy ke AI.`;
 }
 
 function buildLocalOptimizedPrompt(payload) {
   const source = payload.prompt.trim() || "Tuliskan kebutuhan user di sini.";
+  const langCode = payload.outputLanguage || resolveOutputLanguage(payload.prompt);
+  const langMeta = getLanguageMeta(langCode);
   if (isClaudeTarget(payload.targetModel)) {
     return buildClaudeOptimizedPrompt(payload, source);
   }
@@ -2527,7 +2561,7 @@ ${optimizerEngine}
 5. Pertanyaan klarifikasi bila ada informasi krusial yang belum tersedia
 
 **Constraints:**
-- Gunakan bahasa Indonesia dengan tone ${payload.tone}.
+- ${langMeta.constraintLine(payload.tone)}.
 - Jangan mengubah jenis deliverable kecuali user meminta secara eksplisit.
 - Jangan mengarang data yang tidak diberikan.
 - Jika konteks sudah cukup, langsung kerjakan tanpa meminta file/informasi ulang.
@@ -2543,6 +2577,8 @@ ${optimizerEngine}
 }
 
 function buildClaudeOptimizedPrompt(payload, source) {
+  const langCode = payload.outputLanguage || resolveOutputLanguage(payload.prompt, source);
+  const langMeta = getLanguageMeta(langCode);
   const modeInstruction = {
     Clearer: "Name the exact scope, output order, boundaries, and success criteria.",
     Shorter: "Keep the prompt compact while preserving scope, output order, and boundaries.",
@@ -2587,7 +2623,7 @@ Output:
 Return only the final optimized prompt. Do not include a separate engine brief.
 
 Style:
-- Use ${payload.tone} Indonesian.
+- ${langMeta.constraintLine(payload.tone)}.
 - Use positive instructions.
 - Use action verbs: define, extract, map, rank, rewrite, build, verify.
 - Use concrete boundaries, counts, and order.

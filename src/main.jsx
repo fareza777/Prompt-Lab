@@ -40,6 +40,11 @@ import {
 } from "lucide-react";
 import "./styles.css";
 import { countWords } from "./optimizerDiff";
+import {
+  getLanguageLockInstruction,
+  getLanguageMeta,
+  resolveOutputLanguage,
+} from "./promptLanguage.js";
 import { dismissStartupSplash, markStartupSplashStarted } from "./startupSplash";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
@@ -558,6 +563,9 @@ function buildClaudePrompt({
   const cleanNarrative =
     narrative.trim() ||
     "I want to create a high-quality output from the available context.";
+  const langMeta = getLanguageMeta(
+    resolveOutputLanguage(cleanNarrative, ...(attachments || []).map((file) => file.excerpt))
+  );
   const blueprint = inferIntentBlueprint(cleanNarrative, category, outputType, attachments);
   const documentBlock = attachments.length
     ? `<documents>
@@ -618,9 +626,11 @@ Length:
 
 Style:
 - ${tone}.
-- Use clear, concrete English.
+- ${langMeta.styleLine}
 - Use action verbs: define, extract, build, map, rank, rewrite, verify.
 - Replace vague wording with specific boundaries, counts, order, and acceptance criteria.
+
+${getLanguageLockInstruction(langMeta.code)}
 
 Tool and evidence instruction:
 - If web/search/tools are available and current facts are required, verify important claims with sources.
@@ -813,6 +823,9 @@ function buildPrompt(narrative, category, tone, model, outputType, attachments) 
   const cleanNarrative =
     narrative.trim() ||
     "I want to create promotional content for a local milk coffee product targeting college students. The tone should be casual but still sell.";
+  const langMeta = getLanguageMeta(
+    resolveOutputLanguage(cleanNarrative, ...(attachments || []).map((file) => file.excerpt))
+  );
   const attachmentContext = attachments.length
     ? `
 
@@ -856,8 +869,10 @@ Goal:
 
 Language style:
 - ${tone}
-- Clean and easy to understand
-- Suitable for the intended audience
+- ${langMeta.styleLine}
+- ${langMeta.audienceLine}
+
+${getLanguageLockInstruction(langMeta.code)}
 
 Output format:
 Return only the final executable prompt according to the requested output type.
@@ -1005,6 +1020,7 @@ function getLocalPromptRisks(prompt = "") {
 
 function buildLocalOptimizedPrompt(rawPrompt, mode, targetModel, tone) {
   const source = rawPrompt.trim() || "Write the old prompt here.";
+  const langMeta = getLanguageMeta(resolveOutputLanguage(source));
   const optimizerBlueprint = inferOptimizerBlueprint(source, mode);
   if (isClaudeTarget(targetModel)) {
     return buildClaudePrompt({
@@ -1036,11 +1052,13 @@ ${source}
 5. Up to 3 clarifying questions if critical information is missing
 
 **Constraints:**
-- Use English with a ${tone} tone.
+- ${langMeta.constraintLine(tone)}.
 - Do not invent data that was not provided.
 - Use attachments as context when available, not as the output type selector.
 - If the information is sufficient, proceed without asking for the file again.
 - Return only the final optimized prompt. Do not include a separate engine brief.
+
+${getLanguageLockInstruction(langMeta.code)}
 
 **Improvement Checklist**
 - Role, context, objective, output, and constraints are explicit.
@@ -2148,20 +2166,18 @@ function V2PageIntro({ eyebrow, title, copy, children }) {
 /**
  * v2 engine telemetry badges:
  * - Engine version chip
- * - Eval delta banner (baseline → optimized score)
  * - PII redaction notice
  * Tampil hanya kalau ada data.
  */
-function EngineMetaBadges({ engineVersion, evalDelta, piiFindings }) {
+function EngineMetaBadges({ engineVersion, piiFindings }) {
   const hasVersion = Boolean(engineVersion);
-  const hasEval = evalDelta && Number.isFinite(evalDelta.delta);
   const blockingPii = Array.isArray(piiFindings)
     ? piiFindings.filter((finding) => finding && finding.blocking)
     : [];
   const warnPii = Array.isArray(piiFindings)
     ? piiFindings.filter((finding) => finding && !finding.blocking)
     : [];
-  if (!hasVersion && !hasEval && blockingPii.length === 0 && warnPii.length === 0) return null;
+  if (!hasVersion && blockingPii.length === 0 && warnPii.length === 0) return null;
   return (
     <div className="v2-engine-meta" style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
       {hasVersion && (
@@ -2183,42 +2199,7 @@ function EngineMetaBadges({ engineVersion, evalDelta, piiFindings }) {
           >
             ENGINE {engineVersion}
           </span>
-          {hasEval && evalDelta.win && (
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                padding: "3px 10px",
-                borderRadius: 999,
-                fontSize: 11,
-                fontWeight: 600,
-                background: "rgba(34, 197, 94, 0.12)",
-                color: "#15803d",
-                border: "1px solid rgba(34, 197, 94, 0.3)",
-              }}
-              title={`Baseline ${evalDelta.baseline} → Optimized ${evalDelta.optimized}`}
-            >
-              +{evalDelta.delta} PROMPT SCORE
-            </span>
-          )}
         </div>
-      )}
-      {hasEval && evalDelta.win && (
-        <p
-          style={{
-            margin: 0,
-            padding: "10px 14px",
-            borderRadius: 10,
-            background: "rgba(34, 197, 94, 0.08)",
-            border: "1px solid rgba(34, 197, 94, 0.25)",
-            color: "#15803d",
-            fontSize: 13,
-          }}
-        >
-          ✨ Prompt-mu di-upgrade dari skor <strong>{evalDelta.baseline}</strong> →{" "}
-          <strong>{evalDelta.optimized}</strong> (+{evalDelta.delta} poin). Ini perbandingan struktur
-          prompt mentah-mu vs hasil PromptLab Engine.
-        </p>
       )}
       {blockingPii.length > 0 && (
         <p
@@ -2298,7 +2279,7 @@ function V2Builder(props) {
     narrative, setNarrative, attachments, addAttachments, removeAttachment, prompt,
     metrics, generationStatus, generationSource, generationModel, warningMessage, errorMessage, copied,
     copyText, savePrompt, generatePrompt, isGenerating, exportStatus, exportFile,
-    engineVersion, evalDelta, piiFindings,
+    engineVersion, piiFindings,
   } = props;
   return (
     <div className="v2-screen">
@@ -2357,11 +2338,7 @@ function V2Builder(props) {
             </V2ActionBtn>
           </div>
           {isGenerating && <V2GenerateLoader attachments={attachments} model={model} outputType={outputType} />}
-          <EngineMetaBadges
-            engineVersion={engineVersion}
-            evalDelta={evalDelta}
-            piiFindings={piiFindings}
-          />
+          <EngineMetaBadges engineVersion={engineVersion} piiFindings={piiFindings} />
           {warningMessage && <p className="v2-note warn">{warningMessage}</p>}
           {errorMessage && <p className="v2-note error">{errorMessage}</p>}
         </div>

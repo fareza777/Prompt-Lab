@@ -1,3 +1,5 @@
+import { getLanguageLockInstruction, getLanguageMeta } from "../src/promptLanguage.js";
+
 /**
  * PromptLab Prompt Engine v2
  * --------------------------------------------------------------------------
@@ -29,9 +31,11 @@ export function buildIntentSystemPromptXml(payload = {}) {
   const target = payload.modelTarget || payload.targetModel || "General";
   const deliverable = payload.outputType || "tidak dipilih";
   const tone = payload.tone || "Profesional";
+  const langCode = payload.outputLanguage || "id";
+  const meta = getLanguageMeta(langCode);
   return [
-    "<role>PromptLab Intent Engine — senior prompt architect Indonesia.</role>",
-    "<objective>Decompose user intent → expand domain knowledge → lock deliverable → render ONE ready-to-use prompt in Indonesian, no chatty preface.</objective>",
+    `<role>PromptLab Intent Engine — ${meta.architectLabel}.</role>`,
+    `<objective>Decompose user intent → expand domain knowledge → lock deliverable → render ONE ready-to-use prompt in ${meta.label}, no chatty preface.</objective>`,
     "<deliverable_lock priority=\"critical\">",
     `  Selected deliverable: ${deliverable}`,
     "  - User minta PPT → output prompt untuk membuat PPT.",
@@ -52,7 +56,9 @@ export function buildIntentSystemPromptXml(payload = {}) {
     "  - Engine brief atau meta-komentar di output final.",
     "  - Mengubah deliverable yang sudah dipilih user.",
     "  - Placeholder kosong seperti [isi topik] tanpa di-instantiate.",
+    "  - Switching output language away from the user's input language.",
     "</forbidden>",
+    `<language>${getLanguageLockInstruction(langCode).replace(/\n/g, "\n  ")}</language>`,
     "<output>Return only the final prompt, langsung copy-paste ready.</output>",
   ].join("\n");
 }
@@ -65,9 +71,11 @@ export function buildOptimizerSystemPromptXml(payload = {}) {
   const target = payload.targetModel || "General";
   const tone = payload.tone || "Profesional";
   const mode = payload.mode || "Lebih Jelas";
+  const langCode = payload.outputLanguage || "id";
+  const meta = getLanguageMeta(langCode);
   return [
-    "<role>PromptLab Optimizer Engine — senior prompt architect Indonesia.</role>",
-    "<objective>Improve an existing prompt menggunakan optimization mode sebagai meta-prompt layer. Pertahankan intent dan deliverable asli, return only the final optimized prompt.</objective>",
+    `<role>PromptLab Optimizer Engine — ${meta.architectLabel}.</role>`,
+    `<objective>Improve an existing prompt using optimization mode as a meta-prompt layer. Preserve original intent, deliverable, and ${meta.label} language. Return only the final optimized prompt.</objective>`,
     `<optimization_mode>${mode}</optimization_mode>`,
     `<target_ai>${target}</target_ai>`,
     `<tone>${tone}</tone>`,
@@ -77,7 +85,8 @@ export function buildOptimizerSystemPromptXml(payload = {}) {
     "  - Tambahkan role/context/output format/constraints/acceptance jika belum ada.",
     "  - Pertahankan fakta yang sudah ada di prompt lama.",
     "</rules>",
-    "<forbidden>preface, engine brief, meta-komentar, judul \"PromptLab Optimizer Engine\"</forbidden>",
+    "<forbidden>preface, engine brief, meta-komentar, judul \"PromptLab Optimizer Engine\", language switch</forbidden>",
+    `<language>${getLanguageLockInstruction(langCode).replace(/\n/g, "\n  ")}</language>`,
     "<output>final optimized prompt only, ready to copy.</output>",
   ].join("\n");
 }
@@ -488,10 +497,11 @@ export function mergeComparePositionSwap(original, swapped) {
  * @param {string} targetModel
  * @returns {string}
  */
-export function renderForModelDialect(prompt, targetModel) {
+export function renderForModelDialect(prompt, targetModel, outputLanguage = "id") {
   const text = String(prompt || "");
   if (!text.trim()) return text;
   const target = String(targetModel || "").toLowerCase();
+  const meta = getLanguageMeta(outputLanguage);
 
   if (/claude/.test(target)) {
     // Claude suka XML tag + explicit role + "Think before answering".
@@ -509,9 +519,7 @@ export function renderForModelDialect(prompt, targetModel) {
     return `${text.trim()}\n\nFormat catatan: ikuti urutan section di atas. Kalau salah satu section tidak relevan untuk request ini, tetap tulis section dengan keterangan "tidak berlaku" dan alasannya.`;
   }
   if (/deepseek|qwen/.test(target)) {
-    // Model ini sering perform lebih baik dengan English meta-instruction
-    // walau output Indonesia.
-    return `[Meta: follow the structure strictly. Output language: Indonesian. Do not skip sections.]\n\n${text.trim()}`;
+    return `[Meta: follow the structure strictly. ${meta.dialectMeta}. Do not skip sections.]\n\n${text.trim()}`;
   }
   if (/gpt|chatgpt|openai|o1|o3|o4/.test(target)) {
     // GPT suka markdown headers + numbered steps. Pastikan ada list.
