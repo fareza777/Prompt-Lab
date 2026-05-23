@@ -97,7 +97,7 @@ Quota dihitung di backend saat `/api/generate-prompt` berhasil:
 - Jika berhasil, backend mencatat `usage_events` dan menaikkan `profiles.quota_used`.
 - Tombol plan di UI hanya membaca status database; upgrade Pro/Business harus lewat validasi Play Billing/backend, bukan klik lokal.
 
-Jika SQL sudah pernah dijalankan sebelum fitur quota ini, jalankan ulang `supabase/phase-1-auth.sql` agar fungsi `get_my_entitlement` dan `record_usage_event` tersedia.
+Jika SQL tahap 1 sudah pernah dijalankan sebelum fitur quota ini, cukup jalankan `supabase/phase-2-quota-upgrade.sql` agar fungsi `get_my_entitlement` dan `record_usage_event` tersedia.
 
 Untuk provider custom OpenAI-compatible di Vercel, env opsional:
 
