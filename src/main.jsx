@@ -2137,7 +2137,6 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
   const beforeScore = scorePrompt(rawPrompt);
   const afterScore = scoreOptimizedPrompt(rawPrompt, result);
   const scoreDelta = afterScore.score - beforeScore.score;
-  const optimizerBlueprint = useMemo(() => inferOptimizerBlueprint(rawPrompt, mode), [rawPrompt, mode]);
   const qualityBreakdown = [
     ["Clarity", beforeScore.clarity, afterScore.clarity, "role and objective"],
     ["Context", beforeScore.context, afterScore.context, "audience and assumptions"],
@@ -2152,7 +2151,6 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
         <div className="v2-card">
           <div className="v2-card-head"><h2>Input</h2><span className="v2-score-badge">{beforeScore.score}</span></div>
           <textarea className="v2-textarea" value={rawPrompt} onChange={(event) => setRawPrompt(event.target.value)} />
-          <V2IntentEnginePanel blueprint={optimizerBlueprint} eyebrow="PromptLab Optimizer Engine" />
           <V2ChipGroup label="Optimization Mode" options={optimizerModes} value={mode} onChange={setMode} />
           <div className="v2-actions">
             <button className="v2-btn primary" onClick={() => optimizePrompt(rawPrompt, mode)} disabled={isOptimizing}><Zap size={17} />{isOptimizing ? "Optimizing..." : "Optimize"}</button>
@@ -2196,15 +2194,23 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
           </div>
         </div>
       </section>
-      <section className="v2-summary-grid quality">
-        {qualityBreakdown.map(([label, before, after, detail]) => (
-          <V2Stat
-            key={label}
-            label={label}
-            value={`${before} -> ${after}`}
-            detail={`${after - before >= 0 ? "+" : ""}${after - before} · ${detail}`}
-          />
-        ))}
+      <section className="v2-card v2-compact-quality">
+        <div className="v2-card-head">
+          <div>
+            <h2>What improved</h2>
+            <p>Local score change by prompt quality area.</p>
+          </div>
+          <span className="v2-score-badge hot">{scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta}</span>
+        </div>
+        <div className="v2-quality-list">
+          {qualityBreakdown.map(([label, before, after, detail]) => (
+            <div key={label}>
+              <strong>{label}</strong>
+              <span>{before} to {after}</span>
+              <small>{after - before >= 0 ? "+" : ""}{after - before} · {detail}</small>
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   );
@@ -2319,14 +2325,13 @@ function V2Library(props) {
       <V2PageIntro eyebrow="Library" title="Prompt archive that behaves like a workspace." copy="Search, edit, duplicate, export, and send prompts to Compare or Builder.">
         <div className="v2-hero-status"><span>Saved</span><strong>{filteredLibrary.length}</strong><small>of {libraryLimit} local slots</small></div>
       </V2PageIntro>
-      <section className="v2-stats-strip">
-        <V2Stat label="Total" value={filteredLibrary.length} detail="stored prompts" />
-        <V2Stat label="Capacity" value={`${filteredLibrary.length}/${libraryLimit}`} detail="local browser storage" />
-        <V2Stat label="Categories" value={new Set(filteredLibrary.map((i) => i.tag)).size} detail="active tags" />
-        <V2Stat label="Last updated" value={formatDate(currentItem?.updatedAt || currentItem?.createdAt)} detail={currentItem?.title || "-"} compact />
-      </section>
       <section className="v2-library-grid">
         <div className="v2-card">
+          <div className="v2-library-summary">
+            <strong>{filteredLibrary.length}/{libraryLimit}</strong>
+            <span>saved prompts</span>
+            {currentItem && <small>Last: {formatDate(currentItem.updatedAt || currentItem.createdAt)}</small>}
+          </div>
           <div className="v2-toolbar compact"><div className="v2-search wide"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search prompts..." /></div></div>
           <div className="v2-table">
             {rows.map((item) => (
@@ -2351,10 +2356,9 @@ function V2Library(props) {
               <div className="v2-actions wrap">
                 <button className="v2-btn primary" onClick={() => useInBuilder(currentItem)}><PenLine size={16} />Use in Builder</button>
                 <button className="v2-btn" onClick={() => copyText(currentItem.content)}>{copyStatus === "Copied" ? <Check size={16} /> : <Clipboard size={16} />}{copyStatus || "Copy"}</button>
-                <button className="v2-btn" onClick={() => duplicateLibraryItem(currentItem)}><Plus size={16} />Duplicate</button>
-                <button className="v2-btn" onClick={() => { setCompareA(currentItem.content); setActive("Compare"); }}><ArrowRightLeft size={16} />Compare A</button>
-                <button className="v2-btn" onClick={() => { setCompareB(currentItem.content); setActive("Compare"); }}><ArrowRightLeft size={16} />Compare B</button>
+                <button className="v2-btn" onClick={() => { setCompareA(currentItem.content); setActive("Compare"); }}><ArrowRightLeft size={16} />Compare</button>
                 <button className="v2-btn" onClick={() => exportFile("docx", currentItem.content, currentItem.title)}><FileText size={16} />DOCX</button>
+                <button className="v2-btn" onClick={() => duplicateLibraryItem(currentItem)}><Plus size={16} />Duplicate</button>
                 <button className="v2-btn danger" onClick={() => deleteLibraryItem(currentItem.id)}><Trash2 size={16} />Delete</button>
               </div>
             </>
@@ -2395,14 +2399,14 @@ function V2Compare({
       key: "A",
       title: "Prompt A",
       score: aiScores?.A?.overall ?? scoreA.score,
-      bestFor: compareResult?.best_for?.A || "Local readiness preview",
+      bestFor: compareResult?.best_for?.A || "Local score before AI judge.",
       risks: compareResult?.risks?.A || getLocalPromptRisks(compareA),
     },
     {
       key: "B",
       title: "Prompt B",
       score: aiScores?.B?.overall ?? scoreB.score,
-      bestFor: compareResult?.best_for?.B || "Local readiness preview",
+      bestFor: compareResult?.best_for?.B || "Local score before AI judge.",
       risks: compareResult?.risks?.B || getLocalPromptRisks(compareB),
     },
     {
@@ -2415,23 +2419,7 @@ function V2Compare({
   ];
   return (
     <div className="v2-screen">
-      <V2PageIntro eyebrow="Compare Lab" title="Prompt Battle Lab with an AI judge." copy="Compare two prompt versions locally, then ask the active model to pick the stronger prompt without executing it." />
-      <section className="v2-compare-grid">
-        {compareCards.map((card) => (
-          <div className={`v2-card v2-model-card ${winnerKey === card.key ? "winner" : ""}`} key={card.key}>
-            <div className="v2-card-head">
-              <h2>{card.title}</h2>
-              <span className={`v2-score-badge ${winnerKey === card.key ? "hot" : ""}`}>{card.score}</span>
-            </div>
-            <p>{card.bestFor}</p>
-            <V2Metric label="Readiness" value={card.score} />
-            <V2Metric label="Risk control" value={Math.max(0, 100 - (card.risks?.length || 1) * 12)} />
-            <ul className="v2-risk-list">
-              {(card.risks || []).slice(0, 2).map((risk) => <li key={risk}>{risk}</li>)}
-            </ul>
-          </div>
-        ))}
-      </section>
+      <V2PageIntro eyebrow="Compare" title="Compare two prompts before sending." copy="Paste two versions, run the judge, then use the stronger prompt in Builder." />
       <section className="v2-diff-grid">
         <div className="v2-card">
           <div className="v2-card-head"><h2>Prompt A</h2><span className="v2-score-badge">{scoreA.score}</span></div>
@@ -2441,6 +2429,20 @@ function V2Compare({
           <div className="v2-card-head"><h2>Prompt B</h2><span className="v2-score-badge hot">{scoreB.score}</span></div>
           <textarea className="v2-textarea" value={compareB} onChange={(event) => setCompareB(event.target.value)} placeholder="Paste prompt B..." />
         </div>
+      </section>
+      <section className="v2-compare-grid compact">
+        {compareCards.map((card) => (
+          <div className={`v2-card v2-model-card ${winnerKey === card.key ? "winner" : ""}`} key={card.key}>
+            <div className="v2-card-head">
+              <h2>{card.title}</h2>
+              <span className={`v2-score-badge ${winnerKey === card.key ? "hot" : ""}`}>{card.score}</span>
+            </div>
+            <p>{card.bestFor}</p>
+            <ul className="v2-risk-list">
+              {(card.risks || []).slice(0, 2).map((risk) => <li key={risk}>{risk}</li>)}
+            </ul>
+          </div>
+        ))}
       </section>
       <div className="v2-card v2-score-matrix">
         <div><strong>AI Judge Matrix</strong><span>A</span><span>B</span></div>
