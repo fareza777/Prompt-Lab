@@ -1312,6 +1312,55 @@ button {
   cursor: not-allowed;
 }
 
+.v2-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.v2-btn.success {
+  border-color: var(--ac);
+  color: var(--ac);
+  background: var(--ac-soft);
+  box-shadow: 0 0 0 2px var(--ac-line);
+}
+
+.v2-action-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  z-index: 120;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--ac-line);
+  background: oklch(0.16 0.02 220 / 0.96);
+  color: var(--ac);
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 12px 40px oklch(0 0 0 / 0.45);
+  transform: translateX(-50%);
+  animation: v2-toast-in 0.22s ease;
+  pointer-events: none;
+}
+
+@keyframes v2-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (min-width: 900px) {
+  .v2-action-toast {
+    bottom: 28px;
+  }
+}
+
 .v2-note {
   margin: 12px 0 0;
   padding: 11px 12px;

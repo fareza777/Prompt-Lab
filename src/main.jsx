@@ -769,6 +769,38 @@ async function writeClipboard(text) {
   return copied;
 }
 
+function V2ActionBtn({ children, className = "v2-btn", onAction, successLabel, disabled }) {
+  const [pulse, setPulse] = useState("");
+  const handleClick = async () => {
+    if (disabled) return;
+    let ok = true;
+    try {
+      const result = await onAction();
+      if (result === false) ok = false;
+    } catch {
+      ok = false;
+    }
+    setPulse(ok ? "success" : "error");
+    window.setTimeout(() => setPulse(""), 1600);
+  };
+  const classes = [className, pulse === "success" ? "success" : "", pulse === "error" ? "danger" : ""].filter(Boolean).join(" ");
+  return (
+    <button type="button" className={classes} onClick={handleClick} disabled={disabled}>
+      {pulse === "success" && successLabel ? successLabel : children}
+    </button>
+  );
+}
+
+function V2ActionToast({ message }) {
+  if (!message) return null;
+  return (
+    <div className="v2-action-toast" role="status" aria-live="polite">
+      <Check size={18} />
+      <span>{message}</span>
+    </div>
+  );
+}
+
 function buildPrompt(narrative, category, tone, model, outputType, attachments) {
   if (isClaudeTarget(model)) {
     return buildClaudePrompt({ narrative, category, tone, outputType, attachments });
@@ -1031,6 +1063,7 @@ function App() {
   const [warningMessage, setWarningMessage] = useState("");
   const [copied, setCopied] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
+  const [actionToast, setActionToast] = useState("");
   const [search, setSearch] = useState("");
   const [selectedLibraryId, setSelectedLibraryId] = useState("");
   const [compareA, setCompareA] = useState("");
@@ -1193,10 +1226,17 @@ function App() {
     setActive("Builder");
   }
 
+  function flashAction(message) {
+    if (!message) return;
+    setActionToast(message);
+    window.setTimeout(() => setActionToast(""), 2200);
+  }
+
   async function copyText(text = prompt) {
     const ok = await writeClipboard(text);
     setCopied(ok);
     setCopyStatus(ok ? "Copied" : "Copy failed");
+    flashAction(ok ? "Copied to clipboard" : "Copy failed");
     window.setTimeout(() => {
       setCopied(false);
       setCopyStatus("");
@@ -1217,6 +1257,8 @@ function App() {
     };
     setLibrary((items) => [item, ...items].slice(0, LIBRARY_LIMIT));
     setSelectedLibraryId(item.id);
+    flashAction("Saved to library");
+    return true;
   }
 
   function saveCustomTemplate(template) {
@@ -1660,6 +1702,7 @@ function App() {
     errorMessage,
     copied,
     copyStatus,
+    actionToast,
     copyText,
     savePrompt,
     generatePrompt,
@@ -1893,6 +1936,7 @@ function V2App(props) {
         {active === "Settings" && <V2Settings {...props} />}
       </main>
       <BottomNav active={active} setActive={setActive} />
+      <V2ActionToast message={props.actionToast} />
     </div>
   );
 }
@@ -2094,8 +2138,12 @@ function V2Builder(props) {
             <button className="v2-btn primary" onClick={() => generatePrompt()} disabled={isGenerating}>
               <Sparkles size={17} /> {isGenerating ? "Generating..." : "Generate Prompt"}
             </button>
-            <button className="v2-btn" onClick={() => savePrompt(prompt, narrative)}><Save size={17} />Save</button>
-            <button className="v2-btn" onClick={() => copyText(prompt)}>{copied ? <Check size={17} /> : <Clipboard size={17} />}Copy</button>
+            <V2ActionBtn className="v2-btn" onAction={() => savePrompt(prompt, narrative)} successLabel={<><Check size={17} />Saved</>}>
+              <Save size={17} />Save
+            </V2ActionBtn>
+            <V2ActionBtn className="v2-btn" onAction={() => copyText(prompt)} successLabel={<><Check size={17} />Copied</>}>
+              <Clipboard size={17} />Copy
+            </V2ActionBtn>
           </div>
           {isGenerating && <V2GenerateLoader attachments={attachments} model={model} outputType={outputType} />}
           {warningMessage && <p className="v2-note warn">{warningMessage}</p>}
@@ -2281,7 +2329,9 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
           <V2ChipGroup label="Optimization Mode" options={optimizerModes} value={mode} onChange={setMode} />
           <div className="v2-actions">
             <button className="v2-btn primary" onClick={() => optimizePrompt(rawPrompt, mode)} disabled={isOptimizing}><Zap size={17} />{isOptimizing ? "Optimizing..." : "Optimize"}</button>
-            <button className="v2-btn" onClick={() => copyText(rawPrompt)}><Clipboard size={17} />Copy original</button>
+            <V2ActionBtn className="v2-btn" onAction={() => copyText(rawPrompt)} successLabel={<><Check size={17} />Copied</>}>
+              <Clipboard size={17} />Copy original
+            </V2ActionBtn>
           </div>
           {isOptimizing && (
             <V2MiniPipeline
@@ -2315,8 +2365,12 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
             </div>
           )}
           <div className="v2-actions wrap">
-            <button className="v2-btn" onClick={() => copyText(result)}><Clipboard size={16} />Copy</button>
-            <button className="v2-btn" onClick={() => savePrompt(result, rawPrompt)}><Save size={16} />Save</button>
+            <V2ActionBtn className="v2-btn" onAction={() => copyText(result)} successLabel={<><Check size={16} />Copied</>}>
+              <Clipboard size={16} />Copy
+            </V2ActionBtn>
+            <V2ActionBtn className="v2-btn" onAction={() => savePrompt(result, rawPrompt)} successLabel={<><Check size={16} />Saved</>}>
+              <Save size={16} />Save
+            </V2ActionBtn>
             <button className="v2-btn" onClick={() => exportFile("docx", result, rawPrompt)}><FileText size={16} />DOCX</button>
           </div>
         </div>
@@ -2482,7 +2536,13 @@ function V2Library(props) {
               <textarea className="v2-textarea" value={currentItem.content} onChange={(event) => updateLibraryItem(currentItem.id, { content: event.target.value })} />
               <div className="v2-actions wrap">
                 <button className="v2-btn primary" onClick={() => useInBuilder(currentItem)}><PenLine size={16} />Use in Builder</button>
-                <button className="v2-btn" onClick={() => copyText(currentItem.content)}>{copyStatus === "Copied" ? <Check size={16} /> : <Clipboard size={16} />}{copyStatus || "Copy"}</button>
+                <V2ActionBtn
+                  className="v2-btn"
+                  onAction={() => copyText(currentItem.content)}
+                  successLabel={<><Check size={16} />Copied</>}
+                >
+                  <Clipboard size={16} />Copy
+                </V2ActionBtn>
                 <button className="v2-btn" onClick={() => { setCompareA(currentItem.content); setActive("Compare"); }}><ArrowRightLeft size={16} />Compare</button>
                 <button className="v2-btn" onClick={() => exportFile("docx", currentItem.content, currentItem.title)}><FileText size={16} />DOCX</button>
                 <button className="v2-btn" onClick={() => duplicateLibraryItem(currentItem)}><Plus size={16} />Duplicate</button>
@@ -2601,8 +2661,12 @@ function V2Compare({
           <button className="v2-btn primary" disabled={!compareA.trim() || !compareB.trim() || isComparing} onClick={comparePrompts}><Sparkles size={16} />{isComparing ? "Comparing..." : "Run AI Compare"}</button>
           <button className="v2-btn primary" disabled={!winnerPrompt?.trim()} onClick={() => { setNarrative(winnerPrompt); setActive("Builder"); }}><PenLine size={16} />Use winner</button>
           <button className="v2-btn" disabled={!mergedPrompt?.trim()} onClick={() => { setNarrative(mergedPrompt); setActive("Builder"); }}><Wand2 size={16} />Use merged</button>
-          <button className="v2-btn" disabled={!winnerPrompt?.trim()} onClick={() => savePrompt(winnerPrompt, "Compare winner")}><Save size={16} />Save</button>
-          <button className="v2-btn" disabled={!winnerPrompt?.trim()} onClick={() => copyText(winnerPrompt)}><Clipboard size={16} />Copy</button>
+          <V2ActionBtn className="v2-btn" disabled={!winnerPrompt?.trim()} onAction={() => savePrompt(winnerPrompt, "Compare winner")} successLabel={<><Check size={16} />Saved</>}>
+            <Save size={16} />Save
+          </V2ActionBtn>
+          <V2ActionBtn className="v2-btn" disabled={!winnerPrompt?.trim()} onAction={() => copyText(winnerPrompt)} successLabel={<><Check size={16} />Copied</>}>
+            <Clipboard size={16} />Copy
+          </V2ActionBtn>
         </div>
         {compareResult?.recommendations?.length > 0 && (
           <div className="v2-judge-recs">
