@@ -4,16 +4,18 @@ import sharp from "sharp";
 
 const root = process.cwd();
 const outDir = join(root, "playstore", "assets");
-const svgPath = join(root, "public", "promptlab-icon.svg");
+const playIconSvg = join(root, "public", "playstore-icon.svg");
 
 await mkdir(outDir, { recursive: true });
 
-const icon512 = await sharp(join(root, "public", "icons", "icon-512.png"))
+// Google Play: 512x512 PNG, full-bleed square, no shadow/rounded corners in file.
+// https://developer.android.com/distribute/google-play/resources/icon-design-specifications
+await sharp(playIconSvg)
   .resize(512, 512)
-  .png()
+  .png({ compressionLevel: 9 })
   .toFile(join(outDir, "app-icon-512.png"));
 
-console.log("wrote app-icon-512.png", icon512);
+console.log("wrote app-icon-512.png (Play Store full-bleed spec)");
 
 const featureSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="1024" height="500" viewBox="0 0 1024 500" xmlns="http://www.w3.org/2000/svg">
@@ -44,7 +46,7 @@ const featureSvg = `<?xml version="1.0" encoding="UTF-8"?>
 
 const logoSize = 280;
 const logoInset = 110;
-const logoPng = await sharp(await readFile(svgPath)).resize(logoSize, logoSize).png().toBuffer();
+const logoPng = await sharp(await readFile(playIconSvg)).resize(logoSize, logoSize).png().toBuffer();
 
 const featureBase = await sharp(Buffer.from(featureSvg)).png().toBuffer();
 

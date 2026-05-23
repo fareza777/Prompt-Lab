@@ -6,7 +6,7 @@ Generated assets for Google Play **Store listing**.
 
 | File | Use in Play Console |
 |------|---------------------|
-| `app-icon-512.png` | **App icon** (512×512) |
+| `app-icon-512.png` | **App icon** (512×512 PNG, full-bleed per [Google Play icon spec](https://developer.android.com/distribute/google-play/resources/icon-design-specifications)) |
 | `feature-graphic-1024x500.png` | **Feature graphic** (1024×500) |
 | `screenshot-phone-*.png` | **Phone screenshots** (min. 2, recommend 4–5) |
 
