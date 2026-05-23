@@ -7,7 +7,8 @@
       "namespace": "android_app",
       "package_name": "app.promptlab.twa",
       "sha256_cert_fingerprints": [
-        "17:C1:58:CB:70:B7:33:AF:03:6F:B3:61:8D:1A:5F:93:D3:61:04:10:5E:90:84:4D:5C:DA:16:69:A7:9F:28:99"
+        "17:C1:58:CB:70:B7:33:AF:03:6F:B3:61:8D:1A:5F:93:D3:61:04:10:5E:90:84:4D:5C:DA:16:69:A7:9F:28:99",
+        "1C:02:63:1E:52:03:63:80:5D:D3:71:C1:08:E7:A9:6B:55:1A:CB:99:2A:BF:D4:AC:19:A8:2E:C6:4B:1A:41:F5"
       ]
     }
   }
