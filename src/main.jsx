@@ -40,7 +40,10 @@ import {
 } from "lucide-react";
 import "./styles.css";
 import { highlightWeakSegments, inferOptimizerChanges, countWords } from "./optimizerDiff";
+import { dismissStartupSplash, markStartupSplashStarted } from "./startupSplash";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
+
+markStartupSplashStarted();
 
 const categories = ["Marketing", "Content Creator", "Business", "Coding", "Academic", "Image AI"];
 const tones = ["Professional", "Casual", "Persuasive", "Creative"];
@@ -1046,6 +1049,10 @@ ${source}
 }
 
 function App() {
+  useEffect(() => {
+    dismissStartupSplash();
+  }, []);
+
   const [active, setActive] = useState("Builder");
   const [category, setCategory] = useState("Marketing");
   const [tone, setTone] = useState("Professional");

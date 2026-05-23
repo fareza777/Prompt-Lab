@@ -37,3 +37,11 @@ Buat 1024×500 PNG (bisa dari screenshot Builder + logo).
 ## Setelah app dibuat di Play Console
 
 Tambahkan **App signing certificate SHA-256** ke `public/.well-known/assetlinks.json` (baris kedua di array fingerprints), lalu deploy Vercel.
+
+Panduan lengkap hilangkan bar URL di atas: `playstore/HILANGKAN_BAR_URL.md`
+
+Cek verifikasi:
+
+```bash
+npm run playstore:check
+```

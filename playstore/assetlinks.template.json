@@ -7,6 +7,7 @@
       "namespace": "android_app",
       "package_name": "app.promptlab.twa",
       "sha256_cert_fingerprints": [
+        "REPLACE_WITH_UPLOAD_OR_LOCAL_SHA256",
         "REPLACE_WITH_PLAY_APP_SIGNING_SHA256_FINGERPRINT"
       ]
     }

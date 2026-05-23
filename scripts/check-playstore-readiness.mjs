@@ -56,17 +56,39 @@ try {
 try {
   const response = await fetch(`${productionUrl.replace(/\/$/, "")}/.well-known/assetlinks.json`, { redirect: "follow" });
   let validAssetLinks = false;
+  let fingerprintCount = 0;
   if (response.ok) {
     try {
       const json = await response.json();
       validAssetLinks = Array.isArray(json) && json.some((entry) => entry?.target?.package_name);
+      fingerprintCount = json?.[0]?.target?.sha256_cert_fingerprints?.length || 0;
     } catch {
       validAssetLinks = false;
     }
   }
-  check("assetlinks live", validAssetLinks, validAssetLinks ? `${response.status}` : "not installed yet");
+  check("assetlinks live", validAssetLinks, validAssetLinks ? `${response.status}, ${fingerprintCount} fingerprint(s)` : "not installed yet");
+  if (fingerprintCount < 2) {
+    console.log("WARN Add Play App Signing SHA-256 to assetlinks.json — see playstore/HILANGKAN_BAR_URL.md");
+  }
 } catch (error) {
   check("assetlinks live", false, "not installed yet");
+}
+
+try {
+  const dalUrl = new URL("https://digitalassetlinks.googleapis.com/v1/statements:list");
+  dalUrl.searchParams.set("source.web.site", productionUrl.replace(/\/$/, ""));
+  dalUrl.searchParams.set("relation", "delegate_permission/common.handle_all_urls");
+  const dalResponse = await fetch(dalUrl);
+  const dalJson = dalResponse.ok ? await dalResponse.json() : { statements: [] };
+  const linked = Array.isArray(dalJson.statements) && dalJson.statements.some(
+    (item) => item?.target?.androidApp?.packageName === "app.promptlab.twa"
+  );
+  if (!linked) {
+    console.log("WARN TWA not verified by Google yet — URL bar may show until Play signing SHA-256 is added and app is reinstalled.");
+  }
+  check("Google Digital Asset Links", linked, linked ? "app.promptlab.twa linked" : "not linked yet");
+} catch (error) {
+  check("Google Digital Asset Links", false, error.message);
 }
 
 if (failed > 0) {
