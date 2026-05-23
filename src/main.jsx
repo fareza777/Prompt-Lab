@@ -1334,6 +1334,9 @@ function App() {
 
   async function signOut() {
     if (supabase) await supabase.auth.signOut();
+    localStorage.removeItem("promptlab-guest");
+    localStorage.removeItem("promptlab-onboarded");
+    localStorage.removeItem("promptlab-auth-intent");
     setAccountState(defaultAccountState);
     setAuthStatus("Signed out");
   }
@@ -1778,26 +1781,44 @@ function V2TokenSection({ title, tokens }) {
 
 function V2App(props) {
   const { active, setActive, settingsStatus, generationStatus, generationSource, generationModel, isGenerating, accountState } = props;
-  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("promptlab-onboarded"));
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    const hasOnboarded = localStorage.getItem("promptlab-onboarded") === "true";
+    const isGuest = localStorage.getItem("promptlab-guest") === "true";
+    const wantsAuth = localStorage.getItem("promptlab-auth-intent") === "true";
+    return !accountState.userId && (!hasOnboarded || (!isGuest && !wantsAuth));
+  });
   const [authGate, setAuthGate] = useState(() => localStorage.getItem("promptlab-auth-intent") === "true");
   const quotaPercent = Math.min(100, Math.round(((accountState.quotaUsed || 0) / Math.max(1, accountState.quotaLimit || 1)) * 100));
 
   useEffect(() => {
     if (!accountState.userId) return;
     localStorage.setItem("promptlab-onboarded", "true");
+    localStorage.removeItem("promptlab-guest");
     localStorage.removeItem("promptlab-auth-intent");
     setShowOnboarding(false);
     setAuthGate(false);
   }, [accountState.userId]);
 
+  useEffect(() => {
+    if (accountState.userId) return;
+    const isGuest = localStorage.getItem("promptlab-guest") === "true";
+    const wantsAuth = localStorage.getItem("promptlab-auth-intent") === "true";
+    if (!isGuest && !wantsAuth) {
+      setShowOnboarding(true);
+      setAuthGate(false);
+    }
+  }, [accountState.userId]);
+
   const startAuth = () => {
     localStorage.setItem("promptlab-auth-intent", "true");
     localStorage.removeItem("promptlab-onboarded");
+    localStorage.removeItem("promptlab-guest");
     setAuthGate(true);
     setShowOnboarding(false);
   };
   const continueGuest = () => {
     localStorage.setItem("promptlab-onboarded", "true");
+    localStorage.setItem("promptlab-guest", "true");
     localStorage.removeItem("promptlab-auth-intent");
     setAuthGate(false);
     setShowOnboarding(false);
@@ -1806,6 +1827,7 @@ function V2App(props) {
   const backToOnboarding = () => {
     localStorage.removeItem("promptlab-auth-intent");
     localStorage.removeItem("promptlab-onboarded");
+    localStorage.removeItem("promptlab-guest");
     setAuthGate(false);
     setShowOnboarding(true);
   };
