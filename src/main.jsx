@@ -1779,14 +1779,41 @@ function V2TokenSection({ title, tokens }) {
 function V2App(props) {
   const { active, setActive, settingsStatus, generationStatus, generationSource, generationModel, isGenerating, accountState } = props;
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("promptlab-onboarded"));
+  const [authGate, setAuthGate] = useState(() => localStorage.getItem("promptlab-auth-intent") === "true");
   const quotaPercent = Math.min(100, Math.round(((accountState.quotaUsed || 0) / Math.max(1, accountState.quotaLimit || 1)) * 100));
-  const finishOnboarding = (nextActive = "Builder") => {
+
+  useEffect(() => {
+    if (!accountState.userId) return;
     localStorage.setItem("promptlab-onboarded", "true");
+    localStorage.removeItem("promptlab-auth-intent");
     setShowOnboarding(false);
-    setActive(nextActive);
+    setAuthGate(false);
+  }, [accountState.userId]);
+
+  const startAuth = () => {
+    localStorage.setItem("promptlab-auth-intent", "true");
+    localStorage.removeItem("promptlab-onboarded");
+    setAuthGate(true);
+    setShowOnboarding(false);
   };
+  const continueGuest = () => {
+    localStorage.setItem("promptlab-onboarded", "true");
+    localStorage.removeItem("promptlab-auth-intent");
+    setAuthGate(false);
+    setShowOnboarding(false);
+    setActive("Builder");
+  };
+  const backToOnboarding = () => {
+    localStorage.removeItem("promptlab-auth-intent");
+    localStorage.removeItem("promptlab-onboarded");
+    setAuthGate(false);
+    setShowOnboarding(true);
+  };
+  if (!accountState.userId && authGate) {
+    return <V2AuthGate {...props} onBack={backToOnboarding} onGuest={continueGuest} />;
+  }
   if (showOnboarding && !accountState.userId) {
-    return <V2Onboarding onAuth={() => finishOnboarding("Settings")} onGuest={() => finishOnboarding("Builder")} />;
+    return <V2Onboarding onAuth={startAuth} onGuest={continueGuest} />;
   }
   return (
     <div className="v2-shell" data-theme="v2">
@@ -1838,6 +1865,79 @@ function V2App(props) {
       </main>
       <BottomNav active={active} setActive={setActive} />
     </div>
+  );
+}
+
+function V2AuthGate({
+  accountState,
+  authStatus,
+  authError,
+  isAuthBusy,
+  isSupabaseConfigured,
+  signInWithPassword,
+  signUpWithPassword,
+  onBack,
+  onGuest,
+}) {
+  const [authMode, setAuthMode] = useState("sign-in");
+  const [authEmail, setAuthEmail] = useState(accountState.email || "");
+  const [authName, setAuthName] = useState(accountState.name || "");
+  const [authPassword, setAuthPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const isSignIn = authMode === "sign-in";
+  const canSubmit = authEmail.trim() && authPassword.length >= 6 && (isSignIn || authName.trim());
+  const submitAuth = () => {
+    if (isSignIn) {
+      signInWithPassword(authEmail.trim(), authPassword);
+      return;
+    }
+    signUpWithPassword(authEmail.trim(), authPassword, authName.trim());
+  };
+
+  return (
+    <main className="v2-onboarding v2-auth-gate" data-theme="v2">
+      <section className="v2-onboarding-card v2-auth-gate-card">
+        <span className="v2-eyebrow">PromptLab Account</span>
+        <h1>{isSignIn ? "Sign in to continue." : "Create your PromptLab account."}</h1>
+        <p>Login unlocks AI generation quota, membership state, and synced prompt history. Guest mode stays local only.</p>
+        <div className="v2-auth-mode" role="tablist" aria-label="Authentication mode">
+          <button className={isSignIn ? "active" : ""} onClick={() => setAuthMode("sign-in")}>Sign In</button>
+          <button className={!isSignIn ? "active" : ""} onClick={() => setAuthMode("create")}>Create Account</button>
+        </div>
+        <div className="v2-account-grid">
+          <label>
+            <span>Email</span>
+            <input className="v2-input" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} placeholder="user@email.com" autoComplete="email" />
+          </label>
+          {!isSignIn && (
+            <label>
+              <span>Name</span>
+              <input className="v2-input" value={authName} onChange={(event) => setAuthName(event.target.value)} placeholder="Your name" autoComplete="name" />
+            </label>
+          )}
+          <label className="v2-account-password">
+            <span>Password</span>
+            <div className="v2-password-field">
+              <input className="v2-input" type={showPassword ? "text" : "password"} value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} placeholder="Minimum 6 characters" autoComplete={isSignIn ? "current-password" : "new-password"} />
+              <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"}>
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
+            </div>
+          </label>
+        </div>
+        <div className="v2-auth-status">
+          <span>{isSupabaseConfigured ? authStatus : "Supabase env belum aktif"}</span>
+          {authError && <strong>{authError}</strong>}
+        </div>
+        <div className="v2-actions wrap">
+          <button className="v2-btn primary" onClick={submitAuth} disabled={isAuthBusy || !canSubmit}>
+            {isAuthBusy ? "Checking..." : isSignIn ? "Sign In" : "Create Account"}
+          </button>
+          <button className="v2-btn" onClick={onGuest}>Continue as Guest</button>
+          <button className="v2-btn ghost" onClick={onBack}>Back</button>
+        </div>
+      </section>
+    </main>
   );
 }
 
