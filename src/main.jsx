@@ -2202,7 +2202,6 @@ function V2Builder(props) {
           metrics={metrics}
           generationStatus={generationStatus}
           generationSource={generationSource}
-          generationModel={generationModel}
           copyText={copyText}
           savePrompt={savePrompt}
           exportFile={exportFile}
@@ -2275,9 +2274,27 @@ function V2MiniPipeline({ eyebrow = "Working", title, steps }) {
   );
 }
 
-function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource, generationModel, copyText, savePrompt, exportFile, narrative, exportStatus, isGenerating, accountState }) {
+function isAiGeneratedOutput(generationSource, generationStatus) {
+  if (generationSource === "local" || generationSource === "fallback") return false;
+  if (generationStatus === "local-fallback" || generationStatus === "local-error" || generationStatus === "local-quota-warning") {
+    return false;
+  }
+  return (
+    generationStatus === "primary-model" ||
+    generationStatus === "fallback-model" ||
+    generationSource === "openrouter" ||
+    generationSource === "openai" ||
+    generationSource === "server"
+  );
+}
+
+function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource, copyText, savePrompt, exportFile, narrative, exportStatus, isGenerating, accountState }) {
   const [actionFeedback, setActionFeedback] = useState("");
-  const outputStatus = compactGenerationStatus(generationStatus, generationSource, generationModel);
+  const outputBadge = isGenerating
+    ? "Generating..."
+    : isAiGeneratedOutput(generationSource, generationStatus)
+      ? "AI Generated"
+      : "";
   const confirmAction = (label, action) => {
     action();
     setActionFeedback(label);
@@ -2313,8 +2330,10 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
       </div>
       <div className="v2-card v2-output-card">
         <div className="v2-prompt-toolbar">
-          <strong>Optimized Prompt</strong>
-          {outputStatus && <span>{outputStatus}</span>}
+          <div className="v2-prompt-toolbar-title">
+            <strong>Optimized Prompt</strong>
+            {outputBadge && <span className="v2-output-badge">{outputBadge}</span>}
+          </div>
           {actionFeedback && <em>{actionFeedback}</em>}
           <button type="button" onClick={() => confirmAction("Copied", () => copyText(prompt))} title="Copy prompt" aria-label="Copy prompt">
             <Clipboard size={16} />
