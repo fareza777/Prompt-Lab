@@ -24,6 +24,10 @@
       "destination": "/privacy/index.html"
     },
     {
+      "source": "/privacy/delete-account",
+      "destination": "/privacy/delete-account/index.html"
+    },
+    {
       "source": "/.well-known/(.*)",
       "destination": "/.well-known/$1"
     },

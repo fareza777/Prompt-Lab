@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#061011" />
+    <title>Delete account — PromptLab</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: #061011;
+        color: #e8eef8;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 32px 20px 64px;
+      }
+      h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+      h2 { font-size: 1.1rem; margin-top: 2rem; color: #9fd4ff; }
+      p, li { color: #b8c5d9; }
+      a { color: #5eb8ff; }
+      .meta { color: #7a8aa3; font-size: 0.9rem; }
+      ol { padding-left: 1.2rem; }
+      .box {
+        margin: 1rem 0;
+        padding: 14px 16px;
+        border: 1px solid #2a3d45;
+        border-radius: 10px;
+        background: #0c181b;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Delete your PromptLab account</h1>
+      <p class="meta">PromptLab · App: Prompt Lab (app.promptlab.twa) · Contact: support@promptlab.app</p>
+
+      <p>
+        You can request deletion of your <strong>PromptLab</strong> account and associated server-side data.
+        This page explains how to submit a request and what we delete or keep.
+      </p>
+
+      <h2>How to request account deletion</h2>
+      <ol>
+        <li>Sign in to PromptLab (if you still have access).</li>
+        <li>Email <a href="mailto:support@promptlab.app?subject=PromptLab%20account%20deletion">support@promptlab.app</a> from the <strong>same email address</strong> used for your account.</li>
+        <li>Use subject line: <strong>PromptLab account deletion</strong>.</li>
+        <li>We will confirm your identity and process the request within <strong>30 days</strong> (usually sooner).</li>
+      </ol>
+
+      <div class="box">
+        <p><strong>Email template (copy &amp; paste):</strong></p>
+        <p>
+          To: support@promptlab.app<br />
+          Subject: PromptLab account deletion<br /><br />
+          Please delete my PromptLab account and associated data.<br />
+          Account email: [your email]<br />
+          I understand this action is permanent.
+        </p>
+      </div>
+
+      <h2>Data that will be deleted</h2>
+      <ul>
+        <li>Supabase Auth account (email, authentication identifiers)</li>
+        <li>Profile record (display name, plan, quota counters tied to your user ID)</li>
+        <li>Usage events and server-side records linked to your account</li>
+        <li>Any cloud-backed library or template data stored under your user ID (when synced)</li>
+      </ul>
+
+      <h2>Data that may be kept</h2>
+      <ul>
+        <li>Aggregated, non-identifying analytics or logs required for security, fraud prevention, or legal compliance (retained up to <strong>90 days</strong> where applicable).</li>
+        <li>Billing records handled by <strong>Google Play</strong> (managed under Google’s policies; contact Google for purchase history).</li>
+      </ul>
+
+      <h2>Data on your device only</h2>
+      <p>
+        If you used <strong>Continue as guest</strong>, prompts saved in your browser or app storage stay on your device until you clear app data or uninstall the app.
+        Uninstalling the app removes local guest data from that device.
+      </p>
+
+      <h2>Delete some data without deleting your account (optional)</h2>
+      <p>
+        Email <a href="mailto:support@promptlab.app">support@promptlab.app</a> to request removal of specific saved prompts or usage history while keeping your account active.
+      </p>
+
+      <h2>Questions</h2>
+      <p>See our <a href="/privacy">Privacy Policy</a> or contact <a href="mailto:support@promptlab.app">support@promptlab.app</a>.</p>
+
+      <p><a href="/">← Back to PromptLab</a></p>
+    </main>
+  </body>
+</html>
