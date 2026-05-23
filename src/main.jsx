@@ -39,7 +39,7 @@ import {
   Zap,
 } from "lucide-react";
 import "./styles.css";
-import { highlightWeakSegments, inferOptimizerChanges, countWords } from "./optimizerDiff";
+import { countWords } from "./optimizerDiff";
 import { dismissStartupSplash, markStartupSplashStarted } from "./startupSplash";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
@@ -2371,16 +2371,13 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
   );
 }
 
-function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizerError, optimizerWarning, optimizePrompt, clearOptimizerResult, copyText, savePrompt, exportFile }) {
+function V2Optimizer({ optimizerResult, isOptimizing, optimizerError, optimizerWarning, optimizePrompt, clearOptimizerResult, copyText, savePrompt, exportFile }) {
   const [rawPrompt, setRawPrompt] = useState("Make this prompt stronger for Instagram content about a milk coffee product.");
   const [mode, setMode] = useState("Clearer");
-  const [diffView, setDiffView] = useState("split");
   const result = optimizerResult || buildLocalOptimizedPrompt(rawPrompt, mode, "Claude", "Professional");
   const beforeScore = scorePrompt(rawPrompt);
   const afterScore = scoreOptimizedPrompt(rawPrompt, result);
   const scoreDelta = afterScore.score - beforeScore.score;
-  const beforeSegments = useMemo(() => highlightWeakSegments(rawPrompt), [rawPrompt]);
-  const changes = useMemo(() => inferOptimizerChanges(rawPrompt, result, mode), [rawPrompt, result, mode]);
   const qualityBreakdown = [
     ["Clarity", beforeScore.clarity, afterScore.clarity, "role and objective"],
     ["Context", beforeScore.context, afterScore.context, "audience and assumptions"],
@@ -2388,28 +2385,9 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
     ["Guardrails", beforeScore.constraints, afterScore.constraints, "limits and safety"],
     ["Actionability", beforeScore.actionability, afterScore.actionability, "testable criteria"],
   ];
-  const diffViews = [
-    ["split", "Split diff"],
-    ["unified", "Unified"],
-    ["summary", "Summary"],
-  ];
   return (
     <div className="v2-screen">
-      <V2PageIntro eyebrow="Optimizer" title="Old prompts, refined into winning instructions." copy="Review before and after quality changes with a compact improvement summary." />
-      <div className="v2-optimizer-toolbar">
-        <div className="v2-chip-row">
-          {diffViews.map(([id, label]) => (
-            <button key={id} type="button" className={`v2-chip ${diffView === id ? "active" : ""}`} onClick={() => setDiffView(id)}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="v2-optimizer-meta">
-          <span>{changes.length} changes</span>
-          <span>{countWords(rawPrompt)} → {countWords(result)} words</span>
-          <span className={`v2-score-badge ${scoreDelta >= 0 ? "hot" : ""}`}>{scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta}</span>
-        </div>
-      </div>
+      <V2PageIntro eyebrow="Optimizer" title="Old prompts, refined into winning instructions." copy="Paste a weak prompt, pick a mode, and get a stronger version in one pass." />
       <section className="v2-diff-grid">
         <div className="v2-card v2-glass-card">
           <div className="v2-card-head"><h2>Input</h2><span className="v2-score-badge">{beforeScore.score}</span></div>
@@ -2445,15 +2423,11 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
           <div className="v2-card-head">
             <div>
               <h2>Optimized Result</h2>
-              <p>{optimizerSource} · {mode} · {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} score</p>
+              <p>{mode} · {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} pts</p>
             </div>
             <span className="v2-score-badge hot">{afterScore.score}</span>
           </div>
-          {diffView !== "summary" ? (
-            <pre className={`v2-prompt-output ${isOptimizing ? "is-streaming" : ""}`}>{result}</pre>
-          ) : (
-            <p className="v2-small">Summary view focuses on the change map below. Switch to Split or Unified to read the full optimized prompt here.</p>
-          )}
+          <pre className={`v2-prompt-output ${isOptimizing ? "is-streaming" : ""}`}>{result}</pre>
           <div className="v2-score-advice">
             <span>Score notes</span>
             {afterScore.tips.slice(0, 2).map((tip) => <p key={tip}>{tip}</p>)}
@@ -2477,46 +2451,6 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
           </div>
         </div>
       </section>
-      {diffView !== "summary" && (
-        <section className={`v2-diff-panel ${diffView}`}>
-          <div className="v2-diff-col">
-            <div className="v2-diff-head">
-              <span>Before</span>
-              <span className="v2-score-badge">{beforeScore.score}</span>
-            </div>
-            <pre className="v2-prompt-output muted">
-              {beforeSegments.map((segment, index) => (
-                segment.weak ? <mark key={`weak-${index}`}>{segment.text}</mark> : <React.Fragment key={`plain-${index}`}>{segment.text}</React.Fragment>
-              ))}
-            </pre>
-          </div>
-          <div className="v2-diff-col">
-            <div className="v2-diff-head">
-              <span>{diffView === "unified" ? "After · unified stack" : "After"}</span>
-              <span className="v2-score-badge hot">{afterScore.score}</span>
-            </div>
-            <pre className={`v2-prompt-output ${isOptimizing ? "is-streaming" : ""}`}>{result}</pre>
-          </div>
-        </section>
-      )}
-      <section className={`v2-change-summary ${diffView === "summary" ? "featured" : ""}`}>
-        {changes.map((item, index) => (
-          <article key={`${item.label}-${index}`} className={`v2-change-card ${item.type}`}>
-            <span>{item.type}</span>
-            <strong>{item.label}</strong>
-            <p>{item.body}</p>
-          </article>
-        ))}
-      </section>
-      {diffView === "summary" && (
-        <section className="v2-card v2-output-card">
-          <div className="v2-card-head">
-            <h2>Optimized prompt</h2>
-            <span className="v2-score-badge hot">{afterScore.score}</span>
-          </div>
-          <pre className="v2-prompt-output">{result}</pre>
-        </section>
-      )}
       <section className="v2-card v2-compact-quality">
         <div className="v2-card-head">
           <div>
