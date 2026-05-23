@@ -14,6 +14,23 @@ import mammoth from "mammoth";
 import multer from "multer";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
+import {
+  buildIntentSystemPromptXml,
+  buildOptimizerSystemPromptXml,
+  buildCompareSystemPromptXml,
+  validatePromptStructure,
+  buildStructureRetryInstruction,
+  getExpandedDomainPack,
+  getFewShotForMode,
+  buildSwappedComparePayload,
+  mergeComparePositionSwap,
+  renderForModelDialect,
+  evalDelta,
+  shouldRunSelfConsistency,
+  pickBestCandidate,
+  scrubPII,
+  PROMPT_ENGINE_VERSION,
+} from "./prompt-engine-v2.js";
 
 const app = express();
 const port = Number(process.env.PORT || 8787);
@@ -224,6 +241,8 @@ app.post("/api/optimize-prompt", async (req, res) => {
         const optimizedRaw = completion.choices?.[0]?.message?.content || "";
         const optimizedPrompt = sanitizePromptOutput(optimizedRaw) || buildLocalOptimizedPrompt(payload);
         res.json({
+          engineVersion: PROMPT_ENGINE_VERSION,
+          piiFindings: payload.piiFindings || [],
           source: runtime.provider,
           model: completion.model,
           prompt: optimizedPrompt,
@@ -232,6 +251,8 @@ app.post("/api/optimize-prompt", async (req, res) => {
       } catch (error) {
         console.warn("openrouter optimize fallback", error.status || error.code || error.message);
         res.json({
+          engineVersion: PROMPT_ENGINE_VERSION,
+          piiFindings: payload.piiFindings || [],
           source: "fallback",
           warning: "Provider AI sedang limit/overload, memakai optimizer lokal.",
           prompt: buildLocalOptimizedPrompt(payload),
@@ -249,8 +270,7 @@ app.post("/api/optimize-prompt", async (req, res) => {
             content: [
               {
                 type: "input_text",
-                text:
-                  "You are PromptLab Optimizer Engine. Improve an existing prompt in Indonesian using the selected optimization mode as a meta-prompt layer. Preserve the original deliverable and return only the final optimized prompt ready to copy. Do not include a separate engine brief.",
+                text: buildOptimizerSystemPromptXml(payload),
               },
             ],
           },
@@ -267,6 +287,8 @@ app.post("/api/optimize-prompt", async (req, res) => {
       });
       const sanitizedOptimizerPrompt = sanitizePromptOutput(response.output_text);
       res.json({
+        engineVersion: PROMPT_ENGINE_VERSION,
+        piiFindings: payload.piiFindings || [],
         source: "openai",
         prompt: sanitizedOptimizerPrompt || buildLocalOptimizedPrompt(payload),
       });
@@ -274,6 +296,8 @@ app.post("/api/optimize-prompt", async (req, res) => {
     }
 
     res.json({
+      engineVersion: PROMPT_ENGINE_VERSION,
+      piiFindings: payload.piiFindings || [],
       source: "fallback",
       prompt: buildLocalOptimizedPrompt(payload),
     });
@@ -297,7 +321,17 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
       try {
         const generation = await createOpenRouterCompareCompletion(payload, runtime);
         const raw = generation.completion.choices?.[0]?.message?.content || "";
-        const result = parseCompareResult(raw) || buildLocalCompareResult(payload);
+        let result = parseCompareResult(raw) || buildLocalCompareResult(payload);
+        // v2: position-swap bias mitigation — run second judge dengan A/B di-flip
+        try {
+          const swappedPayload = buildSwappedComparePayload(payload);
+          const swappedGen = await createOpenRouterCompareCompletion(swappedPayload, runtime);
+          const swappedRaw = swappedGen.completion.choices?.[0]?.message?.content || "";
+          const swappedResult = parseCompareResult(swappedRaw);
+          if (swappedResult) result = mergeComparePositionSwap(result, swappedResult);
+        } catch (swapErr) {
+          console.warn("compare position-swap failed", swapErr.message);
+        }
         res.json({
           source: runtime.provider,
           model: generation.completion.model,
@@ -330,8 +364,7 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
             content: [
               {
                 type: "input_text",
-                text:
-                  "You are PromptLab Compare Judge. Evaluate two prompts as prompts, do not execute them. Return strict JSON only.",
+                text: buildCompareSystemPromptXml(payload),
               },
             ],
           },
@@ -346,7 +379,22 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
           },
         ],
       });
-      const result = parseCompareResult(response.output_text || "") || buildLocalCompareResult(payload);
+      let result = parseCompareResult(response.output_text || "") || buildLocalCompareResult(payload);
+      // v2: position-swap bias mitigation untuk OpenAI compare
+      try {
+        const swappedPayload = buildSwappedComparePayload(payload);
+        const swappedResp = await runtime.client.responses.create({
+          model: payload.modelSettings.primaryModel || runtime.defaultModel,
+          input: [
+            { role: "system", content: [{ type: "input_text", text: buildCompareSystemPromptXml(swappedPayload) }] },
+            { role: "user", content: [{ type: "input_text", text: buildCompareInstruction(swappedPayload) }] },
+          ],
+        });
+        const swappedResult = parseCompareResult(swappedResp.output_text || "");
+        if (swappedResult) result = mergeComparePositionSwap(result, swappedResult);
+      } catch (swapErr) {
+        console.warn("openai compare position-swap failed", swapErr.message);
+      }
       res.json({
         source: "openai",
         model: payload.modelSettings.primaryModel || runtime.defaultModel,
@@ -436,6 +484,31 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         if (isPromptTooShort(prompt)) {
           prompt = buildFallbackPrompt(payload, attachments);
         }
+
+        // v2: structure validator + retry untuk OpenRouter path.
+        const orStructCheck = validatePromptStructure(prompt);
+        if (!orStructCheck.valid && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
+          try {
+            const retryMessages = [
+              { role: "system", content: buildIntentSystemPromptXml(payload) },
+              { role: "user", content: buildStructureRetryInstruction(prompt, orStructCheck.missing) },
+            ];
+            const primaryModelLocal = payload.modelSettings?.primaryModel || runtime.defaultModel;
+            const timingLocal = getOpenRouterTiming(payload.generationMode);
+            const retryRes = await withTimeout(runtime.client.chat.completions.create(
+              { model: primaryModelLocal, messages: retryMessages, max_tokens: 2200, temperature: 0.4 },
+              { timeout: timingLocal.primaryTimeoutMs }
+            ), timingLocal.primaryTimeoutMs, primaryModelLocal);
+            const retriedRaw = retryRes.choices?.[0]?.message?.content || "";
+            const retried = sanitizePromptOutput(retriedRaw);
+            if (retried && !isPromptTooShort(retried)) {
+              prompt = retried;
+            }
+          } catch (retryError) {
+            console.warn("openrouter structure retry failed", retryError.message);
+          }
+        }
+
         let qualityNote = "";
         if (payload.qualityMode === "premium" && !isPromptTooShort(prompt) && remainingBudget() > PREMIUM_PASS_RESERVE_MS) {
           const primaryModel = payload.modelSettings?.primaryModel || runtime.defaultModel;
@@ -453,14 +526,23 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
           }
         }
 
+        // v2: dialect render + eval delta.
+        prompt = renderForModelDialect(prompt, payload.modelTarget);
+        const orEval = evalDelta(payload.narrative, prompt);
+
         const warnings = [];
         if (generation.usedFallbackModel) warnings.push(`Primary model sedang limit/error (${generation.primaryError}). Fallback model dipakai.`);
         if (retried) warnings.push("Output awal terlalu pendek, di-regenerate ulang.");
         if (qualityNote) warnings.push(qualityNote);
+        if (orEval.win) warnings.push(`Prompt skor naik +${orEval.delta} (baseline ${orEval.baseline} → optimized ${orEval.optimized}).`);
 
         await finishGenerateResponse(res, quotaSession, {
           eventType: "generate_prompt",
           metadata: {
+            engineVersion: PROMPT_ENGINE_VERSION,
+            evalBaseline: orEval.baseline,
+            evalDelta: orEval.delta,
+            evalOptimized: orEval.optimized,
             modelTarget: payload.modelTarget,
             outputType: payload.outputType,
             provider: runtime.provider,
@@ -469,6 +551,9 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
           outputText: prompt,
           tokenEstimate: quotaEstimate,
         }, {
+          engineVersion: PROMPT_ENGINE_VERSION,
+          evalDelta: orEval,
+          piiFindings: payload.piiFindings || [],
           source: runtime.provider,
           model: completion.model,
           modelStatus: generation.usedFallbackModel ? "fallback-model" : "primary-model",
@@ -521,8 +606,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       return;
     }
 
-    const systemPrompt =
-      "You are PromptLab Intent Engine, a senior prompt architect. Do not merely restate the raw user request. Decompose intent, expand the domain, infer missing professional implementation details carefully, lock the deliverable type, then create one excellent ready-to-use prompt in Indonesian. Preserve the user's requested deliverable exactly. If the user asks for PPT, create a prompt for PPT. If the user asks for a Word report, create a prompt for a Word-style report. Return only the final prompt, no chatty preface.";
+    const systemPrompt = buildIntentSystemPromptXml(payload);
 
     const callOpenAI = () => runtime.client.responses.create({
       model: payload.modelSettings.primaryModel || runtime.defaultModel,
@@ -548,6 +632,52 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       openaiPrompt = buildFallbackPrompt(payload, attachments);
     }
 
+    // v2: structure validator + 1 retry kalau section kritis hilang.
+    const structCheck = validatePromptStructure(openaiPrompt);
+    if (!structCheck.valid && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
+      try {
+        const retryRes = await runtime.client.responses.create({
+          model: payload.modelSettings.primaryModel || runtime.defaultModel,
+          input: [
+            { role: "system", content: [{ type: "input_text", text: systemPrompt }] },
+            { role: "user", content: [{ type: "input_text", text: buildStructureRetryInstruction(openaiPrompt, structCheck.missing) }] },
+          ],
+        });
+        const retried = sanitizePromptOutput(retryRes.output_text);
+        if (retried && !isPromptTooShort(retried)) {
+          openaiPrompt = retried;
+          openaiWarnings.push(`Auto-retry untuk melengkapi section: ${structCheck.missing.join(", ")}.`);
+        }
+      } catch (retryError) {
+        console.warn("openai structure retry failed", retryError.message);
+      }
+    }
+
+    // v2: self-consistency n=2 untuk high-stakes request.
+    if (shouldRunSelfConsistency(payload, remainingBudget()) && !isPromptTooShort(openaiPrompt)) {
+      try {
+        const altRes = await runtime.client.responses.create({
+          model: payload.modelSettings.primaryModel || runtime.defaultModel,
+          input: [
+            { role: "system", content: [{ type: "input_text", text: systemPrompt }] },
+            { role: "user", content: buildOpenAIContent(payload, attachments) },
+          ],
+        });
+        const altPrompt = sanitizePromptOutput(altRes.output_text);
+        if (altPrompt && !isPromptTooShort(altPrompt)) {
+          const picked = pickBestCandidate([openaiPrompt, altPrompt]);
+          if (picked.best && picked.best !== openaiPrompt) {
+            openaiPrompt = picked.best;
+            openaiWarnings.push(`Self-consistency: 2 kandidat dibandingkan, terbaik dipilih (skor ${picked.scores.join(" vs ")}).`);
+          }
+        }
+      } catch (selfErr) {
+        console.warn("openai self-consistency failed", selfErr.message);
+      }
+    }
+
+    // v2: critique-refine sekarang jalan untuk semua user (bukan premium-only).
+    // Premium tetap pakai pass lebih panjang via flag di runCritiqueRefinePass.
     if (payload.qualityMode === "premium" && !isPromptTooShort(openaiPrompt) && remainingBudget() > PREMIUM_PASS_RESERVE_MS) {
       try {
         const critiqueRes = await runtime.client.responses.create({
@@ -588,9 +718,18 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         console.warn("openai premium critique pass failed", refineError.message);
       }
     }
+    // v2: dialect render layer untuk target model spesifik.
+    openaiPrompt = renderForModelDialect(openaiPrompt, payload.modelTarget);
+    // v2: eval delta untuk telemetri win-rate.
+    const openaiEval = evalDelta(payload.narrative, openaiPrompt);
+    if (openaiEval.win) openaiWarnings.push(`Prompt skor naik +${openaiEval.delta} (baseline ${openaiEval.baseline} → optimized ${openaiEval.optimized}).`);
     await finishGenerateResponse(res, quotaSession, {
       eventType: "generate_prompt",
       metadata: {
+        engineVersion: PROMPT_ENGINE_VERSION,
+        evalBaseline: openaiEval.baseline,
+        evalDelta: openaiEval.delta,
+        evalOptimized: openaiEval.optimized,
         modelTarget: payload.modelTarget,
         outputType: payload.outputType,
         provider: runtime.provider,
@@ -599,6 +738,9 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       outputText: openaiPrompt,
       tokenEstimate: quotaEstimate,
     }, {
+      engineVersion: PROMPT_ENGINE_VERSION,
+      evalDelta: openaiEval,
+      piiFindings: payload.piiFindings || [],
       source: "openai",
       prompt: openaiPrompt,
       warning: openaiWarnings.join(" "),
@@ -639,13 +781,17 @@ export {
 };
 
 function normalizePayload(body) {
+  const rawNarrative = String(body.narrative || "").slice(0, 6000);
+  // v2: PII/secret guardrail — redact secret keys & token, biarkan email/phone warn-only.
+  const { sanitized: cleanNarrative, findings: piiFindings } = scrubPII(rawNarrative, { mode: "redact" });
   return {
     category: String(body.category || "Marketing").slice(0, 80),
     generationMode: normalizeGenerationMode(body.generationMode),
     modelSettings: normalizeModelSettings(body),
     modelTarget: String(body.model || "ChatGPT").slice(0, 80),
-    narrative: String(body.narrative || "").slice(0, 6000),
+    narrative: cleanNarrative,
     outputType: String(body.outputType || "").slice(0, 80),
+    piiFindings,
     qualityMode: normalizeQualityMode(body.qualityMode),
     tone: String(body.tone || "Profesional").slice(0, 80),
   };
@@ -766,11 +912,14 @@ Output: prompt final saja.`,
 }
 
 function normalizeOptimizePayload(body) {
+  const rawPrompt = String(body.prompt || "").slice(0, 12000);
+  const { sanitized: cleanPrompt, findings: piiFindings } = scrubPII(rawPrompt, { mode: "redact" });
   return {
     generationMode: normalizeGenerationMode(body.generationMode),
     mode: String(body.mode || "Lebih Jelas").slice(0, 80),
     modelSettings: normalizeModelSettings(body),
-    prompt: String(body.prompt || "").slice(0, 12000),
+    prompt: cleanPrompt,
+    piiFindings,
     targetModel: String(body.targetModel || "Claude").slice(0, 80),
     tone: String(body.tone || "Profesional").slice(0, 80),
   };
@@ -1137,8 +1286,7 @@ async function createOpenRouterCompletion(payload, attachments, runtime = getRun
   const messages = [
     {
       role: "system",
-      content:
-        "You are PromptLab Intent Engine, a senior prompt architect. Do not merely restate the raw user request. Decompose intent, expand the domain, infer missing professional implementation details carefully, lock the deliverable type, then create one excellent ready-to-use prompt in Indonesian. Preserve the user's requested deliverable exactly. If the user selects Application Code/Kode Aplikasi, create a prompt for building runnable application code. If the user asks for PPT, create a prompt for PPT. If the user asks for a Word report, create a prompt for a Word-style report. Return only the final prompt, no chatty preface.",
+      content: buildIntentSystemPromptXml(payload),
     },
     {
       role: "user",
@@ -1194,8 +1342,7 @@ async function createOpenRouterOptimizeCompletion(payload, runtime = getRuntimeP
   const messages = [
     {
       role: "system",
-      content:
-        "You are PromptLab Optimizer Engine, a senior prompt architect. Improve the user's prompt in Indonesian using the selected optimization mode as a meta-prompt layer. Preserve the original intent, do not change the requested deliverable, and return only the final optimized prompt ready to copy. Do not include a separate engine brief.",
+      content: buildOptimizerSystemPromptXml(payload),
     },
     {
       role: "user",
@@ -1235,8 +1382,7 @@ async function createOpenRouterCompareCompletion(payload, runtime = getRuntimePr
   const messages = [
     {
       role: "system",
-      content:
-        "You are PromptLab Compare Judge. Evaluate two prompts as prompts, do not execute them. Return strict JSON only.",
+      content: buildCompareSystemPromptXml(payload),
     },
     {
       role: "user",
@@ -1365,6 +1511,7 @@ function buildOptimizerInstruction(payload) {
     },
     []
   );
+  const fewShot = getFewShotForMode(payload.mode);
   return `Optimalkan prompt berikut.
 
 Mode optimasi:
@@ -1379,6 +1526,9 @@ Tone:
 ${optimizerEngine}
 
 ${specInstruction}
+
+Few-shot example (mode-specific, gunakan sebagai inspirasi struktur — JANGAN salin literal):
+${fewShot}
 
 Prompt lama:
 ${payload.prompt}
@@ -1483,6 +1633,22 @@ Render rule:
 }
 
 function getDomainPromptPack(payload = {}) {
+  // v2: pakai expanded pack (17 domain, multi-domain detection).
+  // Fallback ke legacy detector kalau primary domain "generic prompt".
+  try {
+    const expanded = getExpandedDomainPack(payload);
+    if (expanded.primary && expanded.domains.primary !== "generic prompt") {
+      const merged = { ...expanded.primary };
+      if (expanded.secondary) {
+        merged.requirements = [...merged.requirements, `(secondary: ${expanded.secondary.domain}) ${expanded.secondary.requirements[0] || ""}`];
+        merged.constraints = [...merged.constraints, `(secondary: ${expanded.secondary.domain}) ${expanded.secondary.constraints[0] || ""}`];
+      }
+      return merged;
+    }
+  } catch (error) {
+    console.warn("expanded domain pack failed, falling back", error.message);
+  }
+
   const text = `${payload.narrative || ""} ${payload.category || ""} ${payload.outputType || ""}`.toLowerCase();
   const asksApp =
     /\b(aplikasi|app|web app|website|dashboard|sistem|platform|software|frontend|backend|full-stack|fullstack|tool|editor|builder|kasir|pos)\b/i.test(text) ||

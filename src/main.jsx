@@ -1069,6 +1069,11 @@ function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [warningMessage, setWarningMessage] = useState("");
+  // v2 engine telemetry
+  const [engineVersion, setEngineVersion] = useState("");
+  const [evalDelta, setEvalDelta] = useState(null);
+  const [piiFindings, setPiiFindings] = useState([]);
+  const [compareBiasMitigation, setCompareBiasMitigation] = useState("");
   const [copied, setCopied] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [actionToast, setActionToast] = useState("");
@@ -1479,6 +1484,9 @@ function App() {
       setGenerationStatus(data.modelStatus || data.source || "server");
       applyServerQuota(data.quota);
       setWarningMessage([uploadPlan.warning, data.warning].filter(Boolean).join(" "));
+      setEngineVersion(data.engineVersion || "");
+      setEvalDelta(data.evalDelta || null);
+      setPiiFindings(Array.isArray(data.piiFindings) ? data.piiFindings : []);
       return data.prompt || localPrompt;
     } catch (error) {
       const message = error.message || "Backend belum tersedia, memakai prompt lokal.";
@@ -1529,6 +1537,8 @@ function App() {
       setOptimizerResult(data.prompt || buildLocalOptimizedPrompt(rawPrompt, mode, model, tone));
       setOptimizerSource(data.source || "server");
       setOptimizerWarning(data.warning || "");
+      setEngineVersion(data.engineVersion || engineVersion);
+      setPiiFindings(Array.isArray(data.piiFindings) ? data.piiFindings : []);
       return data.prompt;
     } catch (error) {
       const fallback = buildLocalOptimizedPrompt(rawPrompt, mode, model, tone);
@@ -1564,6 +1574,7 @@ function App() {
       setCompareResult(data.result || null);
       setCompareSource(data.model || data.source || "AI judge");
       setCompareWarning(data.warning || "");
+      setCompareBiasMitigation(data.result?.bias_mitigation || "");
       return data.result;
     } catch (error) {
       const fallback = buildLocalCompareResult(compareA, compareB);
@@ -1781,6 +1792,11 @@ function App() {
     optimizerError,
     optimizerWarning,
     optimizePrompt,
+    // v2 engine telemetry
+    engineVersion,
+    evalDelta,
+    piiFindings,
+    compareBiasMitigation,
     clearOptimizerResult,
   };
 
@@ -2129,12 +2145,160 @@ function V2PageIntro({ eyebrow, title, copy, children }) {
   );
 }
 
+/**
+ * v2 engine telemetry badges:
+ * - Engine version chip
+ * - Eval delta banner (baseline → optimized score)
+ * - PII redaction notice
+ * Tampil hanya kalau ada data.
+ */
+function EngineMetaBadges({ engineVersion, evalDelta, piiFindings }) {
+  const hasVersion = Boolean(engineVersion);
+  const hasEval = evalDelta && Number.isFinite(evalDelta.delta);
+  const blockingPii = Array.isArray(piiFindings)
+    ? piiFindings.filter((finding) => finding && finding.blocking)
+    : [];
+  const warnPii = Array.isArray(piiFindings)
+    ? piiFindings.filter((finding) => finding && !finding.blocking)
+    : [];
+  if (!hasVersion && !hasEval && blockingPii.length === 0 && warnPii.length === 0) return null;
+  return (
+    <div className="v2-engine-meta" style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+      {hasVersion && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "3px 10px",
+              borderRadius: 999,
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: 0.4,
+              background: "rgba(99, 102, 241, 0.12)",
+              color: "#4f46e5",
+              border: "1px solid rgba(99, 102, 241, 0.3)",
+            }}
+            title="Versi PromptLab Engine yang memproses request ini"
+          >
+            ENGINE {engineVersion}
+          </span>
+          {hasEval && evalDelta.win && (
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "3px 10px",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 600,
+                background: "rgba(34, 197, 94, 0.12)",
+                color: "#15803d",
+                border: "1px solid rgba(34, 197, 94, 0.3)",
+              }}
+              title={`Baseline ${evalDelta.baseline} → Optimized ${evalDelta.optimized}`}
+            >
+              +{evalDelta.delta} PROMPT SCORE
+            </span>
+          )}
+        </div>
+      )}
+      {hasEval && evalDelta.win && (
+        <p
+          style={{
+            margin: 0,
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(34, 197, 94, 0.08)",
+            border: "1px solid rgba(34, 197, 94, 0.25)",
+            color: "#15803d",
+            fontSize: 13,
+          }}
+        >
+          ✨ Prompt-mu di-upgrade dari skor <strong>{evalDelta.baseline}</strong> →{" "}
+          <strong>{evalDelta.optimized}</strong> (+{evalDelta.delta} poin). Ini perbandingan struktur
+          prompt mentah-mu vs hasil PromptLab Engine.
+        </p>
+      )}
+      {blockingPii.length > 0 && (
+        <p
+          style={{
+            margin: 0,
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(234, 179, 8, 0.10)",
+            border: "1px solid rgba(234, 179, 8, 0.35)",
+            color: "#854d0e",
+            fontSize: 13,
+          }}
+        >
+          🛡️ Demi keamanan, kami men-redact{" "}
+          {blockingPii.map((finding, index) => (
+            <span key={finding.id}>
+              <strong>
+                {finding.count}× {finding.label}
+              </strong>
+              {index < blockingPii.length - 1 ? ", " : ""}
+            </span>
+          ))}{" "}
+          dari prompt-mu sebelum dikirim ke AI provider.
+        </p>
+      )}
+      {warnPii.length > 0 && (
+        <p
+          style={{
+            margin: 0,
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(59, 130, 246, 0.08)",
+            border: "1px solid rgba(59, 130, 246, 0.25)",
+            color: "#1d4ed8",
+            fontSize: 13,
+          }}
+        >
+          ℹ️ Terdeteksi data pribadi (
+          {warnPii.map((finding, index) => (
+            <span key={finding.id}>
+              {finding.count}× {finding.label}
+              {index < warnPii.length - 1 ? ", " : ""}
+            </span>
+          ))}
+          ). Tidak diblokir — pastikan kamu memang ingin mengirimnya ke AI.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Caption kecil untuk hasil Compare Judge — menampilkan bias mitigation aktif.
+ */
+function CompareBiasNote({ biasMitigation }) {
+  if (!biasMitigation) return null;
+  if (biasMitigation === "position-swap-averaged") {
+    return (
+      <p
+        style={{
+          margin: "8px 0 0",
+          fontSize: 12,
+          color: "#6b7280",
+          fontStyle: "italic",
+        }}
+      >
+        ⚖️ Judge dijalankan 2× dengan posisi A/B ditukar — skor di-rata-rata untuk netralitas.
+      </p>
+    );
+  }
+  return null;
+}
+
 function V2Builder(props) {
   const {
     category, setCategory, tone, setTone, model, setModel, outputType, setOutputType,
     narrative, setNarrative, attachments, addAttachments, removeAttachment, prompt,
     metrics, generationStatus, generationSource, generationModel, warningMessage, errorMessage, copied,
     copyText, savePrompt, generatePrompt, isGenerating, exportStatus, exportFile,
+    engineVersion, evalDelta, piiFindings,
   } = props;
   return (
     <div className="v2-screen">
@@ -2193,6 +2357,11 @@ function V2Builder(props) {
             </V2ActionBtn>
           </div>
           {isGenerating && <V2GenerateLoader attachments={attachments} model={model} outputType={outputType} />}
+          <EngineMetaBadges
+            engineVersion={engineVersion}
+            evalDelta={evalDelta}
+            piiFindings={piiFindings}
+          />
           {warningMessage && <p className="v2-note warn">{warningMessage}</p>}
           {errorMessage && <p className="v2-note error">{errorMessage}</p>}
         </div>
@@ -2670,6 +2839,7 @@ function V2Compare({
   compareError,
   isComparing,
   comparePrompts,
+  compareBiasMitigation,
 }) {
   const prompts = [compareA, compareB].filter(Boolean);
   const basePrompt = prompts[0] || "Paste prompt di panel A/B untuk membandingkan kualitas instruksi.";
@@ -2751,6 +2921,7 @@ function V2Compare({
           );
         })}
         {compareResult?.summary && <p className="v2-judge-summary">{compareResult.summary}</p>}
+        <CompareBiasNote biasMitigation={compareBiasMitigation} />
         {compareWarning && <p className="v2-note warn">{compareWarning}</p>}
         {compareError && <p className="v2-note error">{compareError}</p>}
         {isComparing && (
