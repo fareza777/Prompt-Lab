@@ -45,6 +45,12 @@ import {
   getLanguageMeta,
   resolveOutputLanguage,
 } from "./promptLanguage.js";
+import {
+  isLikelyAndroidTwa,
+  isPlayBillingAvailable,
+  purchasePlayPlan,
+  verifyPlayPurchaseOnServer,
+} from "./playBilling.js";
 import { dismissStartupSplash, markStartupSplashStarted } from "./startupSplash";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
@@ -1126,6 +1132,8 @@ function App() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizerError, setOptimizerError] = useState("");
   const [optimizerWarning, setOptimizerWarning] = useState("");
+  const [billingBusy, setBillingBusy] = useState(false);
+  const [billingMessage, setBillingMessage] = useState("");
   const [exportStatus, setExportStatus] = useState("");
   const [library, setLibrary] = useState(() => {
     try {
@@ -1419,6 +1427,43 @@ function App() {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  async function getAccessToken() {
+    if (!supabase) return "";
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token || "";
+  }
+
+  async function upgradeViaPlayBilling(planName) {
+    if (!accountState.userId) {
+      setBillingMessage("Sign in dulu untuk upgrade.");
+      return;
+    }
+    if (!isPlayBillingAvailable()) {
+      setBillingMessage(
+        isLikelyAndroidTwa()
+          ? "Play Billing belum tersedia. Install PromptLab dari Play Store (closed testing), bukan browser biasa."
+          : "Upgrade hanya dari app Android PromptLab di Google Play."
+      );
+      return;
+    }
+    setBillingBusy(true);
+    setBillingMessage("");
+    try {
+      const { productId, purchaseToken } = await purchasePlayPlan(planName);
+      const token = await getAccessToken();
+      if (!token) throw new Error("Session habis. Sign in ulang.");
+      const data = await verifyPlayPurchaseOnServer(apiBase, token, { productId, purchaseToken });
+      if (data.quota) applyServerQuota(data.quota);
+      else await loadUserProfile({ id: accountState.userId, email: accountState.email });
+      setBillingMessage(data.message || `Upgrade ke ${planName} berhasil.`);
+      flashAction(`Plan ${planName} active`);
+    } catch (error) {
+      setBillingMessage(error.message || "Upgrade gagal.");
+    } finally {
+      setBillingBusy(false);
+    }
   }
 
   function applyServerQuota(quota) {
@@ -1816,6 +1861,10 @@ function App() {
     piiFindings,
     compareBiasMitigation,
     clearOptimizerResult,
+    billingBusy,
+    billingMessage,
+    upgradeViaPlayBilling,
+    playBillingReady: isPlayBillingAvailable(),
   };
 
   return <V2App {...shared} />;
@@ -2955,6 +3004,10 @@ function V2Settings(props) {
     signInWithPassword,
     signUpWithPassword,
     signOut,
+    billingBusy,
+    billingMessage,
+    upgradeViaPlayBilling,
+    playBillingReady,
   } = props;
   const fallbackModels = modelSettings.fallbackModels
     .split(/[\n,]/)
@@ -3004,6 +3057,10 @@ function V2PublicSettings(props) {
     fallbackModels,
     providerReady,
     quotaPercent,
+    billingBusy,
+    billingMessage,
+    upgradeViaPlayBilling,
+    playBillingReady,
   } = props;
   const [section, setSection] = useState("Account");
   const [authMode, setAuthMode] = useState("sign-in");
@@ -3147,20 +3204,37 @@ function V2PublicSettings(props) {
               <span className="v2-score-badge">{accountState.plan}</span>
             </div>
             <div className="v2-plan-grid premium">
-              {Object.entries(membershipPlans).map(([plan, info]) => (
-                <button
-                  key={plan}
-                  className={`v2-plan-card ${accountState.plan === plan ? "active" : ""} ${plan === "Business" ? "featured" : ""}`}
-                  type="button"
-                  disabled={accountState.plan !== plan}
-                >
-                  <span>{plan}</span>
-                  <strong>{info.price}</strong>
-                  <small>{info.detail}</small>
-                  <em>{accountState.plan === plan ? "Current plan" : "Unlock via Play Billing"}</em>
-                </button>
-              ))}
+              {Object.entries(membershipPlans).map(([plan, info]) => {
+                const isCurrent = accountState.plan === plan;
+                const canUpgrade = plan !== "Free" && !isCurrent;
+                return (
+                  <button
+                    key={plan}
+                    className={`v2-plan-card ${isCurrent ? "active" : ""} ${plan === "Business" ? "featured" : ""}`}
+                    type="button"
+                    disabled={isCurrent || billingBusy || plan === "Free"}
+                    onClick={() => {
+                      if (canUpgrade) upgradeViaPlayBilling(plan);
+                    }}
+                  >
+                    <span>{plan}</span>
+                    <strong>{info.price}</strong>
+                    <small>{info.detail}</small>
+                    <em>
+                      {isCurrent
+                        ? "Current plan"
+                        : plan === "Free"
+                          ? "Default tier"
+                          : playBillingReady
+                            ? "Tap to subscribe via Play"
+                            : "Android app only"}
+                    </em>
+                  </button>
+                );
+              })}
             </div>
+            {billingMessage && <p className="v2-note warn">{billingMessage}</p>}
+            {billingBusy && <p className="v2-note">Processing Play purchase…</p>}
             <div className="v2-quota-meter">
               <div><span>Quota</span><strong>{(accountState.quotaUsed / 1000).toFixed(1)}k / {(accountState.quotaLimit / 1000).toFixed(0)}k tokens</strong></div>
               <i><b style={{ width: `${quotaPercent}%` }} /></i>

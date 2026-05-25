@@ -36,6 +36,10 @@ import {
   getLanguageMeta,
   resolveOutputLanguage,
 } from "../src/promptLanguage.js";
+import {
+  getPlanForProductId,
+  verifyPlaySubscriptionPurchase,
+} from "./playBillingGoogle.js";
 
 const app = express();
 
@@ -241,6 +245,89 @@ app.post("/api/export/pptx", async (req, res) => {
   } catch (error) {
     console.error("pptx export failed", error.message);
     res.status(500).json({ error: "Gagal membuat file PPTX." });
+  }
+});
+
+app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), async (req, res) => {
+  try {
+    const productId = String(req.body?.productId || "").trim();
+    const purchaseToken = String(req.body?.purchaseToken || "").trim();
+    if (!productId || !purchaseToken) {
+      res.status(400).json({ error: "productId dan purchaseToken wajib." });
+      return;
+    }
+
+    const planConfig = getPlanForProductId(productId);
+    if (!planConfig) {
+      res.status(400).json({ error: "Product ID tidak dikenali." });
+      return;
+    }
+
+    const quotaSession = await getQuotaSession(req, 0);
+    const verification = await verifyPlaySubscriptionPurchase({
+      subscriptionId: productId,
+      purchaseToken,
+    });
+
+    if (!verification.ok) {
+      res.status(402).json({ error: verification.error || "Verifikasi Google Play gagal." });
+      return;
+    }
+
+    const admin = createServiceRoleSupabaseClient();
+    if (!admin || !quotaSession?.user?.id) {
+      res.status(503).json({ error: "Server membership belum siap." });
+      return;
+    }
+
+    const userId = quotaSession.user.id;
+    const { error: profileError } = await admin
+      .from("profiles")
+      .update({
+        plan: planConfig.plan,
+        quota_limit: planConfig.quotaLimit,
+        play_billing: "Google Play",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
+
+    if (profileError) {
+      res.status(503).json({ error: `Gagal memperbarui plan: ${profileError.message}` });
+      return;
+    }
+
+    await admin.from("membership_events").insert({
+      user_id: userId,
+      event_type: "subscription_verified",
+      plan: planConfig.plan,
+      provider: "google_play",
+      metadata: {
+        productId,
+        orderId: verification.orderId || "",
+        expiryTimeMillis: verification.expiryTimeMillis || null,
+      },
+    });
+
+    const { data: profile, error: readError } = await admin
+      .from("profiles")
+      .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (readError || !profile) {
+      res.json({ ok: true, plan: planConfig.plan, message: "Plan diperbarui." });
+      return;
+    }
+
+    res.json({
+      ok: true,
+      plan: planConfig.plan,
+      message: `Berhasil upgrade ke ${planConfig.plan}.`,
+      quota: publicQuota(profile),
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.publicMessage || error.message || "Billing error." });
   }
 });
 

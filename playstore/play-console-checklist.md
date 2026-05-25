@@ -40,3 +40,18 @@ Full description:
 - Product IDs:
   - `promptlab_pro_monthly`
   - `promptlab_business_monthly`
+- Setup guide: `playstore/MONETIZATION_SETUP.md` (license testing, service account, checklist)
+
+## License testing
+
+- Play Console → **Setup** → **License testing** → add tester Gmail accounts
+- Same accounts can test subscription purchase without real charges (after billing wired in app)
+
+## Store checklist (point 5)
+
+- [ ] Category: **Productivity**
+- [ ] Store listing assets from `playstore/assets/`
+- [ ] Privacy URL live
+- [ ] Data safety form
+- [ ] Content rating questionnaire
+- [ ] Closed test: 12 opted-in, 14 days
