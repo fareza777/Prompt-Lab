@@ -52,6 +52,13 @@ import {
   purchasePlayPlan,
   verifyPlayPurchaseOnServer,
 } from "./playBilling.js";
+import {
+  canExportFormat,
+  canUseFeature,
+  getEntitlements,
+  MEMBERSHIP_MARKETING,
+  upgradeMessageForFeature,
+} from "./planEntitlements.js";
 import { dismissStartupSplash, markStartupSplashStarted } from "./startupSplash";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
@@ -64,8 +71,6 @@ const outputTypes = ["Application Code", "Word Document", "PPT", "Technical Desi
 const optimizerModes = ["Clearer", "Shorter", "More Detailed", "Academic", "Marketing", "Coding"];
 const generationModes = ["Fast", "Balanced", "Patient Free"];
 const providerOptions = ["openrouter", "openai", "custom"];
-const LIBRARY_LIMIT = 100;
-const CUSTOM_TEMPLATE_LIMIT = 40;
 const defaultAccountState = {
   userId: "",
   email: "",
@@ -77,23 +82,16 @@ const defaultAccountState = {
   quotaReset: "May 31",
   playBilling: "Not connected",
 };
-const membershipPlans = {
-  Free: {
-    quota: 50000,
-    price: "Rp0",
-    detail: "Basic generation, local library, manual exports.",
-  },
-  Pro: {
-    quota: 500000,
-    price: "Rp49k/mo",
-    detail: "Higher quota, OCR priority, DOCX/PPTX exports, saved templates.",
-  },
-  Business: {
-    quota: 2000000,
-    price: "Rp199k/mo",
-    detail: "Team workspace, shared library, admin quota, priority routing.",
-  },
-};
+const membershipPlans = Object.fromEntries(
+  Object.entries(MEMBERSHIP_MARKETING).map(([plan, marketing]) => [
+    plan,
+    {
+      ...marketing,
+      quota: getEntitlements(plan).quotaLimit,
+      highlights: marketing.highlights,
+    },
+  ])
+);
 const defaultModelSettings = {
   apiKey: "",
   baseUrl: "https://openrouter.ai/api/v1",
@@ -728,7 +726,7 @@ function normalizeCustomTemplates(raw) {
       createdAt: item.createdAt || Date.now(),
     }))
     .filter((item) => item.prompt.trim())
-    .slice(0, CUSTOM_TEMPLATE_LIMIT);
+    .slice(0, getEntitlements("Business").customTemplateLimit);
 }
 
 function normalizeAccountState(raw) {
@@ -1173,6 +1171,10 @@ function App() {
   const apiBase = import.meta.env.DEV
     ? import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787"
     : "";
+  const entitlements = useMemo(() => getEntitlements(accountState.plan), [accountState.plan]);
+  const libraryLimit = entitlements.libraryLimit;
+  const customTemplateLimit = entitlements.customTemplateLimit;
+  const maxAttachments = entitlements.maxAttachments;
 
   useEffect(() => {
     const syncPlayBilling = () => setPlayBillingReady(isPlayBillingAvailable());
@@ -1188,29 +1190,21 @@ function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("promptlab-library", JSON.stringify(library.slice(0, LIBRARY_LIMIT)));
-  }, [library]);
+    setLibrary((items) => items.slice(0, libraryLimit));
+    setCustomTemplates((items) => items.slice(0, customTemplateLimit));
+  }, [libraryLimit, customTemplateLimit]);
 
   useEffect(() => {
-    localStorage.setItem("promptlab-custom-templates", JSON.stringify(customTemplates.slice(0, CUSTOM_TEMPLATE_LIMIT)));
-  }, [customTemplates]);
+    localStorage.setItem("promptlab-library", JSON.stringify(library.slice(0, libraryLimit)));
+  }, [library, libraryLimit]);
+
+  useEffect(() => {
+    localStorage.setItem("promptlab-custom-templates", JSON.stringify(customTemplates.slice(0, customTemplateLimit)));
+  }, [customTemplates, customTemplateLimit]);
 
   useEffect(() => {
     localStorage.setItem("promptlab-account", JSON.stringify(accountState));
   }, [accountState]);
-
-  useEffect(() => {
-    const check = () => setPlayBillingReady(isPlayBillingAvailable());
-    check();
-    window.addEventListener("focus", check);
-    const interval = setInterval(check, 2500);
-    const stop = setTimeout(() => clearInterval(interval), 45000);
-    return () => {
-      window.removeEventListener("focus", check);
-      clearInterval(interval);
-      clearTimeout(stop);
-    };
-  }, []);
 
   useEffect(() => {
     if (!supabase) return;
@@ -1323,7 +1317,7 @@ function App() {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    setLibrary((items) => [item, ...items].slice(0, LIBRARY_LIMIT));
+    setLibrary((items) => [item, ...items].slice(0, libraryLimit));
     setSelectedLibraryId(item.id);
     flashAction("Saved to library");
     return true;
@@ -1343,7 +1337,7 @@ function App() {
       custom: true,
       createdAt: Date.now(),
     };
-    setCustomTemplates((items) => [item, ...items].slice(0, CUSTOM_TEMPLATE_LIMIT));
+    setCustomTemplates((items) => [item, ...items].slice(0, customTemplateLimit));
     return item;
   }
 
@@ -1537,7 +1531,7 @@ function App() {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    setLibrary((items) => [copy, ...items].slice(0, LIBRARY_LIMIT));
+    setLibrary((items) => [copy, ...items].slice(0, libraryLimit));
     setSelectedLibraryId(copy.id);
   }
 
@@ -1618,10 +1612,19 @@ function App() {
     setOptimizerError("");
     setOptimizerWarning("");
 
+    if (!canUseFeature(accountState.plan, "aiOptimize")) {
+      const fallback = buildLocalOptimizedPrompt(rawPrompt, mode, model, tone);
+      setOptimizerResult(fallback);
+      setOptimizerSource("local");
+      setOptimizerWarning(upgradeMessageForFeature("aiOptimize"));
+      setIsOptimizing(false);
+      return fallback;
+    }
+
     try {
       const response = await fetch(`${apiBase}/api/optimize-prompt`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
         body: JSON.stringify({
           prompt: rawPrompt,
           mode,
@@ -1655,10 +1658,19 @@ function App() {
     setCompareError("");
     setCompareWarning("");
 
+    if (!canUseFeature(accountState.plan, "aiCompare")) {
+      const fallback = buildLocalCompareResult(compareA, compareB);
+      setCompareResult(fallback);
+      setCompareSource("Local judge");
+      setCompareWarning(upgradeMessageForFeature("aiCompare"));
+      setIsComparing(false);
+      return fallback;
+    }
+
     try {
       const response = await fetch(`${apiBase}/api/compare-prompts`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
         body: JSON.stringify({
           promptA: compareA,
           promptB: compareB,
@@ -1705,7 +1717,13 @@ function App() {
         };
       })
     );
-    setAttachments((items) => [...nextFiles, ...items].slice(0, 8));
+    setAttachments((items) => {
+      const merged = [...nextFiles, ...items].slice(0, maxAttachments);
+      if (merged.length >= maxAttachments && nextFiles.length > 0) {
+        setWarningMessage(`Maksimal ${maxAttachments} lampiran untuk plan ${accountState.plan}. Upgrade untuk lebih banyak.`);
+      }
+      return merged;
+    });
   }
 
   function removeAttachment(id) {
@@ -1769,17 +1787,28 @@ function App() {
 
   async function exportFile(format, content = prompt, titleSeed = narrative) {
     const formatLabel = format.toUpperCase();
+    const feature = format === "pptx" ? "pptxExport" : "docxExport";
+    if (!canExportFormat(accountState.plan, format)) {
+      const message = upgradeMessageForFeature(feature);
+      setBillingMessage(message);
+      setExportStatus("");
+      return;
+    }
     try {
       setExportStatus(`Preparing ${formatLabel}...`);
+      const authHeaders = await getAuthHeaders();
       const response = await fetch(`${apiBase}/api/export/${format}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({
           title: titleSeed.trim().split(/\s+/).slice(0, 10).join(" ") || "PromptLab Export",
           content,
         }),
       });
-      if (!response.ok) throw new Error(`Failed to export ${format.toUpperCase()}.`);
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || `Failed to export ${formatLabel}.`);
+      }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -1833,10 +1862,12 @@ function App() {
     generatePrompt,
     isGenerating,
     library,
-    libraryLimit: LIBRARY_LIMIT,
+    libraryLimit,
     templates: allTemplates,
     customTemplates,
-    customTemplateLimit: CUSTOM_TEMPLATE_LIMIT,
+    customTemplateLimit,
+    entitlements,
+    maxAttachments,
     saveCustomTemplate,
     deleteCustomTemplate,
     filteredLibrary,
@@ -2365,8 +2396,10 @@ function V2Builder(props) {
     narrative, setNarrative, attachments, addAttachments, removeAttachment, prompt,
     metrics, generationStatus, generationSource, generationModel, warningMessage, errorMessage, copied,
     copyText, savePrompt, generatePrompt, isGenerating, exportStatus, exportFile,
-    engineVersion, piiFindings,
+    engineVersion, piiFindings, entitlements, accountState,
   } = props;
+  const canDocx = entitlements?.docxExport;
+  const canPptx = entitlements?.pptxExport;
   return (
     <div className="v2-screen">
       <V2PageIntro
@@ -2587,9 +2620,9 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
           </div>
         )}
         <div className="v2-actions wrap">
-          <button className="v2-btn" onClick={() => exportFile("docx", prompt, narrative)}><FileText size={16} />DOCX</button>
-          <button className="v2-btn" onClick={() => exportFile("pptx", prompt, narrative)}><BookOpenText size={16} />PPTX</button>
-          <span className="v2-small">{exportStatus || "Export saves the final prompt as a working file."}</span>
+          <button className="v2-btn" disabled={!canDocx} title={!canDocx ? upgradeMessageForFeature("docxExport") : undefined} onClick={() => exportFile("docx", prompt, narrative)}><FileText size={16} />DOCX</button>
+          <button className="v2-btn" disabled={!canPptx} title={!canPptx ? upgradeMessageForFeature("pptxExport") : undefined} onClick={() => exportFile("pptx", prompt, narrative)}><BookOpenText size={16} />PPTX</button>
+          <span className="v2-small">{exportStatus || (canDocx ? "Export saves the final prompt as a working file." : "Export DOCX/PPTX — plan Pro+")}</span>
         </div>
         {exportStatus?.startsWith("Preparing") && (
           <V2MiniPipeline
@@ -2603,7 +2636,8 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
   );
 }
 
-function V2Optimizer({ optimizerResult, isOptimizing, optimizerError, optimizerWarning, optimizePrompt, clearOptimizerResult, copyText, savePrompt, exportFile }) {
+function V2Optimizer({ optimizerResult, isOptimizing, optimizerError, optimizerWarning, optimizePrompt, clearOptimizerResult, copyText, savePrompt, exportFile, entitlements }) {
+  const canDocx = entitlements?.docxExport;
   const [rawPrompt, setRawPrompt] = useState("Make this prompt stronger for Instagram content about a milk coffee product.");
   const [mode, setMode] = useState("Clearer");
   const result = optimizerResult || buildLocalOptimizedPrompt(rawPrompt, mode, "Claude", "Professional");
@@ -2679,7 +2713,7 @@ function V2Optimizer({ optimizerResult, isOptimizing, optimizerError, optimizerW
             <V2ActionBtn className="v2-btn" onAction={() => savePrompt(result, rawPrompt)} successLabel={<><Check size={16} />Saved</>}>
               <Save size={16} />Save
             </V2ActionBtn>
-            <button className="v2-btn" onClick={() => exportFile("docx", result, rawPrompt)}><FileText size={16} />DOCX</button>
+            <button className="v2-btn" disabled={!canDocx} title={!canDocx ? upgradeMessageForFeature("docxExport") : undefined} onClick={() => exportFile("docx", result, rawPrompt)}><FileText size={16} />DOCX</button>
           </div>
         </div>
       </section>
@@ -2813,8 +2847,9 @@ function V2Library(props) {
     filteredLibrary, selectedLibrary, selectedLibraryId, setSelectedLibraryId, search, setSearch,
     updateLibraryItem, deleteLibraryItem, duplicateLibraryItem, copyText, setCompareA, setCompareB,
     setActive, setNarrative, setCategory, setOutputType, exportFile,
-    libraryLimit, copyStatus,
+    libraryLimit, copyStatus, entitlements,
   } = props;
+  const canDocx = entitlements?.docxExport;
   const currentItem = filteredLibrary.find((item) => item.id === selectedLibraryId) || filteredLibrary[0] || selectedLibrary;
   const rows = filteredLibrary.slice(0, 8);
   const totalWords = filteredLibrary.reduce((sum, item) => sum + countWords(item.content), 0);
@@ -2875,7 +2910,7 @@ function V2Library(props) {
                   <Clipboard size={16} />Copy
                 </V2ActionBtn>
                 <button className="v2-btn" onClick={() => { setCompareA(currentItem.content); setActive("Compare"); }}><ArrowRightLeft size={16} />Compare</button>
-                <button className="v2-btn" onClick={() => exportFile("docx", currentItem.content, currentItem.title)}><FileText size={16} />DOCX</button>
+                <button className="v2-btn" disabled={!canDocx} title={!canDocx ? upgradeMessageForFeature("docxExport") : undefined} onClick={() => exportFile("docx", currentItem.content, currentItem.title)}><FileText size={16} />DOCX</button>
                 <button className="v2-btn" onClick={() => duplicateLibraryItem(currentItem)}><Plus size={16} />Duplicate</button>
                 <button className="v2-btn danger" onClick={() => deleteLibraryItem(currentItem.id)}><Trash2 size={16} />Delete</button>
               </div>
@@ -3100,6 +3135,9 @@ function V2PublicSettings(props) {
     upgradeViaPlayBilling,
     playBillingReady,
     playBillingHint,
+    libraryLimit,
+    customTemplateLimit,
+    entitlements,
   } = props;
   const [section, setSection] = useState("Account");
   const [authMode, setAuthMode] = useState("sign-in");
@@ -3223,8 +3261,8 @@ function V2PublicSettings(props) {
               <User size={20} />
             </div>
             <div className="v2-info-grid">
-              <V2Info label="Library" value={`${library.length}/${LIBRARY_LIMIT} saved`} />
-              <V2Info label="Templates" value={`${customTemplates.length}/${CUSTOM_TEMPLATE_LIMIT} custom`} />
+              <V2Info label="Library" value={`${library.length}/${libraryLimit} saved`} />
+              <V2Info label="Templates" value={`${customTemplates.length}/${customTemplateLimit} custom`} />
             </div>
             <p className="v2-note">Plan &amp; upgrade: buka tab <strong>Membership</strong>.</p>
           </div>
@@ -3264,6 +3302,13 @@ function V2PublicSettings(props) {
                     <span>{plan}</span>
                     <strong>{info.price}</strong>
                     <small>{info.detail}</small>
+                    {info.highlights?.length > 0 && (
+                      <ul className="v2-plan-highlights">
+                        {info.highlights.map((line) => (
+                          <li key={line}>{line}</li>
+                        ))}
+                      </ul>
+                    )}
                     <em>
                       {isCurrent
                         ? "Current plan"
@@ -3344,9 +3389,40 @@ function V2PublicSettings(props) {
             </div>
             <div className="v2-actions wrap">
               <button className="v2-btn primary" onClick={copyData}><Clipboard size={16} />Copy My Data</button>
+              {entitlements?.teamLibraryBundle && (
+                <button
+                  className="v2-btn"
+                  type="button"
+                  onClick={() => {
+                    const bundle = {
+                      type: "promptlab-team-library",
+                      plan: accountState.plan,
+                      exportedAt: new Date().toISOString(),
+                      library,
+                      customTemplates,
+                    };
+                    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = `promptlab-team-backup-${Date.now()}.json`;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  <Archive size={16} />
+                  Team backup JSON
+                </button>
+              )}
               <button className="v2-btn" onClick={clearProfile}><Trash2 size={16} />Clear Local Profile</button>
             </div>
-            <p className="v2-small">Full account deletion should be handled by the auth/database backend once login is live.</p>
+            <p className="v2-small">
+              {entitlements?.teamLibraryBundle
+                ? "Business: bagikan file Team backup JSON ke rekan tim (import manual)."
+                : "Full account deletion should be handled by the auth/database backend once login is live."}
+            </p>
           </div>
 
           <div className="v2-card v2-settings-card">

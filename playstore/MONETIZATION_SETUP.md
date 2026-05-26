@@ -79,6 +79,16 @@ Billing library sudah di `android-app` (`androidbrowserhelper:billing`). Upload 
 
 Play Billing **hanya** di app Android (TWA). Di browser biasa tombol upgrade menampilkan: *Install dari Play Store*.
 
+### Fitur per plan (setelah deploy web)
+
+| Plan | Kuota | Export DOCX/PPTX | AI Compare/Optimizer | OCR prioritas | Library / template |
+|------|-------|------------------|----------------------|---------------|-------------------|
+| Free | 50k | Tidak | Lokal saja | Standar | 25 / 5 |
+| Pro | 500k | Ya | Server AI | Prioritas | 100 / 40 |
+| Business | 2M | Ya | Server AI | Prioritas+ | 500 / 120 + backup JSON tim |
+
+Opsional di Vercel: `OPENROUTER_OCR_MODEL_PRO`, `OPENROUTER_OCR_MODEL_BUSINESS`, `OPENROUTER_BUSINESS_PRIMARY_MODEL`.
+
 ---
 
 ## 5. Play Console checklist (store & policy)

@@ -37,6 +37,15 @@ import {
   resolveOutputLanguage,
 } from "../src/promptLanguage.js";
 import {
+  applyPriorityRouting,
+  canExportFormat,
+  canUseFeature,
+  getEntitlements,
+  normalizePlanName,
+  resolveOcrRuntime,
+  upgradeMessageForFeature,
+} from "../src/planEntitlements.js";
+import {
   getPlanForProductId,
   verifyPlaySubscriptionPurchase,
 } from "./playBillingGoogle.js";
@@ -193,8 +202,13 @@ app.post("/api/test-provider", express.json({ limit: "64kb" }), async (req, res)
   }
 });
 
-app.post("/api/export/docx", async (req, res) => {
+app.post("/api/export/docx", express.json({ limit: "2mb" }), async (req, res) => {
   try {
+    const membership = await getMembershipFromRequest(req);
+    if (!canExportFormat(membership.plan, "docx")) {
+      res.status(402).json({ error: upgradeMessageForFeature("docxExport"), code: "UPGRADE_REQUIRED", minPlan: "Pro" });
+      return;
+    }
     const { title, content } = normalizeExportPayload(req.body);
     const doc = new Document({
       sections: [
@@ -223,8 +237,13 @@ app.post("/api/export/docx", async (req, res) => {
   }
 });
 
-app.post("/api/export/pptx", async (req, res) => {
+app.post("/api/export/pptx", express.json({ limit: "2mb" }), async (req, res) => {
   try {
+    const membership = await getMembershipFromRequest(req);
+    if (!canExportFormat(membership.plan, "pptx")) {
+      res.status(402).json({ error: upgradeMessageForFeature("pptxExport"), code: "UPGRADE_REQUIRED", minPlan: "Pro" });
+      return;
+    }
     const { title, content } = normalizeExportPayload(req.body);
     const { default: pptxgen } = await import("pptxgenjs");
     const pptx = new pptxgen();
@@ -331,10 +350,15 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
   }
 });
 
-app.post("/api/optimize-prompt", async (req, res) => {
+app.post("/api/optimize-prompt", express.json({ limit: "256kb" }), async (req, res) => {
   try {
+    const membership = await getMembershipFromRequest(req);
+    if (!canUseFeature(membership.plan, "aiOptimize")) {
+      res.status(402).json({ error: upgradeMessageForFeature("aiOptimize"), code: "UPGRADE_REQUIRED", minPlan: "Pro" });
+      return;
+    }
     const payload = enrichPayloadWithLanguage(normalizeOptimizePayload(req.body));
-    const runtime = getRuntimeProvider(payload.modelSettings);
+    const runtime = getRuntimeProvider(applyPriorityRouting(payload.modelSettings, membership.plan));
 
     if (runtime.provider !== "openai" && runtime.client) {
       try {
@@ -410,8 +434,13 @@ app.post("/api/optimize-prompt", async (req, res) => {
 
 app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, res) => {
   try {
+    const membership = await getMembershipFromRequest(req);
+    if (!canUseFeature(membership.plan, "aiCompare")) {
+      res.status(402).json({ error: upgradeMessageForFeature("aiCompare"), code: "UPGRADE_REQUIRED", minPlan: "Pro" });
+      return;
+    }
     const payload = normalizeComparePayload(req.body);
-    const runtime = getRuntimeProvider(payload.modelSettings);
+    const runtime = getRuntimeProvider(applyPriorityRouting(payload.modelSettings, membership.plan));
 
     if (!payload.promptA.trim() || !payload.promptB.trim()) {
       res.status(400).json({ error: "Prompt A dan Prompt B wajib diisi." });
@@ -529,16 +558,22 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
   let quotaEstimate = 0;
   try {
     const basePayload = normalizePayload(req.body);
+    const membership = await getMembershipFromRequest(req);
+    const entitlements = getEntitlements(membership.plan);
+    const routedSettings = applyPriorityRouting(basePayload.modelSettings, membership.plan);
     const manifestAttachments = normalizeAttachmentManifest(req.body.attachmentManifest);
     const uploadedAttachments = await Promise.all(
-      (req.files || []).map((file) => normalizeFile(file, basePayload.modelSettings))
+      (req.files || []).map((file) => normalizeFile(file, routedSettings, membership.plan))
     );
     const uploadedNames = new Set(uploadedAttachments.map((file) => file.filename));
     const attachments = [
       ...uploadedAttachments,
       ...manifestAttachments.filter((file) => !uploadedNames.has(file.filename)),
-    ].slice(0, 8);
-    const payload = enrichPayloadWithLanguage(basePayload, attachments);
+    ].slice(0, entitlements.maxAttachments);
+    const payload = enrichPayloadWithLanguage(
+      { ...basePayload, modelSettings: routedSettings },
+      attachments
+    );
     const runtime = getRuntimeProvider(payload.modelSettings);
     quotaEstimate = estimateGenerationTokens(payload, attachments);
     quotaSession = await getQuotaSession(req, quotaEstimate);
@@ -1112,6 +1147,32 @@ function publicApiError(message, statusCode = 400) {
   error.publicMessage = message;
   error.statusCode = statusCode;
   return error;
+}
+
+async function getMembershipFromRequest(req) {
+  if (!quotaAuthEnabled) {
+    return { plan: "Business", profile: null, user: null, client: null };
+  }
+  const token = extractBearerToken(req);
+  if (!token) {
+    return { plan: "Free", profile: null, user: null, client: null };
+  }
+  const client = createUserSupabaseClient(token);
+  const { data: userData, error: userError } = await client.auth.getUser(token);
+  if (userError || !userData?.user) {
+    return { plan: "Free", profile: null, user: null, client: null };
+  }
+  const { data, error } = await client.rpc("get_my_entitlement");
+  if (error || !data) {
+    return { plan: "Free", profile: null, user: userData.user, client };
+  }
+  const profile = Array.isArray(data) ? data[0] : data;
+  return {
+    plan: normalizePlanName(profile?.plan),
+    profile,
+    user: userData.user,
+    client,
+  };
 }
 
 async function getQuotaSession(req, estimatedTokens = 0) {
@@ -2255,7 +2316,7 @@ function getIntentDomain(text, asksApp, asksPresentation, asksDocument) {
   return "general prompt workflow";
 }
 
-async function normalizeFile(file, modelSettings = {}) {
+async function normalizeFile(file, modelSettings = {}, plan = "Free") {
   const mime = file.mimetype || "application/octet-stream";
   const isImage = mime.startsWith("image/");
   const isReadable = /^(application\/json|text\/)/.test(mime) || /\.(csv|json|md|txt)$/i.test(file.originalname);
@@ -2286,7 +2347,7 @@ async function normalizeFile(file, modelSettings = {}) {
   } else if (isReadable) {
     excerpt = file.buffer.toString("utf8").replace(/\s+/g, " ").trim().slice(0, 4000);
   } else if (isImage) {
-    excerpt = await extractImageText(file, modelSettings).catch((error) => {
+    excerpt = await extractImageText(file, modelSettings, plan).catch((error) => {
       console.warn("image OCR skipped", file.originalname, error.status || error.code || error.message);
       return "";
     });
@@ -2351,16 +2412,16 @@ function decodePdfHexString(value) {
   return Buffer.from(bytes).toString("utf8").replace(/\u0000/g, "").trim();
 }
 
-async function extractImageText(file, modelSettings = {}) {
+async function extractImageText(file, modelSettings = {}, plan = "Free") {
   const runtime = getRuntimeProvider(modelSettings);
   if (!runtime.client || runtime.provider === "openai") return "";
   const mime = file.mimetype || "image/png";
   const dataUrl = `data:${mime};base64,${file.buffer.toString("base64")}`;
-  const ocrModel = modelSettings.ocrModel || getDefaultOcrModel();
+  const ocrRuntime = resolveOcrRuntime(plan, modelSettings.ocrModel || getDefaultOcrModel());
   const response = await withTimeout(
     runtime.client.chat.completions.create(
       {
-        model: ocrModel,
+        model: ocrRuntime.model,
         messages: [
           {
             role: "user",
@@ -2379,12 +2440,12 @@ async function extractImageText(file, modelSettings = {}) {
             ],
           },
         ],
-        max_tokens: 1600,
+        max_tokens: ocrRuntime.maxTokens,
       },
-      { timeout: openRouterOcrTimeoutMs }
+      { timeout: ocrRuntime.timeoutMs }
     ),
-    openRouterOcrTimeoutMs,
-    ocrModel
+    ocrRuntime.timeoutMs,
+    ocrRuntime.model
   );
   return (response.choices?.[0]?.message?.content || "").replace(/\s+/g, " ").trim().slice(0, 5000);
 }
