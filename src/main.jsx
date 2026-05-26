@@ -46,6 +46,7 @@ import {
   resolveOutputLanguage,
 } from "./promptLanguage.js";
 import {
+  getPlayBillingHint,
   isLikelyAndroidTwa,
   isPlayBillingAvailable,
   purchasePlayPlan,
@@ -1134,6 +1135,8 @@ function App() {
   const [optimizerWarning, setOptimizerWarning] = useState("");
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingMessage, setBillingMessage] = useState("");
+  const [playBillingReady, setPlayBillingReady] = useState(() => isPlayBillingAvailable());
+  const playBillingHint = useMemo(() => getPlayBillingHint(), [playBillingReady]);
   const [exportStatus, setExportStatus] = useState("");
   const [library, setLibrary] = useState(() => {
     try {
@@ -1172,6 +1175,19 @@ function App() {
     : "";
 
   useEffect(() => {
+    const syncPlayBilling = () => setPlayBillingReady(isPlayBillingAvailable());
+    syncPlayBilling();
+    window.addEventListener("focus", syncPlayBilling);
+    const interval = window.setInterval(syncPlayBilling, 2500);
+    const stop = window.setTimeout(() => window.clearInterval(interval), 45000);
+    return () => {
+      window.removeEventListener("focus", syncPlayBilling);
+      window.clearInterval(interval);
+      window.clearTimeout(stop);
+    };
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem("promptlab-library", JSON.stringify(library.slice(0, LIBRARY_LIMIT)));
   }, [library]);
 
@@ -1182,6 +1198,19 @@ function App() {
   useEffect(() => {
     localStorage.setItem("promptlab-account", JSON.stringify(accountState));
   }, [accountState]);
+
+  useEffect(() => {
+    const check = () => setPlayBillingReady(isPlayBillingAvailable());
+    check();
+    window.addEventListener("focus", check);
+    const interval = setInterval(check, 2500);
+    const stop = setTimeout(() => clearInterval(interval), 45000);
+    return () => {
+      window.removeEventListener("focus", check);
+      clearInterval(interval);
+      clearTimeout(stop);
+    };
+  }, []);
 
   useEffect(() => {
     if (!supabase) return;
@@ -1450,16 +1479,23 @@ function App() {
     }
     setBillingBusy(true);
     setBillingMessage("");
+    let completeBilling = null;
     try {
-      const { productId, purchaseToken } = await purchasePlayPlan(planName);
+      const purchase = await purchasePlayPlan(planName);
+      completeBilling = purchase.completeBilling;
       const token = await getAccessToken();
       if (!token) throw new Error("Session habis. Sign in ulang.");
-      const data = await verifyPlayPurchaseOnServer(apiBase, token, { productId, purchaseToken });
+      const data = await verifyPlayPurchaseOnServer(apiBase, token, {
+        productId: purchase.productId,
+        purchaseToken: purchase.purchaseToken,
+      });
+      await completeBilling?.(true);
       if (data.quota) applyServerQuota(data.quota);
       else await loadUserProfile({ id: accountState.userId, email: accountState.email });
       setBillingMessage(data.message || `Upgrade ke ${planName} berhasil.`);
       flashAction(`Plan ${planName} active`);
     } catch (error) {
+      await completeBilling?.(false);
       setBillingMessage(error.message || "Upgrade gagal.");
     } finally {
       setBillingBusy(false);
@@ -1864,7 +1900,8 @@ function App() {
     billingBusy,
     billingMessage,
     upgradeViaPlayBilling,
-    playBillingReady: isPlayBillingAvailable(),
+    playBillingReady,
+    playBillingHint,
   };
 
   return <V2App {...shared} />;
@@ -3008,6 +3045,7 @@ function V2Settings(props) {
     billingMessage,
     upgradeViaPlayBilling,
     playBillingReady,
+    playBillingHint,
   } = props;
   const fallbackModels = modelSettings.fallbackModels
     .split(/[\n,]/)
@@ -3061,6 +3099,7 @@ function V2PublicSettings(props) {
     billingMessage,
     upgradeViaPlayBilling,
     playBillingReady,
+    playBillingHint,
   } = props;
   const [section, setSection] = useState("Account");
   const [authMode, setAuthMode] = useState("sign-in");
@@ -3184,11 +3223,10 @@ function V2PublicSettings(props) {
               <User size={20} />
             </div>
             <div className="v2-info-grid">
-              <V2Info label="Plan" value={accountState.plan} />
-              <V2Info label="Billing" value={accountState.playBilling} />
               <V2Info label="Library" value={`${library.length}/${LIBRARY_LIMIT} saved`} />
               <V2Info label="Templates" value={`${customTemplates.length}/${CUSTOM_TEMPLATE_LIMIT} custom`} />
             </div>
+            <p className="v2-note">Plan &amp; upgrade: buka tab <strong>Membership</strong>.</p>
           </div>
         </section>
       )}
@@ -3203,6 +3241,12 @@ function V2PublicSettings(props) {
               </div>
               <span className="v2-score-badge">{accountState.plan}</span>
             </div>
+            {!playBillingReady && playBillingHint?.message && (
+              <p className="v2-note warn">{playBillingHint.message}</p>
+            )}
+            {playBillingReady && (
+              <p className="v2-note">{playBillingHint.message}</p>
+            )}
             <div className="v2-plan-grid premium">
               {Object.entries(membershipPlans).map(([plan, info]) => {
                 const isCurrent = accountState.plan === plan;
@@ -3210,7 +3254,7 @@ function V2PublicSettings(props) {
                 return (
                   <button
                     key={plan}
-                    className={`v2-plan-card ${isCurrent ? "active" : ""} ${plan === "Business" ? "featured" : ""}`}
+                    className={`v2-plan-card ${isCurrent ? "active" : ""} ${plan === "Business" && !isCurrent ? "recommended" : ""} ${canUpgrade ? "upgrade" : ""}`}
                     type="button"
                     disabled={isCurrent || billingBusy || plan === "Free"}
                     onClick={() => {
@@ -3226,8 +3270,8 @@ function V2PublicSettings(props) {
                         : plan === "Free"
                           ? "Default tier"
                           : playBillingReady
-                            ? "Tap to subscribe via Play"
-                            : "Android app only"}
+                            ? "Tap untuk beli di Play"
+                            : "Tap untuk cek / petunjuk"}
                     </em>
                   </button>
                 );
@@ -3240,19 +3284,6 @@ function V2PublicSettings(props) {
               <i><b style={{ width: `${quotaPercent}%` }} /></i>
               <small>Resets {accountState.quotaReset}. Usage is updated after each successful generation.</small>
             </div>
-          </div>
-
-          <div className="v2-card v2-settings-card">
-            <div className="v2-card-head">
-              <div>
-                <h2>Play Store Billing</h2>
-                <p>Digital memberships sold inside Android must use Google Play Billing.</p>
-              </div>
-              <CreditCard size={20} />
-            </div>
-            <div className="v2-runbook-row"><span>1</span><p>Free plan stays available without payment.</p></div>
-            <div className="v2-runbook-row"><span>2</span><p>Pro and Business unlock after backend verifies Play purchase tokens.</p></div>
-            <div className="v2-runbook-row"><span>3</span><p>Do not link to outside payment pages inside the Android app.</p></div>
           </div>
         </section>
       )}

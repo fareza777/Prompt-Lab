@@ -2247,6 +2247,15 @@ button {
   opacity: 0.58;
 }
 
+.v2-plan-grid button.upgrade:not(:disabled) {
+  cursor: pointer;
+  opacity: 1;
+}
+
+.v2-plan-grid button.upgrade:not(:disabled) em {
+  color: var(--ac);
+}
+
 .v2-plan-grid span {
   color: var(--ac);
   font-family: var(--font-mono);
@@ -4362,10 +4371,13 @@ pre {
   min-height: 138px;
 }
 
-.v2-plan-grid.premium .v2-plan-card.featured {
-  border-color: var(--ac-line);
-  background: linear-gradient(160deg, oklch(0.24 0.05 245 / 0.92), oklch(0.18 0.04 188 / 0.82));
-  box-shadow: 0 18px 44px oklch(0 0 0 / 0.22);
+.v2-plan-grid.premium .v2-plan-card.recommended {
+  border-color: var(--line-strong);
+  box-shadow: 0 12px 28px oklch(0 0 0 / 0.16);
+}
+
+.v2-plan-grid.premium .v2-plan-card.recommended:not(.active) {
+  background: var(--bg-input);
 }
 
 .v2-score-matrix > div:not(.v2-actions):not(:first-child) span.winner {

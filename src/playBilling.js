@@ -1,4 +1,4 @@
-/** Google Play Billing via Digital Goods API (Trusted Web Activity on Android). */
+/** Google Play Billing via Digital Goods API + Payment Request API (TWA on Android). */
 
 export const PLAY_BILLING_SERVICE = "https://play.google.com/billing";
 
@@ -17,13 +17,39 @@ export function planNameForProductId(productId) {
 }
 
 export function isPlayBillingAvailable() {
-  return typeof window !== "undefined" && typeof window.getDigitalGoodsService === "function";
+  return (
+    typeof window !== "undefined" &&
+    typeof window.getDigitalGoodsService === "function" &&
+    typeof PaymentRequest !== "undefined"
+  );
 }
 
 export function isLikelyAndroidTwa() {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent || "";
   return /Android/i.test(ua);
+}
+
+/** User-facing reason when purchase cannot start yet. */
+export function getPlayBillingHint() {
+  if (isPlayBillingAvailable()) {
+    return {
+      ready: true,
+      message: "Tap kartu Pro atau Business untuk membeli lewat Google Play.",
+    };
+  }
+  if (!isLikelyAndroidTwa()) {
+    return {
+      ready: false,
+      message:
+        "Pembelian hanya dari app Android PromptLab yang di-install lewat Google Play (Internal/Closed testing), bukan browser desktop.",
+    };
+  }
+  return {
+    ready: false,
+    message:
+      "Play Billing belum aktif di app ini. Install ulang dari link Play Store (bukan bookmark Chrome), tutup app sepenuhnya lalu buka lagi. Pastikan AAB terbaru sudah di-upload ke Internal testing.",
+  };
 }
 
 async function getBillingService() {
@@ -45,19 +71,64 @@ export async function listPlayPurchases() {
 }
 
 /**
+ * Start Play purchase via Payment Request API (Digital Goods has no purchase() method).
  * @param {"Pro"|"Business"} planName
+ * @returns {Promise<{ productId: string, purchaseToken: string, completeBilling: (ok: boolean) => Promise<void> }>}
  */
 export async function purchasePlayPlan(planName) {
   const productId = PLAY_PRODUCT_IDS[planName];
   if (!productId) throw new Error("Plan tidak dikenali.");
-  const service = await getBillingService();
-  const result = await service.purchase(productId);
-  const purchaseToken =
-    result?.purchaseToken || result?.token || result?.details?.purchaseToken || "";
-  if (!purchaseToken) {
-    throw new Error("Pembelian selesai tetapi token tidak diterima. Coba Restore purchases.");
+
+  await getBillingService();
+
+  const paymentMethods = [
+    {
+      supportedMethods: PLAY_BILLING_SERVICE,
+      data: { sku: productId },
+    },
+  ];
+
+  const paymentDetails = {
+    total: {
+      label: "Total",
+      amount: { currency: "IDR", value: "0" },
+    },
+  };
+
+  const request = new PaymentRequest(paymentMethods, paymentDetails);
+  let paymentResponse;
+
+  try {
+    paymentResponse = await request.show();
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("Pembelian dibatalkan.");
+    }
+    throw error;
   }
-  return { productId, purchaseToken, raw: result };
+
+  const details = paymentResponse?.details || {};
+  const purchaseToken = details.purchaseToken || details.token || "";
+
+  const completeBilling = async (ok) => {
+    try {
+      await paymentResponse.complete(ok ? "success" : "fail");
+    } catch {
+      /* PaymentResponse may already be closed */
+    }
+  };
+
+  if (!purchaseToken) {
+    await completeBilling(false);
+    throw new Error("Token pembelian tidak diterima dari Play Store.");
+  }
+
+  return {
+    productId,
+    purchaseToken,
+    raw: details,
+    completeBilling,
+  };
 }
 
 /**
