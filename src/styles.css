@@ -25,28 +25,29 @@
 }
 
 [data-theme="v2"] {
-  --bg-0: oklch(0.135 0.012 220);
-  --bg-1: oklch(0.165 0.014 220);
-  --bg-2: oklch(0.195 0.016 220);
-  --bg-3: oklch(0.225 0.018 220);
-  --bg-input: oklch(0.155 0.014 220);
-  --line-soft: oklch(0.225 0.016 218);
-  --line: oklch(0.265 0.02 215);
-  --line-strong: oklch(0.34 0.024 210);
-  --fg: oklch(0.975 0.005 220);
-  --fg-2: oklch(0.88 0.008 220);
-  --fg-mute: oklch(0.66 0.014 220);
-  --fg-subtle: oklch(0.48 0.014 220);
-  --fg-faint: oklch(0.36 0.014 220);
-  --ac: oklch(0.84 0.13 195);
-  --ac-2: oklch(0.74 0.14 178);
-  --ac-3: oklch(0.62 0.15 200);
-  --ac-soft: oklch(0.84 0.13 195 / 0.14);
-  --ac-line: oklch(0.84 0.13 195 / 0.32);
-  --ac-glow: oklch(0.84 0.13 195 / 0.55);
-  --pos: oklch(0.78 0.16 158);
-  --warn: oklch(0.82 0.16 78);
-  --neg: oklch(0.72 0.18 22);
+  /* Hex fallbacks — required on older WebView / browsers without oklch */
+  --bg-0: #0a1218;
+  --bg-1: #0d161c;
+  --bg-2: #111c24;
+  --bg-3: #15222c;
+  --bg-input: #0c141a;
+  --line-soft: #1e2a34;
+  --line: #263543;
+  --line-strong: #3a4f62;
+  --fg: #f4f8ff;
+  --fg-2: #d8e4ef;
+  --fg-mute: #9fb0c8;
+  --fg-subtle: #6f8198;
+  --fg-faint: #4f5f72;
+  --ac: #5eead4;
+  --ac-2: #38bdf8;
+  --ac-3: #60a5fa;
+  --ac-soft: rgba(94, 234, 212, 0.14);
+  --ac-line: rgba(94, 234, 212, 0.32);
+  --ac-glow: rgba(94, 234, 212, 0.55);
+  --pos: #4ade80;
+  --warn: #fbbf24;
+  --neg: #f87171;
   --r-sm: 6px;
   --r: 10px;
   --r-md: 14px;
@@ -57,6 +58,33 @@
   --font-mono: "Geist Mono", "SFMono-Regular", Consolas, monospace;
   color: var(--fg);
   font-family: var(--font-ui);
+}
+
+@supports (color: oklch(0.5 0.05 220)) {
+  [data-theme="v2"] {
+    --bg-0: oklch(0.135 0.012 220);
+    --bg-1: oklch(0.165 0.014 220);
+    --bg-2: oklch(0.195 0.016 220);
+    --bg-3: oklch(0.225 0.018 220);
+    --bg-input: oklch(0.155 0.014 220);
+    --line-soft: oklch(0.225 0.016 218);
+    --line: oklch(0.265 0.02 215);
+    --line-strong: oklch(0.34 0.024 210);
+    --fg: oklch(0.975 0.005 220);
+    --fg-2: oklch(0.88 0.008 220);
+    --fg-mute: oklch(0.66 0.014 220);
+    --fg-subtle: oklch(0.48 0.014 220);
+    --fg-faint: oklch(0.36 0.014 220);
+    --ac: oklch(0.84 0.13 195);
+    --ac-2: oklch(0.74 0.14 178);
+    --ac-3: oklch(0.62 0.15 200);
+    --ac-soft: oklch(0.84 0.13 195 / 0.14);
+    --ac-line: oklch(0.84 0.13 195 / 0.32);
+    --ac-glow: oklch(0.84 0.13 195 / 0.55);
+    --pos: oklch(0.78 0.16 158);
+    --warn: oklch(0.82 0.16 78);
+    --neg: oklch(0.72 0.18 22);
+  }
 }
 
 * {
@@ -600,8 +628,15 @@ button {
   padding: 28px;
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  background: linear-gradient(180deg, oklch(0.18 0.018 220), oklch(0.13 0.012 220));
-  box-shadow: 0 28px 90px oklch(0 0 0 / 0.28);
+  background: linear-gradient(180deg, #1a2830, #0f171d);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.28);
+}
+
+@supports (color: oklch(0 0 0)) {
+  .v2-onboarding-card {
+    background: linear-gradient(180deg, oklch(0.18 0.018 220), oklch(0.13 0.012 220));
+    box-shadow: 0 28px 90px oklch(0 0 0 / 0.28);
+  }
 }
 
 .v2-onboarding-card h1 {
@@ -2337,6 +2372,27 @@ button {
 
   .v2-main {
     padding-bottom: 92px;
+  }
+
+  .bottom-nav {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    z-index: 40;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+    padding: 5px;
+    background: rgba(12, 20, 26, 0.96);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 16px;
+    box-shadow: 0 18px 44px rgba(3, 7, 18, 0.45);
+  }
+
+  .bottom-nav button {
+    min-height: 44px;
+    font-size: 10px;
   }
 
   .v2-studio-grid,

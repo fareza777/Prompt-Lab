@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { Component, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Archive,
@@ -59,11 +59,14 @@ import {
   MEMBERSHIP_MARKETING,
   upgradeMessageForFeature,
 } from "./planEntitlements.js";
+import { purgeLegacyServiceWorkers, repairStuckLocalProfile } from "./bootRecovery.js";
 import { dismissStartupSplash, installSplashSafetyNet, markStartupSplashStarted } from "./startupSplash";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
 markStartupSplashStarted();
 installSplashSafetyNet();
+repairStuckLocalProfile();
+purgeLegacyServiceWorkers();
 
 const categories = ["Marketing", "Content Creator", "Business", "Coding", "Academic", "Image AI"];
 const tones = ["Professional", "Casual", "Persuasive", "Creative"];
@@ -1070,6 +1073,60 @@ ${getLanguageLockInstruction(langMeta.code)}
 - Role, context, objective, output, and constraints are explicit.
 - Deliverable guardrails are added to prevent wrong output formats.
 - Clarifying questions are limited.`;
+}
+
+class AppErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error) {
+    console.error("PromptLab render error", error);
+    dismissStartupSplash();
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <main
+          className="v2-boot-error"
+          data-theme="v2"
+          style={{
+            minHeight: "100vh",
+            padding: 24,
+            color: "#e8f4f6",
+            background: "#061011",
+            fontFamily: "system-ui, sans-serif",
+          }}
+        >
+          <h1 style={{ fontSize: 22, marginBottom: 8 }}>PromptLab gagal dimuat</h1>
+          <p style={{ opacity: 0.85, lineHeight: 1.5 }}>{this.state.error.message}</p>
+          <button
+            type="button"
+            className="v2-btn primary"
+            style={{ marginTop: 20 }}
+            onClick={async () => {
+              await purgeLegacyServiceWorkers();
+              try {
+                localStorage.clear();
+              } catch {
+                /* ignore */
+              }
+              window.location.reload();
+            }}
+          >
+            Reset &amp; muat ulang
+          </button>
+        </main>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function App() {
@@ -4556,35 +4613,8 @@ function Metric({ label, value }) {
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
-
-if (import.meta.env.PROD && "serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("/sw.js")
-      .then((registration) => {
-        if (registration.waiting) {
-          registration.waiting.postMessage({ type: "SKIP_WAITING" });
-        }
-        registration.addEventListener("updatefound", () => {
-          const worker = registration.installing;
-          worker?.addEventListener("statechange", () => {
-            if (worker.state === "installed" && navigator.serviceWorker.controller) {
-              worker.postMessage({ type: "SKIP_WAITING" });
-            }
-          });
-        });
-      })
-      .catch(() => {});
-  });
-  let reloadedForSw = false;
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (reloadedForSw) return;
-    reloadedForSw = true;
-    window.location.reload();
-  });
-} else if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.getRegistrations?.().then((registrations) => {
-    registrations.forEach((registration) => registration.unregister());
-  });
-}
+createRoot(document.getElementById("root")).render(
+  <AppErrorBoundary>
+    <App />
+  </AppErrorBoundary>
+);

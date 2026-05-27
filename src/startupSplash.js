@@ -25,10 +25,7 @@ export function markStartupSplashStarted() {
   el.dataset.startedAt = String(performance.now());
 }
 
-/** If React fails to mount (stale cache, JS error), do not trap the user on splash forever. */
+/** If React fails to mount, do not trap the user on splash forever. */
 export function installSplashSafetyNet() {
-  const force = () => dismissStartupSplash();
-  window.addEventListener("error", force);
-  window.addEventListener("unhandledrejection", force);
-  window.setTimeout(force, 9000);
+  window.setTimeout(() => dismissStartupSplash(), 9000);
 }
