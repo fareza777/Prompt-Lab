@@ -2456,8 +2456,6 @@ function V2Builder(props) {
     copyText, savePrompt, generatePrompt, isGenerating, exportStatus, exportFile,
     engineVersion, piiFindings, entitlements, accountState,
   } = props;
-  const canDocx = entitlements?.docxExport;
-  const canPptx = entitlements?.pptxExport;
   return (
     <div className="v2-screen">
       <V2PageIntro
@@ -2532,6 +2530,7 @@ function V2Builder(props) {
           exportStatus={exportStatus}
           isGenerating={isGenerating}
           accountState={props.accountState}
+          entitlements={entitlements}
         />
       </section>
     </div>
@@ -2611,7 +2610,10 @@ function isAiGeneratedOutput(generationSource, generationStatus) {
   );
 }
 
-function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource, copyText, savePrompt, exportFile, narrative, exportStatus, isGenerating, accountState }) {
+function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource, copyText, savePrompt, exportFile, narrative, exportStatus, isGenerating, accountState, entitlements }) {
+  const plan = accountState?.plan || "Free";
+  const canDocx = entitlements?.docxExport ?? canExportFormat(plan, "docx");
+  const canPptx = entitlements?.pptxExport ?? canExportFormat(plan, "pptx");
   const [actionFeedback, setActionFeedback] = useState("");
   const outputBadge = isGenerating
     ? "Generating..."
