@@ -1218,6 +1218,8 @@ function App() {
   const [authStatus, setAuthStatus] = useState(isSupabaseConfigured ? "Checking session..." : "Supabase not configured");
   const [authError, setAuthError] = useState("");
   const [isAuthBusy, setIsAuthBusy] = useState(false);
+  const [authSessionReady, setAuthSessionReady] = useState(!isSupabaseConfigured);
+  const [hasAuthSession, setHasAuthSession] = useState(false);
   const allTemplates = useMemo(() => [...customTemplates, ...templates], [customTemplates]);
 
   const localPrompt = useMemo(
@@ -1274,23 +1276,33 @@ function App() {
       if (error) {
         setAuthError(error.message);
         setAuthStatus("Session check failed");
+        setHasAuthSession(false);
+        setAuthSessionReady(true);
         return;
       }
       const user = data.session?.user;
       if (user) {
+        setHasAuthSession(true);
         setAuthStatus("Signed in");
         await loadUserProfile(user);
       } else {
+        setHasAuthSession(false);
+        setAccountState(defaultAccountState);
         setAuthStatus("Signed out");
       }
+      setAuthSessionReady(true);
     }
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const user = session?.user;
       if (user) {
+        setHasAuthSession(true);
+        setAuthSessionReady(true);
         setAuthStatus("Signed in");
         loadUserProfile(user);
       } else {
+        setHasAuthSession(false);
+        setAuthSessionReady(true);
         setAccountState(defaultAccountState);
         setAuthStatus("Signed out");
       }
@@ -1463,6 +1475,8 @@ function App() {
       setAuthStatus("Sign in failed");
       return;
     }
+    setHasAuthSession(Boolean(data.session));
+    setAuthSessionReady(true);
     setAuthStatus("Signed in");
     await loadUserProfile(data.user);
   }
@@ -1487,6 +1501,8 @@ function App() {
       return;
     }
     if (data.user && data.session) {
+      setHasAuthSession(true);
+      setAuthSessionReady(true);
       setAuthStatus("Signed in");
       await loadUserProfile(data.user);
     } else {
@@ -1499,6 +1515,8 @@ function App() {
     localStorage.removeItem("promptlab-guest");
     localStorage.removeItem("promptlab-onboarded");
     localStorage.removeItem("promptlab-auth-intent");
+    setHasAuthSession(false);
+    setAuthSessionReady(true);
     setAccountState(defaultAccountState);
     setAuthStatus("Signed out");
   }
@@ -1968,6 +1986,8 @@ function App() {
     authStatus,
     authError,
     isAuthBusy,
+    authSessionReady,
+    hasAuthSession,
     isSupabaseConfigured,
     membershipPlans,
     signInWithPassword,
@@ -2055,7 +2075,21 @@ function V2TokenSection({ title, tokens }) {
 }
 
 function V2App(props) {
-  const { active, setActive, settingsStatus, generationStatus, generationSource, generationModel, isGenerating, accountState, library, setNarrative } = props;
+  const {
+    active,
+    setActive,
+    settingsStatus,
+    generationStatus,
+    generationSource,
+    generationModel,
+    isGenerating,
+    accountState,
+    library,
+    setNarrative,
+    authSessionReady,
+    hasAuthSession,
+  } = props;
+  const [guestMode, setGuestMode] = useState(() => localStorage.getItem("promptlab-guest") === "true");
   const recentPrompts = useMemo(
     () =>
       [...(library || [])]
@@ -2063,61 +2097,27 @@ function V2App(props) {
         .slice(0, 3),
     [library]
   );
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    const hasOnboarded = localStorage.getItem("promptlab-onboarded") === "true";
-    const isGuest = localStorage.getItem("promptlab-guest") === "true";
-    const wantsAuth = localStorage.getItem("promptlab-auth-intent") === "true";
-    return !accountState.userId && (!hasOnboarded || (!isGuest && !wantsAuth));
-  });
-  const [authGate, setAuthGate] = useState(() => localStorage.getItem("promptlab-auth-intent") === "true");
   const quotaPercent = Math.min(100, Math.round(((accountState.quotaUsed || 0) / Math.max(1, accountState.quotaLimit || 1)) * 100));
 
   useEffect(() => {
-    if (!accountState.userId) return;
-    localStorage.setItem("promptlab-onboarded", "true");
-    localStorage.removeItem("promptlab-guest");
     localStorage.removeItem("promptlab-auth-intent");
-    setShowOnboarding(false);
-    setAuthGate(false);
-  }, [accountState.userId]);
+    localStorage.removeItem("promptlab-onboarded");
+  }, []);
 
   useEffect(() => {
-    if (accountState.userId) return;
-    const isGuest = localStorage.getItem("promptlab-guest") === "true";
-    const wantsAuth = localStorage.getItem("promptlab-auth-intent") === "true";
-    if (!isGuest && !wantsAuth) {
-      setShowOnboarding(true);
-      setAuthGate(false);
-    }
-  }, [accountState.userId]);
-
-  const startAuth = () => {
-    localStorage.setItem("promptlab-auth-intent", "true");
-    localStorage.removeItem("promptlab-onboarded");
+    if (!hasAuthSession) return;
     localStorage.removeItem("promptlab-guest");
-    setAuthGate(true);
-    setShowOnboarding(false);
-  };
+    setGuestMode(false);
+  }, [hasAuthSession]);
+
   const continueGuest = () => {
-    localStorage.setItem("promptlab-onboarded", "true");
     localStorage.setItem("promptlab-guest", "true");
-    localStorage.removeItem("promptlab-auth-intent");
-    setAuthGate(false);
-    setShowOnboarding(false);
+    setGuestMode(true);
     setActive("Builder");
   };
-  const backToOnboarding = () => {
-    localStorage.removeItem("promptlab-auth-intent");
-    localStorage.removeItem("promptlab-onboarded");
-    localStorage.removeItem("promptlab-guest");
-    setAuthGate(false);
-    setShowOnboarding(true);
-  };
-  if (!accountState.userId && authGate) {
-    return <V2AuthGate {...props} onBack={backToOnboarding} onGuest={continueGuest} />;
-  }
-  if (showOnboarding && !accountState.userId) {
-    return <V2Onboarding onAuth={startAuth} onGuest={continueGuest} />;
+
+  if (!guestMode && (!authSessionReady || !hasAuthSession || !accountState.userId)) {
+    return <V2AuthGate {...props} onGuest={continueGuest} />;
   }
   return (
     <div className="v2-shell" data-theme="v2">
@@ -2202,7 +2202,6 @@ function V2AuthGate({
   isSupabaseConfigured,
   signInWithPassword,
   signUpWithPassword,
-  onBack,
   onGuest,
 }) {
   const [authMode, setAuthMode] = useState("sign-in");
@@ -2260,7 +2259,6 @@ function V2AuthGate({
             {isAuthBusy ? "Checking..." : isSignIn ? "Sign In" : "Create Account"}
           </button>
           <button className="v2-btn" onClick={onGuest}>Continue as Guest</button>
-          <button className="v2-btn ghost" onClick={onBack}>Back</button>
         </div>
       </section>
     </main>
