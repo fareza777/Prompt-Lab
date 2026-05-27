@@ -59,10 +59,11 @@ import {
   MEMBERSHIP_MARKETING,
   upgradeMessageForFeature,
 } from "./planEntitlements.js";
-import { dismissStartupSplash, markStartupSplashStarted } from "./startupSplash";
+import { dismissStartupSplash, installSplashSafetyNet, markStartupSplashStarted } from "./startupSplash";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
 markStartupSplashStarted();
+installSplashSafetyNet();
 
 const categories = ["Marketing", "Content Creator", "Business", "Coding", "Academic", "Image AI"];
 const tones = ["Professional", "Casual", "Persuasive", "Creative"];
@@ -4559,7 +4560,28 @@ createRoot(document.getElementById("root")).render(<App />);
 
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((registration) => {
+        if (registration.waiting) {
+          registration.waiting.postMessage({ type: "SKIP_WAITING" });
+        }
+        registration.addEventListener("updatefound", () => {
+          const worker = registration.installing;
+          worker?.addEventListener("statechange", () => {
+            if (worker.state === "installed" && navigator.serviceWorker.controller) {
+              worker.postMessage({ type: "SKIP_WAITING" });
+            }
+          });
+        });
+      })
+      .catch(() => {});
+  });
+  let reloadedForSw = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloadedForSw) return;
+    reloadedForSw = true;
+    window.location.reload();
   });
 } else if ("serviceWorker" in navigator) {
   navigator.serviceWorker.getRegistrations?.().then((registrations) => {
