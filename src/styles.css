@@ -2356,6 +2356,13 @@ button {
   color: var(--fg);
 }
 
+.v2-quota-meter .v2-build-id {
+  display: block;
+  margin-top: 6px;
+  opacity: 0.45;
+  font-size: 0.72rem;
+}
+
 .v2-quota-meter small {
   color: var(--fg-mute);
   line-height: 1.45;

@@ -1462,7 +1462,7 @@ function App() {
 
   async function signInWithPassword(email, password) {
     if (!supabase) {
-      setAuthError("Supabase belum dikonfigurasi.");
+      setAuthError("Supabase is not configured.");
       return;
     }
     setIsAuthBusy(true);
@@ -1483,7 +1483,7 @@ function App() {
 
   async function signUpWithPassword(email, password, fullName) {
     if (!supabase) {
-      setAuthError("Supabase belum dikonfigurasi.");
+      setAuthError("Supabase is not configured.");
       return;
     }
     setIsAuthBusy(true);
@@ -2267,7 +2267,7 @@ function V2AuthGate({
           </label>
         </div>
         <div className="v2-auth-status">
-          <span>{isSupabaseConfigured ? authStatus : "Supabase env belum aktif"}</span>
+          <span>{isSupabaseConfigured ? authStatus : "Supabase env is not configured"}</span>
           {authError && <strong>{authError}</strong>}
         </div>
         <div className="v2-actions wrap">
@@ -3401,7 +3401,10 @@ function V2PublicSettings(props) {
             <div className="v2-quota-meter">
               <div><span>Quota</span><strong>{(accountState.quotaUsed / 1000).toFixed(1)}k / {(accountState.quotaLimit / 1000).toFixed(0)}k tokens</strong></div>
               <i><b style={{ width: `${quotaPercent}%` }} /></i>
-              <small>Resets {accountState.quotaReset}. Usage is updated after each successful generation.</small>
+              <small>Resets {accountState.quotaReset}. Usage updates after Builder, Compare, and Optimizer runs.</small>
+              {import.meta.env.VITE_APP_BUILD && (
+                <small className="v2-build-id">Build {import.meta.env.VITE_APP_BUILD}</small>
+              )}
             </div>
           </div>
         </section>
@@ -3494,7 +3497,7 @@ function V2PublicSettings(props) {
             </div>
             <p className="v2-small">
               {entitlements?.teamLibraryBundle
-                ? "Business: bagikan file Team backup JSON ke rekan tim (import manual)."
+                ? "Business: share the Team backup JSON file with teammates (manual import)."
                 : "Full account deletion should be handled by the auth/database backend once login is live."}
             </p>
           </div>

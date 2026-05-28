@@ -1201,19 +1201,19 @@ async function getMembershipFromRequest(req) {
 async function getQuotaSession(req, estimatedTokens = 0) {
   if (!quotaAuthEnabled) return null;
   const token = extractBearerToken(req);
-  if (!token) throw publicApiError("Silakan sign in untuk generate dengan AI dan memakai quota.", 401);
+  if (!token) throw publicApiError("Sign in to use AI features and your token quota.", 401);
 
   const client = createUserSupabaseClient(token);
   const { data: userData, error: userError } = await client.auth.getUser(token);
-  if (userError || !userData?.user) throw publicApiError("Session login tidak valid. Silakan sign in ulang.", 401);
+  if (userError || !userData?.user) throw publicApiError("Invalid session. Please sign in again.", 401);
 
   const { data, error } = await client.rpc("get_my_entitlement");
-  if (error) throw publicApiError("Membership belum siap. Jalankan SQL quota terbaru di Supabase.", 503);
+  if (error) throw publicApiError("Membership is not ready. Run the latest Supabase quota SQL.", 503);
   const profile = Array.isArray(data) ? data[0] : data;
-  if (!profile) throw publicApiError("Profile membership tidak ditemukan. Silakan sign out lalu sign in ulang.", 403);
+  if (!profile) throw publicApiError("Membership profile not found. Sign out and sign in again.", 403);
 
   if (Number(profile.quota_used || 0) + estimatedTokens > Number(profile.quota_limit || 0)) {
-    throw publicApiError("Quota token habis. Upgrade plan atau tunggu quota reset.", 402);
+    throw publicApiError("Token quota exceeded. Upgrade your plan or wait for quota reset.", 402);
   }
 
   return { client, profile, user: userData.user };
@@ -1222,21 +1222,21 @@ async function getQuotaSession(req, estimatedTokens = 0) {
 function mapQuotaRecordError(error) {
   const message = String(error?.message || "");
   if (/quota exceeded/i.test(message)) {
-    return { message: "Quota token habis. Upgrade plan atau tunggu quota reset.", statusCode: 402 };
+    return { message: "Token quota exceeded. Upgrade your plan or wait for quota reset.", statusCode: 402 };
   }
   if (/profile not found/i.test(message)) {
-    return { message: "Profil akun belum siap. Sign out lalu sign in lagi, atau jalankan SQL Supabase phase-3.", statusCode: 403 };
+    return { message: "Account profile is not ready. Sign out and sign in again, or run Supabase phase-3 SQL.", statusCode: 403 };
   }
   if (/authentication required/i.test(message)) {
-    return { message: "Session login tidak valid. Silakan sign in ulang.", statusCode: 401 };
+    return { message: "Invalid session. Please sign in again.", statusCode: 401 };
   }
   if (/permission denied|row-level security|policy/i.test(message)) {
     return {
-      message: "Database quota belum siap. Jalankan supabase/phase-3-production-fix.sql di Supabase SQL Editor.",
+      message: "Database quota is not ready. Run supabase/phase-3-production-fix.sql in the Supabase SQL Editor.",
       statusCode: 503,
     };
   }
-  return { message: "Gagal mencatat usage quota.", statusCode: 503 };
+  return { message: "Failed to record quota usage.", statusCode: 503 };
 }
 
 async function recordUsageWithServiceRole(quotaSession, { eventType, metadata, tokenEstimate }) {
@@ -1251,8 +1251,8 @@ async function recordUsageWithServiceRole(quotaSession, { eventType, metadata, t
     .eq("id", userId)
     .maybeSingle();
 
-  if (profileError) throw publicApiError(`Gagal membaca profile quota: ${profileError.message}`, 503);
-  if (!profile) throw publicApiError("Profil akun belum siap. Sign out lalu sign in lagi.", 403);
+  if (profileError) throw publicApiError(`Failed to read quota profile: ${profileError.message}`, 503);
+  if (!profile) throw publicApiError("Account profile is not ready. Sign out and sign in again.", 403);
 
   let quotaUsed = Number(profile.quota_used || 0);
   let quotaResetAt = profile.quota_reset_at;
@@ -1266,7 +1266,7 @@ async function recordUsageWithServiceRole(quotaSession, { eventType, metadata, t
 
   const quotaLimit = Number(profile.quota_limit || 0);
   if (quotaUsed + tokens > quotaLimit) {
-    throw publicApiError("Quota token habis. Upgrade plan atau tunggu quota reset.", 402);
+    throw publicApiError("Token quota exceeded. Upgrade your plan or wait for quota reset.", 402);
   }
 
   const { error: usageError } = await admin.from("usage_events").insert({
@@ -1275,7 +1275,7 @@ async function recordUsageWithServiceRole(quotaSession, { eventType, metadata, t
     token_estimate: tokens,
     metadata: metadata || {},
   });
-  if (usageError) throw publicApiError(`Gagal mencatat usage quota: ${usageError.message}`, 503);
+  if (usageError) throw publicApiError(`Failed to record quota usage: ${usageError.message}`, 503);
 
   const nextQuotaUsed = quotaUsed + tokens;
   const { data: updated, error: updateError } = await admin
@@ -1285,7 +1285,7 @@ async function recordUsageWithServiceRole(quotaSession, { eventType, metadata, t
     .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
     .single();
 
-  if (updateError) throw publicApiError(`Gagal update quota: ${updateError.message}`, 503);
+  if (updateError) throw publicApiError(`Failed to update quota: ${updateError.message}`, 503);
   return publicQuota(updated);
 }
 
@@ -1331,7 +1331,7 @@ async function finishGenerateResponse(res, quotaSession, usagePayload, body) {
     try {
       quota = await recordUsage(quotaSession, usagePayload);
     } catch (usageError) {
-      const note = usageError.publicMessage || usageError.message || "Gagal mencatat usage quota.";
+      const note = usageError.publicMessage || usageError.message || "Failed to record quota usage.";
       if (softFail) {
         warning = [warning, note].filter(Boolean).join(" ");
         console.warn("recordUsage soft-failed", note);
