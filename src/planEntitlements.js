@@ -78,16 +78,16 @@ export function canExportFormat(plan, format) {
 export function upgradeMessageForFeature(feature) {
   const min = minPlanForFeature(feature);
   const labels = {
-    docxExport: "Export DOCX",
-    pptxExport: "Export PPTX",
-    ocrPriority: "OCR prioritas",
+    docxExport: "DOCX export",
+    pptxExport: "PPTX export",
+    ocrPriority: "Priority OCR",
     aiCompare: "AI Compare",
     aiOptimize: "AI Optimizer",
     priorityRouting: "Priority routing",
     teamLibraryBundle: "Team library bundle",
   };
   const name = labels[feature] || feature;
-  return `${name} membutuhkan plan ${min} atau lebih tinggi. Upgrade di Membership.`;
+  return `${name} requires the ${min} plan or higher. Upgrade in Membership.`;
 }
 
 /** OCR model + limits applied server-side from membership. */
@@ -139,27 +139,27 @@ export function applyPriorityRouting(modelSettings = {}, plan) {
 export const MEMBERSHIP_MARKETING = {
   Free: {
     price: "Rp0",
-    detail: "Builder, library lokal terbatas, tanpa export Office.",
-    highlights: ["50k token/bulan", "25 prompt tersimpan", "5 template custom"],
+    detail: "Builder, limited local library, no Office export.",
+    highlights: ["50k tokens/month", "25 saved prompts", "5 custom templates"],
   },
   Pro: {
     price: "Rp49k/mo",
-    detail: "Kuota besar, OCR prioritas, export DOCX/PPTX, AI Compare & Optimizer.",
+    detail: "Higher quota, priority OCR, DOCX/PPTX export, AI Compare & Optimizer.",
     highlights: [
-      "500k token/bulan",
-      "Export DOCX & PPTX",
-      "OCR prioritas untuk lampiran gambar",
-      "AI Compare & Optimizer",
+      "500k tokens/month",
+      "DOCX & PPTX export",
+      "Priority OCR for image attachments",
+      "AI Compare & Optimizer (uses quota)",
     ],
   },
   Business: {
     price: "Rp199k/mo",
-    detail: "Semua Pro + routing model prioritas, library tim, limit tertinggi.",
+    detail: "Everything in Pro plus priority model routing, team library, highest limits.",
     highlights: [
-      "2M token/bulan",
+      "2M tokens/month",
       "Priority AI routing",
-      "500 prompt library + backup tim",
-      "120 template custom",
+      "500-prompt library + team backup",
+      "120 custom templates",
     ],
   },
 };

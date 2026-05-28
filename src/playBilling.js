@@ -35,26 +35,26 @@ export function getPlayBillingHint() {
   if (isPlayBillingAvailable()) {
     return {
       ready: true,
-      message: "Tap kartu Pro atau Business untuk membeli lewat Google Play.",
+      message: "Tap the Pro or Business card to purchase via Google Play.",
     };
   }
   if (!isLikelyAndroidTwa()) {
     return {
       ready: false,
       message:
-        "Pembelian hanya dari app Android PromptLab yang di-install lewat Google Play (Internal/Closed testing), bukan browser desktop.",
+        "Purchases are only available in the PromptLab Android app installed from Google Play (internal/closed testing), not in a desktop browser.",
     };
   }
   return {
     ready: false,
     message:
-      "Play Billing belum aktif di app ini. Install ulang dari link Play Store (bukan bookmark Chrome), tutup app sepenuhnya lalu buka lagi. Pastikan AAB terbaru sudah di-upload ke Internal testing.",
+      "Play Billing is not active in this app yet. Reinstall from the Play Store link (not a Chrome bookmark), fully close the app, then open it again. Make sure the latest AAB is uploaded to internal testing.",
   };
 }
 
 async function getBillingService() {
   if (!isPlayBillingAvailable()) {
-    throw new Error("Play Billing hanya tersedia di app PromptLab dari Google Play (Android).");
+    throw new Error("Play Billing is only available in the PromptLab app from Google Play (Android).");
   }
   return window.getDigitalGoodsService(PLAY_BILLING_SERVICE);
 }
@@ -77,7 +77,7 @@ export async function listPlayPurchases() {
  */
 export async function purchasePlayPlan(planName) {
   const productId = PLAY_PRODUCT_IDS[planName];
-  if (!productId) throw new Error("Plan tidak dikenali.");
+  if (!productId) throw new Error("Unknown plan.");
 
   await getBillingService();
 
@@ -102,7 +102,7 @@ export async function purchasePlayPlan(planName) {
     paymentResponse = await request.show();
   } catch (error) {
     if (error?.name === "AbortError") {
-      throw new Error("Pembelian dibatalkan.");
+      throw new Error("Purchase canceled.");
     }
     throw error;
   }
@@ -120,7 +120,7 @@ export async function purchasePlayPlan(planName) {
 
   if (!purchaseToken) {
     await completeBilling(false);
-    throw new Error("Token pembelian tidak diterima dari Play Store.");
+    throw new Error("Purchase token was not returned from the Play Store.");
   }
 
   return {
@@ -147,7 +147,7 @@ export async function verifyPlayPurchaseOnServer(apiBase, accessToken, payload) 
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error || "Verifikasi pembelian gagal.");
+    throw new Error(data.error || "Purchase verification failed.");
   }
   return data;
 }

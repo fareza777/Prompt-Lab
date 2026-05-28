@@ -272,13 +272,13 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
     const productId = String(req.body?.productId || "").trim();
     const purchaseToken = String(req.body?.purchaseToken || "").trim();
     if (!productId || !purchaseToken) {
-      res.status(400).json({ error: "productId dan purchaseToken wajib." });
+      res.status(400).json({ error: "productId and purchaseToken are required." });
       return;
     }
 
     const planConfig = getPlanForProductId(productId);
     if (!planConfig) {
-      res.status(400).json({ error: "Product ID tidak dikenali." });
+      res.status(400).json({ error: "Unknown product ID." });
       return;
     }
 
@@ -289,13 +289,13 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
     });
 
     if (!verification.ok) {
-      res.status(402).json({ error: verification.error || "Verifikasi Google Play gagal." });
+      res.status(402).json({ error: verification.error || "Google Play verification failed." });
       return;
     }
 
     const admin = createServiceRoleSupabaseClient();
     if (!admin || !quotaSession?.user?.id) {
-      res.status(503).json({ error: "Server membership belum siap." });
+      res.status(503).json({ error: "Membership server is not ready." });
       return;
     }
 
@@ -311,7 +311,7 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
       .eq("id", userId);
 
     if (profileError) {
-      res.status(503).json({ error: `Gagal memperbarui plan: ${profileError.message}` });
+      res.status(503).json({ error: `Failed to update plan: ${profileError.message}` });
       return;
     }
 
@@ -334,14 +334,14 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
       .maybeSingle();
 
     if (readError || !profile) {
-      res.json({ ok: true, plan: planConfig.plan, message: "Plan diperbarui." });
+      res.json({ ok: true, plan: planConfig.plan, message: "Plan updated." });
       return;
     }
 
     res.json({
       ok: true,
       plan: planConfig.plan,
-      message: `Berhasil upgrade ke ${planConfig.plan}.`,
+      message: `Successfully upgraded to ${planConfig.plan}.`,
       quota: publicQuota(profile),
     });
   } catch (error) {
@@ -358,35 +358,34 @@ app.post("/api/optimize-prompt", express.json({ limit: "256kb" }), async (req, r
       return;
     }
     const payload = enrichPayloadWithLanguage(normalizeOptimizePayload(req.body));
+    const quotaEstimate = estimateOptimizeTokens(payload);
+    const quotaSession = await getQuotaSession(req, quotaEstimate);
     const runtime = getRuntimeProvider(applyPriorityRouting(payload.modelSettings, membership.plan));
+    let body;
 
     if (runtime.provider !== "openai" && runtime.client) {
       try {
         const completion = await createOpenRouterOptimizeCompletion(payload, runtime);
         const optimizedRaw = completion.choices?.[0]?.message?.content || "";
         const optimizedPrompt = sanitizePromptOutput(optimizedRaw) || buildLocalOptimizedPrompt(payload);
-        res.json({
+        body = {
           engineVersion: PROMPT_ENGINE_VERSION,
           piiFindings: payload.piiFindings || [],
           source: runtime.provider,
           model: completion.model,
           prompt: optimizedPrompt,
-        });
-        return;
+        };
       } catch (error) {
         console.warn("openrouter optimize fallback", error.status || error.code || error.message);
-        res.json({
+        body = {
           engineVersion: PROMPT_ENGINE_VERSION,
           piiFindings: payload.piiFindings || [],
           source: "fallback",
           warning: "Provider AI sedang limit/overload, memakai optimizer lokal.",
           prompt: buildLocalOptimizedPrompt(payload),
-        });
-        return;
+        };
       }
-    }
-
-    if (runtime.provider === "openai" && runtime.client) {
+    } else if (runtime.provider === "openai" && runtime.client) {
       const response = await runtime.client.responses.create({
         model: payload.modelSettings.primaryModel || runtime.defaultModel,
         input: [
@@ -411,24 +410,36 @@ app.post("/api/optimize-prompt", express.json({ limit: "256kb" }), async (req, r
         ],
       });
       const sanitizedOptimizerPrompt = sanitizePromptOutput(response.output_text);
-      res.json({
+      body = {
         engineVersion: PROMPT_ENGINE_VERSION,
         piiFindings: payload.piiFindings || [],
         source: "openai",
         prompt: sanitizedOptimizerPrompt || buildLocalOptimizedPrompt(payload),
-      });
-      return;
+      };
+    } else {
+      body = {
+        engineVersion: PROMPT_ENGINE_VERSION,
+        piiFindings: payload.piiFindings || [],
+        source: "fallback",
+        prompt: buildLocalOptimizedPrompt(payload),
+      };
     }
 
-    res.json({
-      engineVersion: PROMPT_ENGINE_VERSION,
-      piiFindings: payload.piiFindings || [],
-      source: "fallback",
-      prompt: buildLocalOptimizedPrompt(payload),
-    });
+    await finishGenerateResponse(
+      res,
+      quotaSession,
+      {
+        eventType: "optimize_prompt",
+        metadata: { mode: payload.mode, source: body.source, modelTarget: payload.targetModel },
+        tokenEstimate: quotaEstimate,
+        outputText: body.prompt,
+      },
+      body
+    );
   } catch (error) {
     console.error("optimize-prompt failed", error.message);
-    res.status(500).json({ error: "Gagal mengoptimalkan prompt." });
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.publicMessage || error.message || "Failed to optimize prompt." });
   }
 });
 
@@ -440,19 +451,23 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
       return;
     }
     const payload = normalizeComparePayload(req.body);
-    const runtime = getRuntimeProvider(applyPriorityRouting(payload.modelSettings, membership.plan));
 
     if (!payload.promptA.trim() || !payload.promptB.trim()) {
-      res.status(400).json({ error: "Prompt A dan Prompt B wajib diisi." });
+      res.status(400).json({ error: "Prompt A and Prompt B are required." });
       return;
     }
+
+    const runtime = getRuntimeProvider(applyPriorityRouting(payload.modelSettings, membership.plan));
+    const usesAiJudge = Boolean(runtime.client);
+    const quotaEstimate = estimateCompareTokens(payload, { positionSwap: usesAiJudge });
+    const quotaSession = await getQuotaSession(req, quotaEstimate);
+    let body;
 
     if (runtime.provider !== "openai" && runtime.client) {
       try {
         const generation = await createOpenRouterCompareCompletion(payload, runtime);
         const raw = generation.completion.choices?.[0]?.message?.content || "";
         let result = parseCompareResult(raw) || buildLocalCompareResult(payload);
-        // v2: position-swap bias mitigation — run second judge dengan A/B di-flip
         try {
           const swappedPayload = buildSwappedComparePayload(payload);
           const swappedGen = await createOpenRouterCompareCompletion(swappedPayload, runtime);
@@ -462,7 +477,7 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
         } catch (swapErr) {
           console.warn("compare position-swap failed", swapErr.message);
         }
-        res.json({
+        body = {
           source: runtime.provider,
           model: generation.completion.model,
           modelStatus: generation.usedFallbackModel ? "fallback-model" : "primary-model",
@@ -470,22 +485,18 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
             ? `Primary model sedang limit/error (${generation.primaryError}). Fallback model dipakai.`
             : "",
           result,
-        });
-        return;
+        };
       } catch (error) {
         console.warn("openrouter compare fallback", error.status || error.code || error.message);
-        res.json({
+        body = {
           source: "fallback",
           model: "Local fallback",
           modelStatus: "local-fallback",
           warning: "Provider AI sedang limit/overload, memakai compare lokal.",
           result: buildLocalCompareResult(payload),
-        });
-        return;
+        };
       }
-    }
-
-    if (runtime.provider === "openai" && runtime.client) {
+    } else if (runtime.provider === "openai" && runtime.client) {
       const response = await runtime.client.responses.create({
         model: payload.modelSettings.primaryModel || runtime.defaultModel,
         input: [
@@ -510,7 +521,6 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
         ],
       });
       let result = parseCompareResult(response.output_text || "") || buildLocalCompareResult(payload);
-      // v2: position-swap bias mitigation untuk OpenAI compare
       try {
         const swappedPayload = buildSwappedComparePayload(payload);
         const swappedResp = await runtime.client.responses.create({
@@ -525,25 +535,38 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
       } catch (swapErr) {
         console.warn("openai compare position-swap failed", swapErr.message);
       }
-      res.json({
+      body = {
         source: "openai",
         model: payload.modelSettings.primaryModel || runtime.defaultModel,
         modelStatus: "primary-model",
         result,
-      });
-      return;
+      };
+    } else {
+      body = {
+        source: "fallback",
+        model: "Local fallback",
+        modelStatus: "local-fallback",
+        warning: "API key provider belum aktif, memakai compare lokal.",
+        result: buildLocalCompareResult(payload),
+      };
     }
 
-    res.json({
-      source: "fallback",
-      model: "Local fallback",
-      modelStatus: "local-fallback",
-      warning: "API key provider belum aktif, memakai compare lokal.",
-      result: buildLocalCompareResult(payload),
-    });
+    const resultText = JSON.stringify(body.result || {});
+    await finishGenerateResponse(
+      res,
+      quotaSession,
+      {
+        eventType: "compare_prompts",
+        metadata: { source: body.source, modelTarget: payload.targetModel, positionSwap: usesAiJudge },
+        tokenEstimate: quotaEstimate,
+        outputText: resultText,
+      },
+      body
+    );
   } catch (error) {
     console.error("compare-prompts failed", error.message);
-    res.status(500).json({ error: "Gagal membandingkan prompt." });
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.publicMessage || error.message || "Failed to compare prompts." });
   }
 });
 
@@ -1330,6 +1353,17 @@ function estimateGenerationTokens(payload, attachments = []) {
   const baseText = [payload.narrative, payload.category, payload.tone, payload.modelTarget, payload.outputType, payload.qualityMode, attachmentText].join("\n");
   const outputReserve = payload.qualityMode === "premium" ? 2600 : 1600;
   return Math.min(12000, Math.max(600, estimateTextTokens(baseText) + outputReserve));
+}
+
+function estimateOptimizeTokens(payload) {
+  const baseText = [payload.prompt, payload.mode, payload.targetModel, payload.tone].join("\n");
+  return Math.min(8000, Math.max(500, estimateTextTokens(baseText) + 1400));
+}
+
+function estimateCompareTokens(payload, { positionSwap = false } = {}) {
+  const baseText = [payload.promptA, payload.promptB, payload.targetModel, payload.useCase].join("\n");
+  const single = Math.max(700, estimateTextTokens(baseText) + 900);
+  return Math.min(16000, single * (positionSwap ? 2 : 1));
 }
 
 function normalizeProvider(value) {

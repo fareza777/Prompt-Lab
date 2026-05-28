@@ -1104,7 +1104,7 @@ class AppErrorBoundary extends Component {
             fontFamily: "system-ui, sans-serif",
           }}
         >
-          <h1 style={{ fontSize: 22, marginBottom: 8 }}>PromptLab gagal dimuat</h1>
+          <h1 style={{ fontSize: 22, marginBottom: 8 }}>PromptLab failed to load</h1>
           <p style={{ opacity: 0.85, lineHeight: 1.5 }}>{this.state.error.message}</p>
           <button
             type="button"
@@ -1120,7 +1120,7 @@ class AppErrorBoundary extends Component {
               window.location.reload();
             }}
           >
-            Reset &amp; muat ulang
+            Reset &amp; reload
           </button>
         </main>
       );
@@ -1536,14 +1536,14 @@ function App() {
 
   async function upgradeViaPlayBilling(planName) {
     if (!accountState.userId) {
-      setBillingMessage("Sign in dulu untuk upgrade.");
+      setBillingMessage("Sign in to upgrade your plan.");
       return;
     }
     if (!isPlayBillingAvailable()) {
       setBillingMessage(
         isLikelyAndroidTwa()
-          ? "Play Billing belum tersedia. Install PromptLab dari Play Store (closed testing), bukan browser biasa."
-          : "Upgrade hanya dari app Android PromptLab di Google Play."
+          ? "Play Billing is not available yet. Install PromptLab from the Play Store (closed testing), not a regular browser."
+          : "Upgrades are only available in the PromptLab Android app on Google Play."
       );
       return;
     }
@@ -1554,7 +1554,7 @@ function App() {
       const purchase = await purchasePlayPlan(planName);
       completeBilling = purchase.completeBilling;
       const token = await getAccessToken();
-      if (!token) throw new Error("Session habis. Sign in ulang.");
+      if (!token) throw new Error("Session expired. Please sign in again.");
       const data = await verifyPlayPurchaseOnServer(apiBase, token, {
         productId: purchase.productId,
         purchaseToken: purchase.purchaseToken,
@@ -1562,11 +1562,11 @@ function App() {
       await completeBilling?.(true);
       if (data.quota) applyServerQuota(data.quota);
       else await loadUserProfile({ id: accountState.userId, email: accountState.email });
-      setBillingMessage(data.message || `Upgrade ke ${planName} berhasil.`);
+      setBillingMessage(data.message || `Upgraded to ${planName} successfully.`);
       flashAction(`Plan ${planName} active`);
     } catch (error) {
       await completeBilling?.(false);
-      setBillingMessage(error.message || "Upgrade gagal.");
+      setBillingMessage(error.message || "Upgrade failed.");
     } finally {
       setBillingBusy(false);
     }
@@ -1715,14 +1715,22 @@ function App() {
       setOptimizerResult(data.prompt || buildLocalOptimizedPrompt(rawPrompt, mode, model, tone));
       setOptimizerSource(data.source || "server");
       setOptimizerWarning(data.warning || "");
+      applyServerQuota(data.quota);
       setEngineVersion(data.engineVersion || engineVersion);
       setPiiFindings(Array.isArray(data.piiFindings) ? data.piiFindings : []);
       return data.prompt;
     } catch (error) {
+      const message = error.message || "Backend unavailable, using local optimizer.";
+      const quotaOnly = /quota token|quota exceeded|usage quota/i.test(message);
+      if (quotaOnly) {
+        setOptimizerError(message);
+        setOptimizerWarning("");
+        return null;
+      }
       const fallback = buildLocalOptimizedPrompt(rawPrompt, mode, model, tone);
       setOptimizerResult(fallback);
       setOptimizerSource("local");
-      setOptimizerError(error.message || "Backend belum tersedia, memakai optimizer lokal.");
+      setOptimizerError(message);
       return fallback;
     } finally {
       setIsOptimizing(false);
@@ -1761,13 +1769,21 @@ function App() {
       setCompareResult(data.result || null);
       setCompareSource(data.model || data.source || "AI judge");
       setCompareWarning(data.warning || "");
+      applyServerQuota(data.quota);
       setCompareBiasMitigation(data.result?.bias_mitigation || "");
       return data.result;
     } catch (error) {
+      const message = error.message || "Compare provider unavailable, using local judge.";
+      const quotaOnly = /quota token|quota exceeded|usage quota/i.test(message);
+      if (quotaOnly) {
+        setCompareError(message);
+        setCompareWarning("");
+        return null;
+      }
       const fallback = buildLocalCompareResult(compareA, compareB);
       setCompareResult(fallback);
       setCompareSource("Local judge");
-      setCompareError(error.message || "Compare provider unavailable, using local judge.");
+      setCompareError(message);
       return fallback;
     } finally {
       setIsComparing(false);
@@ -3292,7 +3308,7 @@ function V2PublicSettings(props) {
               )}
             </div>
             <div className="v2-auth-status">
-              <span>{isSupabaseConfigured ? authStatus : "Supabase env belum aktif"}</span>
+              <span>{isSupabaseConfigured ? authStatus : "Supabase env is not configured"}</span>
               {authError && <strong>{authError}</strong>}
             </div>
             <div className="v2-actions wrap">
@@ -3322,7 +3338,7 @@ function V2PublicSettings(props) {
               <V2Info label="Library" value={`${library.length}/${libraryLimit} saved`} />
               <V2Info label="Templates" value={`${customTemplates.length}/${customTemplateLimit} custom`} />
             </div>
-            <p className="v2-note">Plan &amp; upgrade: buka tab <strong>Membership</strong>.</p>
+            <p className="v2-note">Plan &amp; upgrade: open the <strong>Membership</strong> tab.</p>
           </div>
         </section>
       )}
@@ -3373,8 +3389,8 @@ function V2PublicSettings(props) {
                         : plan === "Free"
                           ? "Default tier"
                           : playBillingReady
-                            ? "Tap untuk beli di Play"
-                            : "Tap untuk cek / petunjuk"}
+                            ? "Tap to buy on Play"
+                            : "Tap for setup steps"}
                     </em>
                   </button>
                 );
