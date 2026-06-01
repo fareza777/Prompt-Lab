@@ -1,4 +1,5 @@
 import { getLanguageLockInstruction, getLanguageMeta } from "../src/promptLanguage.js";
+import { buildPhasedAppDeliveryInstruction } from "../src/phasedAppDelivery.js";
 
 /**
  * PromptLab Prompt Engine v2
@@ -59,6 +60,15 @@ export function buildIntentSystemPromptXml(payload = {}) {
     "  - Switching output language away from the user's input language.",
     "</forbidden>",
     `<language>${getLanguageLockInstruction(langCode).replace(/\n/g, "\n  ")}</language>`,
+    (() => {
+      const phased = buildPhasedAppDeliveryInstruction(
+        payload.narrative || "",
+        payload.category || "",
+        payload.outputType || deliverable,
+        langCode
+      );
+      return phased ? `<phased_delivery>\n${phased.replace(/\n/g, "\n  ")}\n</phased_delivery>` : "";
+    })(),
     "<output>Return only the final prompt, langsung copy-paste ready.</output>",
   ].join("\n");
 }

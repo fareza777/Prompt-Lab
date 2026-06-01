@@ -59,6 +59,7 @@ import {
   MEMBERSHIP_MARKETING,
   upgradeMessageForFeature,
 } from "./planEntitlements.js";
+import { buildPhasedAppDeliveryInstruction } from "./phasedAppDelivery.js";
 import { purgeLegacyServiceWorkers, repairStuckLocalProfile } from "./bootRecovery.js";
 import { dismissStartupSplash, installSplashSafetyNet, markStartupSplashStarted } from "./startupSplash";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
@@ -406,10 +407,16 @@ function inferIntentBlueprint(narrative, category, outputType, attachments = [])
       expansions: ["question mapping", "response structure", "validation", "segmentation", "summary", "export"],
     },
     {
-      match: /\b(edit foto|photo editor|image editor|gambar|foto)\b/i,
+      match: /\b(edit foto|photo editor|image editor|editor foto|foto editor)\b/i,
       domain: "Creative photo tool",
       archetype: "canvas editor with upload, controls, preview, undo, and export",
       expansions: ["image upload", "canvas preview", "adjustment controls", "preset filters", "undo/redo", "export/download"],
+    },
+    {
+      match: /\b(editor video|video editor|edit video|editor vidio)\b/i,
+      domain: "Creative video tool",
+      archetype: "timeline editor with media library, trim, preview, overlays, and export",
+      expansions: ["media upload", "timeline", "trim", "preview player", "text overlay", "transitions", "export/download"],
     },
     {
       match: /\b(kasir|pos|point of sale|checkout|struk|stok|inventory)\b/i,
@@ -644,6 +651,8 @@ ${getLanguageLockInstruction(langMeta.code)}
 Tool and evidence instruction:
 - If web/search/tools are available and current facts are required, verify important claims with sources.
 - If tools are not available, state which claims depend on provided documents.
+
+${buildPhasedAppDeliveryInstruction(cleanNarrative, category, outputType, langMeta.code)}
 
 ${reasoningLine}`;
 }
@@ -892,7 +901,9 @@ Constraints:
 - Ask at most 3 clarifying questions only when critical information is missing
 - If the information is sufficient, provide the final answer directly
 - Use concrete examples, not generic theory
-- Preserve the selected output type and do not change it because of attachments`;
+- Preserve the selected output type and do not change it because of attachments
+
+${buildPhasedAppDeliveryInstruction(cleanNarrative, category, outputType, langMeta.code)}`;
 }
 
 function scorePrompt(prompt) {

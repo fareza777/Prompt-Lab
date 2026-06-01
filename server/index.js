@@ -14,6 +14,7 @@ import mammoth from "mammoth";
 import multer from "multer";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
+import { buildPhasedAppDeliveryInstruction } from "../src/phasedAppDelivery.js";
 import {
   buildIntentSystemPromptXml,
   buildOptimizerSystemPromptXml,
@@ -2439,6 +2440,13 @@ Gunakan brief ini sebagai proses berpikir internal.
 Jangan masukkan judul "PromptLab Intent Engine Brief" ke output final.
 Output yang dikembalikan harus langsung berupa Final Executable Prompt yang siap dicopy user, berisi role, context, task, requirements, constraints, output format, implementation/delivery checklist, acceptance criteria, dan clarifying questions hanya jika benar-benar menghalangi pekerjaan.
 
+${buildPhasedAppDeliveryInstruction(
+  payload.narrative || "",
+  payload.category || "",
+  payload.outputType || "",
+  payload.outputLanguage || resolveOutputLanguage(payload.narrative, ...(attachments || []).map((file) => file.excerpt))
+)}
+
 ${getLanguageLockInstruction(
   payload.outputLanguage || resolveOutputLanguage(payload.narrative, ...(attachments || []).map((file) => file.excerpt))
 )}`;
@@ -2819,6 +2827,13 @@ ${targetGuidance}
 ${conditionalInstructions}
 
 ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative))}
+
+${buildPhasedAppDeliveryInstruction(
+  payload.narrative || "",
+  payload.category || "",
+  payload.outputType || "",
+  payload.outputLanguage || resolveOutputLanguage(payload.narrative)
+)}
 
 Pastikan prompt tidak generik dan bisa langsung dicopy ke AI.`;
 }
