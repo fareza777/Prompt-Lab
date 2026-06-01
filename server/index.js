@@ -48,6 +48,7 @@ import {
   resolveOcrRuntime,
   upgradeMessageForFeature,
 } from "../src/planEntitlements.js";
+import { isSuperAccount, SUPER_QUOTA_LIMIT } from "../src/superAccounts.js";
 import {
   getPlanForProductId,
   verifyPlaySubscriptionPurchase,
@@ -1293,15 +1294,17 @@ function createServiceRoleSupabaseClient() {
 
 function publicQuota(profile) {
   if (!profile) return null;
+  const unlimited = isSuperAccount(profile);
   return {
     email: profile.email,
     fullName: profile.full_name || "",
     plan: profile.plan || "Free",
     playBilling: profile.play_billing || "Not linked",
-    quotaLimit: Number(profile.quota_limit || 0),
+    quotaLimit: unlimited ? SUPER_QUOTA_LIMIT : Number(profile.quota_limit || 0),
     quotaResetAt: profile.quota_reset_at,
     quotaUsed: Number(profile.quota_used || 0),
     role: profile.role === "admin" ? "admin" : "user",
+    unlimited,
   };
 }
 
@@ -1352,7 +1355,10 @@ async function getQuotaSession(req, estimatedTokens = 0) {
   const profile = Array.isArray(data) ? data[0] : data;
   if (!profile) throw publicApiError("Membership profile not found. Sign out and sign in again.", 403);
 
-  if (Number(profile.quota_used || 0) + estimatedTokens > Number(profile.quota_limit || 0)) {
+  if (
+    !isSuperAccount(profile) &&
+    Number(profile.quota_used || 0) + estimatedTokens > Number(profile.quota_limit || 0)
+  ) {
     throw publicApiError("Token quota exceeded. Upgrade your plan or wait for quota reset.", 402);
   }
 
@@ -1404,8 +1410,9 @@ async function recordUsageWithServiceRole(quotaSession, { eventType, metadata, t
     quotaResetAt = resetDate.toISOString().slice(0, 10);
   }
 
-  const quotaLimit = Number(profile.quota_limit || 0);
-  if (quotaUsed + tokens > quotaLimit) {
+  const unlimited = isSuperAccount(profile);
+  const quotaLimit = unlimited ? SUPER_QUOTA_LIMIT : Number(profile.quota_limit || 0);
+  if (!unlimited && quotaUsed + tokens > quotaLimit) {
     throw publicApiError("Token quota exceeded. Upgrade your plan or wait for quota reset.", 402);
   }
 
@@ -1417,7 +1424,7 @@ async function recordUsageWithServiceRole(quotaSession, { eventType, metadata, t
   });
   if (usageError) throw publicApiError(`Failed to record quota usage: ${usageError.message}`, 503);
 
-  const nextQuotaUsed = quotaUsed + tokens;
+  const nextQuotaUsed = unlimited ? quotaUsed : quotaUsed + tokens;
   const { data: updated, error: updateError } = await admin
     .from("profiles")
     .update({ quota_used: nextQuotaUsed, quota_reset_at: quotaResetAt })

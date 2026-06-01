@@ -61,6 +61,7 @@ import {
 } from "./planEntitlements.js";
 import { buildPhasedAppDeliveryInstruction } from "./phasedAppDelivery.js";
 import { buildStructuredAuditInstruction } from "./structuredAuditDelivery.js";
+import { isSuperAccount, SUPER_QUOTA_LIMIT } from "./superAccounts.js";
 import { purgeLegacyServiceWorkers, repairStuckLocalProfile } from "./bootRecovery.js";
 import { dismissStartupSplash, installSplashSafetyNet, markStartupSplashStarted } from "./startupSplash";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
@@ -794,6 +795,7 @@ function normalizeAccountState(raw) {
 
 function profileToAccount(profile, user) {
   const plan = membershipPlans[profile?.plan] ? profile.plan : "Free";
+  const unlimited = isSuperAccount(profile);
   return normalizeAccountState({
     userId: user?.id || profile?.id || "",
     email: profile?.email || user?.email || "",
@@ -801,7 +803,9 @@ function profileToAccount(profile, user) {
     role: profile?.role === "admin" ? "admin" : "user",
     plan,
     quotaUsed: Number(profile?.quota_used || 0),
-    quotaLimit: Number(profile?.quota_limit || membershipPlans[plan].quota || defaultAccountState.quotaLimit),
+    quotaLimit: unlimited
+      ? SUPER_QUOTA_LIMIT
+      : Number(profile?.quota_limit || membershipPlans[plan].quota || defaultAccountState.quotaLimit),
     quotaReset: profile?.quota_reset_at
       ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(profile.quota_reset_at))
       : defaultAccountState.quotaReset,
