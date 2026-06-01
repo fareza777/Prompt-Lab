@@ -49,6 +49,13 @@ import {
   getPlanForProductId,
   verifyPlaySubscriptionPurchase,
 } from "./playBillingGoogle.js";
+import {
+  clearRuntimeConfigCache,
+  getCachedPublishedModelSettings,
+  mergeModelSettingsLayers,
+  savePublishedModelSettings,
+  toPublicRuntimeConfig,
+} from "./runtimeConfig.js";
 
 const app = express();
 
@@ -122,24 +129,101 @@ const defaultOpenRouterFallbackModels = [
 app.use(cors({ origin: true }));
 app.use(express.json({ limit: "1mb" }));
 
-app.get("/api/health", (req, res) => {
-  const modelSettings = normalizeModelSettings(req.query);
-  const runtime = getRuntimeProvider(modelSettings);
-  res.json({
-    ok: true,
-    ai: Boolean(runtime.client),
-    endpoint: runtime.baseURL || "OpenAI default",
-    provider: runtime.provider,
-    model: modelSettings.primaryModel || runtime.defaultModel,
-    fallbackModel: runtime.provider === "openai" ? null : getOpenRouterFallbackModels(modelSettings.primaryModel || runtime.defaultModel)[0] || null,
-    fallbackModels: runtime.provider === "openai" ? [] : getOpenRouterFallbackModels(modelSettings.primaryModel || runtime.defaultModel, "balanced", modelSettings.fallbackModels),
-    ocrModel: modelSettings.ocrModel || getDefaultOcrModel(),
-  });
+app.get("/api/health", async (req, res) => {
+  try {
+    const modelSettings = await resolveModelSettings(req, req.query);
+    const runtime = getRuntimeProvider(modelSettings);
+    const { meta } = await getCachedPublishedModelSettings(createServiceRoleSupabaseClient());
+    res.json({
+      ok: true,
+      ai: Boolean(runtime.client),
+      endpoint: runtime.baseURL || "OpenAI default",
+      provider: runtime.provider,
+      model: modelSettings.primaryModel || runtime.defaultModel,
+      fallbackModel:
+        runtime.provider === "openai"
+          ? null
+          : getOpenRouterFallbackModels(modelSettings.primaryModel || runtime.defaultModel)[0] || null,
+      fallbackModels:
+        runtime.provider === "openai"
+          ? []
+          : getOpenRouterFallbackModels(
+              modelSettings.primaryModel || runtime.defaultModel,
+              "balanced",
+              modelSettings.fallbackModels
+            ),
+      ocrModel: modelSettings.ocrModel || getDefaultOcrModel(),
+      configSource: meta?.updatedAt ? "published" : "env",
+      configUpdatedAt: meta?.updatedAt || null,
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message || "Health check failed." });
+  }
+});
+
+app.get("/api/runtime-config", async (_req, res) => {
+  try {
+    const admin = createServiceRoleSupabaseClient();
+    const { settings: published, meta } = await getCachedPublishedModelSettings(admin);
+    const merged = mergeModelSettingsLayers({ published, allowRequestOverride: false });
+    res.json({
+      ok: true,
+      source: published ? "published" : "env",
+      config: toPublicRuntimeConfig(merged, meta),
+    });
+  } catch (error) {
+    res.status(503).json({ ok: false, error: error.message || "Runtime config unavailable." });
+  }
+});
+
+app.get("/api/admin/runtime-config", async (req, res) => {
+  try {
+    await requireAdminMembership(req);
+    const admin = createServiceRoleSupabaseClient();
+    if (!admin) {
+      res.status(503).json({ error: "SUPABASE_SERVICE_ROLE_KEY is required to load global config." });
+      return;
+    }
+    const { settings: published, meta } = await getCachedPublishedModelSettings(admin);
+    const merged = mergeModelSettingsLayers({ published, allowRequestOverride: false });
+    res.json({
+      ok: true,
+      source: published ? "published" : "env",
+      config: toPublicRuntimeConfig(merged, meta),
+      draft: published || null,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.publicMessage || error.message || "Failed to load config." });
+  }
+});
+
+app.put("/api/admin/runtime-config", express.json({ limit: "64kb" }), async (req, res) => {
+  try {
+    const membership = await requireAdminMembership(req);
+    const admin = createServiceRoleSupabaseClient();
+    if (!admin) {
+      res.status(503).json({ error: "SUPABASE_SERVICE_ROLE_KEY is required to publish global config." });
+      return;
+    }
+    const normalized = normalizeModelSettings(req.body);
+    const saved = await savePublishedModelSettings(admin, normalized, membership.user?.id);
+    clearRuntimeConfigCache();
+    res.json({
+      ok: true,
+      message: "Global model routing published. All users on production will use this within a few seconds.",
+      config: toPublicRuntimeConfig(normalized, saved.meta),
+      updatedAt: saved.meta?.updatedAt || null,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.publicMessage || error.message || "Failed to publish config." });
+  }
 });
 
 app.post("/api/test-provider", express.json({ limit: "64kb" }), async (req, res) => {
   try {
-    const modelSettings = normalizeModelSettings(req.body);
+    const modelSettings = await resolveModelSettings(req, req.body);
     const runtime = getRuntimeProvider(modelSettings);
     const model = modelSettings.primaryModel || runtime.defaultModel;
 
@@ -357,10 +441,14 @@ app.post("/api/optimize-prompt", express.json({ limit: "256kb" }), async (req, r
       res.status(402).json({ error: upgradeMessageForFeature("aiOptimize"), code: "UPGRADE_REQUIRED", minPlan: "Pro" });
       return;
     }
-    const payload = enrichPayloadWithLanguage(normalizeOptimizePayload(req.body));
+    const modelSettings = applyPriorityRouting(
+      await resolveModelSettings(req, req.body),
+      membership.plan
+    );
+    const payload = enrichPayloadWithLanguage(normalizeOptimizePayload(req.body, modelSettings));
     const quotaEstimate = estimateOptimizeTokens(payload);
     const quotaSession = await getQuotaSession(req, quotaEstimate);
-    const runtime = getRuntimeProvider(applyPriorityRouting(payload.modelSettings, membership.plan));
+    const runtime = getRuntimeProvider(payload.modelSettings);
     let body;
 
     if (runtime.provider !== "openai" && runtime.client) {
@@ -450,14 +538,18 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
       res.status(402).json({ error: upgradeMessageForFeature("aiCompare"), code: "UPGRADE_REQUIRED", minPlan: "Pro" });
       return;
     }
-    const payload = normalizeComparePayload(req.body);
+    const modelSettings = applyPriorityRouting(
+      await resolveModelSettings(req, req.body),
+      membership.plan
+    );
+    const payload = normalizeComparePayload(req.body, modelSettings);
 
     if (!payload.promptA.trim() || !payload.promptB.trim()) {
       res.status(400).json({ error: "Prompt A and Prompt B are required." });
       return;
     }
 
-    const runtime = getRuntimeProvider(applyPriorityRouting(payload.modelSettings, membership.plan));
+    const runtime = getRuntimeProvider(payload.modelSettings);
     const usesAiJudge = Boolean(runtime.client);
     const quotaEstimate = estimateCompareTokens(payload, { positionSwap: usesAiJudge });
     const quotaSession = await getQuotaSession(req, quotaEstimate);
@@ -580,10 +672,14 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
   let quotaSession = null;
   let quotaEstimate = 0;
   try {
-    const basePayload = normalizePayload(req.body);
     const membership = await getMembershipFromRequest(req);
     const entitlements = getEntitlements(membership.plan);
-    const routedSettings = applyPriorityRouting(basePayload.modelSettings, membership.plan);
+    const resolvedModelSettings = applyPriorityRouting(
+      await resolveModelSettings(req, req.body),
+      membership.plan
+    );
+    const basePayload = normalizePayload(req.body, resolvedModelSettings);
+    const routedSettings = basePayload.modelSettings;
     const manifestAttachments = normalizeAttachmentManifest(req.body.attachmentManifest);
     const uploadedAttachments = await Promise.all(
       (req.files || []).map((file) => normalizeFile(file, routedSettings, membership.plan))
@@ -942,14 +1038,14 @@ export {
   scorePromptText,
 };
 
-function normalizePayload(body) {
+function normalizePayload(body, resolvedModelSettings) {
   const rawNarrative = String(body.narrative || "").slice(0, 6000);
   // v2: PII/secret guardrail — redact secret keys & token, biarkan email/phone warn-only.
   const { sanitized: cleanNarrative, findings: piiFindings } = scrubPII(rawNarrative, { mode: "redact" });
   return {
     category: String(body.category || "Marketing").slice(0, 80),
     generationMode: normalizeGenerationMode(body.generationMode),
-    modelSettings: normalizeModelSettings(body),
+    modelSettings: resolvedModelSettings || normalizeModelSettings(body),
     modelTarget: String(body.model || "ChatGPT").slice(0, 80),
     narrative: cleanNarrative,
     outputType: String(body.outputType || "").slice(0, 80),
@@ -1073,13 +1169,13 @@ Output: prompt final saja.`,
   }
 }
 
-function normalizeOptimizePayload(body) {
+function normalizeOptimizePayload(body, resolvedModelSettings) {
   const rawPrompt = String(body.prompt || "").slice(0, 12000);
   const { sanitized: cleanPrompt, findings: piiFindings } = scrubPII(rawPrompt, { mode: "redact" });
   return {
     generationMode: normalizeGenerationMode(body.generationMode),
     mode: String(body.mode || "Lebih Jelas").slice(0, 80),
-    modelSettings: normalizeModelSettings(body),
+    modelSettings: resolvedModelSettings || normalizeModelSettings(body),
     prompt: cleanPrompt,
     piiFindings,
     targetModel: String(body.targetModel || "Claude").slice(0, 80),
@@ -1087,10 +1183,10 @@ function normalizeOptimizePayload(body) {
   };
 }
 
-function normalizeComparePayload(body) {
+function normalizeComparePayload(body, resolvedModelSettings) {
   return {
     generationMode: normalizeGenerationMode(body.generationMode),
-    modelSettings: normalizeModelSettings(body),
+    modelSettings: resolvedModelSettings || normalizeModelSettings(body),
     promptA: String(body.promptA || "").slice(0, 12000),
     promptB: String(body.promptB || "").slice(0, 12000),
     targetModel: String(body.targetModel || "General").slice(0, 80),
@@ -1129,6 +1225,30 @@ function normalizeModelSettings(body = {}) {
     provider: normalizeProvider(body.provider),
     timeoutMs: normalizeTimeout(body.timeoutMs),
   };
+}
+
+async function requireAdminMembership(req) {
+  const membership = await getMembershipFromRequest(req);
+  if (!membership.user) {
+    throw publicApiError("Sign in with an admin account.", 401);
+  }
+  if (membership.profile?.role !== "admin") {
+    throw publicApiError("Admin access required.", 403);
+  }
+  return membership;
+}
+
+async function resolveModelSettings(req, body = {}) {
+  const admin = createServiceRoleSupabaseClient();
+  const { settings: published } = await getCachedPublishedModelSettings(admin);
+  const fromRequest = normalizeModelSettings(body);
+  const membership = await getMembershipFromRequest(req);
+  const isAdmin = membership.profile?.role === "admin";
+  return mergeModelSettingsLayers({
+    published,
+    request: fromRequest,
+    allowRequestOverride: isAdmin,
+  });
 }
 
 function extractBearerToken(req) {

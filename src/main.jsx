@@ -1184,6 +1184,9 @@ function App() {
   const [providerTestStatus, setProviderTestStatus] = useState("");
   const [isTestingProvider, setIsTestingProvider] = useState(false);
   const [settingsSavedAt, setSettingsSavedAt] = useState("");
+  const [globalPublishBusy, setGlobalPublishBusy] = useState(false);
+  const [globalPublishAt, setGlobalPublishAt] = useState("");
+  const [globalConfigSource, setGlobalConfigSource] = useState("env");
   const [optimizerResult, setOptimizerResult] = useState("");
   const [optimizerSource, setOptimizerSource] = useState("local");
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -1314,6 +1317,12 @@ function App() {
       listener.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (authSessionReady && accountState.role === "admin" && accountState.userId) {
+      loadAdminRuntimeConfig();
+    }
+  }, [authSessionReady, accountState.role, accountState.userId]);
 
   useEffect(() => {
     localStorage.setItem("promptlab-generation-mode", generationMode);
@@ -1625,13 +1634,6 @@ function App() {
       formData.append("outputType", customOutputType);
       formData.append("generationMode", generationMode);
       formData.append("qualityMode", qualityMode);
-      formData.append("primaryModel", modelSettings.primaryModel);
-      formData.append("fallbackModels", modelSettings.fallbackModels);
-      formData.append("ocrModel", modelSettings.ocrModel);
-      formData.append("provider", modelSettings.provider);
-      formData.append("baseUrl", modelSettings.baseUrl);
-      formData.append("apiKey", modelSettings.apiKey);
-      formData.append("timeoutMs", modelSettings.timeoutMs);
       const uploadPlan = getAttachmentUploadPlan(attachments, apiBase);
       formData.append("attachmentManifest", JSON.stringify(buildAttachmentManifestForApi(attachments)));
       if (uploadPlan.sendRawFiles) {
@@ -1707,7 +1709,6 @@ function App() {
           targetModel: model,
           tone,
           generationMode,
-          ...modelSettings,
         }),
       });
       const data = await readApiJson(response);
@@ -1761,7 +1762,6 @@ function App() {
           targetModel: model,
           useCase: outputType,
           generationMode,
-          ...modelSettings,
         }),
       });
       const data = await readApiJson(response);
@@ -1826,15 +1826,77 @@ function App() {
     });
   }
 
+  function applyRuntimeConfigToModelSettings(config) {
+    if (!config) return;
+    setModelSettings((prev) => ({
+      ...prev,
+      provider: config.provider || prev.provider,
+      baseUrl: config.baseUrl || prev.baseUrl,
+      primaryModel: config.primaryModel || prev.primaryModel,
+      ocrModel: config.ocrModel || prev.ocrModel,
+      timeoutMs: config.timeoutMs ? String(config.timeoutMs) : prev.timeoutMs,
+      fallbackModels: Array.isArray(config.fallbackModels)
+        ? config.fallbackModels.join("\n")
+        : String(config.fallbackModels || prev.fallbackModels || ""),
+    }));
+  }
+
+  async function loadAdminRuntimeConfig() {
+    if (accountState.role !== "admin" || !accountState.userId) return;
+    try {
+      const response = await fetch(`${apiBase}/api/admin/runtime-config`, {
+        headers: await getAuthHeaders(),
+      });
+      const data = await readApiJson(response);
+      if (!response.ok) return;
+      if (data.config) applyRuntimeConfigToModelSettings(data.config);
+      setGlobalConfigSource(data.source || "env");
+      if (data.config?.updatedAt) {
+        setGlobalPublishAt(new Date(data.config.updatedAt).toLocaleString("en-US"));
+      }
+    } catch {
+      /* optional */
+    }
+  }
+
+  async function publishGlobalModelSettings() {
+    setGlobalPublishBusy(true);
+    setProviderTestStatus("Publishing global model routing...");
+    try {
+      const response = await fetch(`${apiBase}/api/admin/runtime-config`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+        body: JSON.stringify({
+          provider: modelSettings.provider,
+          baseUrl: modelSettings.baseUrl,
+          primaryModel: modelSettings.primaryModel,
+          ocrModel: modelSettings.ocrModel,
+          fallbackModels: modelSettings.fallbackModels,
+          timeoutMs: modelSettings.timeoutMs,
+        }),
+      });
+      const data = await readApiJson(response);
+      if (!response.ok) throw new Error(data.error || "Failed to publish global config.");
+      if (data.config) applyRuntimeConfigToModelSettings(data.config);
+      setGlobalConfigSource("published");
+      setGlobalPublishAt(
+        data.updatedAt
+          ? new Date(data.updatedAt).toLocaleString("en-US")
+          : new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit" }).format(new Date())
+      );
+      setProviderTestStatus(data.message || "Published globally for all users.");
+      localStorage.setItem("promptlab-model-settings", JSON.stringify(modelSettings));
+      await refreshHealth();
+    } catch (error) {
+      setProviderTestStatus(error.message || "Publish failed.");
+    } finally {
+      setGlobalPublishBusy(false);
+    }
+  }
+
   async function refreshHealth() {
     try {
-      const params = new URLSearchParams({
-        provider: modelSettings.provider || "",
-        baseUrl: modelSettings.baseUrl || "",
-        primaryModel: modelSettings.primaryModel || "",
-        ocrModel: modelSettings.ocrModel || "",
-      });
-      const response = await fetch(`${apiBase}/api/health?${params}`);
+      const response = await fetch(`${apiBase}/api/health`);
       const data = await readApiJson(response);
       setSettingsStatus(data);
       setProviderTestStatus(data.ok ? "Health check OK" : "Health check failed");
@@ -1850,7 +1912,7 @@ function App() {
     try {
       const response = await fetch(`${apiBase}/api/test-provider`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
         body: JSON.stringify(modelSettings),
       });
       const data = await readApiJson(response);
@@ -1873,8 +1935,8 @@ function App() {
 
   function saveModelSettings() {
     localStorage.setItem("promptlab-model-settings", JSON.stringify(modelSettings));
-    setSettingsSavedAt(new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date()));
-    setProviderTestStatus("Settings saved in this browser.");
+    setSettingsSavedAt(new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date()));
+    setProviderTestStatus("Draft saved in this browser only.");
   }
 
   async function exportFile(format, content = prompt, titleSeed = narrative) {
@@ -1990,6 +2052,11 @@ function App() {
     modelSettings,
     setModelSettings,
     saveModelSettings,
+    publishGlobalModelSettings,
+    loadAdminRuntimeConfig,
+    globalPublishBusy,
+    globalPublishAt,
+    globalConfigSource,
     settingsSavedAt,
     providerTestStatus,
     isTestingProvider,
@@ -3571,6 +3638,11 @@ function V2AdminSettings(props) {
     modelSettings,
     setModelSettings,
     saveModelSettings,
+    publishGlobalModelSettings,
+    loadAdminRuntimeConfig,
+    globalPublishBusy,
+    globalPublishAt,
+    globalConfigSource,
     settingsSavedAt,
     providerTestStatus,
     isTestingProvider,
@@ -3587,16 +3659,17 @@ function V2AdminSettings(props) {
         <div className="v2-card-head">
           <div>
             <h2>Admin Console</h2>
-            <p>Internal controls for provider routing, model fallback, Play Store readiness, and operations.</p>
+            <p>Publish model routing for every user on production (Vercel). API keys stay in Vercel env vars.</p>
           </div>
           <span className={`v2-health ${providerReady ? "ready" : ""}`}>{providerReady ? "Ready" : "Offline"}</span>
         </div>
         <div className="v2-info-grid">
           <V2Info label="API Base" value={apiBase || "Same-origin Vercel API"} />
-          <V2Info label="Provider" value={settingsStatus?.provider || modelSettings.provider || "-"} />
+          <V2Info label="Live source" value={globalConfigSource === "published" ? "Published (Supabase)" : "Vercel env defaults"} />
           <V2Info label="Last Active Model" value={settingsStatus?.model || modelSettings.primaryModel || "-"} />
           <V2Info label="OCR Model" value={modelSettings.ocrModel || settingsStatus?.ocrModel || "-"} />
         </div>
+        {globalPublishAt && <p className="v2-note">Last published: {globalPublishAt}</p>}
       </div>
 
       <div className="v2-card v2-settings-card">
@@ -3627,9 +3700,9 @@ function V2AdminSettings(props) {
         <div className="v2-card-head">
           <div>
             <h2>Provider & Endpoint</h2>
-            <p>Use Vercel env values by default, or override them from this browser.</p>
+            <p>Changes apply to all users after you publish. Keys are not stored in the database.</p>
           </div>
-          <button className="v2-btn" onClick={() => setModelSettings(defaultModelSettings)}>Reset</button>
+          <button className="v2-btn" onClick={() => setModelSettings(defaultModelSettings)}>Reset form</button>
         </div>
         <V2ChipGroup label="Provider" options={providerOptions} value={modelSettings.provider} onChange={(item) => updateModelSetting("provider", item)} />
         <label className="v2-label">Base URL / Endpoint</label>
@@ -3674,16 +3747,21 @@ function V2AdminSettings(props) {
           ))}
         </div>
         <div className="v2-actions wrap">
-          <button className="v2-btn primary" onClick={saveModelSettings}><Save size={16} />Save Settings</button>
-          <button className="v2-btn primary" onClick={testProvider} disabled={isTestingProvider}><Zap size={16} />{isTestingProvider ? "Testing..." : "Test Provider"}</button>
-          <button className="v2-btn" onClick={refreshHealth}><Gauge size={16} />Health</button>
-          <button className="v2-btn" onClick={() => navigator.clipboard?.writeText(apiBase).catch(() => {})}><Clipboard size={16} />Copy API Base</button>
+          <button className="v2-btn primary" onClick={publishGlobalModelSettings} disabled={globalPublishBusy}>
+            <Rocket size={16} />
+            {globalPublishBusy ? "Publishing…" : "Publish globally"}
+          </button>
+          <button className="v2-btn" onClick={saveModelSettings} disabled={globalPublishBusy}><Save size={16} />Save local draft</button>
+          <button className="v2-btn primary" onClick={testProvider} disabled={isTestingProvider || globalPublishBusy}><Zap size={16} />{isTestingProvider ? "Testing..." : "Test Provider"}</button>
+          <button className="v2-btn" onClick={refreshHealth} disabled={globalPublishBusy}><Gauge size={16} />Health</button>
+          <button className="v2-btn" onClick={loadAdminRuntimeConfig} disabled={globalPublishBusy}><Database size={16} />Reload published</button>
         </div>
+        <p className="v2-small">Run <code>supabase/phase-5-runtime-config.sql</code> once if publish returns a database error.</p>
         {isTestingProvider && (
           <V2MiniPipeline eyebrow="Provider test" title="Checking model route..." steps={["Endpoint", "Auth", "Model", "Response"]} />
         )}
-        {settingsSavedAt && <p className="v2-note">Settings last saved at {settingsSavedAt}</p>}
-        {providerTestStatus && <p className="v2-note">{providerTestStatus}</p>}
+        {settingsSavedAt && <p className="v2-note">Local draft saved at {settingsSavedAt}</p>}
+        {providerTestStatus && <p className="v2-note warn">{providerTestStatus}</p>}
       </div>
     </section>
   );
