@@ -6,6 +6,7 @@ import {
   getEntitlements,
   normalizePlanName,
   planMeetsMinimum,
+  resolveGenerateMaxTokens,
   resolveOcrRuntime,
 } from "../src/planEntitlements.js";
 
@@ -37,4 +38,24 @@ test("resolveOcrRuntime uses priority settings for Pro", () => {
   const free = resolveOcrRuntime("Free");
   assert.ok(pro.maxTokens > free.maxTokens);
   assert.notEqual(pro.model, free.model);
+});
+
+test("resolveGenerateMaxTokens scales by plan and phased game briefs", () => {
+  const gameNarrative = "buat game action seperti mario bros, 100 level dan story";
+  const freeGame = resolveGenerateMaxTokens("Free", {
+    narrative: gameNarrative,
+    category: "",
+    outputType: "",
+  });
+  const freePlain = resolveGenerateMaxTokens("Free", { narrative: "buat caption kopi" });
+  const businessGame = resolveGenerateMaxTokens("Business", {
+    narrative: gameNarrative,
+    category: "Coding",
+    outputType: "Application Code",
+    qualityMode: "premium",
+  });
+  assert.ok(freeGame >= 4800);
+  assert.ok(freeGame > freePlain);
+  assert.ok(businessGame >= 6000);
+  assert.ok(getEntitlements("Business").generateMaxTokens > getEntitlements("Free").generateMaxTokens);
 });

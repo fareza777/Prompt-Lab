@@ -1,5 +1,7 @@
 /** Plan tiers and feature gates (shared by web app + server). */
 
+import { shouldUsePhasedAppDelivery } from "./phasedAppDelivery.js";
+
 export const PLAN_NAMES = ["Free", "Pro", "Business"];
 
 const TIER = { Free: 0, Pro: 1, Business: 2 };
@@ -9,6 +11,8 @@ export const PLAN_ENTITLEMENTS = {
     quotaLimit: 50_000,
     libraryLimit: 25,
     customTemplateLimit: 5,
+    /** OpenRouter max_tokens for /api/generate-prompt (completion length cap). */
+    generateMaxTokens: 3200,
     maxAttachments: 3,
     docxExport: false,
     pptxExport: false,
@@ -22,6 +26,7 @@ export const PLAN_ENTITLEMENTS = {
     quotaLimit: 500_000,
     libraryLimit: 100,
     customTemplateLimit: 40,
+    generateMaxTokens: 4500,
     maxAttachments: 8,
     docxExport: true,
     pptxExport: true,
@@ -35,6 +40,7 @@ export const PLAN_ENTITLEMENTS = {
     quotaLimit: 2_000_000,
     libraryLimit: 500,
     customTemplateLimit: 120,
+    generateMaxTokens: 6000,
     maxAttachments: 8,
     docxExport: true,
     pptxExport: true,
@@ -88,6 +94,29 @@ export function upgradeMessageForFeature(feature) {
   };
   const name = labels[feature] || feature;
   return `${name} requires the ${min} plan or higher. Upgrade in Membership.`;
+}
+
+/**
+ * max_tokens for prompt generation (OpenRouter). Phased app/game briefs need more room.
+ * Override all plans: OPENROUTER_GENERATE_MAX_TOKENS env (server only).
+ */
+export function resolveGenerateMaxTokens(
+  plan,
+  { narrative = "", category = "", outputType = "", qualityMode = "standard" } = {}
+) {
+  const envOverride =
+    typeof process !== "undefined" && process.env?.OPENROUTER_GENERATE_MAX_TOKENS
+      ? Number(process.env.OPENROUTER_GENERATE_MAX_TOKENS)
+      : 0;
+  if (envOverride > 0) return Math.min(8000, Math.max(2200, envOverride));
+
+  const ent = getEntitlements(plan);
+  let max = Number(ent.generateMaxTokens) || 3200;
+  if (qualityMode === "premium") max += 500;
+  if (shouldUsePhasedAppDelivery(narrative, category, outputType)) {
+    max = Math.max(max, normalizePlanName(plan) === "Business" ? 6000 : normalizePlanName(plan) === "Pro" ? 5200 : 4800);
+  }
+  return Math.min(8000, Math.max(2200, max));
 }
 
 /** OCR model + limits applied server-side from membership. */

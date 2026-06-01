@@ -43,6 +43,7 @@ import {
   canUseFeature,
   getEntitlements,
   normalizePlanName,
+  resolveGenerateMaxTokens,
   resolveOcrRuntime,
   upgradeMessageForFeature,
 } from "../src/planEntitlements.js";
@@ -695,7 +696,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       attachments
     );
     const runtime = getRuntimeProvider(payload.modelSettings);
-    quotaEstimate = estimateGenerationTokens(payload, attachments);
+    quotaEstimate = estimateGenerationTokens(payload, attachments, membership.plan);
     quotaSession = await getQuotaSession(req, quotaEstimate);
 
     if (runtime.provider !== "openai") {
@@ -722,16 +723,17 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       }
 
       try {
-        let generation = await createOpenRouterCompletion(payload, attachments, runtime);
+        let generation = await createOpenRouterCompletion(payload, attachments, runtime, membership.plan);
         let completion = generation.completion;
         let rawPrompt = completion.choices?.[0]?.message?.content || "";
         let prompt = sanitizePromptOutput(rawPrompt);
         let retried = false;
+        let truncatedOutput = isCompletionTruncated(completion);
 
         if (isPromptTooShort(prompt) && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
           retried = true;
           try {
-            generation = await createOpenRouterCompletion(payload, attachments, runtime);
+            generation = await createOpenRouterCompletion(payload, attachments, runtime, membership.plan);
             completion = generation.completion;
             rawPrompt = completion.choices?.[0]?.message?.content || "";
             prompt = sanitizePromptOutput(rawPrompt);
@@ -754,8 +756,9 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
             ];
             const primaryModelLocal = payload.modelSettings?.primaryModel || runtime.defaultModel;
             const timingLocal = getOpenRouterTiming(payload.generationMode);
+            const retryMaxTokens = resolveGenerateMaxTokens(membership.plan, payload);
             const retryRes = await withTimeout(runtime.client.chat.completions.create(
-              { model: primaryModelLocal, messages: retryMessages, max_tokens: 2200, temperature: 0.4 },
+              { model: primaryModelLocal, messages: retryMessages, max_tokens: retryMaxTokens, temperature: 0.4 },
               { timeout: timingLocal.primaryTimeoutMs }
             ), timingLocal.primaryTimeoutMs, primaryModelLocal);
             const retriedRaw = retryRes.choices?.[0]?.message?.content || "";
@@ -775,7 +778,16 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
           const timing = getOpenRouterTiming(payload.generationMode);
           if (payload.modelSettings?.timeoutMs) timing.primaryTimeoutMs = payload.modelSettings.timeoutMs;
           try {
-            const refined = await runCritiqueRefinePass({ runtime, payload, attachments, basePrompt: prompt, timing, primaryModel, fallbackModels });
+            const refined = await runCritiqueRefinePass({
+              runtime,
+              payload,
+              attachments,
+              basePrompt: prompt,
+              timing,
+              primaryModel,
+              fallbackModels,
+              plan: membership.plan,
+            });
             if (refined && !isPromptTooShort(refined) && refined !== prompt) {
               prompt = refined;
               qualityNote = "Premium Quality Mode: critique+refine pass diterapkan.";
@@ -791,6 +803,11 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
 
         const warnings = [];
         if (generation.usedFallbackModel) warnings.push(`Primary model sedang limit/error (${generation.primaryError}). Fallback model dipakai.`);
+        if (truncatedOutput || isCompletionTruncated(completion)) {
+          warnings.push(
+            "Output mungkin terpotong (batas panjang model). Coba Premium Quality Mode, plan Pro/Business, atau generate ulang dengan narasi lebih ringkas per bagian."
+          );
+        }
         if (retried) warnings.push("Output awal terlalu pendek, di-regenerate ulang.");
         if (qualityNote) warnings.push(qualityNote);
         await finishGenerateResponse(res, quotaSession, {
@@ -1069,7 +1086,8 @@ function isPromptTooShort(text) {
   return text.trim().length < MIN_PROMPT_LENGTH;
 }
 
-async function runCritiqueRefinePass({ runtime, payload, attachments, basePrompt, timing, primaryModel, fallbackModels }) {
+async function runCritiqueRefinePass({ runtime, payload, attachments, basePrompt, timing, primaryModel, fallbackModels, plan = "Free" }) {
+  const refineMaxTokens = Math.min(8000, resolveGenerateMaxTokens(plan, payload) + 400);
   const langCode = payload.outputLanguage || resolveOutputLanguage(payload.narrative, payload.prompt, basePrompt);
   const langMeta = getLanguageMeta(langCode);
   const critiqueMessages = [
@@ -1147,7 +1165,7 @@ Output: prompt final saja.`,
       {
         model: primaryModel,
         messages: refineMessages,
-        max_tokens: 2400,
+        max_tokens: refineMaxTokens,
         temperature: 0.4,
       },
       { timeout: timing.primaryTimeoutMs }
@@ -1158,7 +1176,7 @@ Output: prompt final saja.`,
   } catch (error) {
     if (shouldTryFallbackModel(error) && fallbackModels.length > 0) {
       try {
-        const fb = await tryOpenRouterFallbackModels(runtime.client, fallbackModels, refineMessages, timing.fallbackTimeoutMs, 2400, 0.4);
+        const fb = await tryOpenRouterFallbackModels(runtime.client, fallbackModels, refineMessages, timing.fallbackTimeoutMs, refineMaxTokens, 0.4);
         const refined = fb.completion.choices?.[0]?.message?.content || "";
         const sanitized = sanitizePromptOutput(refined);
         return sanitized && !isPromptTooShort(sanitized) ? sanitized : basePrompt;
@@ -1469,11 +1487,15 @@ function estimateTextTokens(value = "") {
   return Math.max(1, Math.ceil(String(value || "").length / 4));
 }
 
-function estimateGenerationTokens(payload, attachments = []) {
+function estimateGenerationTokens(payload, attachments = [], plan = "Free") {
   const attachmentText = attachments.map((file) => `${file.filename || ""} ${file.excerpt || ""}`).join("\n");
   const baseText = [payload.narrative, payload.category, payload.tone, payload.modelTarget, payload.outputType, payload.qualityMode, attachmentText].join("\n");
-  const outputReserve = payload.qualityMode === "premium" ? 2600 : 1600;
+  const outputReserve = resolveGenerateMaxTokens(plan, payload);
   return Math.min(12000, Math.max(600, estimateTextTokens(baseText) + outputReserve));
+}
+
+function isCompletionTruncated(completion) {
+  return completion?.choices?.[0]?.finish_reason === "length";
 }
 
 function estimateOptimizeTokens(payload) {
@@ -1601,7 +1623,13 @@ function getOpenRouterTiming(mode) {
   };
 }
 
-async function createOpenRouterCompletion(payload, attachments, runtime = getRuntimeProvider(payload.modelSettings)) {
+async function createOpenRouterCompletion(
+  payload,
+  attachments,
+  runtime = getRuntimeProvider(payload.modelSettings),
+  plan = "Free"
+) {
+  const maxTokens = resolveGenerateMaxTokens(plan, payload);
   const startedAt = Date.now();
   const messages = [
     {
@@ -1627,13 +1655,14 @@ async function createOpenRouterCompletion(payload, attachments, runtime = getRun
       {
         model: primaryModel,
         messages,
-        max_tokens: 2200,
+        max_tokens: maxTokens,
         temperature: 0.4,
       },
       { timeout: timing.primaryTimeoutMs }
     ), timing.primaryTimeoutMs, primaryModel);
     return {
       completion,
+      maxTokens,
       primaryError: "",
       usedFallbackModel: false,
     };
@@ -1648,7 +1677,7 @@ async function createOpenRouterCompletion(payload, attachments, runtime = getRun
       fallbackModels,
       messages,
       timing.fallbackTimeoutMs,
-      2200
+      maxTokens
     );
     return {
       completion,
