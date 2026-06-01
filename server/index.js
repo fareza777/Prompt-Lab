@@ -18,6 +18,7 @@ import {
   buildIntentSystemPromptXml,
   buildOptimizerSystemPromptXml,
   buildCompareSystemPromptXml,
+  buildDepthDirective,
   validatePromptStructure,
   buildStructureRetryInstruction,
   getExpandedDomainPack,
@@ -658,7 +659,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
             const primaryModelLocal = payload.modelSettings?.primaryModel || runtime.defaultModel;
             const timingLocal = getOpenRouterTiming(payload.generationMode);
             const retryRes = await withTimeout(runtime.client.chat.completions.create(
-              { model: primaryModelLocal, messages: retryMessages, max_tokens: 2200, temperature: 0.4 },
+              { model: primaryModelLocal, messages: retryMessages, max_tokens: GENERATION_MAX_TOKENS, temperature: 0.4 },
               { timeout: timingLocal.primaryTimeoutMs }
             ), timingLocal.primaryTimeoutMs, primaryModelLocal);
             const retriedRaw = retryRes.choices?.[0]?.message?.content || "";
@@ -965,7 +966,10 @@ function normalizeQualityMode(value) {
   return "standard";
 }
 
-const MIN_PROMPT_LENGTH = 280;
+const MIN_PROMPT_LENGTH = 600;
+// v2.1: ceiling token untuk generation/refine dinaikkan agar prompt final
+// punya ruang untuk komprehensif (sebelumnya 2200 → output sering terpotong).
+const GENERATION_MAX_TOKENS = Number(process.env.GENERATION_MAX_TOKENS || 4000);
 
 function isPromptTooShort(text) {
   if (!text || typeof text !== "string") return true;
@@ -1050,7 +1054,7 @@ Output: prompt final saja.`,
       {
         model: primaryModel,
         messages: refineMessages,
-        max_tokens: 2400,
+        max_tokens: GENERATION_MAX_TOKENS,
         temperature: 0.4,
       },
       { timeout: timing.primaryTimeoutMs }
@@ -1061,7 +1065,7 @@ Output: prompt final saja.`,
   } catch (error) {
     if (shouldTryFallbackModel(error) && fallbackModels.length > 0) {
       try {
-        const fb = await tryOpenRouterFallbackModels(runtime.client, fallbackModels, refineMessages, timing.fallbackTimeoutMs, 2400, 0.4);
+        const fb = await tryOpenRouterFallbackModels(runtime.client, fallbackModels, refineMessages, timing.fallbackTimeoutMs, GENERATION_MAX_TOKENS, 0.4);
         const refined = fb.completion.choices?.[0]?.message?.content || "";
         const sanitized = sanitizePromptOutput(refined);
         return sanitized && !isPromptTooShort(sanitized) ? sanitized : basePrompt;
@@ -1506,7 +1510,7 @@ async function createOpenRouterCompletion(payload, attachments, runtime = getRun
       {
         model: primaryModel,
         messages,
-        max_tokens: 2200,
+        max_tokens: GENERATION_MAX_TOKENS,
         temperature: 0.4,
       },
       { timeout: timing.primaryTimeoutMs }
@@ -1527,7 +1531,7 @@ async function createOpenRouterCompletion(payload, attachments, runtime = getRun
       fallbackModels,
       messages,
       timing.fallbackTimeoutMs,
-      2200
+      GENERATION_MAX_TOKENS
     );
     return {
       completion,
@@ -1562,7 +1566,7 @@ async function createOpenRouterOptimizeCompletion(payload, runtime = getRuntimeP
       {
         model: primaryModel,
         messages,
-        max_tokens: 1600,
+        max_tokens: GENERATION_MAX_TOKENS,
         temperature: 0.4,
       },
       { timeout: timing.primaryTimeoutMs }
@@ -1573,7 +1577,7 @@ async function createOpenRouterOptimizeCompletion(payload, runtime = getRuntimeP
       `openrouter optimize primary failed, trying fallback chain`,
       error.status || error.code || error.message
     );
-    return (await tryOpenRouterFallbackModels(runtime.client, fallbackModels, messages, timing.fallbackTimeoutMs, 1600)).completion;
+    return (await tryOpenRouterFallbackModels(runtime.client, fallbackModels, messages, timing.fallbackTimeoutMs, GENERATION_MAX_TOKENS)).completion;
   }
 }
 
@@ -2526,6 +2530,8 @@ ${deliverableGuard}
 - Jika isi lampiran tersedia, gunakan isi tersebut sebagai konteks utama.
 ${targetGuidance}${conditionalInstructions}${antiGeneric}
 
+${buildDepthDirective({ language: payload.outputLanguage || resolveOutputLanguage(payload.narrative) })}
+
 ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative))}`,
     },
   ];
@@ -2598,6 +2604,8 @@ Aturan penting:
 ${deliverableGuard}
 - Jika isi lampiran tersedia, gunakan isi tersebut sebagai konteks utama.
 ${targetGuidance}${conditionalInstructions}${antiGeneric}
+
+${buildDepthDirective({ language: payload.outputLanguage || resolveOutputLanguage(payload.narrative) })}
 
 ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative))}`;
 
@@ -2698,9 +2706,11 @@ ${deliverableGuard}
 ${targetGuidance}
 ${conditionalInstructions}
 
+${buildDepthDirective({ language: payload.outputLanguage || resolveOutputLanguage(payload.narrative) })}
+
 ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative))}
 
-Pastikan prompt tidak generik dan bisa langsung dicopy ke AI.`;
+Pastikan prompt tidak generik, komprehensif, dan bisa langsung dicopy ke AI.`;
 }
 
 function buildLocalOptimizedPrompt(payload) {

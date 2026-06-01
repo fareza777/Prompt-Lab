@@ -51,6 +51,7 @@ export function buildIntentSystemPromptXml(payload = {}) {
     "  - Kuantifikasi jumlah/panjang/struktur sesuai kebutuhan.",
     "  - Sebutkan kapan AI harus klarifikasi (hanya jika informasi blocker).",
     "</rendering_rules>",
+    buildDepthDirective({ language: langCode }),
     "<forbidden>",
     "  - Preface basa-basi (\"Tentu!\", \"Berikut adalah...\").",
     "  - Engine brief atau meta-komentar di output final.",
@@ -85,9 +86,47 @@ export function buildOptimizerSystemPromptXml(payload = {}) {
     "  - Tambahkan role/context/output format/constraints/acceptance jika belum ada.",
     "  - Pertahankan fakta yang sudah ada di prompt lama.",
     "</rules>",
+    buildDepthDirective({ language: langCode }),
     "<forbidden>preface, engine brief, meta-komentar, judul \"PromptLab Optimizer Engine\", language switch</forbidden>",
     `<language>${getLanguageLockInstruction(langCode).replace(/\n/g, "\n  ")}</language>`,
     "<output>final optimized prompt only, ready to copy.</output>",
+  ].join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// 1b) Depth & comprehensiveness mandate
+// ---------------------------------------------------------------------------
+
+/**
+ * Directive yang memaksa model menghasilkan prompt yang komprehensif & mendalam,
+ * bukan kerangka tipis. Dipakai di system prompt intent & optimizer, dan bisa
+ * di-inject ke user instruction. Bilingual (id/en).
+ * @param {{ language?: string }} options
+ * @returns {string}
+ */
+export function buildDepthDirective({ language = "id" } = {}) {
+  const isEn = language === "en";
+  if (isEn) {
+    return [
+      '<depth_mandate priority="high">',
+      "  - Produce a comprehensive, production-grade prompt — never a thin skeleton.",
+      "  - Fully instantiate every section with concrete, domain-specific detail drawn from the narrative/attachments. No one-line placeholders.",
+      "  - Requirements: at least 5 concrete items. Constraints: at least 4. For EACH output-format section, attach a quantitative limit (count, length, structure, or duration).",
+      "  - Always include: edge cases / failure modes, explicit assumptions for any missing fact, and at least 3 testable acceptance criteria.",
+      "  - Expand domain expertise: add the professional steps a senior practitioner would include even if the user did not name them (mark inferred values as assumptions).",
+      "  - Favor depth and specificity over brevity, but do not pad with filler, repetition, or buzzwords.",
+      "</depth_mandate>",
+    ].join("\n");
+  }
+  return [
+    '<depth_mandate priority="high">',
+    "  - Hasilkan prompt yang komprehensif dan setara standar profesional — jangan kerangka tipis.",
+    "  - Instansiasi penuh tiap section dengan detail konkret & spesifik domain dari narasi/lampiran. Jangan placeholder satu baris.",
+    "  - Requirements: minimal 5 item konkret. Constraints: minimal 4. Untuk SETIAP section output, lampirkan batas kuantitatif (jumlah, panjang, struktur, atau durasi).",
+    "  - Selalu sertakan: edge cases / failure modes, asumsi eksplisit untuk fakta yang hilang, dan minimal 3 acceptance criteria yang bisa dites.",
+    "  - Perluas keahlian domain: tambahkan langkah profesional yang akan disertakan praktisi senior meski user belum menyebutkannya (tandai nilai yang diinfer sebagai asumsi).",
+    "  - Utamakan kedalaman & spesifisitas daripada keringkasan, tapi jangan diisi filler, repetisi, atau buzzword.",
+    "</depth_mandate>",
   ].join("\n");
 }
 
@@ -138,8 +177,9 @@ export function validatePromptStructure(prompt) {
     else missing.push(section.id);
   }
   const score = Math.round((hits / REQUIRED_SECTIONS.length) * 100);
-  // Toleran: ≥4 dari 6 dianggap valid. Kurang dari itu → retry hint.
-  return { valid: hits >= 4, missing, score };
+  // v2.1: lebih ketat untuk mendorong prompt komprehensif — butuh ≥5 dari 6
+  // section. Kurang dari itu → retry hint untuk melengkapi section yang hilang.
+  return { valid: hits >= 5, missing, score };
 }
 
 /**
@@ -543,11 +583,17 @@ export function localPromptScore(prompt) {
   if (!text.trim()) return 0;
   const { score: structScore } = validatePromptStructure(text);
   const length = text.length;
-  const lengthScore = length < 200 ? 20 : length < 500 ? 60 : length < 3000 ? 90 : 75;
+  // v2.1: kurva panjang menghargai prompt komprehensif. Output <600 char dianggap
+  // tipis; sweet spot 1.2k-6k char; sangat panjang tetap dihargai (tidak dipotong).
+  const lengthScore =
+    length < 280 ? 15 : length < 600 ? 45 : length < 1200 ? 75 : length < 6000 ? 95 : 85;
   const hasNumbers = /\b\d+\b/.test(text) ? 10 : 0;
   const hasBullets = /^[-*\d]+[\.)]?\s/m.test(text) ? 10 : 0;
+  // v2.1: hargai cakupan (jumlah bullet/baris terstruktur) sebagai proxy kedalaman.
+  const bulletCount = (text.match(/^\s*[-*•]|\s*\d+[.)]\s/gm) || []).length;
+  const coverageBonus = bulletCount >= 12 ? 10 : bulletCount >= 6 ? 6 : 0;
   const genericPenalty = /\b(seamless|cutting-?edge|kelas dunia|terbaik|revolusioner|world-?class)\b/i.test(text) ? -15 : 0;
-  return Math.max(0, Math.min(100, Math.round(structScore * 0.5 + lengthScore * 0.3 + hasNumbers + hasBullets + genericPenalty)));
+  return Math.max(0, Math.min(100, Math.round(structScore * 0.45 + lengthScore * 0.3 + hasNumbers + hasBullets + coverageBonus + genericPenalty)));
 }
 
 /**
@@ -670,4 +716,4 @@ export function scrubPII(text, { mode = "redact" } = {}) {
 // ---------------------------------------------------------------------------
 // Versi engine — untuk tracking di telemetri
 // ---------------------------------------------------------------------------
-export const PROMPT_ENGINE_VERSION = "v2.0.0";
+export const PROMPT_ENGINE_VERSION = "v2.1.0";
