@@ -32,3 +32,11 @@ test("audit block includes dimensions and single full report", () => {
   assert.match(block, /SATU respons/i);
   assert.match(block, /\[ASUMSI\]/i);
 });
+
+test("analisa triggers structured audit like audit", () => {
+  const narrative = "analisa game mobile platformer yang sudah rilis di play store";
+  assert.equal(shouldUseStructuredAudit(narrative, "Research", "Report"), true);
+  assert.equal(resolveAuditKind(narrative), "game_audit");
+  const block = buildStructuredAuditInstruction(narrative, "Research", "Report", "id");
+  assert.match(block, /analisis game/i);
+});

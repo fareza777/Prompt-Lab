@@ -407,7 +407,7 @@ function inferIntentBlueprint(narrative, category, outputType, attachments = [])
   const domainRules = [
     {
       match:
-        /\b(audit|tinjau|evaluasi|review|penilaian)\b[\s\S]{0,80}\b(game|permainan|landing|kode|keamanan|aplikasi|produk)\b|\b(game|landing|kode|keamanan|aplikasi)\b[\s\S]{0,80}\b(audit|tinjau|evaluasi)\b/i,
+        /\b(audit|tinjau|evaluasi|analisa|analisis|review|penilaian)\b[\s\S]{0,80}\b(game|permainan|landing|kode|keamanan|aplikasi|produk)\b|\b(game|landing|kode|keamanan|aplikasi)\b[\s\S]{0,80}\b(audit|tinjau|evaluasi|analisa|analisis)\b/i,
       domain: "Structured audit engagement",
       archetype: "evidence-based audit report with scored dimensions, assumptions, and executive summary",
       expansions: [

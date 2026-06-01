@@ -2,40 +2,55 @@
  * Structured audit frameworks when user asks for audit/review/evaluation (not app building).
  */
 
-const AUDIT_SIGNAL =
-  /\b(audit|auditori|tinjau|evaluasi|review|assessment|penilaian|cek\s*kualitas|quality\s*assurance|laporan\s*audit|temuan|finding)\b/i;
+/** Kata pemicu kerangka audit/analisis (ID + EN). */
+const ANALYSIS_VERBS =
+  "audit|auditori|tinjau|evaluasi|analisa|analisis|menganalisa|menganalisis|review|penilaian|assessment|analyze|analysis";
+
+const AUDIT_SIGNAL = new RegExp(
+  `\\b(${ANALYSIS_VERBS}|cek\\s*kualitas|quality\\s*assurance|laporan\\s*audit|laporan\\s*analisa|temuan|finding)\\b`,
+  "i"
+);
 
 const BUILD_SIGNAL = /\b(buat|bangun|develop|implementasikan|kerjakan|coding|generate\s*kode)\b/i;
 
 const AUDIT_KIND_RULES = [
   {
     kind: "game_audit",
-    match:
-      /\b(audit|tinjau|evaluasi|review|penilaian)\b[\s\S]{0,100}\b(game|permainan|gameplay|level\s*design|platformer|mobile\s*game)\b|\b(game|permainan|gameplay)\b[\s\S]{0,100}\b(audit|tinjau|evaluasi|review)\b/i,
-    label: { id: "audit game", en: "game audit" },
+    match: new RegExp(
+      `\\b(${ANALYSIS_VERBS})\\b[\\s\\S]{0,100}\\b(game|permainan|gameplay|level\\s*design|platformer|mobile\\s*game)\\b|\\b(game|permainan|gameplay)\\b[\\s\\S]{0,100}\\b(${ANALYSIS_VERBS})\\b`,
+      "i"
+    ),
+    label: { id: "audit / analisis game", en: "game audit / analysis" },
   },
   {
     kind: "landing_audit",
-    match:
-      /\b(audit|tinjau|evaluasi|review)\b[\s\S]{0,80}\b(landing|konversi|conversion|cta|halaman\s*jual|funnel)\b|\b(landing|konversi|conversion)\b[\s\S]{0,80}\b(audit|tinjau|evaluasi)\b/i,
-    label: { id: "audit landing / konversi", en: "landing / conversion audit" },
+    match: new RegExp(
+      `\\b(${ANALYSIS_VERBS})\\b[\\s\\S]{0,80}\\b(landing|konversi|conversion|cta|halaman\\s*jual|funnel)\\b|\\b(landing|konversi|conversion)\\b[\\s\\S]{0,80}\\b(${ANALYSIS_VERBS})\\b`,
+      "i"
+    ),
+    label: { id: "audit / analisis landing / konversi", en: "landing / conversion audit" },
   },
   {
     kind: "code_audit",
-    match:
-      /\b(audit|tinjau|review|code\s*review)\b[\s\S]{0,80}\b(kode|code|repo|repositori|pull\s*request|pr\b|refactor|typescript|javascript)\b|\b(kode|code|repo)\b[\s\S]{0,80}\b(audit|tinjau|review)\b/i,
-    label: { id: "audit kode / PR", en: "code / PR audit" },
+    match: new RegExp(
+      `\\b(${ANALYSIS_VERBS}|code\\s*review)\\b[\\s\\S]{0,80}\\b(kode|code|repo|repositori|pull\\s*request|pr\\b|refactor|typescript|javascript)\\b|\\b(kode|code|repo)\\b[\\s\\S]{0,80}\\b(${ANALYSIS_VERBS}|code\\s*review)\\b`,
+      "i"
+    ),
+    label: { id: "audit / analisis kode / PR", en: "code / PR audit" },
   },
   {
     kind: "security_audit",
-    match: /\b(security|keamanan|vulnerability|kerentanan|owasp|pentest|sql\s*injection|xss|csrf|authn|authz)\b/i,
-    label: { id: "audit keamanan", en: "security audit" },
+    match:
+      /\b(security|keamanan|vulnerability|kerentanan|owasp|pentest|sql\s*injection|xss|csrf|authn|authz)\b/i,
+    label: { id: "audit / analisis keamanan", en: "security audit" },
   },
   {
     kind: "app_product_audit",
-    match:
-      /\b(audit|tinjau|evaluasi|review)\b[\s\S]{0,80}\b(aplikasi|app|produk|product|ux|ui|fitur)\b|\b(aplikasi|app|produk)\b[\s\S]{0,80}\b(audit|tinjau|evaluasi)\b/i,
-    label: { id: "audit aplikasi / produk", en: "app / product audit" },
+    match: new RegExp(
+      `\\b(${ANALYSIS_VERBS})\\b[\\s\\S]{0,80}\\b(aplikasi|app|produk|product|ux|ui|fitur)\\b|\\b(aplikasi|app|produk)\\b[\\s\\S]{0,80}\\b(${ANALYSIS_VERBS})\\b`,
+      "i"
+    ),
+    label: { id: "audit / analisis aplikasi / produk", en: "app / product audit" },
   },
 ];
 
