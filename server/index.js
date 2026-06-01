@@ -48,6 +48,7 @@ import {
   resolveOcrRuntime,
   upgradeMessageForFeature,
 } from "../src/planEntitlements.js";
+import { API_MSG, UNSUPPORTED_FILE_TYPE } from "../src/apiUserMessages.js";
 import { isSuperAccount, SUPER_QUOTA_LIMIT } from "../src/superAccounts.js";
 import {
   getPlanForProductId,
@@ -97,7 +98,7 @@ const upload = multer({
       cb(null, true);
       return;
     }
-    cb(new Error("Tipe file belum didukung."));
+    cb(new Error(UNSUPPORTED_FILE_TYPE));
   },
 });
 
@@ -232,7 +233,7 @@ app.post("/api/test-provider", express.json({ limit: "64kb" }), async (req, res)
     const model = modelSettings.primaryModel || runtime.defaultModel;
 
     if (!runtime.client) {
-      res.status(400).json({ ok: false, provider: runtime.provider, error: "API key belum aktif. Isi ENV Vercel atau API key override." });
+      res.status(400).json({ ok: false, provider: runtime.provider, error: API_MSG.apiKeyInactive });
       return;
     }
 
@@ -321,7 +322,7 @@ app.post("/api/export/docx", express.json({ limit: "2mb" }), async (req, res) =>
     res.send(buffer);
   } catch (error) {
     console.error("docx export failed", error.message);
-    res.status(500).json({ error: "Gagal membuat file DOCX." });
+    res.status(500).json({ error: API_MSG.docxFailed });
   }
 });
 
@@ -351,7 +352,7 @@ app.post("/api/export/pptx", express.json({ limit: "2mb" }), async (req, res) =>
     res.send(buffer);
   } catch (error) {
     console.error("pptx export failed", error.message);
-    res.status(500).json({ error: "Gagal membuat file PPTX." });
+    res.status(500).json({ error: API_MSG.pptxFailed });
   }
 });
 
@@ -473,7 +474,7 @@ app.post("/api/optimize-prompt", express.json({ limit: "256kb" }), async (req, r
           engineVersion: PROMPT_ENGINE_VERSION,
           piiFindings: payload.piiFindings || [],
           source: "fallback",
-          warning: "Provider AI sedang limit/overload, memakai optimizer lokal.",
+          warning: API_MSG.providerOverloadOptimizer,
           prompt: buildLocalOptimizedPrompt(payload),
         };
       }
@@ -578,7 +579,7 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
           model: generation.completion.model,
           modelStatus: generation.usedFallbackModel ? "fallback-model" : "primary-model",
           warning: generation.usedFallbackModel
-            ? `Primary model sedang limit/error (${generation.primaryError}). Fallback model dipakai.`
+            ? API_MSG.primaryFallback(generation.primaryError)
             : "",
           result,
         };
@@ -588,7 +589,7 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
           source: "fallback",
           model: "Local fallback",
           modelStatus: "local-fallback",
-          warning: "Provider AI sedang limit/overload, memakai compare lokal.",
+          warning: API_MSG.providerOverloadCompare,
           result: buildLocalCompareResult(payload),
         };
       }
@@ -642,7 +643,7 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
         source: "fallback",
         model: "Local fallback",
         modelStatus: "local-fallback",
-        warning: "API key provider belum aktif, memakai compare lokal.",
+        warning: API_MSG.apiKeyInactiveCompare,
         result: buildLocalCompareResult(payload),
       };
     }
@@ -718,7 +719,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
           source: "fallback",
           model: "Local fallback",
           modelStatus: "local-fallback",
-          warning: "API key provider belum aktif, memakai generator lokal.",
+          warning: API_MSG.apiKeyInactiveGenerate,
           prompt: fallbackPrompt,
         });
         return;
@@ -792,7 +793,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
             });
             if (refined && !isPromptTooShort(refined) && refined !== prompt) {
               prompt = refined;
-              qualityNote = "Premium Quality Mode: critique+refine pass diterapkan.";
+              qualityNote = API_MSG.premiumQualityApplied;
             }
           } catch (refineError) {
             console.warn("premium critique pass failed", refineError.message);
@@ -804,13 +805,11 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         const orEval = evalDelta(payload.narrative, prompt);
 
         const warnings = [];
-        if (generation.usedFallbackModel) warnings.push(`Primary model sedang limit/error (${generation.primaryError}). Fallback model dipakai.`);
+        if (generation.usedFallbackModel) warnings.push(API_MSG.primaryFallback(generation.primaryError));
         if (truncatedOutput || isCompletionTruncated(completion)) {
-          warnings.push(
-            "Output mungkin terpotong (batas panjang model). Coba Premium Quality Mode, plan Pro/Business, atau generate ulang dengan narasi lebih ringkas per bagian."
-          );
+          warnings.push(API_MSG.outputTruncated);
         }
-        if (retried) warnings.push("Output awal terlalu pendek, di-regenerate ulang.");
+        if (retried) warnings.push(API_MSG.outputRetriedShort);
         if (qualityNote) warnings.push(qualityNote);
         await finishGenerateResponse(res, quotaSession, {
           eventType: "generate_prompt",
@@ -853,7 +852,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
           source: "fallback",
           model: "Local fallback",
           modelStatus: "local-fallback",
-          warning: "Provider AI sedang limit/overload, memakai generator lokal.",
+          warning: API_MSG.providerOverloadGenerate,
           prompt: fallbackPrompt,
         });
       }
@@ -876,7 +875,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         source: "fallback",
         model: "Local fallback",
         modelStatus: "local-fallback",
-        warning: "OpenAI API key belum aktif, memakai generator lokal.",
+        warning: API_MSG.apiKeyInactiveOpenAI,
         prompt: fallbackPrompt,
       });
       return;
@@ -899,7 +898,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       try {
         response = await callOpenAI();
         openaiPrompt = sanitizePromptOutput(response.output_text);
-        openaiWarnings.push("Output awal terlalu pendek, di-regenerate ulang.");
+        openaiWarnings.push(API_MSG.outputRetriedShort);
       } catch (retryError) {
         console.warn("openai retry-on-empty failed", retryError.message);
       }
@@ -990,7 +989,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
           const refined = sanitizePromptOutput(refineRes.output_text);
           if (refined && !isPromptTooShort(refined)) {
             openaiPrompt = refined;
-            openaiWarnings.push("Premium Quality Mode: critique+refine pass diterapkan.");
+            openaiWarnings.push(API_MSG.premiumQualityApplied);
           }
         }
       } catch (refineError) {
@@ -1025,12 +1024,12 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
     });
   } catch (error) {
     console.error("generate-prompt failed", error.message);
-    const status = error.statusCode || (error.message === "Tipe file belum didukung." ? 400 : 500);
+    const status = error.statusCode || (error.message === UNSUPPORTED_FILE_TYPE ? 400 : 500);
     res.status(status).json({
       error:
-        error.message === "Tipe file belum didukung."
+        error.message === UNSUPPORTED_FILE_TYPE
           ? error.message
-          : error.publicMessage || "Gagal membuat prompt. Coba lagi sebentar.",
+          : error.publicMessage || API_MSG.generateFailed,
     });
   }
 });
@@ -1038,8 +1037,10 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
 app.use((error, _req, res, _next) => {
   const message =
     error.code === "LIMIT_FILE_SIZE"
-      ? "Ukuran file terlalu besar. Maksimal 8 MB per file."
-      : error.message || "Request tidak valid.";
+      ? API_MSG.fileTooLarge
+      : error.message === UNSUPPORTED_FILE_TYPE
+        ? UNSUPPORTED_FILE_TYPE
+        : error.message || API_MSG.invalidRequest;
   res.status(400).json({ error: message });
 });
 

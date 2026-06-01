@@ -61,6 +61,7 @@ import {
 } from "./planEntitlements.js";
 import { buildPhasedAppDeliveryInstruction } from "./phasedAppDelivery.js";
 import { buildStructuredAuditInstruction } from "./structuredAuditDelivery.js";
+import { API_MSG } from "./apiUserMessages.js";
 import { isSuperAccount, SUPER_QUOTA_LIMIT } from "./superAccounts.js";
 import { purgeLegacyServiceWorkers, repairStuckLocalProfile } from "./bootRecovery.js";
 import { dismissStartupSplash, installSplashSafetyNet, markStartupSplashStarted } from "./startupSplash";
@@ -1714,8 +1715,8 @@ function App() {
       setPiiFindings(Array.isArray(data.piiFindings) ? data.piiFindings : []);
       return data.prompt || localPrompt;
     } catch (error) {
-      const message = error.message || "Backend belum tersedia, memakai prompt lokal.";
-      const quotaOnly = /usage quota|mencatat usage|quota token/i.test(message);
+      const message = error.message || API_MSG.backendUnavailableLocalPrompt;
+      const quotaOnly = /usage quota|quota exceeded|quota token|failed to record quota/i.test(message);
       setGeneratedPrompt(localPrompt);
       setGenerationSource("local");
       setGenerationModel("Local draft");
