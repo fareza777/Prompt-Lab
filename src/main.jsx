@@ -394,7 +394,11 @@ function inferRole(category) {
 
 function inferIntentBlueprint(narrative, category, outputType, attachments = []) {
   const text = `${narrative || ""} ${category || ""} ${outputType || ""}`.toLowerCase();
-  const asksApp = /\b(app|aplikasi|dashboard|website|web app|sistem|platform|software|frontend|backend|full-stack|fullstack|tool|tools|editor|builder|kasir|pos)\b/i.test(text) || /application code/i.test(outputType);
+  const asksGame = /\b(game|permainan|platformer|mario|phaser|side[\s-]?scroll|level\s*\d+|aksi\s*2d)\b/i.test(text);
+  const asksApp =
+    /\b(app|aplikasi|dashboard|website|web app|sistem|software|frontend|backend|full-stack|fullstack|tool|tools|editor|builder|kasir|pos)\b/i.test(text) ||
+    asksGame ||
+    /application code/i.test(outputType);
   const asksPresentation = /\b(ppt|powerpoint|presentation|presentasi|slides?)\b/i.test(text);
   const asksDocument = /\b(word|docx|document|dokumen|report|laporan|proposal)\b/i.test(text);
   const asksImage = /\b(image|gambar|foto|photo|visual|edit foto|photo editor|midjourney|desain)\b/i.test(text);
@@ -405,6 +409,22 @@ function inferIntentBlueprint(narrative, category, outputType, attachments = [])
       domain: "Survey and form intelligence",
       archetype: "structured analysis flow with fields, responses, validation, segmentation, and summary output",
       expansions: ["question mapping", "response structure", "validation", "segmentation", "summary", "export"],
+    },
+    {
+      match:
+        /\b(game|permainan|platformer|mario|side[\s-]?scroll|game\s*action|aksi\s*2d|phaser)\b|\b(game|permainan)\b[\s\S]{0,60}\b(level|story|cerita|mario)\b/i,
+      domain: "2D platformer game",
+      archetype: "browser game with scenes, player physics, enemies, collectibles, level data, and phased MVP delivery",
+      expansions: [
+        "player movement",
+        "platforms",
+        "enemies",
+        "coins",
+        "goal flag",
+        "HUD",
+        "level JSON",
+        "phased implementation",
+      ],
     },
     {
       match: /\b(edit foto|photo editor|image editor|editor foto|foto editor)\b/i,

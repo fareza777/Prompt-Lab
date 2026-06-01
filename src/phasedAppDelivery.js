@@ -3,9 +3,19 @@
  */
 
 const APP_SIGNAL =
-  /\b(aplikasi|app|web\s*app|website|situs|dashboard|sistem|platform|perangkat\s*lunak|software|frontend|backend|full[\s-]?stack|tool|tools|editor|builder|kasir|pos)\b/i;
+  /\b(aplikasi|app|web\s*app|website|situs|dashboard|sistem|perangkat\s*lunak|software|frontend|backend|full[\s-]?stack|tool|tools|editor|builder|kasir|pos)\b/i;
+
+/** Game builds without the word "aplikasi" (e.g. "buat game mario"). */
+const GAME_BUILD_SIGNAL =
+  /\b(game|permainan|platformer|platform\s*game|side[\s-]?scroll(?:er)?|mario|mega\s*man|phaser|godot|unity\s*2d|game\s*action|aksi\s*2d)\b/i;
 
 const KIND_RULES = [
+  {
+    kind: "game_platformer",
+    match:
+      /\b(game|permainan|platformer|platform\s*game|side[\s-]?scroll(?:er)?|mario|mega\s*man|phaser|godot|unity\s*2d|game\s*action|aksi\s*2d)\b|\b(game|permainan)\b[\s\S]{0,80}\b(level|story|cerita|mario|platformer)\b|\b(level|story|cerita)\b[\s\S]{0,80}\b(game|permainan)\b/i,
+    label: { id: "game platformer 2D (HTML5/Phaser)", en: "2D platformer game (HTML5/Phaser)" },
+  },
   {
     kind: "video_editor",
     match: /\b(editor\s*video|video\s*editor|edit\s*video|potong\s*video|timeline|klip\s*video)\b/i,
@@ -181,6 +191,160 @@ const PHASE_TEMPLATES = {
       },
     },
   ],
+  game_platformer: [
+    {
+      id: "phase_1",
+      title: { id: "Fase 1 — Prototype 1 level playable", en: "Phase 1 — Single-level playable prototype" },
+      goal: {
+        id: "Satu level jalan di browser: player lompat/gerak, platform solid, 1 musuh patroli, goal flag, HUD minimal (nyawa + level).",
+        en: "One browser-playable level: move/jump, solid platforms, one patrolling enemy, goal flag, minimal HUD (lives + level).",
+      },
+      includes: {
+        id: [
+          "Phaser 3 (atau HTML5 canvas) — scene Boot, Preload, Game",
+          "kontrol keyboard (panah/WASD)",
+          "gravitasi + collision platform",
+          "1 musuh patroli (stomp atau hindari)",
+          "menang/kalah + restart",
+          "grafis placeholder (geometri/warna)",
+          "state loading / error asset",
+        ],
+        en: [
+          "Phaser 3 (or HTML5 canvas) — Boot, Preload, Game scenes",
+          "keyboard controls (arrows/WASD)",
+          "gravity + platform collision",
+          "one patrolling enemy (stomp or avoid)",
+          "win/lose + restart",
+          "placeholder graphics (shapes/colors)",
+          "loading / asset error state",
+        ],
+      },
+      excludes: {
+        id: [
+          "100 level manual atau generator penuh",
+          "cerita/cutscene/ending",
+          "power-up (jamur/bintang), pipa teleport",
+          "level select multi-halaman",
+        ],
+        en: [
+          "100 manual levels or full generator",
+          "story/cutscenes/ending",
+          "power-ups (mushroom/star), warp pipes",
+          "multi-screen level select",
+        ],
+      },
+      deliverables: {
+        id: ["index.html", "game.js", "scenes dasar", "1 level hardcoded atau JSON tunggal", "README buka di browser"],
+        en: ["index.html", "game.js", "base scenes", "one hardcoded or single JSON level", "README open in browser"],
+      },
+      acceptance: {
+        id: [
+          "Player bisa gerak & lompat tanpa jatuh melalui platform",
+          "Musuh bergerak; kontak = kalah atau stomp (pilih satu, konsisten)",
+          "Capai goal → layar menang; nyawa habis → kalah",
+          "Bisa dijalankan tanpa build (atau npm run dev jika Vite)",
+        ],
+        en: [
+          "Player moves and jumps without falling through platforms",
+          "Enemy moves; contact = lose or stomp (pick one, stay consistent)",
+          "Reach goal → win screen; out of lives → lose",
+          "Runs without build step (or npm run dev if using Vite)",
+        ],
+      },
+    },
+    {
+      id: "phase_2",
+      title: { id: "Fase 2 — Konten & mekanik inti", en: "Phase 2 — Core content & mechanics" },
+      goal: {
+        id: "5–10 level dari data JSON, koin/skor, 2 tipe musuh, platform bergerak atau breakable, pause, level select.",
+        en: "5–10 JSON-driven levels, coins/score, 2 enemy types, moving or breakable platforms, pause, level select.",
+      },
+      includes: {
+        id: [
+          "array level JSON (5–10 entri, bukan 100)",
+          "koin + HUD skor",
+          "2 tipe musuh (mis. patrol + flying)",
+          "platform bergerak ATAU breakable",
+          "pause (P) + resume/restart",
+          "empty state jika daftar level kosong",
+        ],
+        en: [
+          "level JSON array (5–10 entries, not 100)",
+          "coins + score HUD",
+          "2 enemy types (e.g. patrol + flying)",
+          "moving OR breakable platforms",
+          "pause (P) + resume/restart",
+          "empty state when level list is empty",
+        ],
+      },
+      excludes: {
+        id: ["generator 100 level", "cutscene cerita tiap 10 level", "ending statistik penuh"],
+        en: ["100-level generator", "story cutscene every 10 levels", "full ending statistics"],
+      },
+      deliverables: {
+        id: ["levels.js (data)", "player.js / enemy.js", "hud.js", "level select sederhana"],
+        en: ["levels.js (data)", "player.js / enemy.js", "hud.js", "simple level select"],
+      },
+      acceptance: {
+        id: [
+          "Bisa memilih & menyelesaikan minimal 3 level berbeda",
+          "Koin menambah skor",
+          "Pause tidak merusak physics saat resume",
+        ],
+        en: [
+          "Can select and clear at least 3 distinct levels",
+          "Coins increase score",
+          "Pause does not break physics on resume",
+        ],
+      },
+    },
+    {
+      id: "phase_3",
+      title: { id: "Fase 3 — 100 level, cerita, polish", en: "Phase 3 — 100 levels, story, polish" },
+      goal: {
+        id: "Generator procedural hingga 100 level (kesulitan naik tiap 10 level), intro + cutscene tiap 10 level + ending, power-up opsional, QA.",
+        en: "Procedural generator up to 100 levels (difficulty ramp every 10), intro + cutscene every 10 levels + ending, optional power-ups, QA.",
+      },
+      includes: {
+        id: [
+          "generateLevel(difficulty) — jangan tulis 100 level manual",
+          "scene Intro, CutScene, Ending (teks cerita Bahasa Indonesia)",
+          "parameter difficulty 1–10 per kelompok 10 level",
+          "power-up opsional (jamur/bintang) jika disebut di brief",
+          "checklist QA + komentar // asumsi:",
+        ],
+        en: [
+          "generateLevel(difficulty) — do not hand-write 100 levels",
+          "Intro, CutScene, Ending scenes (Indonesian story text)",
+          "difficulty 1–10 per block of 10 levels",
+          "optional power-ups (mushroom/star) if in brief",
+          "QA checklist + // asumsi: comments",
+        ],
+      },
+      excludes: {
+        id: ["multiplayer online", "mobile touch penuh (kecuali diminta)", "fitur di luar brief awal"],
+        en: ["online multiplayer", "full mobile touch (unless requested)", "features outside initial brief"],
+      },
+      deliverables: {
+        id: ["levelGenerator.js", "story.js", "README arsitektur + cara run", "acceptance criteria global"],
+        en: ["levelGenerator.js", "story.js", "architecture README + run steps", "global acceptance criteria"],
+      },
+      acceptance: {
+        id: [
+          "Level 1 dan 100 bisa dimainkan (via generator + seed)",
+          "Cutscene muncul setelah level 10, 20, … (mock teks OK)",
+          "Ending setelah level 100 dengan ringkasan skor",
+          "Tidak ada TODO kosong di kode produksi",
+        ],
+        en: [
+          "Levels 1 and 100 are playable (generator + seed)",
+          "Cutscene after levels 10, 20, … (text mock OK)",
+          "Ending after level 100 with score summary",
+          "No empty TODOs in production code",
+        ],
+      },
+    },
+  ],
   generic_app: [
     {
       id: "phase_1",
@@ -254,6 +418,9 @@ function pickLang(code) {
 
 export function shouldUsePhasedAppDelivery(narrative = "", category = "", outputType = "") {
   const text = `${narrative} ${category} ${outputType}`;
+  if (resolvePhasedAppKind(narrative) === "game_platformer") return true;
+  if (GAME_BUILD_SIGNAL.test(narrative) && /application code|kode aplikasi/i.test(outputType)) return true;
+  if (GAME_BUILD_SIGNAL.test(narrative) && /\b(Coding|Developer|Engineering)\b/i.test(category)) return true;
   if (!APP_SIGNAL.test(text)) return false;
   if (/application code|kode aplikasi/i.test(outputType)) return true;
   if (/\b(Coding|Developer|Engineering)\b/i.test(category)) return true;
@@ -286,7 +453,7 @@ function listBlock(items, lang) {
 
 export function formatPhasedAppDeliveryBlock(plan) {
   if (!plan?.phases?.length) return "";
-  const { phases, productLabel, lang } = plan;
+  const { phases, productLabel, lang, kind } = plan;
   const header =
     lang === "en"
       ? `Phased delivery (mandatory): split the final prompt for building a ${productLabel} into the phases below. Do NOT dump all features into phase 1. Each phase must state scope in/out, deliverables, and testable acceptance criteria. Tell the coding AI to implement phase-by-phase (stop after each phase unless user asks to continue).`
@@ -319,12 +486,19 @@ export function formatPhasedAppDeliveryBlock(plan) {
     })
     .join("\n\n");
 
-  const footer =
+  const footerBase =
     lang === "en"
       ? `Final prompt output structure must include a section "Implementation phases" with Phase 1, 2, 3 as above, then stack/tech assumptions, constraints, and global acceptance criteria. Warn that browser-heavy features (e.g. FFmpeg.wasm export) may need an honest mock in Phase 1–2.`
       : `Struktur output prompt final wajib menyertakan bagian "Fase implementasi" (Fase 1, 2, 3 seperti di atas), lalu asumsi stack/teknis, constraints, dan acceptance criteria global. Ingatkan fitur berat browser (mis. export FFmpeg.wasm) boleh mock jujur di Fase 1–2.`;
 
-  return `${header}\n\n${phaseSections}\n\n${footer}`;
+  const gameFooter =
+    plan.kind === "game_platformer"
+      ? lang === "en"
+        ? `Game-specific rules: default stack Phaser 3 + HTML5 (or honest alternative in comments). If the brief mentions 100 levels, use a procedural generator in Phase 3 only — never paste 100 hand-written level objects in Phase 1. Story/cutscenes/ending belong in Phase 3. The final prompt must tell the coding AI to output code for Phase 1 only and stop; do not write "continue with full code for all phases" in one shot.`
+        : `Aturan khusus game: stack default Phaser 3 + HTML5 (atau alternatif jelas di komentar). Jika brief menyebut 100 level, gunakan generator procedural hanya di Fase 3 — jangan 100 objek level manual di Fase 1. Cerita/cutscene/ending masuk Fase 3. Prompt final wajib menginstruksikan AI coding: hasilkan kode hanya untuk Fase 1 lalu berhenti; jangan "lanjutkan kode lengkap semua fase" sekaligus.`
+      : "";
+
+  return `${header}\n\n${phaseSections}\n\n${footerBase}${gameFooter ? `\n\n${gameFooter}` : ""}`;
 }
 
 export function buildPhasedAppDeliveryInstruction(narrative = "", category = "", outputType = "", outputLanguage = "id") {

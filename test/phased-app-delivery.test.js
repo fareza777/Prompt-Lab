@@ -28,6 +28,26 @@ test("phased block includes three phases and MVP language", () => {
   assert.match(block, /jangan memasukkan semua fitur ke fase 1/i);
 });
 
+test("detects mario-style game brief without the word aplikasi", () => {
+  const narrative =
+    "buat game action seperti mario bros yang bagus dan asik. game yg panjang bisa 100 level, dan ada storynya";
+  assert.equal(shouldUsePhasedAppDelivery(narrative, "", ""), true);
+  assert.equal(resolvePhasedAppKind(narrative), "game_platformer");
+});
+
+test("game phased block defers 100 levels and story to later phases", () => {
+  const block = buildPhasedAppDeliveryInstruction(
+    "buat game action seperti mario bros. 100 level dan story",
+    "Coding",
+    "Application Code",
+    "id"
+  );
+  assert.match(block, /Fase 1/i);
+  assert.match(block, /generator procedural/i);
+  assert.match(block, /jangan.*100.*level manual/i);
+  assert.match(block, /hanya untuk Fase 1/i);
+});
+
 test("non-app brief skips phased delivery", () => {
   assert.equal(shouldUsePhasedAppDelivery("buat caption instagram kopi", "Marketing", "Content"), false);
   assert.equal(buildPhasedAppDeliveryInstruction("buat caption instagram kopi", "Marketing", "Content"), "");
