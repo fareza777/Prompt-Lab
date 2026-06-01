@@ -456,8 +456,8 @@ export function formatPhasedAppDeliveryBlock(plan) {
   const { phases, productLabel, lang, kind } = plan;
   const header =
     lang === "en"
-      ? `Phased delivery (mandatory): split the final prompt for building a ${productLabel} into the phases below. Do NOT dump all features into phase 1. Each phase must state scope in/out, deliverables, and testable acceptance criteria. Tell the coding AI to implement phase-by-phase (stop after each phase unless user asks to continue).`
-      : `Pengiriman bertahap (wajib): pecah prompt final untuk membangun ${productLabel} menjadi fase-fase di bawah. Jangan memasukkan semua fitur ke fase 1. Setiap fase harus punya scope masuk/keluar, deliverable, dan acceptance criteria yang bisa dites. Instruksikan AI coding untuk implementasi per fase (berhenti setelah tiap fase kecuali user minta lanjut).`;
+      ? `Phased delivery (mandatory): the final prompt you write must document ALL phases below (Phase 1, 2, and 3) in full — goals, in/out scope, deliverables, and acceptance criteria for each. Do NOT shorten the prompt to Phase 1 only. Split *implementation* across phases (Phase 1 code first), not the *prompt document*. Do NOT dump every feature into Phase 1 implementation scope.`
+      : `Pengiriman bertahap (wajib): prompt final yang Anda tulis harus mendokumentasikan SEMUA fase di bawah (Fase 1, 2, dan 3) secara lengkap — goal, scope masuk/keluar, deliverable, dan acceptance criteria tiap fase. Jangan memotong output prompt hanya ke Fase 1. Pisahkan *implementasi kode* per fase (coding mulai Fase 1), bukan *dokumen prompt*. Jangan masukkan semua fitur ke scope implementasi Fase 1.`;
 
   const phaseSections = phases
     .map((phase, index) => {
@@ -488,14 +488,14 @@ export function formatPhasedAppDeliveryBlock(plan) {
 
   const footerBase =
     lang === "en"
-      ? `Final prompt output structure must include a section "Implementation phases" with Phase 1, 2, 3 as above, then stack/tech assumptions, constraints, and global acceptance criteria. Warn that browser-heavy features (e.g. FFmpeg.wasm export) may need an honest mock in Phase 1–2.`
-      : `Struktur output prompt final wajib menyertakan bagian "Fase implementasi" (Fase 1, 2, 3 seperti di atas), lalu asumsi stack/teknis, constraints, dan acceptance criteria global. Ingatkan fitur berat browser (mis. export FFmpeg.wasm) boleh mock jujur di Fase 1–2.`;
+      ? `Final prompt structure (required): section "Implementation phases" with complete specs for Phase 1, Phase 2, and Phase 3 (never omit Phase 2 or 3), then stack assumptions, constraints, and global acceptance criteria after all phases are done. Add a short subsection "Coding order": when the user pastes this prompt into a coding AI, that agent should implement Phase 1 code first and stop until the user says "continue to phase 2" — but your job here is to deliver the full three-phase prompt text. Browser-heavy features (e.g. FFmpeg.wasm) may use an honest mock in Phase 1–2.`
+      : `Struktur output prompt final (wajib): bagian "Fase implementasi" berisi spesifikasi LENGKAP Fase 1, Fase 2, dan Fase 3 (jangan hilangkan Fase 2 atau 3), lalu asumsi stack, constraints, dan acceptance criteria global setelah ketiga fase terdokumentasi. Tambahkan subbagian singkat "Urutan coding": saat user paste ke AI coding, agent itu mulai kode Fase 1 dulu dan berhenti sampai user bilang "lanjut fase 2" — tugas Anda di sini adalah menulis prompt utuh tiga fase, bukan hanya Fase 1. Fitur berat browser (mis. FFmpeg.wasm) boleh mock jujur di Fase 1–2.`;
 
   const gameFooter =
-    plan.kind === "game_platformer"
+    kind === "game_platformer"
       ? lang === "en"
-        ? `Game-specific rules: default stack Phaser 3 + HTML5 (or honest alternative in comments). If the brief mentions 100 levels, use a procedural generator in Phase 3 only — never paste 100 hand-written level objects in Phase 1. Story/cutscenes/ending belong in Phase 3. The final prompt must tell the coding AI to output code for Phase 1 only and stop; do not write "continue with full code for all phases" in one shot.`
-        : `Aturan khusus game: stack default Phaser 3 + HTML5 (atau alternatif jelas di komentar). Jika brief menyebut 100 level, gunakan generator procedural hanya di Fase 3 — jangan 100 objek level manual di Fase 1. Cerita/cutscene/ending masuk Fase 3. Prompt final wajib menginstruksikan AI coding: hasilkan kode hanya untuk Fase 1 lalu berhenti; jangan "lanjutkan kode lengkap semua fase" sekaligus.`
+        ? `Game rules: default stack Phaser 3 + HTML5. If the brief mentions 100 levels, document procedural generation in Phase 3 (not 100 hand-written levels in Phase 1). Story/cutscenes/ending stay in Phase 3 specs. The prompt document must still describe all three phases in full; only the coding-agent execution starts at Phase 1.`
+        : `Aturan game: stack default Phaser 3 + HTML5. Jika brief menyebut 100 level, jelaskan generator procedural di Fase 3 (bukan 100 level manual di Fase 1). Cerita/cutscene/ending tetap didokumentasikan di spesifikasi Fase 3. Dokumen prompt tetap harus lengkap tiga fase; yang dibatasi hanya eksekusi coding (mulai Fase 1 dulu).`
       : "";
 
   return `${header}\n\n${phaseSections}\n\n${footerBase}${gameFooter ? `\n\n${gameFooter}` : ""}`;
