@@ -1,6 +1,7 @@
 /** Plan tiers and feature gates (shared by web app + server). */
 
 import { shouldUsePhasedAppDelivery } from "./phasedAppDelivery.js";
+import { shouldUseStructuredAudit } from "./structuredAuditDelivery.js";
 
 export const PLAN_NAMES = ["Free", "Pro", "Business"];
 
@@ -115,6 +116,9 @@ export function resolveGenerateMaxTokens(
   if (qualityMode === "premium") max += 500;
   if (shouldUsePhasedAppDelivery(narrative, category, outputType)) {
     max = Math.max(max, normalizePlanName(plan) === "Business" ? 6000 : normalizePlanName(plan) === "Pro" ? 5200 : 4800);
+  }
+  if (shouldUseStructuredAudit(narrative, category, outputType)) {
+    max = Math.max(max, normalizePlanName(plan) === "Business" ? 5000 : 4200);
   }
   return Math.min(8000, Math.max(2200, max));
 }

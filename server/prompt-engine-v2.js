@@ -1,5 +1,6 @@
 import { getLanguageLockInstruction, getLanguageMeta } from "../src/promptLanguage.js";
 import { buildPhasedAppDeliveryInstruction } from "../src/phasedAppDelivery.js";
+import { buildStructuredAuditInstruction } from "../src/structuredAuditDelivery.js";
 
 /**
  * PromptLab Prompt Engine v2
@@ -61,13 +62,22 @@ export function buildIntentSystemPromptXml(payload = {}) {
     "</forbidden>",
     `<language>${getLanguageLockInstruction(langCode).replace(/\n/g, "\n  ")}</language>`,
     (() => {
+      const audit = buildStructuredAuditInstruction(
+        payload.narrative || "",
+        payload.category || "",
+        payload.outputType || deliverable,
+        langCode
+      );
       const phased = buildPhasedAppDeliveryInstruction(
         payload.narrative || "",
         payload.category || "",
         payload.outputType || deliverable,
         langCode
       );
-      return phased ? `<phased_delivery>\n${phased.replace(/\n/g, "\n  ")}\n</phased_delivery>` : "";
+      const blocks = [];
+      if (audit) blocks.push(`<structured_audit>\n${audit.replace(/\n/g, "\n  ")}\n</structured_audit>`);
+      if (phased) blocks.push(`<phased_delivery>\n${phased.replace(/\n/g, "\n  ")}\n</phased_delivery>`);
+      return blocks.join("\n");
     })(),
     "<output>Return only the final prompt, langsung copy-paste ready.</output>",
   ].join("\n");

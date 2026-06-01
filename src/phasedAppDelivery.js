@@ -2,6 +2,8 @@
  * Auto phased delivery for vague app-building briefs (e.g. "buat aplikasi editor foto").
  */
 
+import { shouldUseStructuredAudit } from "./structuredAuditDelivery.js";
+
 const APP_SIGNAL =
   /\b(aplikasi|app|web\s*app|website|situs|dashboard|sistem|perangkat\s*lunak|software|frontend|backend|full[\s-]?stack|tool|tools|editor|builder|kasir|pos)\b/i;
 
@@ -417,6 +419,7 @@ function pickLang(code) {
 }
 
 export function shouldUsePhasedAppDelivery(narrative = "", category = "", outputType = "") {
+  if (shouldUseStructuredAudit(narrative, category, outputType)) return false;
   const text = `${narrative} ${category} ${outputType}`;
   if (resolvePhasedAppKind(narrative) === "game_platformer") return true;
   if (GAME_BUILD_SIGNAL.test(narrative) && /application code|kode aplikasi/i.test(outputType)) return true;

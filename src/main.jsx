@@ -60,6 +60,7 @@ import {
   upgradeMessageForFeature,
 } from "./planEntitlements.js";
 import { buildPhasedAppDeliveryInstruction } from "./phasedAppDelivery.js";
+import { buildStructuredAuditInstruction } from "./structuredAuditDelivery.js";
 import { purgeLegacyServiceWorkers, repairStuckLocalProfile } from "./bootRecovery.js";
 import { dismissStartupSplash, installSplashSafetyNet, markStartupSplashStarted } from "./startupSplash";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
@@ -405,6 +406,20 @@ function inferIntentBlueprint(narrative, category, outputType, attachments = [])
 
   const domainRules = [
     {
+      match:
+        /\b(audit|tinjau|evaluasi|review|penilaian)\b[\s\S]{0,80}\b(game|permainan|landing|kode|keamanan|aplikasi|produk)\b|\b(game|landing|kode|keamanan|aplikasi)\b[\s\S]{0,80}\b(audit|tinjau|evaluasi)\b/i,
+      domain: "Structured audit engagement",
+      archetype: "evidence-based audit report with scored dimensions, assumptions, and executive summary",
+      expansions: [
+        "required inputs",
+        "scored dimensions",
+        "findings",
+        "priority recommendations",
+        "executive summary",
+        "[ASUMSI] tags",
+      ],
+    },
+    {
       match: /\b(informasi|survey|survei|kuesioner|questionnaire|form|formulir)\b/i,
       domain: "Survey and form intelligence",
       archetype: "structured analysis flow with fields, responses, validation, segmentation, and summary output",
@@ -672,6 +687,8 @@ Tool and evidence instruction:
 - If web/search/tools are available and current facts are required, verify important claims with sources.
 - If tools are not available, state which claims depend on provided documents.
 
+${buildStructuredAuditInstruction(cleanNarrative, category, outputType, langMeta.code)}
+
 ${buildPhasedAppDeliveryInstruction(cleanNarrative, category, outputType, langMeta.code)}
 
 ${reasoningLine}`;
@@ -922,6 +939,8 @@ Constraints:
 - If the information is sufficient, provide the final answer directly
 - Use concrete examples, not generic theory
 - Preserve the selected output type and do not change it because of attachments
+
+${buildStructuredAuditInstruction(cleanNarrative, category, outputType, langMeta.code)}
 
 ${buildPhasedAppDeliveryInstruction(cleanNarrative, category, outputType, langMeta.code)}`;
 }
