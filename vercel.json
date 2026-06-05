@@ -46,23 +46,17 @@
       },
       {
         "source": "/app",
-        "destination": "/index.html"
+        "destination": "/app.html"
       },
       {
         "source": "/app/(.*)",
-        "destination": "/index.html"
-      }
-    ],
-    "afterFiles": [
-      {
-        "source": "/",
-        "destination": "/landing.html"
+        "destination": "/app.html"
       }
     ],
     "fallback": [
       {
         "source": "/(.*)",
-        "destination": "/index.html"
+        "destination": "/app.html"
       }
     ]
   }
