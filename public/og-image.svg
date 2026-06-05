@@ -45,7 +45,7 @@
   <text x="600" y="430" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="22" fill="#64748b">Build · Optimize · Compare · Save</text>
   
   <!-- Target AI logos text -->
-  <text x="600" y="480" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#475569">ChatGPT · Claude · Gemini · Grok · Midjourney</text>
+  <text x="600" y="480" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#475569">ChatGPT · Claude · Gemini · Grok · Others</text>
   
   <!-- URL -->
   <text x="600" y="570" text-anchor="middle" font-family="monospace" font-size="20" fill="#38bdf8">prompt-lab.xyz</text>

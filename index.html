@@ -947,12 +947,119 @@
       .app-hidden { display: none !important; }
       .landing-hidden { display: none !important; }
 
-      #app-splash { position: fixed; inset: 0; z-index: 99999; display: grid; place-items: center; overflow: hidden; background: #061011; }
-      #app-splash.is-exiting { opacity: 0; transition: opacity 0.5s ease; }
-      .app-splash__backdrop { position: absolute; inset: -20%; background: radial-gradient(circle at 30% 20%, rgba(56, 189, 248, 0.22), transparent 42%), radial-gradient(circle at 72% 12%, rgba(99, 102, 241, 0.18), transparent 36%), linear-gradient(180deg, #061011, #0a1518 55%, #061011); }
-      .app-splash__bar { position: absolute; bottom: 32%; left: 25%; right: 25%; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
-      .app-splash__bar i { display: block; width: 42%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #22d3ee, #38bdf8, #818cf8); animation: splash-bar 1.2s ease-in-out infinite; }
-      @keyframes splash-bar { 0% { transform: translateX(-120%); } 100% { transform: translateX(260%); } }
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background: #061011;
+      }
+      #app-splash.is-exiting {
+        opacity: 0;
+        transition: opacity 0.5s ease;
+      }
+      .app-splash__backdrop {
+        position: absolute;
+        inset: -20%;
+        background:
+          radial-gradient(circle at 30% 20%, rgba(56, 189, 248, 0.22), transparent 42%),
+          radial-gradient(circle at 72% 12%, rgba(99, 102, 241, 0.18), transparent 36%),
+          linear-gradient(180deg, #061011, #0a1518 55%, #061011);
+        animation: splash-bg-shift 2.4s ease-in-out infinite alternate;
+      }
+      @keyframes splash-bg-shift {
+        to { transform: scale(1.06) translateY(-1%); }
+      }
+      .app-splash__orbits {
+        position: absolute;
+        width: 220px;
+        height: 220px;
+        animation: splash-orbit 3.2s linear infinite;
+      }
+      .app-splash__orbits span {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #38bdf8, #22d3ee);
+        box-shadow: 0 0 18px rgba(56, 189, 248, 0.65);
+      }
+      .app-splash__orbits span:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); }
+      .app-splash__orbits span:nth-child(2) { bottom: 12%; right: 8%; opacity: 0.85; }
+      .app-splash__orbits span:nth-child(3) { bottom: 12%; left: 8%; opacity: 0.7; }
+      @keyframes splash-orbit {
+        to { transform: rotate(360deg); }
+      }
+      .app-splash__brand {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        justify-items: center;
+        gap: 10px;
+        text-align: center;
+        padding: 24px;
+        animation: splash-brand-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      @keyframes splash-brand-in {
+        from { opacity: 0; transform: translateY(18px) scale(0.96); }
+        to { opacity: 1; transform: none; }
+      }
+      .app-splash__logo {
+        width: 92px;
+        height: 92px;
+        display: grid;
+        place-items: center;
+        border-radius: 24px;
+        background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(34, 211, 238, 0.12));
+        box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.25), 0 24px 60px rgba(0, 0, 0, 0.45);
+        animation: splash-logo-pulse 1.8s ease-in-out infinite;
+      }
+      @keyframes splash-logo-pulse {
+        50% { transform: scale(1.04); box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.4), 0 28px 70px rgba(34, 211, 238, 0.18); }
+      }
+      .app-splash__logo img {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+      }
+      .app-splash__brand strong {
+        color: #e8f4f6;
+        font-size: 28px;
+        letter-spacing: -0.02em;
+        font-family: Georgia, "Times New Roman", serif;
+        font-weight: 400;
+      }
+      .app-splash__brand p {
+        margin: 0;
+        color: rgba(184, 205, 210, 0.88);
+        font: 600 12px/1.4 system-ui, sans-serif;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .app-splash__bar {
+        position: absolute;
+        left: 12%;
+        right: 12%;
+        bottom: max(28px, env(safe-area-inset-bottom));
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+      }
+      .app-splash__bar i {
+        display: block;
+        width: 42%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #22d3ee, #38bdf8, #818cf8);
+        animation: splash-bar 1.2s ease-in-out infinite;
+      }
+      @keyframes splash-bar {
+        0% { transform: translateX(-120%); }
+        100% { transform: translateX(260%); }
+      }
 
       /* Blog listing page */
       #blog-page { min-height: 100vh; padding-top: 100px; }
@@ -1063,7 +1170,7 @@
               <span class="ai-logo">Claude</span>
               <span class="ai-logo">Gemini</span>
               <span class="ai-logo">Grok</span>
-              <span class="ai-logo">Midjourney</span>
+              <span class="ai-logo">Others</span>
             </div>
           </div>
 
@@ -1652,6 +1759,14 @@ Original content: [paste here]</code></pre>
     <div id="app-root" class="app-hidden">
       <div id="app-splash" role="presentation" aria-hidden="true">
         <div class="app-splash__backdrop"></div>
+        <div class="app-splash__orbits" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="app-splash__brand">
+          <div class="app-splash__logo">
+            <img src="/icons/icon-192.png" alt="" width="72" height="72" decoding="async" />
+          </div>
+          <strong>PromptLab</strong>
+          <p>AI prompt workspace</p>
+        </div>
         <div class="app-splash__bar" aria-hidden="true"><i></i></div>
       </div>
       <div id="root">

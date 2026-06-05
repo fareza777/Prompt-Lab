@@ -9,13 +9,13 @@ export default function LandingPage() {
         <div style={{ position: "relative" }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.2)", borderRadius: 999, padding: "6px 16px", fontSize: 13, color: "#38bdf8", marginBottom: 24, fontWeight: 500 }}>⚡ Free to use — no credit card required</div>
           <h1 style={{ fontSize: "clamp(2.5rem, 6vw, 4.5rem)", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.03em", marginBottom: 20, background: "linear-gradient(135deg, #fff, #94a3b8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>The Cleanest Prompt,<br />Before You Hit Run</h1>
-          <p style={{ fontSize: "1.2rem", color: "#94a3b8", maxWidth: 580, marginBottom: 40 }}>Turn rough ideas into structured, model-ready prompts for ChatGPT, Claude, Gemini, Grok, and Midjourney. Scored, optimized, and comparison-tested.</p>
+          <p style={{ fontSize: "1.2rem", color: "#94a3b8", maxWidth: 580, marginBottom: 40 }}>Turn rough ideas into structured, model-ready prompts for ChatGPT, Claude, Gemini, Grok, and other AI tools. Scored, optimized, and comparison-tested.</p>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center" }}>
             <a href="/app" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "14px 32px", borderRadius: 12, fontSize: 16, fontWeight: 600, textDecoration: "none", background: "linear-gradient(135deg, #38bdf8, #6366f1)", color: "#fff", transition: "opacity 0.2s" }}>Start Building Prompts →</a>
             <a href="#features" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "14px 32px", borderRadius: 12, fontSize: 16, fontWeight: 600, textDecoration: "none", background: "#0d1a1d", color: "#e2e8f0", border: "1px solid rgba(255,255,255,0.06)" }}>See How It Works</a>
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 32, marginTop: 60, flexWrap: "wrap" }}>
-            {["ChatGPT", "Claude", "Gemini", "Grok", "Midjourney"].map(ai => (
+            {["ChatGPT", "Claude", "Gemini", "Grok", "Others"].map(ai => (
               <span key={ai} style={{ fontSize: 14, color: "#94a3b8", opacity: 0.6, fontWeight: 500 }}>{ai}</span>
             ))}
           </div>

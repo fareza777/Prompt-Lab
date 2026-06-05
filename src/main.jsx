@@ -75,7 +75,7 @@ purgeLegacyServiceWorkers();
 
 const categories = ["Marketing", "Content Creator", "Business", "Coding", "Academic", "Image AI"];
 const tones = ["Professional", "Casual", "Persuasive", "Creative"];
-const models = ["ChatGPT", "Claude", "Gemini", "Grok", "Midjourney"];
+const models = ["ChatGPT", "Claude", "Gemini", "Grok", "Others"];
 const outputTypes = ["Application Code", "Word Document", "PPT", "Technical Design", "Analysis", "Content"];
 const optimizerModes = ["Clearer", "Shorter", "More Detailed", "Academic", "Marketing", "Coding"];
 const generationModes = ["Fast", "Balanced", "Patient Free"];
@@ -187,7 +187,7 @@ const templates = [
   {
     title: "Product Image Prompt",
     category: "Image AI",
-    model: "Midjourney",
+    model: "Others",
     outputType: "Content",
     tone: "Creative",
     prompt:
@@ -349,7 +349,7 @@ const templates = [
   {
     title: "Image-to-Prompt Analyzer",
     category: "Image AI",
-    model: "Midjourney",
+    model: "Others",
     outputType: "Content",
     tone: "Creative",
     prompt:
