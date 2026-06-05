@@ -171,12 +171,12 @@ export function applyPriorityRouting(modelSettings = {}, plan) {
 
 export const MEMBERSHIP_MARKETING = {
   Free: {
-    price: "Rp0",
+    price: "$0",
     detail: "Builder, limited local library, no Office export.",
     highlights: ["50k tokens/month", "25 saved prompts", "5 custom templates"],
   },
   Pro: {
-    price: "Rp49k/mo",
+    price: "$3/mo",
     detail: "Higher quota, priority OCR, DOCX/PPTX export, AI Compare & Optimizer.",
     highlights: [
       "500k tokens/month",
@@ -186,7 +186,7 @@ export const MEMBERSHIP_MARKETING = {
     ],
   },
   Business: {
-    price: "Rp199k/mo",
+    price: "$12/mo",
     detail: "Everything in Pro plus priority model routing, team library, highest limits.",
     highlights: [
       "2M tokens/month",
