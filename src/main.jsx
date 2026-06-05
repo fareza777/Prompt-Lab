@@ -1,5 +1,6 @@
 import React, { Component, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import LandingPage from "./LandingPage.jsx";
 import {
   Archive,
   ArrowRightLeft,
@@ -4767,8 +4768,19 @@ function Metric({ label, value }) {
   );
 }
 
-createRoot(document.getElementById("root")).render(
-  <AppErrorBoundary>
-    <App />
-  </AppErrorBoundary>
-);
+// Route-based rendering: / shows landing page, /app shows the app
+const root = document.getElementById("root");
+const path = window.location.pathname;
+
+if (path === "/" || path === "") {
+  // Landing page for web visitors
+  root.innerHTML = "";
+  createRoot(root).render(<LandingPage />);
+} else {
+  // App for /app and all other routes
+  createRoot(root).render(
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
+  );
+}
