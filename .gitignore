@@ -15,4 +15,11 @@ api-test.txt
 *.aab
 *.apk
 android-app/
+android-app/build/
+android-app/.gradle/
 playstore/signing/
+playstore/assets/*.aab
+playstore/assets/*.apk
+playwright-report/
+playwright-results.*
+.repo-inspect/

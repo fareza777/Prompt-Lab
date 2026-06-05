@@ -710,7 +710,7 @@ async function readApiJson(response) {
   } catch {
     const shortText = text.replace(/\s+/g, " ").trim().slice(0, 180);
     if (/request entity too large|payload too large/i.test(shortText)) {
-      throw new Error("Upload terlalu besar untuk server Vercel. PromptLab mengirim metadata file saja atau gunakan backend lokal untuk ekstraksi penuh.");
+      throw new Error("The upload is too large for the Vercel server. PromptLab will send file metadata only, or use a local backend for full extraction.");
     }
     throw new Error(shortText || "Server returned a non-JSON response.");
   }
@@ -725,7 +725,7 @@ function getAttachmentUploadPlan(attachments, apiBase) {
     totalSize,
     warning: sendRawFiles
       ? ""
-      : `Total lampiran ${formatBytes(totalSize)} terlalu besar untuk upload Vercel. Generate tetap jalan dengan metadata file; untuk ekstraksi isi penuh gunakan file lebih kecil atau backend lokal/Tailscale.`,
+      : `Total attachments (${formatBytes(totalSize)}) are too large for Vercel upload. Generation will continue with file metadata; use smaller files or a local/Tailscale backend for full extraction.`,
   };
 }
 
@@ -1867,7 +1867,7 @@ function App() {
     setAttachments((items) => {
       const merged = [...nextFiles, ...items].slice(0, maxAttachments);
       if (merged.length >= maxAttachments && nextFiles.length > 0) {
-        setWarningMessage(`Maksimal ${maxAttachments} lampiran untuk plan ${accountState.plan}. Upgrade untuk lebih banyak.`);
+        setWarningMessage(`Maximum ${maxAttachments} attachments for the ${accountState.plan} plan. Upgrade to add more.`);
       }
       return merged;
     });
@@ -2167,7 +2167,7 @@ function V2Preview() {
       <section className="v2-preview-hero">
         <span className="v2-eyebrow">PromptLab v2 tokens</span>
         <h1>The cleanest <em>prompt</em>, before you hit run.</h1>
-        <p>Swatch grid untuk validasi R1: OKLCH palette, font stack, radius, dan control samples.</p>
+        <p>Swatch grid for R1 validation: OKLCH palette, font stack, radius, and control samples.</p>
       </section>
       <V2TokenSection title="Surfaces" tokens={surfaceTokens} />
       <V2TokenSection title="Lines" tokens={lineTokens} />
@@ -2227,7 +2227,7 @@ function V2App(props) {
     authSessionReady,
     hasAuthSession,
   } = props;
-  const [guestMode, setGuestMode] = useState(false);
+  const [guestMode, setGuestMode] = useState(() => localStorage.getItem("promptlab-guest") === "1");
   const recentPrompts = useMemo(
     () =>
       [...(library || [])]
@@ -2238,18 +2238,15 @@ function V2App(props) {
   const quotaPercent = Math.min(100, Math.round(((accountState.quotaUsed || 0) / Math.max(1, accountState.quotaLimit || 1)) * 100));
 
   useEffect(() => {
-    localStorage.removeItem("promptlab-guest");
-    localStorage.removeItem("promptlab-auth-intent");
-    localStorage.removeItem("promptlab-onboarded");
-  }, []);
-
-  useEffect(() => {
     if (!hasAuthSession) return;
     localStorage.removeItem("promptlab-guest");
     setGuestMode(false);
   }, [hasAuthSession]);
 
   const continueGuest = () => {
+    localStorage.setItem("promptlab-guest", "1");
+    localStorage.removeItem("promptlab-auth-intent");
+    localStorage.removeItem("promptlab-onboarded");
     setGuestMode(true);
     setActive("Builder");
   };
@@ -2310,6 +2307,7 @@ function V2App(props) {
         </div>
       </aside>
 
+      <BottomNav active={active} setActive={setActive} />
       <main className="v2-main">
         <V2Header
           active={active}
@@ -2318,6 +2316,8 @@ function V2App(props) {
           isGenerating={isGenerating}
           generationStatus={generationStatus}
           generationSource={generationSource}
+          isGuestMode={guestMode}
+          accountState={accountState}
         />
         {active === "Builder" && <V2Builder {...props} />}
         {active === "Optimizer" && <V2Optimizer {...props} />}
@@ -2326,7 +2326,6 @@ function V2App(props) {
         {active === "Compare" && <V2Compare {...props} />}
         {active === "Settings" && <V2Settings {...props} />}
       </main>
-      <BottomNav active={active} setActive={setActive} />
       <V2ActionToast message={props.actionToast} />
     </div>
   );
@@ -2424,7 +2423,7 @@ function V2Onboarding({ onAuth, onGuest }) {
   );
 }
 
-function V2Header({ active, setActive, settingsStatus, isGenerating, generationStatus, generationSource }) {
+function V2Header({ active, setActive, settingsStatus, isGenerating, generationStatus, generationSource, isGuestMode, accountState }) {
   const subtitles = {
     Builder: "Parse intent, lock guardrails, and ship model-ready prompts.",
     Optimizer: "Diff an old prompt into a sharper, safer instruction.",
@@ -2435,7 +2434,10 @@ function V2Header({ active, setActive, settingsStatus, isGenerating, generationS
   };
   const syncLabel = isGenerating
     ? statusLabel(generationStatus, generationSource)
-    : "Synced";
+    : isGuestMode || !accountState?.userId
+      ? "Local only"
+      : "Synced";
+  const syncClass = isGenerating ? "busy" : isGuestMode || !accountState?.userId ? "local" : "";
   return (
     <header className="v2-headerbar">
       <div>
@@ -2443,7 +2445,7 @@ function V2Header({ active, setActive, settingsStatus, isGenerating, generationS
         <strong>{subtitles[active] || subtitles.Builder}</strong>
       </div>
       <div className="v2-header-actions">
-        <span className={`v2-sync ${isGenerating ? "busy" : ""}`}><i /> {syncLabel}</span>
+        <span className={`v2-sync ${syncClass}`}><i /> {syncLabel}</span>
         <button className="v2-search" onClick={() => setActive("Library")}>
           <Search size={15} />
           <span>Search library</span>
@@ -2563,7 +2565,7 @@ function EngineMetaBadges({ engineVersion, piiFindings }) {
 }
 
 /**
- * Caption kecil untuk hasil Compare Judge — menampilkan bias mitigation aktif.
+ * Small caption for Compare Judge results when bias mitigation is active.
  */
 function CompareBiasNote({ biasMitigation }) {
   if (!biasMitigation) return null;
@@ -2577,7 +2579,7 @@ function CompareBiasNote({ biasMitigation }) {
           fontStyle: "italic",
         }}
       >
-        ⚖️ Judge dijalankan 2× dengan posisi A/B ditukar — skor di-rata-rata untuk netralitas.
+        Judge ran twice with A/B positions swapped; scores were averaged for neutrality.
       </p>
     );
   }
@@ -2751,6 +2753,8 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
   const canDocx = entitlements?.docxExport ?? canExportFormat(plan, "docx");
   const canPptx = entitlements?.pptxExport ?? canExportFormat(plan, "pptx");
   const [actionFeedback, setActionFeedback] = useState("");
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const outputBadge = isGenerating
     ? "Generating..."
     : isAiGeneratedOutput(generationSource, generationStatus)
@@ -2760,6 +2764,18 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
     action();
     setActionFeedback(label);
     window.setTimeout(() => setActionFeedback(""), 1500);
+  };
+  const copyOutputSection = (heading) => {
+    const marker = `${heading}:`;
+    const start = prompt.indexOf(marker);
+    if (start === -1) {
+      confirmAction("Copied", () => copyText(prompt));
+      return;
+    }
+    const rest = prompt.slice(start);
+    const nextSection = rest.slice(marker.length).search(/\n[A-Z][A-Za-z ]+:\n/);
+    const section = nextSection === -1 ? rest : rest.slice(0, marker.length + nextSection);
+    confirmAction("Section copied", () => copyText(section.trim()));
   };
 
   return (
@@ -2789,7 +2805,7 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
           {metrics.tips.slice(0, 3).map((tip) => <p key={tip}>{tip}</p>)}
         </div>
       </div>
-      <div className="v2-card v2-output-card">
+      <div className={`v2-card v2-output-card ${isFullscreen ? "fullscreen" : ""}`}>
         <div className="v2-prompt-toolbar">
           <div className="v2-prompt-toolbar-title">
             <strong>Optimized Prompt</strong>
@@ -2799,14 +2815,23 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
           <button type="button" onClick={() => confirmAction("Copied", () => copyText(prompt))} title="Copy prompt" aria-label="Copy prompt">
             <Clipboard size={16} />
           </button>
+          <button type="button" onClick={() => copyOutputSection("Interpreted brief")} title="Copy interpreted brief" aria-label="Copy interpreted brief">
+            <Layers3 size={16} />
+          </button>
           <button type="button" onClick={() => confirmAction("Saved", () => savePrompt(prompt, narrative))} title="Save prompt" aria-label="Save prompt">
             <Archive size={16} />
+          </button>
+          <button type="button" onClick={() => setIsExpanded((value) => !value)} title={isExpanded ? "Collapse output" : "Expand output"} aria-label={isExpanded ? "Collapse output" : "Expand output"}>
+            {isExpanded ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+          <button type="button" onClick={() => setIsFullscreen((value) => !value)} title={isFullscreen ? "Close full screen" : "Open full screen"} aria-label={isFullscreen ? "Close full screen" : "Open full screen"}>
+            {isFullscreen ? <X size={16} /> : <FolderOpen size={16} />}
           </button>
         </div>
         <div className="v2-output-tabs">
           <button className="active">Prompt</button>
         </div>
-        <pre className={`v2-prompt-output ${isGenerating ? "is-streaming" : ""}`}>{prompt}</pre>
+        <pre className={`v2-prompt-output ${isGenerating ? "is-streaming" : ""} ${isExpanded ? "expanded" : ""}`}>{prompt}</pre>
         {isGenerating && (
           <div className="v2-stream-preview">
             <span>Streaming preview</span>
@@ -3094,7 +3119,7 @@ function V2Library(props) {
                 <div><label className="v2-label">Folder</label><input className="v2-input" value={currentItem.folder} onChange={(event) => updateLibraryItem(currentItem.id, { folder: event.target.value })} /></div>
                 <div><label className="v2-label">Tag</label><input className="v2-input" value={currentItem.tag} onChange={(event) => updateLibraryItem(currentItem.id, { tag: event.target.value })} /></div>
               </div>
-              <label className="v2-label">Isi Prompt</label>
+              <label className="v2-label">Prompt Content</label>
               <textarea className="v2-textarea" value={currentItem.content} onChange={(event) => updateLibraryItem(currentItem.id, { content: event.target.value })} />
               <div className="v2-actions wrap">
                 <button className="v2-btn primary" onClick={() => useInBuilder(currentItem)}><PenLine size={16} />Use in Builder</button>
@@ -3136,7 +3161,7 @@ function V2Compare({
   compareBiasMitigation,
 }) {
   const prompts = [compareA, compareB].filter(Boolean);
-  const basePrompt = prompts[0] || "Paste prompt di panel A/B untuk membandingkan kualitas instruksi.";
+  const basePrompt = prompts[0] || "Paste prompts into panels A/B to compare instruction quality.";
   const scoreA = scorePrompt(compareA || "");
   const scoreB = scorePrompt(compareB || "");
   const localWinner = scoreA.score >= scoreB.score ? "A" : "B";
@@ -3903,7 +3928,7 @@ function Nav({ active, setActive }) {
 
 function BottomNav({ active, setActive }) {
   return (
-    <nav className="bottom-nav">
+    <nav className="bottom-nav v2-bottom-nav">
       {navItems().map(([item, Icon]) => (
         <button key={item} className={active === item ? "active" : ""} onClick={() => setActive(item)}>
           <Icon size={18} />
@@ -4119,7 +4144,7 @@ function ResultPanel({
         </div>
         <div>
           <h2>Readiness Score</h2>
-          <p>Struktur, konteks, format, dan batasan dicek sebelum prompt dipakai.</p>
+          <p>Structure, context, format, and constraints are checked before the prompt is used.</p>
         </div>
       </div>
       <div className="metric-list">
@@ -4131,17 +4156,17 @@ function ResultPanel({
         <div>
           <span>01</span>
           <strong>Intent parsed</strong>
-          <small>Role, tujuan, dan output terbaca.</small>
+          <small>Role, goal, and output are readable.</small>
         </div>
         <div>
           <span>02</span>
           <strong>Guardrails active</strong>
-          <small>Format dan batasan dikunci.</small>
+          <small>Format and constraints are locked.</small>
         </div>
         <div>
           <span>03</span>
           <strong>Export ready</strong>
-          <small>Copy, DOCX, dan PPTX siap.</small>
+          <small>Copy, DOCX, and PPTX are ready.</small>
         </div>
       </div>
       <div className="prompt-output">
@@ -4166,13 +4191,13 @@ function ResultPanel({
       {errorMessage && <p className="error-note">{errorMessage}</p>}
       <div className="before-after">
         <div><span>Before</span><p>{narrative}</p></div>
-        <div><span>After</span><p>Role, goal, tone, format, batasan, dan konteks lampiran sudah dipisah jelas.</p></div>
+        <div><span>After</span><p>Role, goal, tone, format, constraints, and attachment context are separated clearly.</p></div>
       </div>
       <div className="delivery-pack">
         <div>
           <span>Delivery Pack</span>
-          <strong>Ambil prompt sebagai file kerja</strong>
-          <p>DOCX/PPTX berisi prompt final untuk ditempel ke Claude, ChatGPT, Gemini, Grok, atau model lain.</p>
+          <strong>Take the prompt as a working file</strong>
+          <p>DOCX/PPTX contains the final prompt for Claude, ChatGPT, Gemini, Grok, or another model.</p>
         </div>
         <div className="delivery-actions">
           <button className="secondary-button" onClick={() => copyText(prompt)}><Clipboard size={18} />Copy</button>
@@ -4181,7 +4206,7 @@ function ResultPanel({
           <button className="secondary-button" onClick={() => exportFile("pptx", prompt, narrative)}><BookOpenText size={18} />PPTX</button>
         </div>
         <p className="delivery-note">
-          {exportStatus || "Catatan: export ini menyimpan prompt, bukan membuat laporan final otomatis."}
+          {exportStatus || "Note: this export saves the prompt; it does not automatically create the final report."}
         </p>
       </div>
     </aside>
@@ -4377,12 +4402,12 @@ function LibraryView({
             <small>{item.folder}</small>
           </button>
         ))}
-        {visibleLibrary.length === 0 && <p className="empty-state">Belum ada prompt yang cocok.</p>}
+        {visibleLibrary.length === 0 && <p className="empty-state">No matching prompts yet.</p>}
       </div>
       <div className="result-panel">
         {currentItem ? (
           <>
-            <label className="field-label">Judul</label>
+            <label className="field-label">Title</label>
             <input className="text-input" value={currentItem.title} onChange={(event) => updateLibraryItem(currentItem.id, { title: event.target.value })} />
             <div className="library-meta-grid">
               <div>
@@ -4390,15 +4415,15 @@ function LibraryView({
                 <input className="text-input" value={currentItem.folder} onChange={(event) => updateLibraryItem(currentItem.id, { folder: event.target.value })} />
               </div>
               <div>
-                <label className="field-label">Tag / Kategori</label>
+                <label className="field-label">Tag / Category</label>
                 <input className="text-input" value={currentItem.tag} onChange={(event) => updateLibraryItem(currentItem.id, { tag: event.target.value })} />
               </div>
             </div>
-            <label className="field-label">Isi Prompt</label>
+            <label className="field-label">Prompt Content</label>
             <textarea value={currentItem.content} onChange={(event) => updateLibraryItem(currentItem.id, { content: event.target.value })} />
             <div className="library-meta-note">
-              <span>Dibuat {formatDate(currentItem.createdAt)}</span>
-              <span>Diupdate {formatDate(currentItem.updatedAt || currentItem.createdAt)}</span>
+              <span>Created {formatDate(currentItem.createdAt)}</span>
+              <span>Updated {formatDate(currentItem.updatedAt || currentItem.createdAt)}</span>
             </div>
             <div className="builder-actions wrap">
               <button className="primary-button" onClick={() => useInBuilder(currentItem)}><PenLine size={18} />Use in Builder</button>
@@ -4411,7 +4436,7 @@ function LibraryView({
               <button className="secondary-button danger" onClick={() => deleteLibraryItem(currentItem.id)}><Trash2 size={18} />Delete</button>
             </div>
           </>
-        ) : <p>Tidak ada prompt tersimpan.</p>}
+        ) : <p>No saved prompts.</p>}
       </div>
     </section>
   );
@@ -4464,7 +4489,7 @@ function CompareView({
       <div className="section-title">
         <div>
           <h2>Compare Prompts</h2>
-          <p>Uji dua versi prompt sebelum dikirim ke AI. Pilih yang paling jelas, lengkap, dan minim salah tafsir.</p>
+          <p>Test two prompt versions before sending them to AI. Choose the clearest, most complete, least ambiguous version.</p>
         </div>
         <strong className="status-pill">{winner}</strong>
       </div>
@@ -4543,7 +4568,7 @@ function SettingsView({
     .map((item) => item.trim())
     .filter(Boolean);
   const providerReady = Boolean(settingsStatus?.ok && settingsStatus?.ai);
-  const activeProfile = modeProfiles[generationMode] || modeProfiles.Seimbang;
+  const activeProfile = modeProfiles[generationMode] || modeProfiles.Balanced;
   const updateModelSetting = (key, value) => setModelSettings((settings) => ({ ...settings, [key]: value }));
 
   return (
@@ -4568,7 +4593,7 @@ function SettingsView({
           ))}
         </div>
         <div className="settings-mode">
-          <span>Mode aktif</span>
+          <span>Active mode</span>
           <strong>{generationMode}</strong>
           <p>{activeProfile.bestFor}</p>
         </div>
@@ -4577,8 +4602,8 @@ function SettingsView({
           <strong>{qualityMode === "premium" ? "ON · critique+refine pass" : "OFF · single pass"}</strong>
           <p>
             {qualityMode === "premium"
-              ? "Setiap prompt akan di-audit critic dan di-refine ulang. Lebih lambat & lebih banyak token, tapi hasil lebih tajam (cocok untuk model gratis/kecil)."
-              : "Generate sekali jalan tanpa critique pass. Cepat dan hemat token."}
+              ? "Each prompt will be audited by a critic and refined again. Slower and more token-heavy, but sharper for small or free models."
+              : "Generate in a single pass without the critique step. Fast and token-efficient."}
           </p>
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
             <button
@@ -4598,8 +4623,8 @@ function SettingsView({
         <div className="settings-grid">
           <InfoBox label="API Base" value={apiBase} />
           <InfoBox label="Provider" value={settingsStatus?.provider || modelSettings.provider || "-"} />
-          <InfoBox label="Model aktif terakhir" value={settingsStatus?.model || "-"} />
-          <InfoBox label="OCR aktif" value={modelSettings.ocrModel || settingsStatus?.ocrModel || "-"} />
+          <InfoBox label="Last active model" value={settingsStatus?.model || "-"} />
+          <InfoBox label="Active OCR" value={modelSettings.ocrModel || settingsStatus?.ocrModel || "-"} />
         </div>
         <div className="model-settings-panel">
           <div className="section-title">
@@ -4621,13 +4646,13 @@ function SettingsView({
             onChange={(event) => updateModelSetting("baseUrl", event.target.value)}
             placeholder="https://openrouter.ai/api/v1"
           />
-          <label className="field-label">API key override, opsional</label>
+          <label className="field-label">API key override, optional</label>
           <input
             className="text-input"
             type="password"
             value={modelSettings.apiKey}
             onChange={(event) => updateModelSetting("apiKey", event.target.value)}
-            placeholder="Kosongkan untuk memakai ENV Vercel"
+            placeholder="Leave empty to use Vercel ENV"
           />
           <p className="settings-help">Leave empty to use the backend API key from Vercel Environment Variables. If filled, the key is stored in this browser.</p>
         </div>
@@ -4636,7 +4661,7 @@ function SettingsView({
             <h2>Model Routing</h2>
             <span className="status-pill">{modelSettings.timeoutMs || "auto"} ms</span>
           </div>
-          <label className="field-label">Model utama</label>
+          <label className="field-label">Primary model</label>
           <input
             className="text-input"
             value={modelSettings.primaryModel}
@@ -4657,7 +4682,7 @@ function SettingsView({
             onChange={(event) => updateModelSetting("timeoutMs", event.target.value.replace(/[^\d]/g, ""))}
             placeholder="40000"
           />
-          <label className="field-label">Fallback models, satu model per baris</label>
+          <label className="field-label">Fallback models, one model per line</label>
           <textarea
             className="model-list-input"
             value={modelSettings.fallbackModels}
@@ -4687,7 +4712,7 @@ function SettingsView({
           <button className="secondary-button" onClick={refreshHealth}><Gauge size={18} />Health</button>
           <button className="secondary-button" onClick={() => navigator.clipboard?.writeText(apiBase).catch(() => {})}><Clipboard size={18} />Copy API Base</button>
         </div>
-        {settingsSavedAt && <p className="provider-test-note">Settings terakhir disimpan: {settingsSavedAt}</p>}
+        {settingsSavedAt && <p className="provider-test-note">Settings last saved: {settingsSavedAt}</p>}
         {providerTestStatus && <p className="provider-test-note">{providerTestStatus}</p>}
       </div>
       <div className="result-panel">
@@ -4702,7 +4727,7 @@ function SettingsView({
           <div><span>1</span><p>Use <strong>Patient Free</strong> for large files, OCR, or queued free models.</p></div>
           <div><span>2</span><p>If local fallback keeps appearing, press <strong>Test Provider</strong> and check the backend API.</p></div>
           <div><span>3</span><p>Change the key/model in <strong>.env</strong>, then restart the API.</p></div>
-          <div><span>4</span><p>Untuk akses HP, buka frontend Tailscale dan pastikan backend lokal tetap hidup.</p></div>
+          <div><span>4</span><p>For phone access, open the Tailscale frontend and keep the local backend running.</p></div>
         </div>
       </div>
     </section>

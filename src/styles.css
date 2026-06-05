@@ -490,7 +490,7 @@ button {
 
 .v2-main {
   min-width: 0;
-  padding: 24px 28px 42px;
+  padding: 18px 28px 42px;
 }
 
 .v2-headerbar {
@@ -545,6 +545,11 @@ button {
   border-radius: 999px;
   background: var(--pos);
   box-shadow: 0 0 14px var(--pos);
+}
+
+.v2-sync.local i {
+  background: var(--warn);
+  box-shadow: 0 0 14px oklch(0.82 0.16 78 / 0.55);
 }
 
 .v2-search {
@@ -683,12 +688,12 @@ button {
 .v2-hero {
   position: relative;
   overflow: hidden;
-  min-height: 190px;
+  min-height: 144px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
   gap: 24px;
-  padding: 24px;
+  padding: 20px 22px;
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   background:
@@ -717,12 +722,12 @@ button {
 
 .v2-hero h1 {
   max-width: 900px;
-  margin: 8px 0 10px;
+  margin: 6px 0 8px;
   color: var(--fg);
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: clamp(34px, 4.7vw, 66px);
-  line-height: 0.98;
+  font-size: clamp(30px, 3.6vw, 50px);
+  line-height: 1;
   letter-spacing: 0;
 }
 
@@ -750,7 +755,7 @@ button {
 .v2-hero-status strong {
   display: block;
   margin: 5px 0;
-  font-size: 34px;
+  font-size: 30px;
   line-height: 1;
 }
 
@@ -1599,6 +1604,22 @@ button {
   white-space: pre-wrap;
 }
 
+.v2-prompt-output.expanded,
+.v2-output-card.fullscreen .v2-prompt-output {
+  max-height: min(72vh, 760px);
+}
+
+.v2-output-card.fullscreen {
+  position: fixed;
+  inset: 18px;
+  z-index: 70;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  max-width: none;
+  background: oklch(0.13 0.012 220 / 0.98);
+  box-shadow: 0 30px 110px oklch(0 0 0 / 0.58);
+}
+
 .v2-prompt-output.muted {
   color: oklch(0.78 0.01 210);
   background: oklch(0.1 0.01 220);
@@ -2378,26 +2399,26 @@ button {
   }
 
   .v2-main {
-    padding-bottom: 92px;
+    padding-bottom: 42px;
   }
 
-  .bottom-nav {
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: max(10px, env(safe-area-inset-bottom));
+  .v2-bottom-nav {
+    position: sticky;
+    top: 0;
     z-index: 40;
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 4px;
-    padding: 5px;
+    margin: 0;
+    padding: 6px 12px;
     background: rgba(12, 20, 26, 0.96);
-    border: 1px solid rgba(148, 163, 184, 0.22);
-    border-radius: 16px;
-    box-shadow: 0 18px 44px rgba(3, 7, 18, 0.45);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 0;
+    box-shadow: 0 14px 34px rgba(3, 7, 18, 0.35);
+    backdrop-filter: blur(16px);
   }
 
-  .bottom-nav button {
+  .v2-bottom-nav button {
     min-height: 44px;
     font-size: 10px;
   }
@@ -2428,7 +2449,7 @@ button {
 
 @media (max-width: 760px) {
   .v2-main {
-    padding: 12px 12px 90px;
+    padding: 12px 12px 30px;
   }
 
   .v2-headerbar {
@@ -2462,11 +2483,16 @@ button {
   .v2-hero {
     min-height: 0;
     grid-template-columns: 1fr;
-    padding: 16px;
+    padding: 14px;
   }
 
   .v2-hero h1 {
-    font-size: 34px;
+    font-size: 28px;
+    line-height: 1.03;
+  }
+
+  .v2-hero p {
+    font-size: 13px;
   }
 
   .v2-hero-status {
@@ -4063,6 +4089,23 @@ pre {
   display: none;
 }
 
+@media (max-width: 420px) {
+  .v2-bottom-nav {
+    padding: 5px 8px;
+  }
+
+  .v2-bottom-nav button {
+    min-height: 42px;
+    gap: 3px;
+    font-size: 9px;
+  }
+
+  .v2-bottom-nav svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
 @media (max-width: 1120px) {
   .content-grid,
   .lower-grid,
@@ -4473,5 +4516,47 @@ pre {
 
   .v2-stats-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .v2-shell > .v2-bottom-nav {
+    position: sticky;
+    top: 0;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+    width: 100%;
+    padding: 6px 12px;
+    border: 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 0;
+    background: rgba(12, 20, 26, 0.96);
+    box-shadow: 0 14px 34px rgba(3, 7, 18, 0.35);
+    backdrop-filter: blur(16px);
+  }
+
+  .v2-shell > .v2-bottom-nav button {
+    min-height: 44px;
+    justify-content: center;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 420px) {
+  .v2-shell > .v2-bottom-nav {
+    padding: 5px 8px;
+  }
+
+  .v2-shell > .v2-bottom-nav button {
+    min-height: 42px;
+    gap: 3px;
+    font-size: 9px;
   }
 }

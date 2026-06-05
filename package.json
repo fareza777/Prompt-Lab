@@ -7,6 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "server": "node --use-system-ca server/index.js",
     "test": "node --test",
+    "test:smoke": "node scripts/smoke-ui.mjs",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "playstore:check": "node --use-system-ca scripts/check-playstore-readiness.mjs",
