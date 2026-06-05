@@ -108,11 +108,14 @@ try {
 
   await page.addInitScript(() => {
     localStorage.setItem("promptlab-onboarded", "true");
-    localStorage.setItem("promptlab-guest", "true");
+    localStorage.removeItem("promptlab-guest");
     localStorage.removeItem("promptlab-auth-intent");
   });
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
+  if (await page.getByRole("button", { name: /Continue as Guest/i }).count()) {
+    await page.getByRole("button", { name: /Continue as Guest/i }).click();
+  }
   await page.waitForSelector(".v2-shell", { timeout: 30000 });
   await page.addStyleTag({ content: mobileChromeCss });
   await page.waitForTimeout(1500);

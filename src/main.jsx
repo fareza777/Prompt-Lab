@@ -2300,7 +2300,7 @@ function V2App(props) {
     authSessionReady,
     hasAuthSession,
   } = props;
-  const [guestMode, setGuestMode] = useState(() => localStorage.getItem("promptlab-guest") === "1");
+  const [guestMode, setGuestMode] = useState(false);
   const recentPrompts = useMemo(
     () =>
       [...(library || [])]
@@ -2311,13 +2311,13 @@ function V2App(props) {
   const quotaPercent = Math.min(100, Math.round(((accountState.quotaUsed || 0) / Math.max(1, accountState.quotaLimit || 1)) * 100));
 
   useEffect(() => {
-    if (!hasAuthSession) return;
     localStorage.removeItem("promptlab-guest");
+    if (!hasAuthSession) return;
     setGuestMode(false);
   }, [hasAuthSession]);
 
   const continueGuest = () => {
-    localStorage.setItem("promptlab-guest", "1");
+    localStorage.removeItem("promptlab-guest");
     localStorage.removeItem("promptlab-auth-intent");
     localStorage.removeItem("promptlab-onboarded");
     setGuestMode(true);
