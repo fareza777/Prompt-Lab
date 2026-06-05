@@ -26,38 +26,44 @@
       ]
     }
   ],
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index.js"
-    },
-    {
-      "source": "/privacy",
-      "destination": "/privacy/index.html"
-    },
-    {
-      "source": "/privacy/delete-account",
-      "destination": "/privacy/delete-account/index.html"
-    },
-    {
-      "source": "/.well-known/(.*)",
-      "destination": "/.well-known/$1"
-    },
-    {
-      "source": "/app",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/app/(.*)",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/",
-      "destination": "/landing.html"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
+  "rewrites": {
+    "beforeFiles": [
+      {
+        "source": "/api/(.*)",
+        "destination": "/api/index.js"
+      },
+      {
+        "source": "/privacy",
+        "destination": "/privacy/index.html"
+      },
+      {
+        "source": "/privacy/delete-account",
+        "destination": "/privacy/delete-account/index.html"
+      },
+      {
+        "source": "/.well-known/(.*)",
+        "destination": "/.well-known/$1"
+      },
+      {
+        "source": "/app",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/app/(.*)",
+        "destination": "/index.html"
+      }
+    ],
+    "afterFiles": [
+      {
+        "source": "/",
+        "destination": "/landing.html"
+      }
+    ],
+    "fallback": [
+      {
+        "source": "/(.*)",
+        "destination": "/index.html"
+      }
+    ]
+  }
 }
