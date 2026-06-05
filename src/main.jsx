@@ -2470,6 +2470,7 @@ function V2AuthGate({
           </button>
           <button className="v2-btn" onClick={onGuest}>Continue as Guest</button>
         </div>
+        <p className="v2-note">Want Pro or Business? Create an account first, then open Settings → Membership to upgrade. Guest mode is for local trial only.</p>
       </section>
     </main>
   );
@@ -2491,6 +2492,7 @@ function V2Onboarding({ onAuth, onGuest }) {
           <button className="v2-btn primary" onClick={onAuth}>Sign In / Create Account</button>
           <button className="v2-btn" onClick={onGuest}>Continue as Guest</button>
         </div>
+        <p className="v2-note">Membership upgrades are available after sign in from Settings → Membership.</p>
       </section>
     </main>
   );
