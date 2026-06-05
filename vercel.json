@@ -1,18 +1,10 @@
 {
-  "cleanUrls": true,
-  "trailingSlash": false,
-  "routes": [
-    { "src": "/sitemap.xml", "dest": "/sitemap.xml" },
-    { "src": "/robots.txt", "dest": "/robots.txt" },
-    { "src": "/og-image.png", "dest": "/og-image.png" },
-    { "src": "/manifest.webmanifest", "dest": "/manifest.webmanifest" },
-    { "src": "/icons/(.*)", "dest": "/icons/$1" },
-    { "src": "/blog/(.*)", "dest": "/index.html" },
-    { "src": "/blog", "dest": "/index.html" },
-    { "src": "/privacy", "dest": "/privacy.html" },
-    { "src": "/privacy/delete-account", "dest": "/privacy.html" },
-    { "src": "/app/(.*)", "dest": "/index.html" },
-    { "src": "/app", "dest": "/index.html" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/blog/:slug*", "destination": "/index.html" },
+    { "source": "/blog", "destination": "/index.html" },
+    { "source": "/app/:slug*", "destination": "/index.html" },
+    { "source": "/app", "destination": "/index.html" },
+    { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/privacy/:slug*", "destination": "/privacy.html" }
   ]
 }
