@@ -61,31 +61,36 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
 
     <style>
       *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
       :root {
         --bg: #061011;
-         --bg-card: #0a1518;
-         --bg-card-hover: #0e1e22;
-         --text: #c8d6df;
-         --text-muted: #6b7f8a;
-         --accent: #2a9dc7;
-         --accent2: #4f46e5;
-         --accent3: #7c6bd4;
-         --gold: #c9941a;
-         --border: rgba(255,255,255,0.04);
-         --border-glow: rgba(42,157,199,0.1);
-         --glass: rgba(10,21,24,0.75);
-         --glass-border: rgba(255,255,255,0.05);
+        --bg-deep: #03090c;
+        --bg-card: #091417;
+        --bg-card-hover: #0d1f24;
+        --text: #f4f8ff;
+        --text-muted: #8fa3b4;
+        --text-soft: #c8d6df;
+        --accent: #5eead4;
+        --accent2: #38bdf8;
+        --accent3: #60a5fa;
+        --gold: #f5c36a;
+        --border: rgba(148, 163, 184, 0.14);
+        --border-glow: rgba(94, 234, 212, 0.34);
+        --glass: rgba(9, 20, 23, 0.72);
+        --glass-border: rgba(148, 163, 184, 0.16);
+        --display: "Instrument Serif", Georgia, serif;
+        --ui: "Geist", Inter, system-ui, -apple-system, sans-serif;
+        --mono: "Geist Mono", "JetBrains Mono", monospace;
       }
 
       html { scroll-behavior: smooth; }
 
       body {
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        font-family: var(--ui);
         background: var(--bg);
         color: var(--text);
         line-height: 1.7;
@@ -440,6 +445,504 @@
         .cta-box h2 { font-size: 1.8rem; }
       }
 
+      /* --- Premium PromptLab landing refresh --- */
+      body {
+        background:
+          radial-gradient(circle at 12% -10%, rgba(56, 189, 248, 0.18), transparent 28%),
+          radial-gradient(circle at 86% 8%, rgba(94, 234, 212, 0.12), transparent 30%),
+          linear-gradient(180deg, #071116 0%, #061011 42%, #03090c 100%);
+      }
+      #landing-page {
+        background:
+          linear-gradient(rgba(148, 163, 184, 0.025) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(148, 163, 184, 0.025) 1px, transparent 1px);
+        background-size: 44px 44px;
+      }
+      .navbar {
+        padding: 14px 40px;
+        background: rgba(3, 9, 12, 0.78);
+        border-bottom-color: rgba(148, 163, 184, 0.12);
+      }
+      .nav-logo {
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        color: #061011;
+        box-shadow: 0 0 0 1px rgba(94, 234, 212, 0.28), 0 16px 32px rgba(94, 234, 212, 0.12);
+      }
+      .nav-brand-text { color: var(--text); }
+      .nav-cta {
+        color: #061011 !important;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        box-shadow: 0 14px 38px rgba(56, 189, 248, 0.2);
+      }
+      .hero {
+        min-height: min(980px, 100vh);
+        align-items: stretch;
+        justify-content: center;
+        padding: 110px 32px 48px;
+        text-align: left;
+      }
+      .hero::before {
+        background:
+          radial-gradient(circle at 72% 35%, rgba(94, 234, 212, 0.16), transparent 30%),
+          radial-gradient(circle at 20% 25%, rgba(56, 189, 248, 0.13), transparent 30%),
+          linear-gradient(180deg, rgba(56, 189, 248, 0.05), transparent 42%);
+      }
+      .hero-shell {
+        position: relative;
+        z-index: 2;
+        width: min(1240px, 100%);
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: minmax(0, 0.92fr) minmax(420px, 1.08fr);
+        gap: 42px;
+        align-items: center;
+      }
+      .hero-content {
+        max-width: none;
+      }
+      .hero-badge {
+        margin-bottom: 22px;
+        color: var(--accent);
+        background: rgba(94, 234, 212, 0.09);
+        border-color: rgba(94, 234, 212, 0.26);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+      }
+      .hero h1 {
+        max-width: 720px;
+        margin-bottom: 22px;
+        color: var(--text);
+        font-family: var(--display);
+        font-size: clamp(3.4rem, 6vw, 6.2rem);
+        font-weight: 400;
+        line-height: 0.96;
+        letter-spacing: 0;
+        background: none;
+        -webkit-text-fill-color: currentColor;
+      }
+      .hero h1 .gradient-word {
+        color: var(--accent);
+        font-style: italic;
+        background: none;
+        -webkit-text-fill-color: currentColor;
+      }
+      .hero-subtitle {
+        max-width: 620px;
+        margin: 0 0 34px;
+        color: var(--text-muted);
+        font-size: 1.1rem;
+      }
+      .hero-cta {
+        justify-content: flex-start;
+        margin-bottom: 24px;
+      }
+      .btn {
+        border-radius: 10px;
+        font-weight: 750;
+      }
+      .btn-primary {
+        color: #061011;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        box-shadow: 0 16px 44px rgba(56, 189, 248, 0.22);
+      }
+      .btn-secondary {
+        background: rgba(9, 20, 23, 0.72);
+        border-color: rgba(148, 163, 184, 0.16);
+      }
+      .hero-proof {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 22px;
+      }
+      .hero-proof span {
+        padding: 8px 12px;
+        border: 1px solid rgba(148, 163, 184, 0.13);
+        border-radius: 999px;
+        color: var(--text-soft);
+        background: rgba(9, 20, 23, 0.7);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .ai-logos {
+        justify-content: flex-start;
+        gap: 22px;
+        margin-top: 34px;
+      }
+      .ai-logo {
+        color: var(--text-muted);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      .promptlab-mockup {
+        position: relative;
+        min-height: 570px;
+        padding: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        border-radius: 28px;
+        background:
+          radial-gradient(circle at 80% 12%, rgba(94, 234, 212, 0.18), transparent 32%),
+          linear-gradient(180deg, rgba(15, 31, 38, 0.86), rgba(3, 9, 12, 0.96));
+        box-shadow: 0 40px 120px rgba(0,0,0,0.42), 0 0 0 1px rgba(94,234,212,0.04);
+      }
+      .mockup-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+        color: var(--text-muted);
+        font-size: 12px;
+        font-family: var(--mono);
+      }
+      .mockup-top strong {
+        color: var(--accent);
+        font-family: var(--ui);
+        font-size: 13px;
+      }
+      .mockup-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .mockup-status i {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: var(--accent);
+        box-shadow: 0 0 18px var(--accent);
+      }
+      .mockup-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) 0.95fr;
+        gap: 14px;
+      }
+      .mock-card {
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        border-radius: 18px;
+        background: rgba(6, 16, 17, 0.72);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+      }
+      .mock-composer {
+        min-height: 410px;
+        padding: 18px;
+      }
+      .mock-card h3 {
+        margin-bottom: 6px;
+        color: var(--text);
+        font-family: var(--display);
+        font-size: 26px;
+        font-weight: 400;
+      }
+      .mock-card p {
+        color: var(--text-muted);
+        font-size: 13px;
+      }
+      .mock-textarea {
+        min-height: 122px;
+        margin: 18px 0 14px;
+        padding: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        border-radius: 14px;
+        color: var(--text);
+        background: rgba(3, 9, 12, 0.76);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+      .mock-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .mock-chips span {
+        padding: 7px 10px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        border-radius: 999px;
+        color: var(--text-soft);
+        background: rgba(9, 20, 23, 0.72);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .mock-chips span.active {
+        color: #061011;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+      }
+      .mock-generate {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 4px;
+        padding: 12px 16px;
+        border-radius: 10px;
+        color: #061011;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        font-weight: 800;
+      }
+      .mock-side {
+        display: grid;
+        gap: 14px;
+      }
+      .mock-score {
+        padding: 18px;
+      }
+      .score-row {
+        display: grid;
+        grid-template-columns: 68px minmax(0, 1fr);
+        gap: 14px;
+        align-items: center;
+      }
+      .score-ring {
+        width: 64px;
+        height: 64px;
+        display: grid;
+        place-items: center;
+        border-radius: 999px;
+        color: var(--text);
+        font-family: var(--display);
+        font-size: 25px;
+        background:
+          radial-gradient(circle at center, #071116 56%, transparent 57%),
+          conic-gradient(var(--accent) 0 356deg, rgba(148,163,184,0.18) 0);
+        filter: drop-shadow(0 0 14px rgba(94,234,212,0.42));
+      }
+      .mock-meter {
+        height: 4px;
+        margin-top: 12px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.14);
+        overflow: hidden;
+      }
+      .mock-meter i {
+        display: block;
+        width: 99%;
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent2), var(--accent));
+      }
+      .mock-output {
+        min-height: 244px;
+        padding: 16px;
+      }
+      .mock-output pre {
+        margin-top: 12px;
+        padding: 14px;
+        overflow: hidden;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        border-radius: 12px;
+        color: #d8e4ef;
+        background: rgba(3, 9, 12, 0.82);
+        font: 11px/1.62 var(--mono);
+        white-space: pre-wrap;
+      }
+      .mock-float {
+        position: absolute;
+        right: 28px;
+        bottom: 24px;
+        padding: 12px 14px;
+        border: 1px solid rgba(245, 195, 106, 0.28);
+        border-radius: 16px;
+        color: var(--gold);
+        background: rgba(12, 16, 10, 0.78);
+        font-size: 12px;
+        font-weight: 800;
+        box-shadow: 0 18px 44px rgba(0,0,0,0.28);
+      }
+      .section {
+        padding: 82px 24px;
+      }
+      .section-header {
+        margin-bottom: 44px;
+      }
+      .section-label {
+        color: var(--accent);
+        font-family: var(--mono);
+      }
+      .section-header h2,
+      .features h2,
+      .how h2,
+      .domains h2,
+      .cta-box h2 {
+        font-family: var(--display);
+        font-weight: 400;
+        letter-spacing: 0;
+      }
+      .features-grid {
+        gap: 18px;
+      }
+      .feature-card,
+      .blog-card,
+      .testimonial-card,
+      .cta-box {
+        background:
+          radial-gradient(circle at 86% 0%, rgba(94, 234, 212, 0.08), transparent 32%),
+          rgba(9, 20, 23, 0.72);
+        border-color: rgba(148, 163, 184, 0.13);
+        border-radius: 16px;
+      }
+      .feature-card {
+        min-height: 250px;
+      }
+      .feature-icon {
+        color: var(--accent);
+        background: rgba(94, 234, 212, 0.08);
+        border-color: rgba(94, 234, 212, 0.18);
+        font-family: var(--mono);
+        font-size: 18px;
+        font-weight: 800;
+      }
+      .feature-card h3 {
+        color: var(--text);
+      }
+      .feature-tag,
+      .domain-tag,
+      .blog-category {
+        color: var(--accent);
+        background: rgba(94, 234, 212, 0.08);
+        border-color: rgba(94, 234, 212, 0.18);
+      }
+      .steps-grid {
+        max-width: 1100px;
+        gap: 18px;
+      }
+      .step-card {
+        padding: 30px 24px;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        border-radius: 18px;
+        background: rgba(9, 20, 23, 0.52);
+      }
+      .step-num {
+        color: #061011;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+      }
+      .domain-tags {
+        max-width: 980px;
+      }
+      .blog-section {
+        padding-top: 74px;
+      }
+      .cta-box {
+        max-width: 780px;
+        border-color: rgba(94, 234, 212, 0.18);
+      }
+      @media (max-width: 980px) {
+        .hero {
+          min-height: auto;
+          padding: 96px 18px 44px;
+          text-align: center;
+        }
+        .hero-shell {
+          grid-template-columns: 1fr;
+        }
+        .hero h1,
+        .hero-subtitle {
+          margin-left: auto;
+          margin-right: auto;
+        }
+        .hero-cta,
+        .hero-proof,
+        .ai-logos {
+          justify-content: center;
+        }
+        .promptlab-mockup {
+          min-height: auto;
+        }
+        .mockup-grid {
+          grid-template-columns: 1fr;
+        }
+        .mock-side {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (max-width: 640px) {
+        .navbar {
+          padding: 10px 16px;
+        }
+        .nav-logo {
+          width: 42px;
+          height: 42px;
+          border-radius: 12px;
+          font-size: 20px;
+        }
+        .nav-brand-text {
+          font-size: 22px;
+        }
+        .nav-cta {
+          display: none;
+        }
+        .hero {
+          padding: 86px 16px 32px;
+        }
+        .hero-badge {
+          margin-bottom: 18px;
+          padding: 7px 14px;
+          font-size: 12px;
+        }
+        .hero h1 {
+          font-size: clamp(2.7rem, 13vw, 3.45rem);
+          line-height: 0.98;
+          margin-bottom: 18px;
+        }
+        .hero-subtitle {
+          font-size: 1rem;
+          line-height: 1.65;
+          margin-bottom: 26px;
+        }
+        .hero-cta {
+          gap: 10px;
+        }
+        .hero-cta .btn {
+          width: min(100%, 310px);
+          justify-content: center;
+          padding: 13px 18px;
+          font-size: 15px;
+        }
+        .hero-proof {
+          gap: 8px;
+          margin-top: 18px;
+        }
+        .hero-proof span {
+          padding: 7px 10px;
+          font-size: 11px;
+        }
+        .ai-logos {
+          gap: 14px;
+          margin-top: 24px;
+        }
+        .ai-logo {
+          font-size: 10px;
+        }
+        .mock-side {
+          grid-template-columns: 1fr;
+        }
+        .promptlab-mockup {
+          margin-top: 4px;
+          padding: 12px;
+          border-radius: 20px;
+        }
+        .mock-composer {
+          min-height: 0;
+          padding: 14px;
+        }
+        .mock-textarea {
+          min-height: 92px;
+          font-size: 12px;
+        }
+        .mock-output pre {
+          max-height: 132px;
+          font-size: 10px;
+        }
+        .mockup-top {
+          flex-wrap: wrap;
+        }
+        .mock-float {
+          position: static;
+          display: inline-flex;
+          margin-top: 12px;
+        }
+        .section {
+          padding: 62px 18px;
+        }
+      }
+
       /* App styles (hidden when landing visible) */
       .app-hidden { display: none !important; }
       .landing-hidden { display: none !important; }
@@ -528,30 +1031,92 @@
         <div class="orb orb-1"></div>
         <div class="orb orb-2"></div>
         <div class="orb orb-3"></div>
-        <div class="hero-content">
-          <div class="hero-badge">
-            <span class="pulse"></span>
-            AI-Powered Prompt Engineering
-          </div>
-          <h1>The <span class="gradient-word">Smartest</span> Way<br>to Build AI Prompts</h1>
-          <p class="hero-subtitle">
-            Stop guessing. Build, optimize, and compare prompts with AI-powered scoring.
-            From rough ideas to production-ready prompts in seconds.
-          </p>
+        <div class="hero-shell">
+          <div class="hero-content">
+            <div class="hero-badge">
+              <span class="pulse"></span>
+              Premium AI Prompt Workspace
+            </div>
+            <h1>The cleanest <span class="gradient-word">prompt</span>, before you hit run.</h1>
+            <p class="hero-subtitle">
+              Build precise prompts with intent parsing, readiness scoring, model routing, exports,
+              and a reusable prompt library in one polished workspace.
+            </p>
 
-          <div class="hero-cta">
-            <a href="/app" class="btn btn-primary">
-              <span>Start Building Prompts</span>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-            </a>
-            <a href="#features" class="btn btn-secondary">See How It Works</a>
+            <div class="hero-cta">
+              <a href="/app" class="btn btn-primary">
+                <span>Open PromptLab</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </a>
+              <a href="#features" class="btn btn-secondary">Explore Features</a>
+            </div>
+
+            <div class="hero-proof">
+              <span>No signup required</span>
+              <span>Guest mode available</span>
+              <span>DOCX/PPTX export</span>
+              <span>Readiness scoring</span>
+            </div>
+
+            <div class="ai-logos">
+              <span class="ai-logo">ChatGPT</span>
+              <span class="ai-logo">Claude</span>
+              <span class="ai-logo">Gemini</span>
+              <span class="ai-logo">Grok</span>
+              <span class="ai-logo">Midjourney</span>
+            </div>
           </div>
-          <div class="ai-logos">
-            <span class="ai-logo">ChatGPT</span>
-            <span class="ai-logo">Claude</span>
-            <span class="ai-logo">Gemini</span>
-            <span class="ai-logo">Grok</span>
-            <span class="ai-logo">Others</span>
+
+          <div class="promptlab-mockup" aria-label="PromptLab product preview">
+            <div class="mockup-top">
+              <strong>PromptLab / Builder</strong>
+              <span class="mockup-status"><i></i> Local only</span>
+            </div>
+            <div class="mockup-grid">
+              <div class="mock-card mock-composer">
+                <h3>Prompt Studio</h3>
+                <p>Write freely, attach context, then generate.</p>
+                <div class="mock-textarea">
+                  Create Instagram content to sell milk coffee to college students. Keep it casual, persuasive, and ready for a campaign launch.
+                </div>
+                <div class="mock-chips">
+                  <span class="active">Marketing</span>
+                  <span>Professional</span>
+                  <span>ChatGPT</span>
+                  <span>Content</span>
+                </div>
+                <div class="mock-chips">
+                  <span>Attach screenshot</span>
+                  <span>OCR ready</span>
+                  <span>Template match</span>
+                </div>
+                <div class="mock-generate">Generate Prompt →</div>
+              </div>
+              <div class="mock-side">
+                <div class="mock-card mock-score">
+                  <div class="score-row">
+                    <div class="score-ring">99</div>
+                    <div>
+                      <h3>Ready to use</h3>
+                      <p>Five-point quality check passed.</p>
+                    </div>
+                  </div>
+                  <div class="mock-meter"><i></i></div>
+                </div>
+                <div class="mock-card mock-output">
+                  <h3>Optimized Prompt</h3>
+                  <p>Structured, copy-ready output.</p>
+                  <pre>Act as a growth strategist.
+
+Build a campaign prompt with:
+- audience and offer
+- hooks and CTA
+- output format
+- acceptance criteria</pre>
+                </div>
+              </div>
+            </div>
+            <div class="mock-float">AI Generated · Local fallback ready</div>
           </div>
         </div>
       </section>

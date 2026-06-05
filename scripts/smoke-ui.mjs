@@ -1,6 +1,6 @@
 import { chromium } from "playwright";
 
-const url = process.argv[2] || "http://127.0.0.1:4173/";
+const url = process.argv[2] || "http://127.0.0.1:4173/app";
 const browser = await chromium.launch();
 const desktop = await browser.newPage({ viewport: { width: 1366, height: 900 } });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
@@ -19,9 +19,11 @@ const desktopText = await desktopRoot.innerText().catch(() => "");
 if (await desktop.getByRole("button", { name: /Continue as Guest/i }).count()) {
   await desktop.getByRole("button", { name: /Continue as Guest/i }).click();
   await desktop.waitForLoadState("networkidle");
+  await desktop.waitForTimeout(800);
 }
 const desktopShellVisible = await desktop.locator(".v2-shell").isVisible().catch(() => false);
-const localOnlyVisible = await desktop.getByText("Local only").first().isVisible().catch(() => false);
+const desktopShellText = await desktop.locator("body").innerText().catch(() => "");
+const localOnlyVisible = /local only/i.test(desktopShellText);
 
 await page.goto(url, { waitUntil: "networkidle", timeout: 60000 });
 await page.waitForTimeout(2500);
