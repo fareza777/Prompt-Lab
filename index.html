@@ -7,8 +7,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="description" content="PromptLab helps you build, optimize, and compare AI prompts for ChatGPT, Claude, Gemini, Grok, and Midjourney. Free prompt builder with readiness scoring." />
-    <meta name="keywords" content="prompt builder, AI prompt tool, create prompts, prompt engineering, ChatGPT prompts, Claude prompts, prompt optimizer, prompt templates, AI workspace" />
+    <meta name="description" content="PromptLab — AI Prompt Workspace. Build, optimize, and compare prompts for ChatGPT, Claude, Gemini, Grok & Midjourney. Free prompt builder with readiness scoring." />
+    <meta name="keywords" content="prompt builder, AI prompt tool, create prompts, prompt engineering, ChatGPT prompts, Claude prompts, prompt optimizer, prompt templates, AI workspace, cara buat prompt, aplikasi prompt" />
     <meta name="author" content="PromptLab" />
 
     <!-- Open Graph -->
@@ -48,37 +48,397 @@
     }
     </script>
 
+    <!-- Blog Article Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Blog",
+      "name": "PromptLab Blog",
+      "url": "https://prompt-lab.xyz/blog",
+      "description": "Tips, tutorials, and guides on AI prompt engineering."
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
     <style>
       *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-      :root { --bg: #061011; --bg-card: #0d1a1d; --text: #e2e8f0; --text-muted: #94a3b8; --accent: #38bdf8; --accent2: #6366f1; --border: rgba(255,255,255,0.06); }
-      body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; overflow-x: hidden; }
+
+      :root {
+        --bg: #061011;
+        --bg-card: #0d1a1d;
+        --bg-card-hover: #112226;
+        --text: #e2e8f0;
+        --text-muted: #94a3b8;
+        --accent: #38bdf8;
+        --accent2: #6366f1;
+        --accent3: #a78bfa;
+        --gold: #f59e0b;
+        --border: rgba(255,255,255,0.06);
+        --border-glow: rgba(56,189,248,0.15);
+        --glass: rgba(13,26,29,0.7);
+        --glass-border: rgba(255,255,255,0.08);
+      }
+
+      html { scroll-behavior: smooth; }
+
+      body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.7;
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ===== LANDING PAGE ===== */
       #landing-page { min-height: 100vh; }
-      #landing-page .hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; padding: 80px 24px; }
-      #landing-page .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 20%, rgba(56,189,248,0.12), transparent 45%), radial-gradient(circle at 72% 12%, rgba(99,102,241,0.10), transparent 38%); pointer-events: none; }
-      #landing-page .badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.2); border-radius: 999px; padding: 6px 16px; font-size: 13px; color: var(--accent); margin-bottom: 24px; font-weight: 500; position: relative; }
-      #landing-page h1 { font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 20px; background: linear-gradient(135deg, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; position: relative; }
-      #landing-page .subtitle { font-size: 1.2rem; color: var(--text-muted); max-width: 580px; margin-bottom: 40px; position: relative; }
-      #landing-page .cta-row { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; position: relative; }
-      #landing-page .btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 32px; border-radius: 12px; font-size: 16px; font-weight: 600; text-decoration: none; transition: all 0.2s; }
-      #landing-page .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; }
-      #landing-page .btn-secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); }
-      #landing-page .ai-row { display: flex; align-items: center; justify-content: center; gap: 32px; margin-top: 60px; flex-wrap: wrap; position: relative; }
-      #landing-page .ai-row span { font-size: 14px; color: var(--text-muted); opacity: 0.6; font-weight: 500; }
-      #landing-page section { padding: 100px 24px; }
-      #landing-page h2 { text-align: center; font-size: 2.2rem; font-weight: 700; margin-bottom: 12px; }
-      #landing-page .section-sub { text-align: center; color: var(--text-muted); margin-bottom: 60px; font-size: 1.05rem; }
-      #landing-page .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1100px; margin: 0 auto; }
-      #landing-page .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 32px; }
-      #landing-page .card-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 16px; background: rgba(56,189,248,0.1); }
-      #landing-page .card h3 { font-size: 1.15rem; font-weight: 600; margin-bottom: 8px; }
-      #landing-page .card p { color: var(--text-muted); font-size: 0.95rem; }
-      #landing-page .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 32px; max-width: 900px; margin: 0 auto; }
-      #landing-page .step { text-align: center; padding: 24px; }
-      #landing-page .step-num { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; font-size: 22px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
-      #landing-page .domain-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; max-width: 800px; margin: 0 auto; }
-      #landing-page .domain-tag { background: var(--bg-card); border: 1px solid var(--border); border-radius: 999px; padding: 8px 18px; font-size: 14px; color: var(--text-muted); white-space: nowrap; }
-      #landing-page footer { padding: 40px 24px; text-align: center; color: var(--text-muted); font-size: 14px; border-top: 1px solid var(--border); }
-      #landing-page footer a { color: var(--accent); text-decoration: none; }
+
+      /* --- Navbar --- */
+      .navbar {
+        position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+        padding: 16px 40px;
+        display: flex; align-items: center; justify-content: space-between;
+        background: rgba(6,16,17,0.8);
+        backdrop-filter: blur(20px) saturate(1.4);
+        -webkit-backdrop-filter: blur(20px) saturate(1.4);
+        border-bottom: 1px solid var(--border);
+        transition: all 0.3s ease;
+      }
+      .navbar.scrolled { background: rgba(6,16,17,0.95); padding: 12px 40px; }
+      .nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+      .nav-logo {
+        width: 36px; height: 36px; border-radius: 10px;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 18px; color: #fff;
+      }
+      .nav-brand-text { font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+      .nav-links { display: flex; gap: 32px; align-items: center; }
+      .nav-links a {
+        color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500;
+        transition: color 0.2s; position: relative;
+      }
+      .nav-links a:hover { color: var(--text); }
+      .nav-links a::after {
+        content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 2px;
+        background: var(--accent); border-radius: 2px; transition: width 0.3s ease;
+      }
+      .nav-links a:hover::after { width: 100%; }
+      .nav-cta {
+        padding: 10px 24px; border-radius: 10px; font-size: 14px; font-weight: 600;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        color: #fff !important; text-decoration: none; transition: all 0.3s ease;
+        box-shadow: 0 0 20px rgba(56,189,248,0.2);
+      }
+      .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 0 30px rgba(56,189,248,0.35); }
+      .nav-cta::after { display: none !important; }
+
+      /* --- Hero --- */
+      .hero {
+        min-height: 100vh; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; text-align: center;
+        position: relative; padding: 120px 24px 80px; overflow: hidden;
+      }
+      .hero::before {
+        content: ''; position: absolute; inset: 0;
+        background:
+          radial-gradient(ellipse 80% 50% at 50% 0%, rgba(56,189,248,0.10), transparent 60%),
+          radial-gradient(ellipse 60% 40% at 20% 50%, rgba(99,102,241,0.08), transparent 50%),
+          radial-gradient(ellipse 50% 35% at 80% 60%, rgba(167,139,250,0.06), transparent 50%);
+        pointer-events: none;
+      }
+
+      /* Animated grid background */
+      .hero-grid {
+        position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+      }
+      .hero-grid::before {
+        content: ''; position: absolute; inset: -50%;
+        background-image:
+          linear-gradient(rgba(56,189,248,0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(56,189,248,0.03) 1px, transparent 1px);
+        background-size: 60px 60px;
+        animation: gridMove 20s linear infinite;
+      }
+      @keyframes gridMove { 0% { transform: translate(0,0); } 100% { transform: translate(60px,60px); } }
+
+      /* Floating orbs */
+      .orb {
+        position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.4;
+        animation: orbFloat 8s ease-in-out infinite;
+      }
+      .orb-1 { width: 300px; height: 300px; background: var(--accent); top: 10%; left: 10%; animation-delay: 0s; }
+      .orb-2 { width: 250px; height: 250px; background: var(--accent2); top: 20%; right: 15%; animation-delay: -3s; }
+      .orb-3 { width: 200px; height: 200px; background: var(--accent3); bottom: 15%; left: 25%; animation-delay: -5s; }
+      @keyframes orbFloat {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        33% { transform: translate(30px, -20px) scale(1.05); }
+        66% { transform: translate(-20px, 15px) scale(0.95); }
+      }
+
+      .hero-content { position: relative; z-index: 2; max-width: 800px; }
+      .hero-badge {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.15);
+        border-radius: 999px; padding: 8px 20px; font-size: 13px; color: var(--accent);
+        margin-bottom: 32px; font-weight: 500; letter-spacing: 0.02em;
+      }
+      .hero-badge .pulse { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulse 2s ease-in-out infinite; }
+      @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } }
+
+      .hero h1 {
+        font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 900; line-height: 1.05;
+        letter-spacing: -0.04em; margin-bottom: 24px;
+        background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 40%, var(--accent) 80%, var(--accent2) 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .hero h1 .gradient-word {
+        background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent3));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      }
+      .hero-subtitle {
+        font-size: 1.25rem; color: var(--text-muted); max-width: 600px; margin: 0 auto 48px;
+        line-height: 1.8; font-weight: 400;
+      }
+
+      .hero-cta { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 64px; }
+      .btn {
+        display: inline-flex; align-items: center; gap: 10px; padding: 16px 36px;
+        border-radius: 14px; font-size: 16px; font-weight: 600; text-decoration: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        color: #fff; box-shadow: 0 4px 24px rgba(56,189,248,0.25), 0 0 0 1px rgba(56,189,248,0.1);
+      }
+      .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(56,189,248,0.35); }
+      .btn-primary::before {
+        content: ''; position: absolute; inset: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+        opacity: 0; transition: opacity 0.3s;
+      }
+      .btn-primary:hover::before { opacity: 1; }
+      .btn-secondary {
+        background: var(--glass); color: var(--text);
+        border: 1px solid var(--glass-border); backdrop-filter: blur(10px);
+      }
+      .btn-secondary:hover { background: var(--bg-card-hover); border-color: var(--border-glow); transform: translateY(-2px); }
+
+      /* Social proof */
+      .social-proof {
+        display: flex; align-items: center; justify-content: center; gap: 12px;
+        margin-bottom: 48px; font-size: 14px; color: var(--text-muted);
+      }
+      .avatar-stack { display: flex; }
+      .avatar-stack span {
+        width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--bg);
+        display: flex; align-items: center; justify-content: center; font-size: 14px;
+        margin-left: -8px; background: var(--bg-card);
+      }
+      .avatar-stack span:first-child { margin-left: 0; }
+
+      /* AI logos */
+      .ai-logos { display: flex; align-items: center; justify-content: center; gap: 40px; flex-wrap: wrap; }
+      .ai-logo {
+        font-size: 15px; font-weight: 600; color: var(--text-muted); opacity: 0.5;
+        letter-spacing: 0.05em; text-transform: uppercase; transition: opacity 0.3s;
+      }
+      .ai-logo:hover { opacity: 0.8; }
+
+      /* --- Stats Section --- */
+      .stats-section {
+        padding: 80px 24px; position: relative;
+        background: linear-gradient(180deg, transparent, rgba(56,189,248,0.02), transparent);
+      }
+      .stats-grid {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
+        max-width: 900px; margin: 0 auto; text-align: center;
+      }
+      .stat-item h3 {
+        font-size: 3rem; font-weight: 900; letter-spacing: -0.03em; line-height: 1;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        margin-bottom: 8px;
+      }
+      .stat-item p { font-size: 14px; color: var(--text-muted); font-weight: 500; }
+
+      /* --- Features --- */
+      .section { padding: 120px 24px; position: relative; }
+      .section-header { text-align: center; margin-bottom: 80px; }
+      .section-label {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: 13px; font-weight: 600; color: var(--accent); text-transform: uppercase;
+        letter-spacing: 0.1em; margin-bottom: 16px;
+      }
+      .section-header h2 {
+        font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; letter-spacing: -0.03em;
+        margin-bottom: 16px; line-height: 1.15;
+      }
+      .section-header p { color: var(--text-muted); max-width: 560px; margin: 0 auto; font-size: 1.1rem; }
+
+      .features-grid {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 1200px; margin: 0 auto;
+      }
+      .feature-card {
+        background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px;
+        padding: 40px 32px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative; overflow: hidden;
+      }
+      .feature-card::before {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+        background: linear-gradient(90deg, transparent, var(--accent), transparent);
+        opacity: 0; transition: opacity 0.4s;
+      }
+      .feature-card:hover { border-color: var(--border-glow); transform: translateY(-4px); }
+      .feature-card:hover::before { opacity: 1; }
+      .feature-icon {
+        width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center;
+        justify-content: center; font-size: 26px; margin-bottom: 24px;
+        background: linear-gradient(135deg, rgba(56,189,248,0.1), rgba(99,102,241,0.1));
+        border: 1px solid rgba(56,189,248,0.1);
+      }
+      .feature-card h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 12px; letter-spacing: -0.01em; }
+      .feature-card p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.7; }
+      .feature-tag {
+        display: inline-block; margin-top: 16px; padding: 4px 12px; border-radius: 999px;
+        font-size: 12px; font-weight: 500; color: var(--accent);
+        background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.12);
+      }
+
+      /* --- How It Works --- */
+      .how-section { background: linear-gradient(180deg, transparent, rgba(99,102,241,0.03), transparent); }
+      .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; max-width: 1000px; margin: 0 auto; }
+      .step-card { text-align: center; position: relative; }
+      .step-num {
+        width: 64px; height: 64px; border-radius: 20px; display: flex; align-items: center;
+        justify-content: center; font-size: 24px; font-weight: 800; margin: 0 auto 24px;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        color: #fff; box-shadow: 0 8px 32px rgba(56,189,248,0.2);
+      }
+      .step-card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 12px; }
+      .step-card p { color: var(--text-muted); font-size: 0.95rem; max-width: 280px; margin: 0 auto; }
+
+      /* --- Domain Packs --- */
+      .domain-section { text-align: center; }
+      .domain-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; max-width: 900px; margin: 0 auto; }
+      .domain-tag {
+        padding: 10px 22px; border-radius: 999px; font-size: 14px; font-weight: 500;
+        color: var(--text-muted); background: var(--bg-card); border: 1px solid var(--border);
+        transition: all 0.3s ease; cursor: default;
+      }
+      .domain-tag:hover { border-color: var(--border-glow); color: var(--accent); transform: translateY(-2px); }
+
+      /* --- Testimonials --- */
+      .testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 1100px; margin: 0 auto; }
+      .testimonial-card {
+        background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px;
+        padding: 32px; position: relative;
+      }
+      .testimonial-card::before {
+        content: '"'; position: absolute; top: 20px; left: 28px; font-size: 60px; line-height: 1;
+        color: var(--accent); opacity: 0.15; font-family: Georgia, serif;
+      }
+      .testimonial-text { font-size: 15px; color: var(--text-muted); line-height: 1.8; margin-bottom: 24px; font-style: italic; }
+      .testimonial-author { display: flex; align-items: center; gap: 12px; }
+      .testimonial-avatar {
+        width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center;
+        justify-content: center; font-size: 18px; font-weight: 700;
+        background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff;
+      }
+      .testimonial-info { font-size: 14px; }
+      .testimonial-name { font-weight: 600; color: var(--text); }
+      .testimonial-role { color: var(--text-muted); font-size: 13px; }
+
+      /* --- Blog Section --- */
+      .blog-section { background: linear-gradient(180deg, transparent, rgba(56,189,248,0.02), transparent); }
+      .blog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 1200px; margin: 0 auto; }
+      .blog-card {
+        background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px;
+        overflow: hidden; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer;
+        text-decoration: none; color: inherit; display: flex; flex-direction: column;
+      }
+      .blog-card:hover { border-color: var(--border-glow); transform: translateY(-4px); }
+      .blog-thumb {
+        height: 180px; position: relative; overflow: hidden;
+      }
+      .blog-thumb-bg {
+        width: 100%; height: 100%; object-fit: cover;
+        background: linear-gradient(135deg, rgba(56,189,248,0.15), rgba(99,102,241,0.15));
+        display: flex; align-items: center; justify-content: center; font-size: 48px;
+      }
+      .blog-category {
+        position: absolute; top: 12px; left: 12px; padding: 4px 12px; border-radius: 999px;
+        font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+        background: rgba(6,16,17,0.8); backdrop-filter: blur(8px); color: var(--accent);
+        border: 1px solid rgba(56,189,248,0.2);
+      }
+      .blog-body { padding: 28px; flex: 1; display: flex; flex-direction: column; }
+      .blog-date { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; font-weight: 500; }
+      .blog-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; line-height: 1.4; letter-spacing: -0.01em; }
+      .blog-card p { font-size: 14px; color: var(--text-muted); line-height: 1.7; flex: 1; }
+      .blog-read-more {
+        display: inline-flex; align-items: center; gap: 6px; margin-top: 16px;
+        font-size: 14px; font-weight: 600; color: var(--accent); transition: gap 0.2s;
+      }
+      .blog-card:hover .blog-read-more { gap: 10px; }
+
+      /* --- CTA Section --- */
+      .cta-section {
+        padding: 120px 24px; text-align: center; position: relative; overflow: hidden;
+      }
+      .cta-section::before {
+        content: ''; position: absolute; inset: 0;
+        background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(56,189,248,0.08), transparent);
+        pointer-events: none;
+      }
+      .cta-box {
+        max-width: 700px; margin: 0 auto; padding: 64px 48px; position: relative; z-index: 2;
+        background: var(--bg-card); border: 1px solid var(--border); border-radius: 28px;
+        box-shadow: 0 20px 80px rgba(0,0,0,0.3);
+      }
+      .cta-box h2 { font-size: 2.5rem; font-weight: 800; margin-bottom: 16px; letter-spacing: -0.03em; }
+      .cta-box p { color: var(--text-muted); margin-bottom: 40px; font-size: 1.1rem; }
+
+      /* --- Footer --- */
+      .footer {
+        padding: 80px 24px 40px; border-top: 1px solid var(--border);
+        background: linear-gradient(180deg, transparent, rgba(0,0,0,0.3));
+      }
+      .footer-grid {
+        display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px;
+        max-width: 1100px; margin: 0 auto 60px;
+      }
+      .footer-brand p { color: var(--text-muted); font-size: 14px; margin-top: 12px; line-height: 1.7; }
+      .footer-col h4 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text); margin-bottom: 20px; }
+      .footer-col a { display: block; color: var(--text-muted); font-size: 14px; text-decoration: none; padding: 4px 0; transition: color 0.2s; }
+      .footer-col a:hover { color: var(--accent); }
+      .footer-bottom {
+        text-align: center; padding-top: 32px; border-top: 1px solid var(--border);
+        color: var(--text-muted); font-size: 13px;
+      }
+
+      /* --- Animations --- */
+      .fade-up {
+        opacity: 0; transform: translateY(30px);
+        transition: opacity 0.6s ease, transform 0.6s ease;
+      }
+      .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+      /* --- Responsive --- */
+      @media (max-width: 768px) {
+        .navbar { padding: 12px 20px; }
+        .nav-links { display: none; }
+        .features-grid, .testimonials-grid, .blog-grid { grid-template-columns: 1fr; }
+        .steps-grid { grid-template-columns: 1fr; gap: 32px; }
+        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        .footer-grid { grid-template-columns: 1fr 1fr; }
+        .cta-box { padding: 40px 24px; }
+        .cta-box h2 { font-size: 1.8rem; }
+      }
 
       /* App styles (hidden when landing visible) */
       .app-hidden { display: none !important; }
@@ -90,73 +450,704 @@
       .app-splash__bar { position: absolute; bottom: 32%; left: 25%; right: 25%; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
       .app-splash__bar i { display: block; width: 42%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #22d3ee, #38bdf8, #818cf8); animation: splash-bar 1.2s ease-in-out infinite; }
       @keyframes splash-bar { 0% { transform: translateX(-120%); } 100% { transform: translateX(260%); } }
+
+      /* Blog listing page */
+      #blog-page { min-height: 100vh; padding-top: 100px; }
+      #blog-page .blog-list-header { text-align: center; padding: 60px 24px 40px; }
+      #blog-page .blog-list-header h1 { font-size: 3rem; font-weight: 800; letter-spacing: -0.03em; }
+      #blog-page .blog-list-header p { color: var(--text-muted); font-size: 1.1rem; margin-top: 12px; }
+      #blog-page .blog-list { max-width: 1000px; margin: 0 auto; padding: 0 24px 120px; }
+      #blog-page .blog-list-card {
+        display: flex; gap: 32px; padding: 32px; background: var(--bg-card); border: 1px solid var(--border);
+        border-radius: 20px; margin-bottom: 20px; transition: all 0.3s ease; text-decoration: none; color: inherit;
+      }
+      #blog-page .blog-list-card:hover { border-color: var(--border-glow); transform: translateX(4px); }
+      #blog-page .blog-list-thumb {
+        width: 200px; min-height: 140px; border-radius: 12px; flex-shrink: 0;
+        background: linear-gradient(135deg, rgba(56,189,248,0.12), rgba(99,102,241,0.12));
+        display: flex; align-items: center; justify-content: center; font-size: 36px;
+      }
+      #blog-page .blog-list-content { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+      #blog-page .blog-list-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+      #blog-page .blog-list-card h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; }
+      #blog-page .blog-list-card p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+      @media (max-width: 768px) {
+        #blog-page .blog-list-card { flex-direction: column; }
+        #blog-page .blog-list-thumb { width: 100%; min-height: 120px; }
+      }
+
+      /* Article detail page */
+      #article-page { min-height: 100vh; padding-top: 100px; }
+      #article-page .article-header { text-align: center; padding: 60px 24px 40px; max-width: 800px; margin: 0 auto; }
+      #article-page .article-meta { font-size: 14px; color: var(--text-muted); margin-bottom: 16px; }
+      #article-page .article-header h1 { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; }
+      #article-page .article-body { max-width: 720px; margin: 0 auto; padding: 0 24px 120px; }
+      #article-page .article-body h2 { font-size: 1.5rem; font-weight: 700; margin: 40px 0 16px; }
+      #article-page .article-body h3 { font-size: 1.2rem; font-weight: 600; margin: 32px 0 12px; color: var(--accent); }
+      #article-page .article-body p { font-size: 16px; color: var(--text-muted); line-height: 1.8; margin-bottom: 20px; }
+      #article-page .article-body ul, #article-page .article-body ol { color: var(--text-muted); margin: 0 0 20px 24px; }
+      #article-page .article-body li { margin-bottom: 8px; line-height: 1.7; }
+      #article-page .article-body code {
+        background: rgba(56,189,248,0.08); padding: 2px 8px; border-radius: 6px;
+        font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent);
+      }
+      #article-page .article-body pre {
+        background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+        padding: 20px 24px; margin: 20px 0; overflow-x: auto;
+      }
+      #article-page .article-body pre code { background: none; padding: 0; font-size: 13px; color: var(--text-muted); }
+      #article-page .article-body .tip-box {
+        background: rgba(56,189,248,0.05); border: 1px solid rgba(56,189,248,0.15);
+        border-radius: 12px; padding: 20px 24px; margin: 24px 0;
+      }
+      #article-page .article-body .tip-box strong { color: var(--accent); }
     </style>
   </head>
   <body>
-    <!-- Landing page (visible at /, hidden at /app) -->
+    <!-- ============================== LANDING PAGE ============================== -->
     <div id="landing-page" class="landing-hidden">
+
+      <!-- Navbar -->
+      <nav class="navbar" id="navbar">
+        <a href="/" class="nav-brand">
+          <div class="nav-logo">P</div>
+          <span class="nav-brand-text">PromptLab</span>
+        </a>
+        <div class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#how">How It Works</a>
+          <a href="#domains">Domains</a>
+          <a href="/blog">Blog</a>
+          <a href="/app" class="nav-cta">Open App →</a>
+        </div>
+      </nav>
+
+      <!-- Hero -->
       <section class="hero">
-        <div style="position:relative">
-          <div class="badge">⚡ Free to use — no credit card required</div>
-          <h1>The Cleanest Prompt,<br>Before You Hit Run</h1>
-          <p class="subtitle">Turn rough ideas into structured, model-ready prompts for ChatGPT, Claude, Gemini, Grok, and Midjourney. Scored, optimized, and comparison-tested.</p>
-          <div class="cta-row">
-            <a href="/app" class="btn btn-primary">Start Building Prompts →</a>
+        <div class="hero-grid"></div>
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="hero-content">
+          <div class="hero-badge">
+            <span class="pulse"></span>
+            Free to use — no credit card required
+          </div>
+          <h1>The <span class="gradient-word">Smartest</span> Way<br>to Build AI Prompts</h1>
+          <p class="hero-subtitle">
+            Stop guessing. Build, optimize, and compare prompts with AI-powered scoring.
+            From rough ideas to production-ready prompts in seconds.
+          </p>
+          <div class="social-proof">
+            <div class="avatar-stack">
+              <span>🧑‍💻</span><span>👩‍🎨</span><span>👨‍🏫</span><span>👩‍💼</span><span>🧑‍🔬</span>
+            </div>
+            <span>Trusted by creators, marketers &amp; teams worldwide</span>
+          </div>
+          <div class="hero-cta">
+            <a href="/app" class="btn btn-primary">
+              <span>Start Building Prompts</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </a>
             <a href="#features" class="btn btn-secondary">See How It Works</a>
           </div>
-          <div class="ai-row">
-            <span>ChatGPT</span><span>Claude</span><span>Gemini</span><span>Grok</span><span>Midjourney</span>
+          <div class="ai-logos">
+            <span class="ai-logo">ChatGPT</span>
+            <span class="ai-logo">Claude</span>
+            <span class="ai-logo">Gemini</span>
+            <span class="ai-logo">Grok</span>
+            <span class="ai-logo">Midjourney</span>
           </div>
         </div>
       </section>
 
-      <section id="features">
-        <h2>Everything You Need to Prompt Better</h2>
-        <p class="section-sub">Six tools in one workspace — from first draft to production-ready prompt.</p>
-        <div class="grid-3">
-          <article class="card"><div class="card-icon">🧱</div><h3>Builder</h3><p>Describe what you need in plain language. Pick a category, tone, target AI, and output type. Get a structured, copy-ready prompt in seconds.</p></article>
-          <article class="card"><div class="card-icon">⚡</div><h3>Optimizer</h3><p>Paste an existing prompt and refine it. Choose Clearer, Shorter, More Detailed, or domain-specific modes.</p></article>
-          <article class="card"><div class="card-icon">📐</div><h3>Readiness Score</h3><p>Every prompt is scored on Clarity, Context, Format, Constraints, and Actionability — know exactly where to improve.</p></article>
-          <article class="card"><div class="card-icon">📋</div><h3>Templates</h3><p>Start from production-ready prompt patterns for Marketing, Coding, Academic, Business, Content Creator, and Image AI.</p></article>
-          <article class="card"><div class="card-icon">📚</div><h3>Library</h3><p>Save your best prompts, organize by folder, search instantly, and reuse them across projects.</p></article>
-          <article class="card"><div class="card-icon">⚖️</div><h3>Compare</h3><p>Side-by-side evaluation of two prompts. Scored on 6 dimensions with bias mitigation.</p></article>
+      <!-- Stats -->
+      <section class="stats-section">
+        <div class="stats-grid">
+          <div class="stat-item fade-up">
+            <h3>6</h3>
+            <p>Power Tools</p>
+          </div>
+          <div class="stat-item fade-up">
+            <h3>17</h3>
+            <p>Domain Packs</p>
+          </div>
+          <div class="stat-item fade-up">
+            <h3>5</h3>
+            <p>AI Models</p>
+          </div>
+          <div class="stat-item fade-up">
+            <h3>100%</h3>
+            <p>Free Forever</p>
+          </div>
         </div>
       </section>
 
-      <section id="how" style="background:linear-gradient(180deg,transparent,rgba(56,189,248,0.03),transparent)">
-        <h2>From Idea to Perfect Prompt in 3 Steps</h2>
-        <div class="steps">
-          <div class="step"><div class="step-num">1</div><h3>Describe Your Goal</h3><p>Write what you want in plain language. Attach files, screenshots, or documents for context.</p></div>
-          <div class="step"><div class="step-num">2</div><h3>Pick Your Settings</h3><p>Choose category, tone, target AI, and output type. The engine auto-detects your domain.</p></div>
-          <div class="step"><div class="step-num">3</div><h3>Generate &amp; Copy</h3><p>Get a structured prompt with role, context, task, constraints, and acceptance criteria.</p></div>
+      <!-- Features -->
+      <section class="section" id="features">
+        <div class="section-header">
+          <div class="section-label">⚡ Features</div>
+          <h2>Everything You Need to<br>Prompt Like a Pro</h2>
+          <p>Six powerful tools in one workspace — from first draft to production-ready prompt.</p>
+        </div>
+        <div class="features-grid">
+          <article class="feature-card fade-up">
+            <div class="feature-icon">🧱</div>
+            <h3>Prompt Builder</h3>
+            <p>Describe what you need in plain language. Pick a category, tone, target AI, and output type. Get a structured, copy-ready prompt in seconds.</p>
+            <span class="feature-tag">Most Popular</span>
+          </article>
+          <article class="feature-card fade-up">
+            <div class="feature-icon">⚡</div>
+            <h3>Prompt Optimizer</h3>
+            <p>Paste an existing prompt and refine it. Choose Clearer, Shorter, More Detailed, or domain-specific optimization modes.</p>
+            <span class="feature-tag">AI-Powered</span>
+          </article>
+          <article class="feature-card fade-up">
+            <div class="feature-icon">📐</div>
+            <h3>Readiness Score</h3>
+            <p>Every prompt is scored on Clarity, Context, Format, Constraints, and Actionability — know exactly where to improve.</p>
+            <span class="feature-tag">Instant</span>
+          </article>
+          <article class="feature-card fade-up">
+            <div class="feature-icon">📋</div>
+            <h3>Templates Library</h3>
+            <p>Start from production-ready prompt patterns for Marketing, Coding, Academic, Business, Content Creator, and Image AI.</p>
+            <span class="feature-tag">Ready-to-Use</span>
+          </article>
+          <article class="feature-card fade-up">
+            <div class="feature-icon">📚</div>
+            <h3>Saved Prompts</h3>
+            <p>Save your best prompts, organize by folder, search instantly, and reuse them across projects and teams.</p>
+            <span class="feature-tag">Organize</span>
+          </article>
+          <article class="feature-card fade-up">
+            <div class="feature-icon">⚖️</div>
+            <h3>Side-by-Side Compare</h3>
+            <p>Compare two prompts head-to-head. Scored on 6 dimensions with bias mitigation and structured feedback.</p>
+            <span class="feature-tag">Pro Tool</span>
+          </article>
         </div>
       </section>
 
-      <section id="domains">
-        <h2>17 Domain Packs — prompts tailored to your industry</h2>
-        <p class="section-sub">The engine detects your domain and adds expert-level context automatically.</p>
-        <div class="domain-grid">
-          <span class="domain-tag">Marketing</span><span class="domain-tag">Social Media</span><span class="domain-tag">E-Commerce</span>
-          <span class="domain-tag">Legal &amp; Compliance</span><span class="domain-tag">Finance</span><span class="domain-tag">Education</span>
-          <span class="domain-tag">Healthcare</span><span class="domain-tag">HR &amp; People Ops</span><span class="domain-tag">Data Analytics</span>
-          <span class="domain-tag">Customer Support</span><span class="domain-tag">UX Research</span><span class="domain-tag">Video &amp; Podcast</span>
-          <span class="domain-tag">Coding</span><span class="domain-tag">Creative / Image AI</span><span class="domain-tag">Academic</span>
-          <span class="domain-tag">Presentations</span><span class="domain-tag">Documents &amp; Reports</span>
+      <!-- How It Works -->
+      <section class="section how-section" id="how">
+        <div class="section-header">
+          <div class="section-label">🚀 How It Works</div>
+          <h2>From Idea to Perfect Prompt<br>in 3 Steps</h2>
+          <p>No learning curve. Just describe what you want and let the engine handle the rest.</p>
+        </div>
+        <div class="steps-grid">
+          <div class="step-card fade-up">
+            <div class="step-num">1</div>
+            <h3>Describe Your Goal</h3>
+            <p>Write what you want in plain language. Attach files, screenshots, or documents for context.</p>
+          </div>
+          <div class="step-card fade-up">
+            <div class="step-num">2</div>
+            <h3>Pick Your Settings</h3>
+            <p>Choose category, tone, target AI, and output type. The engine auto-detects your domain.</p>
+          </div>
+          <div class="step-card fade-up">
+            <div class="step-num">3</div>
+            <h3>Generate &amp; Copy</h3>
+            <p>Get a structured prompt with role, context, task, constraints, and acceptance criteria.</p>
+          </div>
         </div>
       </section>
 
-      <section style="text-align:center">
-        <h2 style="font-size:2.4rem">Stop Writing Weak Prompts</h2>
-        <p class="section-sub">Join creators, marketers, students, and teams who build better prompts with PromptLab.</p>
-        <a href="/app" class="btn btn-primary">Try PromptLab Free →</a>
+      <!-- Domain Packs -->
+      <section class="section domain-section" id="domains">
+        <div class="section-header">
+          <div class="section-label">🎯 Domain Packs</div>
+          <h2>17 Industry-Specific<br>Domain Packs</h2>
+          <p>The engine detects your domain and adds expert-level context automatically.</p>
+        </div>
+        <div class="domain-tags">
+          <span class="domain-tag">Marketing</span>
+          <span class="domain-tag">Social Media</span>
+          <span class="domain-tag">E-Commerce</span>
+          <span class="domain-tag">Legal &amp; Compliance</span>
+          <span class="domain-tag">Finance</span>
+          <span class="domain-tag">Education</span>
+          <span class="domain-tag">Healthcare</span>
+          <span class="domain-tag">HR &amp; People Ops</span>
+          <span class="domain-tag">Data Analytics</span>
+          <span class="domain-tag">Customer Support</span>
+          <span class="domain-tag">UX Research</span>
+          <span class="domain-tag">Video &amp; Podcast</span>
+          <span class="domain-tag">Coding</span>
+          <span class="domain-tag">Creative / Image AI</span>
+          <span class="domain-tag">Academic</span>
+          <span class="domain-tag">Presentations</span>
+          <span class="domain-tag">Documents &amp; Reports</span>
+        </div>
       </section>
 
-      <footer>
-        <p>&copy; 2026 PromptLab. Built with care. &nbsp; <a href="/privacy">Privacy Policy</a></p>
+      <!-- Testimonials -->
+      <section class="section">
+        <div class="section-header">
+          <div class="section-label">💬 Testimonials</div>
+          <h2>Loved by Prompt<br>Engineers &amp; Creators</h2>
+        </div>
+        <div class="testimonials-grid">
+          <div class="testimonial-card fade-up">
+            <p class="testimonial-text">PromptLab changed how I write prompts for ChatGPT. The readiness score tells me exactly what's missing — saves me hours every week.</p>
+            <div class="testimonial-author">
+              <div class="testimonial-avatar">S</div>
+              <div class="testimonial-info">
+                <div class="testimonial-name">Sarah K.</div>
+                <div class="testimonial-role">Content Marketer</div>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial-card fade-up">
+            <p class="testimonial-text">The Compare feature is a game-changer. I can test two prompt versions side-by-side and see which one performs better with real scores.</p>
+            <div class="testimonial-author">
+              <div class="testimonial-avatar">M</div>
+              <div class="testimonial-info">
+                <div class="testimonial-name">Mike R.</div>
+                <div class="testimonial-role">Startup Founder</div>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial-card fade-up">
+            <p class="testimonial-text">Domain packs are brilliant. I work in healthcare and the engine automatically adds HIPAA context — no manual setup needed.</p>
+            <div class="testimonial-author">
+              <div class="testimonial-avatar">L</div>
+              <div class="testimonial-info">
+                <div class="testimonial-name">Lisa T.</div>
+                <div class="testimonial-role">Healthcare Consultant</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Blog -->
+      <section class="section blog-section" id="blog">
+        <div class="section-header">
+          <div class="section-label">📖 Blog</div>
+          <h2>Learn Prompt Engineering</h2>
+          <p>Tips, tutorials, and deep dives on getting the most out of AI.</p>
+        </div>
+        <div class="blog-grid">
+          <a href="/blog/prompt-engineering-guide" class="blog-card fade-up">
+            <div class="blog-thumb">
+              <div class="blog-thumb-bg">🧠</div>
+              <span class="blog-category">Tutorial</span>
+            </div>
+            <div class="blog-body">
+              <span class="blog-date">June 5, 2026</span>
+              <h3>The Complete Guide to Prompt Engineering in 2026</h3>
+              <p>Master the art of writing effective AI prompts. From basic structure to advanced techniques like chain-of-thought and few-shot learning.</p>
+              <span class="blog-read-more">Read article →</span>
+            </div>
+          </a>
+          <a href="/blog/chatgpt-vs-claude-prompts" class="blog-card fade-up">
+            <div class="blog-thumb">
+              <div class="blog-thumb-bg">⚔️</div>
+              <span class="blog-category">Comparison</span>
+            </div>
+            <div class="blog-body">
+              <span class="blog-date">June 2, 2026</span>
+              <h3>ChatGPT vs Claude: How to Write Prompts for Each</h3>
+              <p>They respond differently to the same prompt. Learn how to optimize your prompts for OpenAI and Anthropic models specifically.</p>
+              <span class="blog-read-more">Read article →</span>
+            </div>
+          </a>
+          <a href="/blog/prompt-templates-marketing" class="blog-card fade-up">
+            <div class="blog-thumb">
+              <div class="blog-thumb-bg">📢</div>
+              <span class="blog-category">Templates</span>
+            </div>
+            <div class="blog-body">
+              <span class="blog-date">May 28, 2026</span>
+              <h3>10 Prompt Templates Every Marketer Needs</h3>
+              <p>Copy-paste templates for social media posts, ad copy, email campaigns, blog outlines, and more. Ready to use in PromptLab.</p>
+              <span class="blog-read-more">Read article →</span>
+            </div>
+          </a>
+        </div>
+        <div style="text-align: center; margin-top: 48px;">
+          <a href="/blog" class="btn btn-secondary">View All Articles →</a>
+        </div>
+      </section>
+
+      <!-- Final CTA -->
+      <section class="cta-section">
+        <div class="cta-box">
+          <h2>Stop Writing Weak Prompts</h2>
+          <p>Join creators, marketers, students, and teams who build better prompts with PromptLab.</p>
+          <a href="/app" class="btn btn-primary">
+            <span>Try PromptLab Free</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <a href="/" class="nav-brand" style="margin-bottom: 8px;">
+              <div class="nav-logo">P</div>
+              <span class="nav-brand-text">PromptLab</span>
+            </a>
+            <p>Build, optimize, and compare AI prompts. Free workspace for creators, students, and teams.</p>
+          </div>
+          <div class="footer-col">
+            <h4>Product</h4>
+            <a href="/app">Open App</a>
+            <a href="#features">Features</a>
+            <a href="#domains">Domain Packs</a>
+            <a href="/app">Templates</a>
+          </div>
+          <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/blog">Blog</a>
+            <a href="/blog/prompt-engineering-guide">Prompt Guide</a>
+            <a href="/blog/prompt-templates-marketing">Marketing Templates</a>
+          </div>
+          <div class="footer-col">
+            <h4>Legal</h4>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/privacy/delete-account">Delete Account</a>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          &copy; 2026 PromptLab. Built with care for the AI community.
+        </div>
       </footer>
     </div>
 
-    <!-- App (visible at /app, hidden at /) -->
+    <!-- ============================== BLOG LIST PAGE ============================== -->
+    <div id="blog-page" class="landing-hidden">
+      <nav class="navbar" id="navbar-blog">
+        <a href="/" class="nav-brand">
+          <div class="nav-logo">P</div>
+          <span class="nav-brand-text">PromptLab</span>
+        </a>
+        <div class="nav-links">
+          <a href="/">Home</a>
+          <a href="/#features">Features</a>
+          <a href="/blog" style="color:var(--text)">Blog</a>
+          <a href="/app" class="nav-cta">Open App →</a>
+        </div>
+      </nav>
+      <div class="blog-list-header">
+        <h1>Blog</h1>
+        <p>Tips, tutorials, and deep dives on AI prompt engineering.</p>
+      </div>
+      <div class="blog-list">
+        <a href="/blog/prompt-engineering-guide" class="blog-list-card">
+          <div class="blog-list-thumb">🧠</div>
+          <div class="blog-list-content">
+            <span class="blog-list-meta">June 5, 2026 · Tutorial · 8 min read</span>
+            <h3>The Complete Guide to Prompt Engineering in 2026</h3>
+            <p>Master the art of writing effective AI prompts. From basic structure to advanced techniques like chain-of-thought and few-shot learning.</p>
+          </div>
+        </a>
+        <a href="/blog/chatgpt-vs-claude-prompts" class="blog-list-card">
+          <div class="blog-list-thumb">⚔️</div>
+          <div class="blog-list-content">
+            <span class="blog-list-meta">June 2, 2026 · Comparison · 6 min read</span>
+            <h3>ChatGPT vs Claude: How to Write Prompts for Each</h3>
+            <p>They respond differently to the same prompt. Learn how to optimize your prompts for OpenAI and Anthropic models specifically.</p>
+          </div>
+        </a>
+        <a href="/blog/prompt-templates-marketing" class="blog-list-card">
+          <div class="blog-list-thumb">📢</div>
+          <div class="blog-list-content">
+            <span class="blog-list-meta">May 28, 2026 · Templates · 5 min read</span>
+            <h3>10 Prompt Templates Every Marketer Needs</h3>
+            <p>Copy-paste templates for social media posts, ad copy, email campaigns, blog outlines, and more.</p>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- ============================== ARTICLE: PROMPT ENGINEERING GUIDE ============================== -->
+    <div id="article-page" class="landing-hidden">
+      <nav class="navbar" id="navbar-article">
+        <a href="/" class="nav-brand">
+          <div class="nav-logo">P</div>
+          <span class="nav-brand-text">PromptLab</span>
+        </a>
+        <div class="nav-links">
+          <a href="/">Home</a>
+          <a href="/#features">Features</a>
+          <a href="/blog">Blog</a>
+          <a href="/app" class="nav-cta">Open App →</a>
+        </div>
+      </nav>
+      <div class="article-header">
+        <span class="article-meta">June 5, 2026 · Tutorial · 8 min read</span>
+        <h1>The Complete Guide to Prompt Engineering in 2026</h1>
+      </div>
+      <article class="article-body">
+        <p>Prompt engineering is the skill of communicating effectively with AI models. Whether you're using ChatGPT, Claude, Gemini, or any other LLM, how you phrase your request dramatically affects the quality of the output.</p>
+
+        <h2>Why Prompt Engineering Matters</h2>
+        <p>The same AI model can give you a mediocre paragraph or a brilliant, structured response — the difference is the prompt. Good prompts lead to:</p>
+        <ul>
+          <li><strong>Better accuracy</strong> — the AI understands exactly what you want</li>
+          <li><strong>Consistent quality</strong> — reliable outputs every time</li>
+          <li><strong>Time savings</strong> — fewer back-and-forth iterations</li>
+          <li><strong>Professional results</strong> — content you can actually use</li>
+        </ul>
+
+        <h2>The 5-Part Prompt Structure</h2>
+        <p>Every great prompt follows a basic structure. Think of it as a recipe:</p>
+
+        <h3>1. Role</h3>
+        <p>Tell the AI who it should be. This sets the expertise level and perspective.</p>
+        <pre><code>You are a senior content strategist with 10 years of experience in B2B SaaS marketing.</code></pre>
+
+        <h3>2. Context</h3>
+        <p>Provide background information the AI needs to understand your situation.</p>
+        <pre><code>I'm launching a new AI writing tool targeted at freelance writers. Our main differentiator is the domain-specific templates.</code></pre>
+
+        <h3>3. Task</h3>
+        <p>Be specific about what you want the AI to do. Use action verbs.</p>
+        <pre><code>Write 5 LinkedIn post ideas that highlight our template feature. Each post should be 150-200 words, conversational, and end with a CTA.</code></pre>
+
+        <h3>4. Constraints</h3>
+        <p>Set boundaries: tone, length, format, what to avoid.</p>
+        <pre><code>Tone: friendly but professional. Avoid jargon. Don't use more than 2 emojis per post. No hashtag overload.</code></pre>
+
+        <h3>5. Format</h3>
+        <p>Specify the output structure you need.</p>
+        <pre><code>Return as a numbered list. Each item should have: a hook line, the body, and the CTA in bold.</code></pre>
+
+        <h2>Advanced Techniques</h2>
+
+        <h3>Chain-of-Thought (CoT)</h3>
+        <p>Ask the AI to think step-by-step before giving the answer. This dramatically improves reasoning tasks.</p>
+        <pre><code>Think step-by-step before answering. First analyze the data, then identify patterns, then give your recommendation.</code></pre>
+
+        <h3>Few-Shot Learning</h3>
+        <p>Give the AI 2-3 examples of what you want. This is the fastest way to teach it your style.</p>
+        <pre><code>Here are 2 examples of the output I want:
+
+Example 1: [your example]
+Example 2: [your example]
+
+Now generate a new one following the same pattern.</code></pre>
+
+        <h3>Output Iteration</h3>
+        <p>Don't try to get the perfect result in one shot. Use follow-up prompts to refine:</p>
+        <pre><code>Good, but make it more conversational. Shorten the paragraphs. Add a specific example for the second point.</code></pre>
+
+        <div class="tip-box">
+          <strong>💡 Pro Tip:</strong> Use PromptLab's Readiness Score to check if your prompt has all 5 components. The score tells you exactly what's missing — Context? Constraints? Format?
+        </div>
+
+        <h2>Common Mistakes to Avoid</h2>
+        <ul>
+          <li><strong>Being too vague:</strong> "Write me something about marketing" vs "Write a LinkedIn post about why short-form video outperforms static images for B2B brands"</li>
+          <li><strong>Too many instructions:</strong> Break complex requests into smaller steps</li>
+          <li><strong>No examples:</strong> Show, don't just tell. Examples are worth 1000 words of instruction</li>
+          <li><strong>Ignoring output format:</strong> Always specify how you want the result structured</li>
+        </ul>
+
+        <h2>Putting It All Together</h2>
+        <p>Here's a complete prompt using the 5-part structure:</p>
+        <pre><code># Role
+You are a copywriter specializing in SaaS landing pages.
+
+# Context
+I'm building a landing page for PromptLab, a free AI prompt workspace. The target audience is marketers and content creators who struggle with writing effective prompts for ChatGPT and Claude.
+
+# Task
+Write the hero section copy for the landing page, including:
+- A headline (max 8 words)
+- A subheadline (max 25 words)
+- A primary CTA button text (3-5 words)
+
+# Constraints
+- Tone: confident, clear, slightly playful
+- No buzzwords like "revolutionary" or "game-changing"
+- Focus on the pain point (bad prompts = bad AI output)
+
+# Format
+Return as:
+**Headline:** ...
+**Subheadline:** ...
+**CTA:** ...</code></pre>
+
+        <p>Or — even easier — just paste this into <a href="/app" style="color:var(--accent)">PromptLab's Builder</a>, pick "Marketing" as the category, and let the engine generate a structured prompt with all 5 components automatically.</p>
+
+        <div class="tip-box">
+          <strong>🚀 Ready to try?</strong> <a href="/app" style="color:var(--accent)">Open PromptLab</a> and start building better prompts in seconds. No signup required.
+        </div>
+      </article>
+    </div>
+
+    <!-- ============================== ARTICLE: CHATGPT VS CLAUDE ============================== -->
+    <div id="article-page-chatgpt" class="landing-hidden">
+      <nav class="navbar">
+        <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
+        <div class="nav-links">
+          <a href="/">Home</a><a href="/#features">Features</a><a href="/blog">Blog</a>
+          <a href="/app" class="nav-cta">Open App →</a>
+        </div>
+      </nav>
+      <div class="article-header">
+        <span class="article-meta">June 2, 2026 · Comparison · 6 min read</span>
+        <h1>ChatGPT vs Claude: How to Write Prompts for Each</h1>
+      </div>
+      <article class="article-body">
+        <p>ChatGPT and Claude are the two most popular AI assistants — but they respond very differently to the same prompt. Understanding these differences is the key to getting better results from both.</p>
+
+        <h2>The Core Difference</h2>
+        <p><strong>ChatGPT (GPT-4o)</strong> tends to be more creative, verbose, and eager to please. It follows instructions literally and produces longer outputs by default.</p>
+        <p><strong>Claude (Sonnet/Opus)</strong> is more careful, nuanced, and prefers structured instructions. It excels at following complex multi-step instructions and maintaining context.</p>
+
+        <h2>Prompting for ChatGPT</h2>
+        <p>ChatGPT works best with:</p>
+        <ul>
+          <li><strong>Direct, action-oriented instructions:</strong> "Write 5 variations of..."</li>
+          <li><strong>Role-playing:</strong> "Act as a senior developer reviewing code"</li>
+          <li><strong>Delimited input:</strong> Use triple backticks for code or data</li>
+          <li><strong>Explicit format requests:</strong> "Return as a markdown table"</li>
+        </ul>
+        <pre><code>You are a social media expert. Write 5 Instagram captions for a fitness app launch. Each caption should include:
+- A hook in the first line
+- 3-4 value points
+- A CTA with emoji
+- 5 relevant hashtags
+Tone: energetic, motivational, Gen Z friendly.</code></pre>
+
+        <h2>Prompting for Claude</h2>
+        <p>Claude responds better to:</p>
+        <ul>
+          <li><strong>Structured sections:</strong> Use headers (# Role, # Context, etc.)</li>
+          <li><strong>XML tags:</strong> Claude is trained to respect XML boundaries</li>
+          <li><strong>Detailed constraints:</strong> Claude excels at following complex rules</li>
+          <li><strong>Examples:</strong> Few-shot works exceptionally well with Claude</li>
+        </ul>
+        <pre><code><instructions>
+You are a content strategist. Analyze the following blog post and suggest 3 improvement areas.
+</instructions>
+
+<blog_post>
+[Paste your blog post here]
+</blog_post>
+
+<output_format>
+For each improvement:
+- What needs to change and why
+- A specific rewrite suggestion
+- Impact level: High / Medium / Low
+</output_format></code></pre>
+
+        <h2>Quick Reference</h2>
+        <ul>
+          <li><strong>Creative tasks:</strong> ChatGPT tends to be more inventive</li>
+          <li><strong>Analytical tasks:</strong> Claude tends to be more thorough</li>
+          <li><strong>Long conversations:</strong> Claude maintains context better</li>
+          <li><strong>Code generation:</strong> Both are excellent; Claude is more careful</li>
+          <li><strong>Structured output:</strong> Claude follows format instructions more precisely</li>
+        </ul>
+
+        <div class="tip-box">
+          <strong>💡 Pro Tip:</strong> Use PromptLab's Compare feature to test the same prompt on both ChatGPT and Claude side-by-side. See which model handles your specific use case better.
+        </div>
+
+        <p>The best way to learn is to experiment. <a href="/app" style="color:var(--accent)">Open PromptLab</a>, create a prompt, and compare the results. The readiness score will tell you if your prompt works well for both models — or if it needs adjustment.</p>
+      </article>
+    </div>
+
+    <!-- ============================== ARTICLE: MARKETING TEMPLATES ============================== -->
+    <div id="article-page-marketing" class="landing-hidden">
+      <nav class="navbar">
+        <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
+        <div class="nav-links">
+          <a href="/">Home</a><a href="/#features">Features</a><a href="/blog">Blog</a>
+          <a href="/app" class="nav-cta">Open App →</a>
+        </div>
+      </nav>
+      <div class="article-header">
+        <span class="article-meta">May 28, 2026 · Templates · 5 min read</span>
+        <h1>10 Prompt Templates Every Marketer Needs</h1>
+      </div>
+      <article class="article-body">
+        <p>Marketing with AI is only as good as your prompts. Here are 10 battle-tested templates you can copy, paste, and customize in PromptLab.</p>
+
+        <h3>1. Social Media Caption</h3>
+        <pre><code>Write 5 Instagram captions for [product/announcement].
+- Hook line (attention-grabbing)
+- 3 value points
+- CTA with emoji
+- 5 hashtags
+Tone: [brand voice]</code></pre>
+
+        <h3>2. Email Subject Lines</h3>
+        <pre><code>Generate 10 email subject lines for [campaign purpose].
+Include: 3 curiosity-based, 3 urgency-based, 2 benefit-driven, 2 personalized.
+Keep under 50 characters each.</code></pre>
+
+        <h3>3. Blog Outline</h3>
+        <pre><code>Create a detailed blog outline for: [topic]
+Target audience: [audience]
+Goal: [awareness/consideration/conversion]
+Include: title, introduction hook, 5-7 H2 sections with bullet points, conclusion with CTA.
+Word count target: [X] words.</code></pre>
+
+        <h3>4. Ad Copy (Facebook/Google)</h3>
+        <pre><code>Write 3 variations of ad copy for [product].
+Headline (max 40 chars), primary text (max 125 chars), description (max 30 chars).
+Each variation targets: 1) pain point, 2) benefit, 3) social proof.
+CTA: [shop now / learn more / sign up]</code></pre>
+
+        <h3>5. Landing Page Hero</h3>
+        <pre><code>Write a landing page hero section for [product].
+- Headline: max 8 words, punchy
+- Subheadline: max 25 words, explain the value
+- Primary CTA: 3-5 words
+- Secondary CTA: "See How It Works"
+Tone: [professional / playful / authoritative]</code></pre>
+
+        <h3>6. Newsletter Introduction</h3>
+        <pre><code>Write a newsletter intro for this week's edition.
+Main topic: [topic]
+Key takeaway: [one sentence]
+Tone: conversational, like writing to a friend.
+Include a transition to the first article.
+Max 100 words.</code></pre>
+
+        <h3>7. Product Description</h3>
+        <pre><code>Write a product description for [product name].
+Features: [list features]
+Target buyer: [persona]
+Include: headline, 3 benefit bullets, emotional hook, CTA.
+Optimize for: clarity, scannability, conversion.</code></pre>
+
+        <h3>8. A/B Test Hypotheses</h3>
+        <pre><code>Generate 5 A/B test hypotheses for [page/campaign].
+For each, specify: variable, hypothesis (if we X, then Y because Z), expected impact, priority (high/med/low).</code></pre>
+
+        <h3>9. Competitor Analysis</h3>
+        <pre><code>Analyze [competitor name] vs our [product].
+Compare: positioning, messaging, pricing, target audience, strengths, weaknesses.
+Output: comparison table + 3 opportunities we can exploit.</code></pre>
+
+        <h3>10. Content Repurposing</h3>
+        <pre><code>Repurpose this [blog post/transcript/video] into:
+1. 5 tweet threads
+2. 1 LinkedIn post (200 words)
+3. 3 Instagram carousel slides
+4. 1 email newsletter (300 words)
+Original content: [paste here]</code></pre>
+
+        <div class="tip-box">
+          <strong>🚀 Try in PromptLab:</strong> Go to <a href="/app" style="color:var(--accent)">PromptLab</a> → Templates → Marketing. These templates are pre-built with the full 5-part structure and domain context. Just fill in your details and generate.
+        </div>
+      </article>
+    </div>
+
+    <!-- ============================== APP ============================== -->
     <div id="app-root" class="app-hidden">
       <div id="app-splash" role="presentation" aria-hidden="true">
         <div class="app-splash__backdrop"></div>
@@ -170,13 +1161,72 @@
       <script type="module" src="/src/main.jsx"></script>
     </div>
 
-    <!-- Route switcher -->
+    <!-- ============================== ROUTE SWITCHER ============================== -->
     <script>
       (function() {
-        var path = window.location.pathname;
+        var path = window.location.pathname.replace(/\/+$/, '') || '/';
+
+        // Route mapping
+        var routes = {
+          '/': 'landing',
+          '/app': 'app',
+          '/blog': 'blog',
+          '/blog/prompt-engineering-guide': 'article',
+          '/blog/chatgpt-vs-claude-prompts': 'article-chatgpt',
+          '/blog/prompt-templates-marketing': 'article-marketing'
+        };
+
+        var route = routes[path] || 'landing';
         var isApp = path === '/app' || path.startsWith('/app/');
-        document.getElementById('landing-page').className = isApp ? 'landing-hidden' : '';
-        document.getElementById('app-root').className = isApp ? '' : 'app-hidden';
+
+        // Hide everything first
+        document.getElementById('landing-page').className = 'landing-hidden';
+        document.getElementById('blog-page').className = 'landing-hidden';
+        document.getElementById('article-page').className = 'landing-hidden';
+        document.getElementById('article-page-chatgpt').className = 'landing-hidden';
+        document.getElementById('article-page-marketing').className = 'landing-hidden';
+        document.getElementById('app-root').className = 'app-hidden';
+
+        // Show correct page
+        switch(route) {
+          case 'app':
+            document.getElementById('app-root').className = '';
+            break;
+          case 'blog':
+            document.getElementById('blog-page').className = '';
+            break;
+          case 'article':
+            document.getElementById('article-page').className = '';
+            break;
+          case 'article-chatgpt':
+            document.getElementById('article-page-chatgpt').className = '';
+            break;
+          case 'article-marketing':
+            document.getElementById('article-page-marketing').className = '';
+            break;
+          default:
+            document.getElementById('landing-page').className = '';
+        }
+
+        // Scroll animations
+        var observer = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('visible');
+            }
+          });
+        }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+        document.querySelectorAll('.fade-up').forEach(function(el) { observer.observe(el); });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+          var navs = document.querySelectorAll('.navbar');
+          navs.forEach(function(nav) {
+            if (window.scrollY > 50) { nav.classList.add('scrolled'); }
+            else { nav.classList.remove('scrolled'); }
+          });
+        });
       })();
     </script>
   </body>
