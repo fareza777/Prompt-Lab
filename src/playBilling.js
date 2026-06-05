@@ -42,7 +42,7 @@ export function getPlayBillingHint() {
     return {
       ready: false,
       message:
-        "Purchases are only available in the PromptLab Android app installed from Google Play (internal/closed testing), not in a desktop browser.",
+        "Web membership upgrades are available from this browser. Choose a paid plan to open checkout or send an upgrade request.",
     };
   }
   return {

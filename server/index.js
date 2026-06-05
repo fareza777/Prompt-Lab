@@ -1293,18 +1293,38 @@ function createServiceRoleSupabaseClient() {
   });
 }
 
+function nextQuotaResetDateString() {
+  const resetDate = new Date();
+  resetDate.setDate(resetDate.getDate() + 30);
+  return resetDate.toISOString().slice(0, 10);
+}
+
+function normalizePublicQuotaProfile(profile) {
+  if (!profile) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  if (!profile.quota_reset_at || String(profile.quota_reset_at) < today) {
+    return {
+      ...profile,
+      quota_reset_at: nextQuotaResetDateString(),
+      quota_used: 0,
+    };
+  }
+  return profile;
+}
+
 function publicQuota(profile) {
   if (!profile) return null;
+  const normalized = normalizePublicQuotaProfile(profile);
   const unlimited = isSuperAccount(profile);
   return {
-    email: profile.email,
-    fullName: profile.full_name || "",
-    plan: profile.plan || "Free",
-    playBilling: profile.play_billing || "Not linked",
-    quotaLimit: unlimited ? SUPER_QUOTA_LIMIT : Number(profile.quota_limit || 0),
-    quotaResetAt: profile.quota_reset_at,
-    quotaUsed: Number(profile.quota_used || 0),
-    role: profile.role === "admin" ? "admin" : "user",
+    email: normalized.email,
+    fullName: normalized.full_name || "",
+    plan: normalized.plan || "Free",
+    playBilling: normalized.play_billing || "Not linked",
+    quotaLimit: unlimited ? SUPER_QUOTA_LIMIT : Number(normalized.quota_limit || 0),
+    quotaResetAt: normalized.quota_reset_at,
+    quotaUsed: Number(normalized.quota_used || 0),
+    role: normalized.role === "admin" ? "admin" : "user",
     unlimited,
   };
 }

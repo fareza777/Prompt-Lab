@@ -95,7 +95,7 @@ Quota dihitung di backend saat `/api/generate-prompt` berhasil:
 - Backend membaca entitlement user dari Supabase.
 - Jika quota tidak cukup, request ditolak sebelum memanggil model AI.
 - Jika berhasil, backend mencatat `usage_events` dan menaikkan `profiles.quota_used`.
-- Tombol plan di UI hanya membaca status database; upgrade Pro/Business harus lewat validasi Play Billing/backend, bukan klik lokal.
+- Plan buttons never activate paid access locally. Android purchases use Play Billing verification, while web purchases use `VITE_WEB_CHECKOUT_PRO_URL` / `VITE_WEB_CHECKOUT_BUSINESS_URL` when configured or fall back to a membership request email.
 
 Jika SQL tahap 1 sudah pernah dijalankan sebelum fitur quota ini, cukup jalankan `supabase/phase-2-quota-upgrade.sql` agar fungsi `get_my_entitlement` dan `record_usage_event` tersedia.
 

@@ -48,7 +48,6 @@ import {
 } from "./promptLanguage.js";
 import {
   getPlayBillingHint,
-  isLikelyAndroidTwa,
   isPlayBillingAvailable,
   purchasePlayPlan,
   verifyPlayPurchaseOnServer,
@@ -80,17 +79,6 @@ const outputTypes = ["Application Code", "Word Document", "PPT", "Technical Desi
 const optimizerModes = ["Clearer", "Shorter", "More Detailed", "Academic", "Marketing", "Coding"];
 const generationModes = ["Fast", "Balanced", "Patient Free"];
 const providerOptions = ["openrouter", "openai", "custom"];
-const defaultAccountState = {
-  userId: "",
-  email: "",
-  name: "",
-  role: "user",
-  plan: "Free",
-  quotaUsed: 12400,
-  quotaLimit: 50000,
-  quotaReset: "May 31",
-  playBilling: "Not connected",
-};
 const membershipPlans = Object.fromEntries(
   Object.entries(MEMBERSHIP_MARKETING).map(([plan, marketing]) => [
     plan,
@@ -101,6 +89,53 @@ const membershipPlans = Object.fromEntries(
     },
   ])
 );
+const quotaDateFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
+
+function toDateOnly(value = new Date()) {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function nextQuotaResetDate(from = new Date()) {
+  const resetDate = new Date(from);
+  resetDate.setDate(resetDate.getDate() + 30);
+  return resetDate;
+}
+
+function parseQuotaResetDate(value) {
+  if (!value) return null;
+  const raw = String(value).trim();
+  const hasYear = /\b\d{4}\b/.test(raw) || /^\d{4}-\d{2}-\d{2}/.test(raw);
+  const parsed = new Date(hasYear ? raw : `${raw}, ${new Date().getFullYear()}`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
+function isQuotaResetExpired(value) {
+  const parsed = parseQuotaResetDate(value);
+  return parsed ? toDateOnly(parsed) < toDateOnly() : false;
+}
+
+function resolveQuotaResetLabel(value) {
+  const parsed = parseQuotaResetDate(value);
+  if (parsed && toDateOnly(parsed) >= toDateOnly()) return quotaDateFormatter.format(parsed);
+  return quotaDateFormatter.format(nextQuotaResetDate());
+}
+
+function createDefaultAccountState() {
+  return {
+    userId: "",
+    email: "",
+    name: "",
+    role: "user",
+    plan: "Free",
+    quotaUsed: 0,
+    quotaLimit: 50000,
+    quotaReset: resolveQuotaResetLabel(),
+    playBilling: "Not connected",
+  };
+}
+
+const defaultAccountState = createDefaultAccountState();
 const defaultModelSettings = {
   apiKey: "",
   baseUrl: "https://openrouter.ai/api/v1",
@@ -783,15 +818,18 @@ function normalizeCustomTemplates(raw) {
 }
 
 function normalizeAccountState(raw) {
-  if (!raw || typeof raw !== "object") return defaultAccountState;
+  if (!raw || typeof raw !== "object") return createDefaultAccountState();
   const plan = membershipPlans[raw.plan] ? raw.plan : "Free";
+  const resetSource = raw.quotaResetAt || raw.quota_reset_at || raw.quotaReset;
+  const quotaExpired = isQuotaResetExpired(resetSource);
   return {
     ...defaultAccountState,
     ...raw,
     plan,
     role: raw.role === "admin" ? "admin" : "user",
     quotaLimit: Number(raw.quotaLimit || membershipPlans[plan].quota || defaultAccountState.quotaLimit),
-    quotaUsed: Number(raw.quotaUsed || 0),
+    quotaReset: resolveQuotaResetLabel(resetSource),
+    quotaUsed: quotaExpired ? 0 : Number(raw.quotaUsed || 0),
   };
 }
 
@@ -808,9 +846,7 @@ function profileToAccount(profile, user) {
     quotaLimit: unlimited
       ? SUPER_QUOTA_LIMIT
       : Number(profile?.quota_limit || membershipPlans[plan].quota || defaultAccountState.quotaLimit),
-    quotaReset: profile?.quota_reset_at
-      ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(profile.quota_reset_at))
-      : defaultAccountState.quotaReset,
+    quotaReset: resolveQuotaResetLabel(profile?.quota_reset_at),
     playBilling: profile?.play_billing || defaultAccountState.playBilling,
   });
 }
@@ -1271,7 +1307,7 @@ function App() {
     try {
       return normalizeAccountState(JSON.parse(localStorage.getItem("promptlab-account")));
     } catch {
-      return defaultAccountState;
+      return createDefaultAccountState();
     }
   });
   const [authStatus, setAuthStatus] = useState(isSupabaseConfigured ? "Checking session..." : "Supabase not configured");
@@ -1346,7 +1382,7 @@ function App() {
         await loadUserProfile(user);
       } else {
         setHasAuthSession(false);
-        setAccountState(defaultAccountState);
+        setAccountState(createDefaultAccountState());
         setAuthStatus("Signed out");
       }
       setAuthSessionReady(true);
@@ -1362,7 +1398,7 @@ function App() {
       } else {
         setHasAuthSession(false);
         setAuthSessionReady(true);
-        setAccountState(defaultAccountState);
+        setAccountState(createDefaultAccountState());
         setAuthStatus("Signed out");
       }
     });
@@ -1582,7 +1618,7 @@ function App() {
     localStorage.removeItem("promptlab-auth-intent");
     setHasAuthSession(false);
     setAuthSessionReady(true);
-    setAccountState(defaultAccountState);
+    setAccountState(createDefaultAccountState());
     setAuthStatus("Signed out");
   }
 
@@ -1605,11 +1641,7 @@ function App() {
       return;
     }
     if (!isPlayBillingAvailable()) {
-      setBillingMessage(
-        isLikelyAndroidTwa()
-          ? "Play Billing is not available yet. Install PromptLab from the Play Store (closed testing), not a regular browser."
-          : "Upgrades are only available in the PromptLab Android app on Google Play."
-      );
+      upgradeViaWebMembership(planName);
       return;
     }
     setBillingBusy(true);
@@ -1637,6 +1669,47 @@ function App() {
     }
   }
 
+  function upgradeViaWebMembership(planName) {
+    if (!accountState.userId) {
+      setBillingMessage("Sign in to request a web membership upgrade.");
+      return;
+    }
+
+    const checkoutUrls = {
+      Pro: import.meta.env.VITE_WEB_CHECKOUT_PRO_URL || "",
+      Business: import.meta.env.VITE_WEB_CHECKOUT_BUSINESS_URL || "",
+    };
+    const checkoutUrl = checkoutUrls[planName] || "";
+    if (checkoutUrl) {
+      window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+      setBillingMessage(`Opening web checkout for ${planName}. Your account will update after payment confirmation.`);
+      flashAction(`${planName} checkout opened`);
+      return;
+    }
+
+    const supportEmail = import.meta.env.VITE_WEB_MEMBERSHIP_EMAIL || "support@prompt-lab.xyz";
+    const subject = `PromptLab ${planName} web membership request`;
+    const body = [
+      `Requested plan: ${planName}`,
+      `Current plan: ${accountState.plan}`,
+      `Email: ${accountState.email}`,
+      `User ID: ${accountState.userId}`,
+      "",
+      "Please activate this membership after payment confirmation.",
+    ].join("\n");
+    window.location.href = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setBillingMessage(`Web upgrade request prepared for ${planName}. After payment or admin confirmation, your account plan will update here.`);
+    flashAction(`${planName} request prepared`);
+  }
+
+  function requestMembershipUpgrade(planName) {
+    if (isPlayBillingAvailable()) {
+      upgradeViaPlayBilling(planName);
+      return;
+    }
+    upgradeViaWebMembership(planName);
+  }
+
   function applyServerQuota(quota) {
     if (!quota) return;
     setAccountState((account) => normalizeAccountState({
@@ -1646,9 +1719,7 @@ function App() {
       playBilling: quota.playBilling || account.playBilling,
       plan: quota.plan || account.plan,
       quotaLimit: quota.quotaLimit ?? account.quotaLimit,
-      quotaReset: quota.quotaResetAt
-        ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(quota.quotaResetAt))
-        : account.quotaReset,
+      quotaReset: resolveQuotaResetLabel(quota.quotaResetAt || account.quotaReset),
       quotaUsed: quota.quotaUsed ?? account.quotaUsed,
       role: quota.role || account.role,
     }));
@@ -2148,6 +2219,7 @@ function App() {
     billingBusy,
     billingMessage,
     upgradeViaPlayBilling,
+    requestMembershipUpgrade,
     playBillingReady,
     playBillingHint,
   };
@@ -3277,7 +3349,6 @@ function V2Settings(props) {
     signOut,
     billingBusy,
     billingMessage,
-    upgradeViaPlayBilling,
     playBillingReady,
     playBillingHint,
   } = props;
@@ -3331,7 +3402,7 @@ function V2PublicSettings(props) {
     quotaPercent,
     billingBusy,
     billingMessage,
-    upgradeViaPlayBilling,
+    requestMembershipUpgrade,
     playBillingReady,
     playBillingHint,
     libraryLimit,
@@ -3358,7 +3429,7 @@ function V2PublicSettings(props) {
     navigator.clipboard?.writeText(JSON.stringify(data, null, 2)).catch(() => {});
   };
   const clearProfile = () => {
-    setAccountState(defaultAccountState);
+    setAccountState(createDefaultAccountState());
     localStorage.removeItem("promptlab-account");
   };
   const submitSignIn = () => signInWithPassword(authEmail.trim(), authPassword);
@@ -3478,10 +3549,7 @@ function V2PublicSettings(props) {
               </div>
               <span className="v2-score-badge">{accountState.plan}</span>
             </div>
-            {!playBillingReady && playBillingHint?.message && (
-              <p className="v2-note warn">{playBillingHint.message}</p>
-            )}
-            {playBillingReady && (
+            {playBillingHint?.message && (
               <p className="v2-note">{playBillingHint.message}</p>
             )}
             <div className="v2-plan-grid premium">
@@ -3495,7 +3563,7 @@ function V2PublicSettings(props) {
                     type="button"
                     disabled={isCurrent || billingBusy || plan === "Free"}
                     onClick={() => {
-                      if (canUpgrade) upgradeViaPlayBilling(plan);
+                      if (canUpgrade) requestMembershipUpgrade(plan);
                     }}
                   >
                     <span>{plan}</span>
@@ -3511,18 +3579,18 @@ function V2PublicSettings(props) {
                     <em>
                       {isCurrent
                         ? "Current plan"
-                        : plan === "Free"
+                          : plan === "Free"
                           ? "Default tier"
                           : playBillingReady
                             ? "Tap to buy on Play"
-                            : "Tap for setup steps"}
+                            : "Request web upgrade"}
                     </em>
                   </button>
                 );
               })}
             </div>
             {billingMessage && <p className="v2-note warn">{billingMessage}</p>}
-            {billingBusy && <p className="v2-note">Processing Play purchase…</p>}
+            {billingBusy && <p className="v2-note">Processing membership upgrade...</p>}
             <div className="v2-quota-meter">
               <div><span>Quota</span><strong>{(accountState.quotaUsed / 1000).toFixed(1)}k / {(accountState.quotaLimit / 1000).toFixed(0)}k tokens</strong></div>
               <i><b style={{ width: `${quotaPercent}%` }} /></i>
@@ -3657,7 +3725,7 @@ function V2PublicSettings(props) {
               <LifeBuoy size={20} />
             </div>
             <div className="v2-runbook-row"><span>1</span><p>Report generation errors with a screenshot and prompt category.</p></div>
-            <div className="v2-runbook-row"><span>2</span><p>For billing issues, include the Google Play order ID after Play Billing is connected.</p></div>
+            <div className="v2-runbook-row"><span>2</span><p>For billing issues, include the Google Play order ID or web checkout receipt after payment is connected.</p></div>
             <div className="v2-runbook-row"><span>3</span><p>For data requests, use the account email shown in Profile.</p></div>
           </div>
 
