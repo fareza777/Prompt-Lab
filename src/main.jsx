@@ -2307,7 +2307,6 @@ function V2App(props) {
         </div>
       </aside>
 
-      <BottomNav active={active} setActive={setActive} />
       <main className="v2-main">
         <V2Header
           active={active}
@@ -2326,6 +2325,7 @@ function V2App(props) {
         {active === "Compare" && <V2Compare {...props} />}
         {active === "Settings" && <V2Settings {...props} />}
       </main>
+      <BottomNav active={active} setActive={setActive} />
       <V2ActionToast message={props.actionToast} />
     </div>
   );
@@ -2753,8 +2753,6 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
   const canDocx = entitlements?.docxExport ?? canExportFormat(plan, "docx");
   const canPptx = entitlements?.pptxExport ?? canExportFormat(plan, "pptx");
   const [actionFeedback, setActionFeedback] = useState("");
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const outputBadge = isGenerating
     ? "Generating..."
     : isAiGeneratedOutput(generationSource, generationStatus)
@@ -2764,18 +2762,6 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
     action();
     setActionFeedback(label);
     window.setTimeout(() => setActionFeedback(""), 1500);
-  };
-  const copyOutputSection = (heading) => {
-    const marker = `${heading}:`;
-    const start = prompt.indexOf(marker);
-    if (start === -1) {
-      confirmAction("Copied", () => copyText(prompt));
-      return;
-    }
-    const rest = prompt.slice(start);
-    const nextSection = rest.slice(marker.length).search(/\n[A-Z][A-Za-z ]+:\n/);
-    const section = nextSection === -1 ? rest : rest.slice(0, marker.length + nextSection);
-    confirmAction("Section copied", () => copyText(section.trim()));
   };
 
   return (
@@ -2805,7 +2791,7 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
           {metrics.tips.slice(0, 3).map((tip) => <p key={tip}>{tip}</p>)}
         </div>
       </div>
-      <div className={`v2-card v2-output-card ${isFullscreen ? "fullscreen" : ""}`}>
+      <div className="v2-card v2-output-card">
         <div className="v2-prompt-toolbar">
           <div className="v2-prompt-toolbar-title">
             <strong>Optimized Prompt</strong>
@@ -2815,23 +2801,14 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
           <button type="button" onClick={() => confirmAction("Copied", () => copyText(prompt))} title="Copy prompt" aria-label="Copy prompt">
             <Clipboard size={16} />
           </button>
-          <button type="button" onClick={() => copyOutputSection("Interpreted brief")} title="Copy interpreted brief" aria-label="Copy interpreted brief">
-            <Layers3 size={16} />
-          </button>
           <button type="button" onClick={() => confirmAction("Saved", () => savePrompt(prompt, narrative))} title="Save prompt" aria-label="Save prompt">
             <Archive size={16} />
-          </button>
-          <button type="button" onClick={() => setIsExpanded((value) => !value)} title={isExpanded ? "Collapse output" : "Expand output"} aria-label={isExpanded ? "Collapse output" : "Expand output"}>
-            {isExpanded ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
-          <button type="button" onClick={() => setIsFullscreen((value) => !value)} title={isFullscreen ? "Close full screen" : "Open full screen"} aria-label={isFullscreen ? "Close full screen" : "Open full screen"}>
-            {isFullscreen ? <X size={16} /> : <FolderOpen size={16} />}
           </button>
         </div>
         <div className="v2-output-tabs">
           <button className="active">Prompt</button>
         </div>
-        <pre className={`v2-prompt-output ${isGenerating ? "is-streaming" : ""} ${isExpanded ? "expanded" : ""}`}>{prompt}</pre>
+        <pre className={`v2-prompt-output ${isGenerating ? "is-streaming" : ""}`}>{prompt}</pre>
         {isGenerating && (
           <div className="v2-stream-preview">
             <span>Streaming preview</span>
