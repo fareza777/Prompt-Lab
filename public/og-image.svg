@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#061011"/>
+      <stop offset="100%" style="stop-color:#0a1518"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#38bdf8"/>
+      <stop offset="100%" style="stop-color:#6366f1"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  
+  <!-- Decorative circles -->
+  <circle cx="200" cy="150" r="300" fill="rgba(56,189,248,0.08)"/>
+  <circle cx="1000" cy="500" r="250" fill="rgba(99,102,241,0.08)"/>
+  
+  <!-- Grid pattern -->
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+  </pattern>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  
+  <!-- Logo icon -->
+  <g transform="translate(525, 120)">
+    <!-- P letter -->
+    <rect x="0" y="0" width="15" height="70" rx="3" fill="url(#accent)"/>
+    <rect x="15" y="0" width="50" height="15" rx="3" fill="url(#accent)"/>
+    <rect x="50" y="15" width="15" height="25" rx="3" fill="url(#accent)"/>
+    <rect x="15" y="30" width="50" height="15" rx="3" fill="url(#accent)"/>
+  </g>
+  
+  <!-- Title -->
+  <text x="600" y="280" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="bold" fill="white">PromptLab</text>
+  
+  <!-- Subtitle -->
+  <text x="600" y="340" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="#94a3b8">AI Prompt Workspace</text>
+  
+  <!-- Accent line -->
+  <rect x="450" y="370" width="300" height="4" rx="2" fill="url(#accent)"/>
+  
+  <!-- Features -->
+  <text x="600" y="430" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="22" fill="#64748b">Build · Optimize · Compare · Save</text>
+  
+  <!-- Target AI logos text -->
+  <text x="600" y="480" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#475569">ChatGPT · Claude · Gemini · Grok · Midjourney</text>
+  
+  <!-- URL -->
+  <text x="600" y="570" text-anchor="middle" font-family="monospace" font-size="20" fill="#38bdf8">prompt-lab.xyz</text>
+  
+  <!-- Free badge -->
+  <rect x="510" y="510" width="180" height="36" rx="18" fill="rgba(56,189,248,0.15)" stroke="#38bdf8" stroke-width="1"/>
+  <text x="600" y="534" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="bold" fill="#38bdf8">FREE TIER AVAILABLE</text>
+</svg>
