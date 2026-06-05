@@ -68,18 +68,18 @@
 
       :root {
         --bg: #061011;
-        --bg-card: #0d1a1d;
-        --bg-card-hover: #112226;
-        --text: #e2e8f0;
-        --text-muted: #94a3b8;
-        --accent: #38bdf8;
-        --accent2: #6366f1;
-        --accent3: #a78bfa;
-        --gold: #f59e0b;
-        --border: rgba(255,255,255,0.06);
-        --border-glow: rgba(56,189,248,0.15);
-        --glass: rgba(13,26,29,0.7);
-        --glass-border: rgba(255,255,255,0.08);
+         --bg-card: #0a1518;
+         --bg-card-hover: #0e1e22;
+         --text: #c8d6df;
+         --text-muted: #6b7f8a;
+         --accent: #2a9dc7;
+         --accent2: #4f46e5;
+         --accent3: #7c6bd4;
+         --gold: #c9941a;
+         --border: rgba(255,255,255,0.04);
+         --border-glow: rgba(42,157,199,0.1);
+         --glass: rgba(10,21,24,0.75);
+         --glass-border: rgba(255,255,255,0.05);
       }
 
       html { scroll-behavior: smooth; }
@@ -101,7 +101,7 @@
         position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
         padding: 16px 40px;
         display: flex; align-items: center; justify-content: space-between;
-        background: rgba(6,16,17,0.8);
+        background: rgba(6,16,17,0.92);
         backdrop-filter: blur(20px) saturate(1.4);
         -webkit-backdrop-filter: blur(20px) saturate(1.4);
         border-bottom: 1px solid var(--border);
@@ -131,9 +131,9 @@
         padding: 10px 24px; border-radius: 10px; font-size: 14px; font-weight: 600;
         background: linear-gradient(135deg, var(--accent), var(--accent2));
         color: #fff !important; text-decoration: none; transition: all 0.3s ease;
-        box-shadow: 0 0 20px rgba(56,189,248,0.2);
+        box-shadow: 0 0 16px rgba(42,157,199,0.15);
       }
-      .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 0 30px rgba(56,189,248,0.35); }
+      .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 0 24px rgba(42,157,199,0.25); }
       .nav-cta::after { display: none !important; }
 
       /* --- Hero --- */
@@ -145,9 +145,9 @@
       .hero::before {
         content: ''; position: absolute; inset: 0;
         background:
-          radial-gradient(ellipse 80% 50% at 50% 0%, rgba(56,189,248,0.10), transparent 60%),
-          radial-gradient(ellipse 60% 40% at 20% 50%, rgba(99,102,241,0.08), transparent 50%),
-          radial-gradient(ellipse 50% 35% at 80% 60%, rgba(167,139,250,0.06), transparent 50%);
+          radial-gradient(ellipse 80% 50% at 50% 0%, rgba(42,157,199,0.06), transparent 60%),
+          radial-gradient(ellipse 60% 40% at 20% 50%, rgba(79,70,229,0.04), transparent 50%),
+          radial-gradient(ellipse 50% 35% at 80% 60%, rgba(124,107,212,0.03), transparent 50%);
         pointer-events: none;
       }
 
@@ -167,7 +167,7 @@
 
       /* Floating orbs */
       .orb {
-        position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.4;
+        position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.2;
         animation: orbFloat 8s ease-in-out infinite;
       }
       .orb-1 { width: 300px; height: 300px; background: var(--accent); top: 10%; left: 10%; animation-delay: 0s; }
@@ -213,9 +213,9 @@
       }
       .btn-primary {
         background: linear-gradient(135deg, var(--accent), var(--accent2));
-        color: #fff; box-shadow: 0 4px 24px rgba(56,189,248,0.25), 0 0 0 1px rgba(56,189,248,0.1);
+        color: #fff; box-shadow: 0 4px 24px rgba(42,157,199,0.2), 0 0 0 1px rgba(42,157,199,0.08);
       }
-      .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(56,189,248,0.35); }
+      .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(42,157,199,0.3); }
       .btn-primary::before {
         content: ''; position: absolute; inset: 0;
         background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
@@ -317,7 +317,7 @@
         width: 64px; height: 64px; border-radius: 20px; display: flex; align-items: center;
         justify-content: center; font-size: 24px; font-weight: 800; margin: 0 auto 24px;
         background: linear-gradient(135deg, var(--accent), var(--accent2));
-        color: #fff; box-shadow: 0 8px 32px rgba(56,189,248,0.2);
+        color: #fff; box-shadow: 0 8px 32px rgba(42,157,199,0.15);
       }
       .step-card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 12px; }
       .step-card p { color: var(--text-muted); font-size: 0.95rem; max-width: 280px; margin: 0 auto; }
@@ -538,12 +538,7 @@
             Stop guessing. Build, optimize, and compare prompts with AI-powered scoring.
             From rough ideas to production-ready prompts in seconds.
           </p>
-          <div class="social-proof">
-            <div class="avatar-stack">
-              <span>🧑‍💻</span><span>👩‍🎨</span><span>👨‍🏫</span><span>👩‍💼</span><span>🧑‍🔬</span>
-            </div>
-            <span>Trusted by creators, marketers &amp; teams worldwide</span>
-          </div>
+
           <div class="hero-cta">
             <a href="/app" class="btn btn-primary">
               <span>Start Building Prompts</span>
@@ -561,24 +556,6 @@
         </div>
       </section>
 
-      <!-- Stats -->
-      <section class="stats-section">
-        <div class="stats-grid">
-          <div class="stat-item fade-up">
-            <h3>6</h3>
-            <p>Power Tools</p>
-          </div>
-          <div class="stat-item fade-up">
-            <h3>17</h3>
-            <p>Domain Packs</p>
-          </div>
-          <div class="stat-item fade-up">
-            <h3>5</h3>
-            <p>AI Models</p>
-          </div>
-
-        </div>
-      </section>
 
       <!-- Features -->
       <section class="section" id="features">
