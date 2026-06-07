@@ -816,107 +816,6 @@
       .domain-tags {
         max-width: 980px;
       }
-      .plans-section {
-        padding-top: 76px;
-        padding-bottom: 76px;
-        background:
-          radial-gradient(circle at 50% 0%, rgba(94, 234, 212, 0.08), transparent 38%),
-          linear-gradient(180deg, rgba(9, 20, 23, 0.2), transparent);
-      }
-      .plans-grid {
-        width: min(1120px, 100%);
-        margin: 0 auto;
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 18px;
-      }
-      .plan-card {
-        position: relative;
-        min-height: 330px;
-        padding: 24px;
-        border: 1px solid rgba(148, 163, 184, 0.13);
-        border-radius: 18px;
-        background:
-          radial-gradient(circle at 86% 0%, rgba(94, 234, 212, 0.07), transparent 34%),
-          rgba(9, 20, 23, 0.66);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
-      }
-      .plan-card.featured {
-        border-color: rgba(94, 234, 212, 0.38);
-        background:
-          radial-gradient(circle at 84% 0%, rgba(94, 234, 212, 0.16), transparent 34%),
-          linear-gradient(180deg, rgba(8, 36, 39, 0.86), rgba(9, 20, 23, 0.72));
-        box-shadow: 0 24px 70px rgba(94, 234, 212, 0.08), inset 0 1px 0 rgba(255,255,255,0.05);
-      }
-      .plan-kicker {
-        display: inline-flex;
-        margin-bottom: 18px;
-        color: var(--accent);
-        font-family: var(--mono);
-        font-size: 12px;
-        font-weight: 800;
-        text-transform: uppercase;
-      }
-      .plan-card h3 {
-        margin: 0 0 12px;
-        color: var(--text);
-        font-size: 34px;
-        line-height: 1;
-      }
-      .plan-card p {
-        min-height: 72px;
-        color: var(--text-muted);
-        line-height: 1.65;
-      }
-      .plan-card ul {
-        display: grid;
-        gap: 8px;
-        margin: 18px 0 22px;
-        padding-left: 18px;
-        color: var(--text-soft);
-        font-size: 14px;
-      }
-      .plan-link {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 42px;
-        padding: 10px 14px;
-        border: 1px solid rgba(94, 234, 212, 0.28);
-        border-radius: 10px;
-        color: var(--accent);
-        background: rgba(94, 234, 212, 0.08);
-        font-weight: 800;
-        text-decoration: none;
-      }
-      .plan-card.featured .plan-link {
-        color: #061011;
-        background: linear-gradient(135deg, var(--accent), var(--accent2));
-      }
-      .plans-path {
-        width: min(920px, 100%);
-        margin: 20px auto 0;
-        padding: 14px 18px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px 16px;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid rgba(245, 195, 106, 0.22);
-        border-radius: 14px;
-        color: var(--text-soft);
-        background: rgba(12, 16, 10, 0.58);
-      }
-      .plans-path span {
-        color: var(--gold);
-        font-family: var(--mono);
-        font-size: 12px;
-        font-weight: 800;
-        text-transform: uppercase;
-      }
-      .plans-path strong {
-        color: var(--text);
-      }
       .blog-section {
         padding-top: 74px;
       }
@@ -951,15 +850,6 @@
         }
         .mock-side {
           grid-template-columns: 1fr 1fr;
-        }
-        .plans-grid {
-          grid-template-columns: 1fr;
-        }
-        .plan-card {
-          min-height: auto;
-        }
-        .plan-card p {
-          min-height: 0;
         }
       }
       @media (max-width: 640px) {
@@ -1057,119 +947,12 @@
       .app-hidden { display: none !important; }
       .landing-hidden { display: none !important; }
 
-      #app-splash {
-        position: fixed;
-        inset: 0;
-        z-index: 99999;
-        display: grid;
-        place-items: center;
-        overflow: hidden;
-        background: #061011;
-      }
-      #app-splash.is-exiting {
-        opacity: 0;
-        transition: opacity 0.5s ease;
-      }
-      .app-splash__backdrop {
-        position: absolute;
-        inset: -20%;
-        background:
-          radial-gradient(circle at 30% 20%, rgba(56, 189, 248, 0.22), transparent 42%),
-          radial-gradient(circle at 72% 12%, rgba(99, 102, 241, 0.18), transparent 36%),
-          linear-gradient(180deg, #061011, #0a1518 55%, #061011);
-        animation: splash-bg-shift 2.4s ease-in-out infinite alternate;
-      }
-      @keyframes splash-bg-shift {
-        to { transform: scale(1.06) translateY(-1%); }
-      }
-      .app-splash__orbits {
-        position: absolute;
-        width: 220px;
-        height: 220px;
-        animation: splash-orbit 3.2s linear infinite;
-      }
-      .app-splash__orbits span {
-        position: absolute;
-        width: 10px;
-        height: 10px;
-        border-radius: 999px;
-        background: linear-gradient(135deg, #38bdf8, #22d3ee);
-        box-shadow: 0 0 18px rgba(56, 189, 248, 0.65);
-      }
-      .app-splash__orbits span:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); }
-      .app-splash__orbits span:nth-child(2) { bottom: 12%; right: 8%; opacity: 0.85; }
-      .app-splash__orbits span:nth-child(3) { bottom: 12%; left: 8%; opacity: 0.7; }
-      @keyframes splash-orbit {
-        to { transform: rotate(360deg); }
-      }
-      .app-splash__brand {
-        position: relative;
-        z-index: 1;
-        display: grid;
-        justify-items: center;
-        gap: 10px;
-        text-align: center;
-        padding: 24px;
-        animation: splash-brand-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
-      }
-      @keyframes splash-brand-in {
-        from { opacity: 0; transform: translateY(18px) scale(0.96); }
-        to { opacity: 1; transform: none; }
-      }
-      .app-splash__logo {
-        width: 92px;
-        height: 92px;
-        display: grid;
-        place-items: center;
-        border-radius: 24px;
-        background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(34, 211, 238, 0.12));
-        box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.25), 0 24px 60px rgba(0, 0, 0, 0.45);
-        animation: splash-logo-pulse 1.8s ease-in-out infinite;
-      }
-      @keyframes splash-logo-pulse {
-        50% { transform: scale(1.04); box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.4), 0 28px 70px rgba(34, 211, 238, 0.18); }
-      }
-      .app-splash__logo img {
-        width: 72px;
-        height: 72px;
-        border-radius: 18px;
-      }
-      .app-splash__brand strong {
-        color: #e8f4f6;
-        font-size: 28px;
-        letter-spacing: -0.02em;
-        font-family: Georgia, "Times New Roman", serif;
-        font-weight: 400;
-      }
-      .app-splash__brand p {
-        margin: 0;
-        color: rgba(184, 205, 210, 0.88);
-        font: 600 12px/1.4 system-ui, sans-serif;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
-      .app-splash__bar {
-        position: absolute;
-        left: 12%;
-        right: 12%;
-        bottom: max(28px, env(safe-area-inset-bottom));
-        height: 4px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-        overflow: hidden;
-      }
-      .app-splash__bar i {
-        display: block;
-        width: 42%;
-        height: 100%;
-        border-radius: inherit;
-        background: linear-gradient(90deg, #22d3ee, #38bdf8, #818cf8);
-        animation: splash-bar 1.2s ease-in-out infinite;
-      }
-      @keyframes splash-bar {
-        0% { transform: translateX(-120%); }
-        100% { transform: translateX(260%); }
-      }
+      #app-splash { position: fixed; inset: 0; z-index: 99999; display: grid; place-items: center; overflow: hidden; background: #061011; }
+      #app-splash.is-exiting { opacity: 0; transition: opacity 0.5s ease; }
+      .app-splash__backdrop { position: absolute; inset: -20%; background: radial-gradient(circle at 30% 20%, rgba(56, 189, 248, 0.22), transparent 42%), radial-gradient(circle at 72% 12%, rgba(99, 102, 241, 0.18), transparent 36%), linear-gradient(180deg, #061011, #0a1518 55%, #061011); }
+      .app-splash__bar { position: absolute; bottom: 32%; left: 25%; right: 25%; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
+      .app-splash__bar i { display: block; width: 42%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #22d3ee, #38bdf8, #818cf8); animation: splash-bar 1.2s ease-in-out infinite; }
+      @keyframes splash-bar { 0% { transform: translateX(-120%); } 100% { transform: translateX(260%); } }
 
       /* Blog listing page */
       #blog-page { min-height: 100vh; padding-top: 100px; }
@@ -1221,28 +1004,7 @@
         border-radius: 12px; padding: 20px 24px; margin: 24px 0;
       }
       #article-page .article-body .tip-box strong { color: var(--accent); }
-      html.boot-app #landing-page,
-      html.boot-app #blog-page,
-      html.boot-app #article-page,
-      html.boot-app #article-page-chatgpt,
-      html.boot-app #article-page-marketing { display: none !important; }
-      html.boot-app #app-root { display: block !important; }
     </style>
-    <script>
-      (function () {
-        var path = location.pathname.replace(/\/+$/, "") || "/";
-        var standalone =
-          window.matchMedia("(display-mode: standalone)").matches ||
-          window.navigator.standalone === true;
-        if (standalone && path === "/") {
-          location.replace("/app" + location.search + location.hash);
-          return;
-        }
-        if (path === "/app" || path.startsWith("/app/")) {
-          document.documentElement.classList.add("boot-app");
-        }
-      })();
-    </script>
   </head>
   <body>
     <!-- ============================== LANDING PAGE ============================== -->
@@ -1257,7 +1019,6 @@
         <div class="nav-links">
           <a href="#features">Features</a>
           <a href="#how">How It Works</a>
-          <a href="#plans">Plans</a>
           <a href="#domains">Domains</a>
           <a href="/blog">Blog</a>
           <a href="/app" class="nav-cta">Open App →</a>
@@ -1293,7 +1054,6 @@
             <div class="hero-proof">
               <span>No signup required</span>
               <span>Guest mode available</span>
-              <span>Sign in to upgrade</span>
               <span>DOCX/PPTX export</span>
               <span>Readiness scoring</span>
             </div>
@@ -1303,7 +1063,7 @@
               <span class="ai-logo">Claude</span>
               <span class="ai-logo">Gemini</span>
               <span class="ai-logo">Grok</span>
-              <span class="ai-logo">Others</span>
+              <span class="ai-logo">Midjourney</span>
             </div>
           </div>
 
@@ -1358,55 +1118,6 @@ Build a campaign prompt with:
             </div>
             <div class="mock-float">AI Generated · Local fallback ready</div>
           </div>
-        </div>
-      </section>
-
-
-      <!-- Plans -->
-      <section class="section plans-section" id="plans">
-        <div class="section-header">
-          <div class="section-label">Membership</div>
-          <h2>Start Free.<br>Upgrade When PromptLab Becomes Your Daily Workspace.</h2>
-          <p>Guest mode is for trying the builder locally. Paid membership requires a signed-in account, then upgrade from Settings → Membership inside the app.</p>
-        </div>
-        <div class="plans-grid">
-          <article class="plan-card">
-            <span class="plan-kicker">Free</span>
-            <h3>$0</h3>
-            <p>Try the workspace, build prompts, use local scoring, and keep a small local library.</p>
-            <ul>
-              <li>50k tokens/month</li>
-              <li>25 saved prompts</li>
-              <li>5 custom templates</li>
-            </ul>
-            <a href="/app" class="plan-link">Try as guest</a>
-          </article>
-          <article class="plan-card featured">
-            <span class="plan-kicker">Pro</span>
-            <h3>$3/mo</h3>
-            <p>For creators and professionals who need exports, OCR priority, optimizer, and compare tools.</p>
-            <ul>
-              <li>500k tokens/month</li>
-              <li>DOCX/PPTX export</li>
-              <li>AI Optimizer and Compare</li>
-            </ul>
-            <a href="/app" class="plan-link">Sign in to upgrade</a>
-          </article>
-          <article class="plan-card">
-            <span class="plan-kicker">Business</span>
-            <h3>$12/mo</h3>
-            <p>Higher limits for teams, heavier document workflows, and priority model routing.</p>
-            <ul>
-              <li>2M tokens/month</li>
-              <li>500-prompt library</li>
-              <li>Priority AI routing</li>
-            </ul>
-            <a href="/app" class="plan-link">Request business access</a>
-          </article>
-        </div>
-        <div class="plans-path">
-          <span>Upgrade path</span>
-          <strong>Create account → Open Settings → Membership → Choose Pro or Business</strong>
         </div>
       </section>
 
@@ -1961,14 +1672,6 @@ Original content: [paste here]</code></pre>
     <div id="app-root" class="app-hidden">
       <div id="app-splash" role="presentation" aria-hidden="true">
         <div class="app-splash__backdrop"></div>
-        <div class="app-splash__orbits" aria-hidden="true"><span></span><span></span><span></span></div>
-        <div class="app-splash__brand">
-          <div class="app-splash__logo">
-            <img src="/icons/icon-192.png" alt="" width="72" height="72" decoding="async" />
-          </div>
-          <strong>PromptLab</strong>
-          <p>AI prompt workspace</p>
-        </div>
         <div class="app-splash__bar" aria-hidden="true"><i></i></div>
       </div>
       <div id="root">
@@ -1991,7 +1694,7 @@ Original content: [paste here]</code></pre>
       <div class="article-header">
         <span class="article-meta">June 7, 2026 · Featured · 7 min read</span>
         <h1>9 Tips to Write a Claude Prompt That <span class="gradient">Actually Works</span></h1>
-        <p style="color: var(--text-dim); max-width: 720px; margin: 16px auto 0; font-size: 1.05rem; line-height: 1.7;">
+        <p style="color: var(--text-muted); max-width: 720px; margin: 16px auto 0; font-size: 1.05rem; line-height: 1.7;">
           Practical rules distilled from Anthropic's own Claude prompting playbook. Most of these apply to GPT-5, Gemini, and other frontier models too — but they're written for Claude first.
         </p>
       </div>
@@ -2082,7 +1785,7 @@ Now: [the actual task, starting with a verb]</code></pre>
 
         <hr style="border: 0; border-top: 1px solid var(--border); margin: 48px 0;">
 
-        <p style="color: var(--text-dim); font-size: 0.95rem;">
+        <p style="color: var(--text-muted); font-size: 0.95rem;">
           <strong>About the author:</strong> Ruben Hassid is a creator and AI educator who breaks down frontier-model techniques for a general audience. This article is adapted from his breakdown of Anthropic's 31-page Claude prompting guide and tested with PromptLab's Compare feature. Want more like this? <a href="/blog" style="color: var(--accent);">Browse the blog</a> or <a href="/blog/prompt-engineering-guide" style="color: var(--accent);">read the full Prompt Engineering guide</a>.
         </p>
 
@@ -2093,13 +1796,6 @@ Now: [the actual task, starting with a verb]</code></pre>
     <script>
       (function() {
         var path = window.location.pathname.replace(/\/+$/, '') || '/';
-        var standalone =
-          window.matchMedia('(display-mode: standalone)').matches ||
-          window.navigator.standalone === true;
-        if (standalone && path === '/') {
-          window.location.replace('/app' + window.location.search + window.location.hash);
-          return;
-        }
 
         // Route mapping
         var routes = {
