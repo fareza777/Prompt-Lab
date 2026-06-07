@@ -63,6 +63,12 @@ import { buildPhasedAppDeliveryInstruction } from "./phasedAppDelivery.js";
 import { buildStructuredAuditInstruction } from "./structuredAuditDelivery.js";
 import { API_MSG } from "./apiUserMessages.js";
 import { isSuperAccount, SUPER_QUOTA_LIMIT } from "./superAccounts.js";
+import {
+  clearInstalledAppEntry,
+  hasInstalledAppEntry,
+  isInstalledApp,
+  markInstalledAppEntered,
+} from "./installedApp.js";
 import { purgeLegacyServiceWorkers, repairStuckLocalProfile } from "./bootRecovery.js";
 import { dismissStartupSplash, installSplashSafetyNet, markStartupSplashStarted } from "./startupSplash";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
@@ -1579,6 +1585,7 @@ function App() {
     setHasAuthSession(Boolean(data.session));
     setAuthSessionReady(true);
     setAuthStatus("Signed in");
+    markInstalledAppEntered();
     await loadUserProfile(data.user);
   }
 
@@ -1605,6 +1612,7 @@ function App() {
       setHasAuthSession(true);
       setAuthSessionReady(true);
       setAuthStatus("Signed in");
+      markInstalledAppEntered();
       await loadUserProfile(data.user);
     } else {
       setAuthStatus("Check your email to confirm your account.");
@@ -1613,6 +1621,7 @@ function App() {
 
   async function signOut() {
     if (supabase) await supabase.auth.signOut();
+    clearInstalledAppEntry();
     localStorage.removeItem("promptlab-guest");
     localStorage.removeItem("promptlab-onboarded");
     localStorage.removeItem("promptlab-auth-intent");
@@ -2320,12 +2329,31 @@ function V2App(props) {
     localStorage.removeItem("promptlab-guest");
     localStorage.removeItem("promptlab-auth-intent");
     localStorage.removeItem("promptlab-onboarded");
+    markInstalledAppEntered();
     setGuestMode(true);
     setActive("Builder");
   };
 
-  if (!guestMode && (!authSessionReady || !hasAuthSession || !accountState.userId)) {
-    return <V2AuthGate {...props} onGuest={continueGuest} />;
+  const resumeInstalledSession = () => {
+    markInstalledAppEntered();
+  };
+
+  const needsAuthGate =
+    !guestMode &&
+    (!hasInstalledAppEntry() ||
+      !authSessionReady ||
+      !hasAuthSession ||
+      !accountState.userId);
+
+  if (needsAuthGate) {
+    return (
+      <V2AuthGate
+        {...props}
+        onGuest={continueGuest}
+        onResumeSession={resumeInstalledSession}
+        showResumeSession={isInstalledApp() && hasAuthSession && Boolean(accountState.email)}
+      />
+    );
   }
   return (
     <div className="v2-shell" data-theme="v2">
@@ -2413,6 +2441,8 @@ function V2AuthGate({
   signInWithPassword,
   signUpWithPassword,
   onGuest,
+  onResumeSession,
+  showResumeSession,
 }) {
   const [authMode, setAuthMode] = useState("sign-in");
   const [authEmail, setAuthEmail] = useState(accountState.email || "");
@@ -2464,6 +2494,13 @@ function V2AuthGate({
           <span>{isSupabaseConfigured ? authStatus : "Supabase env is not configured"}</span>
           {authError && <strong>{authError}</strong>}
         </div>
+        {showResumeSession && (
+          <div className="v2-actions wrap">
+            <button className="v2-btn primary" type="button" onClick={onResumeSession}>
+              Continue as {accountState.email}
+            </button>
+          </div>
+        )}
         <div className="v2-actions wrap">
           <button className="v2-btn primary" onClick={submitAuth} disabled={isAuthBusy || !canSubmit}>
             {isAuthBusy ? "Checking..." : isSignIn ? "Sign In" : "Create Account"}
