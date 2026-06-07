@@ -6,10 +6,14 @@ This folder tracks the Android / Google Play migration work for PromptLab.
 
 Use Trusted Web Activity (TWA) first because PromptLab is already deployed as a responsive web app:
 
-- Production URL: `https://promptlab-six-phi.vercel.app/`
+- Production URL: `https://prompt-lab.xyz/`
 - Android package: `app.promptlab.twa`
 - App name: `PromptLab`
 - Display mode: standalone / fullscreen browser surface
+
+## Production domain
+
+Custom domain: **https://prompt-lab.xyz/** — checklist lengkap sebelum Production: `playstore/PRODUCTION_GO_LIVE.md`.
 
 ## Step By Step
 

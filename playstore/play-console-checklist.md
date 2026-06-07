@@ -6,8 +6,8 @@
 - Package name: `app.promptlab.twa`
 - Default language: English
 - App/category: Productivity
-- Website: `https://promptlab-six-phi.vercel.app/`
-- Privacy policy URL: `https://promptlab-six-phi.vercel.app/privacy`
+- Website: `https://prompt-lab.xyz/`
+- Privacy policy URL: `https://prompt-lab.xyz/privacy`
 
 ## Store Listing Draft
 
@@ -54,4 +54,8 @@ Full description:
 - [ ] Privacy URL live
 - [ ] Data safety form
 - [ ] Content rating questionnaire
-- [ ] Closed test: 12 opted-in, 14 days
+- [x] Closed test: 12 opted-in, 14 days (complete)
+- [ ] **Production**: upload AAB with host `prompt-lab.xyz` (see `PRODUCTION_GO_LIVE.md`)
+- [ ] Play Console → Store settings → Website = `https://prompt-lab.xyz/`
+- [ ] Supabase → Auth → URL Configuration → Site URL `https://prompt-lab.xyz`
+- [ ] Vercel env `APP_URL=https://prompt-lab.xyz`

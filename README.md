@@ -49,7 +49,7 @@ AI_PROVIDER=openrouter
 OPENROUTER_API_KEY=isi_key_di_sini
 OPENROUTER_MODEL=deepseek/deepseek-v4-flash
 OPENROUTER_OCR_MODEL=baidu/qianfan-ocr-fast:free
-APP_URL=https://domain-vercel-kamu.vercel.app
+APP_URL=https://prompt-lab.xyz
 VITE_SUPABASE_URL=https://project-ref.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_xxx
 ```

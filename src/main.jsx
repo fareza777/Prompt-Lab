@@ -3710,7 +3710,7 @@ function V2PublicSettings(props) {
             <div className="v2-runbook-row"><span>3</span><p>Read the full privacy policy before using production builds.</p></div>
             <div className="v2-actions wrap">
               <a className="v2-btn primary" href="/privacy" target="_blank" rel="noreferrer"><ShieldCheck size={16} />Privacy Policy</a>
-              <a className="v2-btn" href="mailto:support@promptlab.app"><LifeBuoy size={16} />Request data deletion</a>
+              <a className="v2-btn" href={`mailto:${import.meta.env.VITE_WEB_MEMBERSHIP_EMAIL || "support@prompt-lab.xyz"}`}><LifeBuoy size={16} />Request data deletion</a>
             </div>
           </div>
         </section>

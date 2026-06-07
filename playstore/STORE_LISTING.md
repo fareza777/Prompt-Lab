@@ -4,8 +4,8 @@
 
 | Item | URL |
 |------|-----|
-| Production app | https://promptlab-six-phi.vercel.app/ |
-| Privacy policy | https://promptlab-six-phi.vercel.app/privacy |
+| Production app | https://prompt-lab.xyz/ |
+| Privacy policy | https://prompt-lab.xyz/privacy |
 | Package name | `app.promptlab.twa` |
 
 ## Short description (80 chars max)
@@ -28,7 +28,7 @@ PromptLab helps creators, students, marketers, and builders transform rough inst
 
 Sign in to sync quota and membership. Free tier included. Pro and Business plans unlock higher limits (Google Play Billing on Android when enabled).
 
-Privacy: https://promptlab-six-phi.vercel.app/privacy
+Privacy: https://prompt-lab.xyz/privacy
 ```
 
 ## Category

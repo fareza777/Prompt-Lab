@@ -2,7 +2,7 @@
   "appName": "PromptLab",
   "launcherName": "PromptLab",
   "packageId": "app.promptlab.twa",
-  "host": "promptlab-six-phi.vercel.app",
+  "host": "prompt-lab.xyz",
   "startUrl": "/",
   "themeColor": "#061011",
   "navigationColor": "#061011",

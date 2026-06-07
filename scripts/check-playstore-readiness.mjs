@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
-const productionUrl = process.argv[2] || "https://promptlab-six-phi.vercel.app";
+const productionUrl = process.argv[2] || "https://prompt-lab.xyz";
 
 function check(label, ok, detail = "") {
   const status = ok ? "PASS" : "FAIL";
@@ -30,8 +30,10 @@ failed += check("maskable icon exists", existsSync(maskable512)) ? 0 : 1;
 if (existsSync(manifestPath)) {
   const manifest = readJson(manifestPath);
   failed += check("manifest display standalone", manifest.display === "standalone", manifest.display) ? 0 : 1;
-  failed += check("manifest start_url", manifest.start_url === "/", manifest.start_url) ? 0 : 1;
-  failed += check("manifest scope", manifest.scope === "/", manifest.scope) ? 0 : 1;
+  const validStart = manifest.start_url === "/" || manifest.start_url === "/app";
+  const validScope = manifest.scope === "/" || manifest.scope === "/app";
+  failed += check("manifest start_url", validStart, manifest.start_url) ? 0 : 1;
+  failed += check("manifest scope", validScope, manifest.scope) ? 0 : 1;
   failed += check("manifest has PNG icons", manifest.icons?.some((icon) => icon.type === "image/png")) ? 0 : 1;
   failed += check("manifest has maskable icon", manifest.icons?.some((icon) => String(icon.purpose || "").includes("maskable"))) ? 0 : 1;
 }

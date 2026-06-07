@@ -1,6 +1,6 @@
 # Hilangkan bar alamat Vercel di atas (TWA fullscreen)
 
-Kalau di HP masih terlihat URL `promptlab-six-phi.vercel.app` di bagian atas, artinya Android **belum mengenali** app sebagai Trusted Web Activity. Bukan bug UI web — ini verifikasi **Digital Asset Links**.
+Kalau di HP masih terlihat URL `prompt-lab.xyz` (atau domain lama) di bagian atas, artinya Android **belum mengenali** app sebagai Trusted Web Activity. Bukan bug UI web — ini verifikasi **Digital Asset Links**.
 
 ## Penyebab paling umum
 
@@ -13,7 +13,7 @@ Play Store memakai **App signing key** (sertifikat Google), sedangkan `assetlink
 3. Salin **SHA-256 certificate fingerprint** dari bagian **App signing key certificate** (bukan upload key saja)
 4. Edit `public/.well-known/assetlinks.json` — tambahkan fingerprint itu ke array `sha256_cert_fingerprints` (biarkan fingerprint upload key tetap ada jika masih dipakai untuk testing lokal)
 5. Deploy ulang ke Vercel (`git push` → tunggu deploy selesai)
-6. Cek file live: `https://promptlab-six-phi.vercel.app/.well-known/assetlinks.json`
+6. Cek file live: `https://prompt-lab.xyz/.well-known/assetlinks.json`
 7. **Uninstall** app dari HP, lalu install lagi dari link **internal testing** Play Store (bukan bookmark Chrome)
 8. Tunggu 15 menit–24 jam jika verifikasi Google belum propagate
 

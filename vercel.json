@@ -1,10 +1,24 @@
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
     { "source": "/blog/:slug*", "destination": "/index.html" },
     { "source": "/blog", "destination": "/index.html" },
     { "source": "/app/:slug*", "destination": "/index.html" },
     { "source": "/app", "destination": "/index.html" },
-    { "source": "/privacy", "destination": "/privacy.html" },
-    { "source": "/privacy/:slug*", "destination": "/privacy.html" }
+    {
+      "source": "/privacy/delete-account",
+      "destination": "/privacy/delete-account/index.html"
+    },
+    { "source": "/privacy", "destination": "/privacy/index.html" }
   ]
 }

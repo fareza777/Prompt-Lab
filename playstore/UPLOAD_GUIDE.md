@@ -16,7 +16,7 @@ atau `PromptLab-release-signed.aab` — cek folder di atas.
 2. App name: **PromptLab**
 3. **Production** → **Create new release** → Upload AAB
 4. Isi dari `playstore/STORE_LISTING.md`:
-   - Privacy: https://promptlab-six-phi.vercel.app/privacy
+   - Privacy: https://prompt-lab.xyz/privacy
    - Short / full description
 5. **Store settings** → App category: Productivity
 6. **Policy** → Privacy policy URL (wajib)

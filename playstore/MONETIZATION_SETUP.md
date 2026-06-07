@@ -99,7 +99,7 @@ Centang manual di Dashboard:
 |------|--------|
 | **App category** | **Productivity** → Save |
 | **Store listing** | Upload `playstore/assets/` (icon, feature graphic, 5 screenshots) + copy dari `STORE_LISTING.md` |
-| **Privacy policy** | `https://promptlab-six-phi.vercel.app/privacy` |
+| **Privacy policy** | `https://prompt-lab.xyz/privacy` |
 | **Data safety** | Ikuti tabel di `STORE_LISTING.md` |
 | **Content rating** | Kuesioner productivity / AI tool |
 | **In-app products** | Yes — subscriptions `promptlab_pro_monthly`, `promptlab_business_monthly` |
