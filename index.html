@@ -1221,7 +1221,28 @@
         border-radius: 12px; padding: 20px 24px; margin: 24px 0;
       }
       #article-page .article-body .tip-box strong { color: var(--accent); }
+      html.boot-app #landing-page,
+      html.boot-app #blog-page,
+      html.boot-app #article-page,
+      html.boot-app #article-page-chatgpt,
+      html.boot-app #article-page-marketing { display: none !important; }
+      html.boot-app #app-root { display: block !important; }
     </style>
+    <script>
+      (function () {
+        var path = location.pathname.replace(/\/+$/, "") || "/";
+        var standalone =
+          window.matchMedia("(display-mode: standalone)").matches ||
+          window.navigator.standalone === true;
+        if (standalone && path === "/") {
+          location.replace("/app" + location.search + location.hash);
+          return;
+        }
+        if (path === "/app" || path.startsWith("/app/")) {
+          document.documentElement.classList.add("boot-app");
+        }
+      })();
+    </script>
   </head>
   <body>
     <!-- ============================== LANDING PAGE ============================== -->
@@ -1942,6 +1963,13 @@ Original content: [paste here]</code></pre>
     <script>
       (function() {
         var path = window.location.pathname.replace(/\/+$/, '') || '/';
+        var standalone =
+          window.matchMedia('(display-mode: standalone)').matches ||
+          window.navigator.standalone === true;
+        if (standalone && path === '/') {
+          window.location.replace('/app' + window.location.search + window.location.hash);
+          return;
+        }
 
         // Route mapping
         var routes = {
