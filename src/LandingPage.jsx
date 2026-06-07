@@ -79,48 +79,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 9 Tips Article */}
-      <section id="tips" style={{ padding: "100px 24px", background: "linear-gradient(180deg, transparent, rgba(56,189,248,0.03), transparent)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 60 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 999, padding: "6px 16px", fontSize: 13, color: "#a5b4fc", marginBottom: 20, fontWeight: 500 }}>📖 Featured Insight</div>
-            <h2 style={{ fontSize: "2.2rem", fontWeight: 700, marginBottom: 16, lineHeight: 1.2 }}>9 Tips to Write a Claude Prompt That <span style={{ background: "linear-gradient(135deg, #38bdf8, #6366f1)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Actually Works</span></h2>
-            <p style={{ color: "#94a3b8", maxWidth: 720, margin: "0 auto", fontSize: "1.05rem", lineHeight: 1.6 }}>
-              Anthropic released a 31-page prompting guide. We distilled it into 9 tactical tips you can read in 60 seconds — each one is a copy-paste pattern that fixes the most common LLM failure mode. Inspired by <a href="https://x.com/rubenhassid" target="_blank" rel="noopener" style={{ color: "#38bdf8", textDecoration: "none" }}>Ruben Hassid</a>'s breakdown.
-            </p>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 20 }}>
-            {[
-              { num: 1, icon: "🎯", title: "Name the Output, Not the Task", body: "Replace vague verbs like \"review\", \"help\", \"look at\" with the exact task. Specify the format — table, bullets, JSON, doc. Set boundaries: what to include, what to ignore. Vague verbs get vague drafts. Name the thing." },
-              { num: 2, icon: "📏", title: "Define the Length Up Front", body: "Set the exact count — \"5 bullets\", \"180 words\", \"3 paragraphs\". Name the first word of each line — verb, number, or noun. Add: \"No preamble. No recap. No filler.\" Long input no longer means long output. Set the limit." },
-              { num: 3, icon: "🔄", title: "Flip Every \"Don't\" Into a \"Do\"", body: "Find every \"don't\" & \"avoid\" in your prompt. Rewrite each as a positive instruction. Use concrete words. \"Write as a 16-year-old can read it aloud.\" 4.7 reads literally. Tell it what to write, not dodge." },
-              { num: 4, icon: "⚡", title: "Lead With Action", body: "Remove \"Can you help me with...\" Start every line with: Write, Draft, Send, Analyze. Stack verbs in the order the work happens. Politeness costs tokens. Action ships work." },
-              { num: 5, icon: "🧠", title: "Force Maximum Reasoning", body: "Select Opus 4.7 with Adaptive thinking on. End your prompt with \"Think before answering. Common reasoning.\" For simple tasks, ask Claude to plan before doing. 4.7 reasons on demand, not by default. Demand it." },
-              { num: 6, icon: "✨", title: "Add \"Go Beyond the Basics\"", body: "Paste this exact phrase on every creative task: \"Polish like a real client deliverable.\" Ban the lazy defaults — \"no purple gradients, no AI clichés\". One phrase to go deeper. Line by line." },
-              { num: 7, icon: "🎙️", title: "Upload Your Voice", body: "Paste 2-3 sentences written exactly how you sound. Tell Claude: \"Match the style of these examples.\" Save them in an about-me file. Reuse them forever. Showing beats describing. Every single time." },
-              { num: 8, icon: "🛠️", title: "Control Tools On Purpose", body: "For research — \"Use web search aggressively, 2+ sources per claim.\" For speed — \"Answer from training. No search.\" Name the connectors — Gmail, Drive, Calendar, Slack. 4.7 calls fewer tools by default. Override when it matters." },
-              { num: 9, icon: "🏁", title: "State the Goal Before the Task", body: "Open with: \"Goal: [what winning looks like].\" Name the audience — \"for a CRO, not an engineer.\" Set the deadline or outcome — \"book a meeting by Friday\". A prompt without a goal is a wish. State the win." },
-            ].map((tip, i) => (
-              <div key={i} style={{ background: "#0d1a1d", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 28, position: "relative", transition: "all 0.25s" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #38bdf8, #6366f1)", color: "#fff", fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{tip.num}</div>
-                  <div style={{ fontSize: 22 }}>{tip.icon}</div>
-                </div>
-                <h3 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: 10, color: "#e2e8f0", lineHeight: 1.3 }}>{tip.title}</h3>
-                <p style={{ color: "#94a3b8", fontSize: "0.92rem", lineHeight: 1.6, margin: 0 }}>{tip.body}</p>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ textAlign: "center", marginTop: 48 }}>
-            <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginBottom: 0 }}>
-              More tips at <a href="https://how-to-ai.guide" target="_blank" rel="noopener" style={{ color: "#38bdf8", textDecoration: "none", fontWeight: 500 }}>how-to-ai.guide</a>
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* CTA */}
       <section style={{ padding: "100px 24px", textAlign: "center" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
