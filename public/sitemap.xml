@@ -38,7 +38,25 @@
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/9-tips-claude-prompts</loc>
-    <lastmod>2026-06-07</lastmod>
+    <lastmod>2026-06-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://prompt-lab.xyz/blog/how-to-create-prompt-for-chatgpt</loc>
+    <lastmod>2026-06-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://prompt-lab.xyz/blog/prompt-engineering-guide</loc>
+    <lastmod>2026-06-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://prompt-lab.xyz/blog/chatgpt-vs-claude-prompts</loc>
+    <lastmod>2026-06-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
