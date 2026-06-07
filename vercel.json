@@ -11,8 +11,6 @@
       "source": "/api/(.*)",
       "destination": "/api/index.js"
     },
-    { "source": "/blog/:slug*", "destination": "/app.html" },
-    { "source": "/blog", "destination": "/app.html" },
     { "source": "/app/:slug*", "destination": "/app.html" },
     { "source": "/app", "destination": "/app.html" },
     {
