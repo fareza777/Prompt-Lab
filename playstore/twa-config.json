@@ -3,7 +3,7 @@
   "launcherName": "PromptLab",
   "packageId": "app.promptlab.twa",
   "host": "prompt-lab.xyz",
-  "startUrl": "/",
+  "startUrl": "/app",
   "themeColor": "#061011",
   "navigationColor": "#061011",
   "backgroundColor": "#061011",
