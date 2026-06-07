@@ -13,6 +13,8 @@
     },
     { "source": "/app/:slug*", "destination": "/app.html" },
     { "source": "/app", "destination": "/app.html" },
+    { "source": "/blog/:slug*", "destination": "/index.html" },
+    { "source": "/blog", "destination": "/index.html" },
     {
       "source": "/privacy/delete-account",
       "destination": "/privacy/delete-account/index.html"
