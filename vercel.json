@@ -11,10 +11,10 @@
       "source": "/api/(.*)",
       "destination": "/api/index.js"
     },
-    { "source": "/blog/:slug*", "destination": "/index.html" },
-    { "source": "/blog", "destination": "/index.html" },
-    { "source": "/app/:slug*", "destination": "/index.html" },
-    { "source": "/app", "destination": "/index.html" },
+    { "source": "/blog/:slug*", "destination": "/app.html" },
+    { "source": "/blog", "destination": "/app.html" },
+    { "source": "/app/:slug*", "destination": "/app.html" },
+    { "source": "/app", "destination": "/app.html" },
     {
       "source": "/privacy/delete-account",
       "destination": "/privacy/delete-account/index.html"

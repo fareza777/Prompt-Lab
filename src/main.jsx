@@ -4838,19 +4838,32 @@ function Metric({ label, value }) {
   );
 }
 
-// Route-based rendering: / shows landing page, /app shows the app
-const root = document.getElementById("root");
-const path = window.location.pathname;
+function mountPromptLab() {
+  const root = document.getElementById("root");
+  if (!root) {
+    dismissStartupSplash();
+    return;
+  }
+  const path = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
+  const standalone =
+    typeof window !== "undefined" &&
+    (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true);
+  const showApp = path === "/app" || path.startsWith("/app/") || standalone;
 
-if (path === "/" || path === "") {
-  // Landing page for web visitors
   root.innerHTML = "";
-  createRoot(root).render(<LandingPage />);
+  if (showApp) {
+    createRoot(root).render(
+      <AppErrorBoundary>
+        <App />
+      </AppErrorBoundary>
+    );
+  } else {
+    createRoot(root).render(<LandingPage />);
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", mountPromptLab);
 } else {
-  // App for /app and all other routes
-  createRoot(root).render(
-    <AppErrorBoundary>
-      <App />
-    </AppErrorBoundary>
-  );
+  mountPromptLab();
 }
