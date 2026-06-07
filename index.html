@@ -1558,6 +1558,18 @@ Build a campaign prompt with:
               <span class="blog-read-more">Read article →</span>
             </div>
           </a>
+          <a href="/blog/9-tips-claude-prompts" class="blog-card fade-up">
+            <div class="blog-thumb">
+              <div class="blog-thumb-bg">🧩</div>
+              <span class="blog-category">Featured</span>
+            </div>
+            <div class="blog-body">
+              <span class="blog-date">June 7, 2026</span>
+              <h3>9 Tips to Write a Claude Prompt That Actually Works</h3>
+              <p>Practical rules from Anthropic's own playbook — name the output, define length, flip don'ts to dos, lead with action, and 5 more that change everything.</p>
+              <span class="blog-read-more">Read article →</span>
+            </div>
+          </a>
         </div>
         <div style="text-align: center; margin-top: 48px;">
           <a href="/blog" class="btn btn-secondary">View All Articles →</a>
@@ -1652,6 +1664,14 @@ Build a campaign prompt with:
             <span class="blog-list-meta">May 28, 2026 · Templates · 5 min read</span>
             <h3>10 Prompt Templates Every Marketer Needs</h3>
             <p>Copy-paste templates for social media posts, ad copy, email campaigns, blog outlines, and more.</p>
+          </div>
+        </a>
+        <a href="/blog/9-tips-claude-prompts" class="blog-list-card">
+          <div class="blog-list-thumb">🧩</div>
+          <div class="blog-list-content">
+            <span class="blog-list-meta">June 7, 2026 · Featured · 7 min read</span>
+            <h3>9 Tips to Write a Claude Prompt That Actually Works</h3>
+            <p>Practical rules from Anthropic's own playbook — name the output, define length, flip don'ts to dos, lead with action, and 5 more.</p>
           </div>
         </a>
       </div>
@@ -1959,6 +1979,116 @@ Original content: [paste here]</code></pre>
       <script type="module" src="/src/main.jsx"></script>
     </div>
 
+    <!-- ============================== ARTICLE: 9 TIPS CLAUDE PROMPTS ============================== -->
+    <div id="article-page-9-tips" class="landing-hidden">
+      <nav class="navbar">
+        <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
+        <div class="nav-links">
+          <a href="/">Home</a><a href="/#features">Features</a><a href="/blog">Blog</a>
+          <a href="/app" class="nav-cta">Open App →</a>
+        </div>
+      </nav>
+      <div class="article-header">
+        <span class="article-meta">June 7, 2026 · Featured · 7 min read</span>
+        <h1>9 Tips to Write a Claude Prompt That <span class="gradient">Actually Works</span></h1>
+        <p style="color: var(--text-dim); max-width: 720px; margin: 16px auto 0; font-size: 1.05rem; line-height: 1.7;">
+          Practical rules distilled from Anthropic's own Claude prompting playbook. Most of these apply to GPT-5, Gemini, and other frontier models too — but they're written for Claude first.
+        </p>
+      </div>
+      <article class="article-body">
+
+        <p>Writing prompts is engineering, not magic. The difference between a vague "help me with this" and a sharp, testable instruction is the difference between a draft you'll throw away and one you can ship. These nine rules are the shortest path to the second kind.</p>
+
+        <div class="tip-box">
+          <strong>📌 Source:</strong> Distilled from Anthropic's 31-page Claude prompting guide and Ruben Hassid's breakdown. Tested with Claude 4.7 Sonnet, Opus 4.7, and GPT-5 in PromptLab.
+        </div>
+
+        <h2>1. Name the Output, Not the Task</h2>
+        <p>Replace weak verbs like "review", "help", "look at", "improve" with a <strong>specific deliverable</strong>: a table, a JSON object, a five-bullet list, a doc, a 200-word summary, three Slack-ready messages.</p>
+        <p><strong>Why:</strong> Vague verbs produce vague drafts. The model has to guess what "good" looks like. If you can't name the output, the model can't either.</p>
+        <p><strong>Bad:</strong> "Help me with this landing page."</p>
+        <p><strong>Good:</strong> "Audit the landing page above. Return a markdown table with three columns: <code>Element</code>, <code>Issue</code>, <code>Fix</code>. Cover hero, CTA, social proof, and footer. No preamble, no recap."</p>
+
+        <h2>2. Define the Length Up Front</h2>
+        <p>State the count, the word budget, or the structural shape before the model starts writing. "5 bullets" beats "a few bullets." "180 words" beats "a paragraph." "Three sections, first section is the hook" beats "an intro."</p>
+        <p>For lists, name the first word of each line so the model can parallelize. For prose, add: <em>"No preamble. No recap. No filler."</em></p>
+        <p><strong>Why:</strong> Without length, models default to verbosity. With length, they constrain themselves. "Five paragraphs" is a different prompt from "write this."</p>
+
+        <h2>3. Flip Every "Don't" Into a "Do"</h2>
+        <p>Find every <code>don't</code>, <code>avoid</code>, <code>never</code>, <code>without</code> in your prompt. Rewrite each as a positive instruction. Models follow what they <em>should</em> do far more reliably than what they <em>shouldn't</em>.</p>
+        <p><strong>Bad:</strong> "Don't use jargon, don't be vague, don't be preachy."</p>
+        <p><strong>Good:</strong> "Use plain language. Be specific with numbers. State the benefit in one line, then back it with evidence."</p>
+        <p><strong>Why:</strong> Claude 4.7 reads instructions literally. A "don't" tells the model what to filter out; a "do" tells it what to generate. Always bias toward generation.</p>
+
+        <h2>4. Lead With Action</h2>
+        <p>Strip the throat-clearing. "Can you help me with..." "I'd like you to..." "I need..." — all of these waste the first ~30 tokens of context.</p>
+        <p>Start with a verb: <em>Write, Draft, Audit, Convert, Generate, List, Summarize, Rewrite, Translate, Score.</em></p>
+        <p><strong>Bad:</strong> "I was wondering if you could maybe help me think about how to structure a Q3 OKR doc?"</p>
+        <p><strong>Good:</strong> "Draft a Q3 OKR doc. Three objectives, each with 3 key results. Use the SMART format. Audience: CEO + leadership team. 400 words."</p>
+        <p><strong>Why:</strong> The model's first tokens are the most expensive (cache + attention). Spend them on the work, not on politeness.</p>
+
+        <h2>5. Force Maximum Reasoning</h2>
+        <p>For non-trivial tasks, select the strongest reasoning model and <strong>explicitly ask for it</strong>. In Claude 4.7, that means Opus with Adaptive Thinking turned on.</p>
+        <p>Add: <em>"Think before answering. State the assumptions. Walk through the reasoning. Then give the final answer."</em></p>
+        <p>For simple, well-defined tasks, do the opposite — turn reasoning off, because you want speed, not analysis paralysis. Claude 4.7's reasoning toggle is your friend.</p>
+        <p><strong>Why:</strong> Reasoning effort is a parameter, not a vibe. You can over-reason a one-line answer and under-reason a strategic decision. Match the tool to the task.</p>
+
+        <h2>6. Add "Go Beyond the Basics"</h2>
+        <p>For creative and strategic work, ban the lazy defaults. Tell the model: <em>"Don't give me the obvious answer. Pretend I'm a real client who has seen the generic version already. Go one layer deeper."</em></p>
+        <p>This single line changes output quality more than any other trick. Pair it with: <em>"List 3 contrarian takes. Then pick the strongest and defend it."</em></p>
+        <p><strong>Why:</strong> LLMs are trained to be helpful, which defaults to safe, which defaults to generic. The "go beyond" instruction breaks the gradient and unlocks the tail of the distribution.</p>
+
+        <h2>7. Upload Your Voice</h2>
+        <p>Paste 2-3 sentences of exactly how you (or your brand) sounds. Then add: <em>"Match the style of these examples. Don't tighten it. Don't formalize it. Keep the same rhythm."</em></p>
+        <p>Save this as a reusable "about-me" file in PromptLab — paste it once, reference it forever. Voice is the hardest thing for models to nail from instructions alone. Examples are 10x cheaper than adjectives.</p>
+        <p><strong>Why:</strong> "Professional but warm" is meaningless. "Short sentences. Em-dashes. No exclamation marks. Starts with the punchline" is a prompt.</p>
+
+        <h2>8. Control Tools On Purpose</h2>
+        <p>Decide upfront whether you want the model to use tools — and which ones.</p>
+        <ul>
+          <li><strong>Research tasks:</strong> "Search the web aggressively. Cite at least 2 sources per non-trivial claim. Quote exact numbers."</li>
+          <li><strong>Speed tasks:</strong> "Answer from training. No search. No tools. Go."</li>
+          <li><strong>Workflow tasks:</strong> Name the connectors explicitly: <em>"Use Gmail to find the last 3 threads with Acme Corp. Use Calendar to check availability next week. Draft a reply in Slack-ready format."</em></li>
+        </ul>
+        <p><strong>Why:</strong> Claude 4.7 (and GPT-5) call fewer tools by default than 3.5 did. If you want web search or a connector fired, you have to ask. If you don't, say so — otherwise the model burns time and tokens deciding.</p>
+
+        <h2>9. State the Goal Before the Task</h2>
+        <p>Open the prompt with the <strong>win condition</strong>, not the workflow.</p>
+        <p><strong>Bad:</strong> "Write me a follow-up email."</p>
+        <p><strong>Good:</strong> "<strong>Goal:</strong> Get a meeting booked with the Head of Growth at Acme Corp by Friday. <strong>Audience:</strong> VP of Marketing, 15 years experience, skeptical of cold outreach. <strong>Output:</strong> 3 follow-up email variations under 80 words each. Subject line under 45 chars."</p>
+        <p>Name the audience (CRO, not engineer), the deadline, the measurable outcome. A prompt without a goal is a wish. A prompt with a goal is a brief.</p>
+        <p><strong>Why:</strong> The model can trade off tone, length, and depth intelligently — but only if it knows what success looks like. Without a goal, it optimizes for the average of the training data. With a goal, it optimizes for <em>your</em> outcome.</p>
+
+        <h2>Putting It All Together</h2>
+        <p>Here's the template. Save it in PromptLab as a starter:</p>
+        <pre><code>Goal: [what winning looks like in one sentence]
+Audience: [who reads this, their seniority, their skepticism]
+Output: [format — table, list, doc, JSON, code]
+Length: [count, word budget, or section structure]
+Voice: [paste 2-3 sentences of exactly the tone you want]
+Rules: [the "do" version of every "don't"]
+Tools: [search? connectors? or none?]
+Reasoning: [on or off, and why]
+Go beyond the obvious: [the "go deeper" instruction]
+Now: [the actual task, starting with a verb]</code></pre>
+
+        <p>That's it. Nine rules, one template, no magic words. The difference between a prompt that gets ignored and a prompt that ships is almost always structural — and structure is a skill, not a talent.</p>
+
+        <div class="tip-box">
+          <strong>💡 Pro Tip:</strong> Test this template against your last 5 prompts in PromptLab's Compare feature. Run them on Claude 4.7 and GPT-5 side-by-side. The Readiness Score will tell you which structural changes actually moved the needle. Structure is measurable.
+        </div>
+
+        <p>Want to see the template in action? <a href="/app" style="color: var(--accent);">Open PromptLab</a>, paste the template into a new prompt, and ship your first structured prompt in under 3 minutes.</p>
+
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 48px 0;">
+
+        <p style="color: var(--text-dim); font-size: 0.95rem;">
+          <strong>About the author:</strong> Ruben Hassid is a creator and AI educator who breaks down frontier-model techniques for a general audience. This article is adapted from his breakdown of Anthropic's 31-page Claude prompting guide and tested with PromptLab's Compare feature. Want more like this? <a href="/blog" style="color: var(--accent);">Browse the blog</a> or <a href="/blog/prompt-engineering-guide" style="color: var(--accent);">read the full Prompt Engineering guide</a>.
+        </p>
+
+      </article>
+    </div>
+
     <!-- ============================== ROUTE SWITCHER ============================== -->
     <script>
       (function() {
@@ -1978,7 +2108,8 @@ Original content: [paste here]</code></pre>
           '/blog': 'blog',
           '/blog/prompt-engineering-guide': 'article',
           '/blog/chatgpt-vs-claude-prompts': 'article-chatgpt',
-          '/blog/prompt-templates-marketing': 'article-marketing'
+          '/blog/prompt-templates-marketing': 'article-marketing',
+          '/blog/9-tips-claude-prompts': 'article-9-tips'
         };
 
         var route = routes[path] || 'landing';
@@ -1990,6 +2121,7 @@ Original content: [paste here]</code></pre>
         document.getElementById('article-page').className = 'landing-hidden';
         document.getElementById('article-page-chatgpt').className = 'landing-hidden';
         document.getElementById('article-page-marketing').className = 'landing-hidden';
+        document.getElementById('article-page-9-tips').className = 'landing-hidden';
         document.getElementById('app-root').className = 'app-hidden';
 
         // Show correct page
@@ -2008,6 +2140,9 @@ Original content: [paste here]</code></pre>
             break;
           case 'article-marketing':
             document.getElementById('article-page-marketing').className = '';
+            break;
+          case 'article-9-tips':
+            document.getElementById('article-page-9-tips').className = '';
             break;
           default:
             document.getElementById('landing-page').className = '';
