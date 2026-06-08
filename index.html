@@ -7,18 +7,19 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <!-- Meta tags: updated dynamically by route switcher script (see /script at bottom) -->
-    <meta id="meta-description" name="description" content="PromptLab — AI Prompt Workspace. Build, optimize, and compare prompts for ChatGPT, Claude, Gemini, Grok & more. Free prompt builder with readiness scoring." />
-    <meta name="keywords" content="how to create prompt, best prompt, AI prompt template, prompt builder, AI prompt tool, create prompts, prompt engineering, ChatGPT prompts, Claude prompts, prompt optimizer, prompt templates, AI workspace" />
+    <!-- Meta tags: default = blog list (fallback for crawlers that don't execute JS).
+         Route switcher script (see /script at bottom) overrides these per page. -->
+    <meta id="meta-description" name="description" content="PromptLab Blog — practical guides on prompt engineering, ChatGPT prompts, Claude prompts, and AI workflow templates. Updated weekly with tutorials, templates, and how-to articles for creators and marketers." />
+    <meta name="keywords" content="how to create prompt, best prompt, AI prompt template, prompt builder, AI prompt tool, create prompts, prompt engineering, ChatGPT prompts, Claude prompts, prompt optimizer, prompt templates, AI workspace, prompt guide, prompt tutorial" />
     <meta name="author" content="PromptLab" />
-    <link rel="alternate" hreflang="en" href="https://prompt-lab.xyz" />
-    <link rel="alternate" hreflang="x-default" href="https://prompt-lab.xyz" />
+    <link rel="alternate" hreflang="en" href="https://prompt-lab.xyz/blog" />
+    <link rel="alternate" hreflang="x-default" href="https://prompt-lab.xyz/blog" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta id="og-title" property="og:title" content="PromptLab — AI Prompt Workspace" />
-    <meta id="og-description" property="og:description" content="Build, optimize, and compare AI prompts. Free workspace for creators, students, and marketers." />
-    <meta id="og-url" property="og:url" content="https://prompt-lab.xyz" />
+    <meta id="og-title" property="og:title" content="PromptLab Blog — Prompt Engineering Guides & AI Templates" />
+    <meta id="og-description" property="og:description" content="Practical guides on prompt engineering for ChatGPT, Claude, and Gemini. Tutorials, templates, and how-to articles updated weekly." />
+    <meta id="og-url" property="og:url" content="https://prompt-lab.xyz/blog" />
     <meta id="og-image" property="og:image" content="https://prompt-lab.xyz/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -26,15 +27,15 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta id="twitter-title" name="twitter:title" content="PromptLab — AI Prompt Workspace" />
-    <meta id="twitter-description" name="twitter:description" content="Build, optimize, and compare AI prompts. Free workspace for creators, students, and marketers." />
+    <meta id="twitter-title" name="twitter:title" content="PromptLab Blog — Prompt Engineering Guides & AI Templates" />
+    <meta id="twitter-description" name="twitter:description" content="Practical guides on prompt engineering for ChatGPT, Claude, and Gemini. Tutorials, templates, and how-to articles updated weekly." />
     <meta name="twitter:image" content="https://prompt-lab.xyz/og-image.png" />
 
-    <link id="canonical-link" rel="canonical" href="https://prompt-lab.xyz" />
+    <link id="canonical-link" rel="canonical" href="https://prompt-lab.xyz/blog" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <title id="page-title">PromptLab — AI Prompt Workspace</title>
+    <title id="page-title">PromptLab Blog — Prompt Engineering Guides & AI Templates</title>
 
     <!-- Structured Data -->
     <script type="application/ld+json">
@@ -136,6 +137,31 @@
         "keywords": "how to create a prompt for ChatGPT, best prompt for ChatGPT, ChatGPT prompt tips, ChatGPT prompt examples, CRISPE framework, OpenAI prompt engineering"
       }
     ]
+    </script>
+
+    <!-- BreadcrumbList Schema: helps Google display breadcrumbs in search results -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://prompt-lab.xyz" },
+        { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://prompt-lab.xyz/blog" }
+      ]
+    }
+    </script>
+
+    <!-- Organization Schema: site-level knowledge panel + logo in Google -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "PromptLab",
+      "url": "https://prompt-lab.xyz",
+      "logo": "https://prompt-lab.xyz/icons/icon-512.png",
+      "description": "AI prompt workspace for creators, students, and marketers. Build, optimize, and compare prompts for ChatGPT, Claude, Gemini, and more.",
+      "sameAs": []
+    }
     </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
