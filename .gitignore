@@ -24,8 +24,3 @@ playwright-report/
 playwright-results.*
 .repo-inspect/
 .tools/
-
-# Article drafts and cross-post output (working files, not for repo)
-article-*.html
-cross-post/
-edge-tmp/
