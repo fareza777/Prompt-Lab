@@ -26,19 +26,19 @@
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/chatgpt-vs-claude-prompts</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/prompt-templates-marketing</loc>
-    <lastmod>2026-05-28</lastmod>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/9-tips-claude-prompts</loc>
-    <lastmod>2026-06-11</lastmod>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -69,6 +69,12 @@
   <url>
     <loc>https://prompt-lab.xyz/blog/best-prompt-for-image-generation</loc>
     <lastmod>2026-06-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://prompt-lab.xyz/blog/best-prompt-for-email-writing</loc>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
