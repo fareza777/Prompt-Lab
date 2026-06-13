@@ -109,6 +109,14 @@
       h1: "article-how-to-create-system-prompt",
       lang: "en",
       ogType: "article",
+    },
+    "/blog/best-prompt-for-coding": {
+      title: "Best Prompt for Coding: Debug Faster and Ship More with AI | PromptLab",
+      description: "How to write the best prompt for coding: 4 copy-paste AI templates (write, debug, review, refactor) built on the 5-part framework, tested on Claude Code, Cursor, GitHub Copilot, ChatGPT, and Gemini.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-coding",
+      h1: "article-best-prompt-for-coding",
+      lang: "en",
+      ogType: "article",
     }
   };
 
@@ -126,7 +134,8 @@
     "/blog/claude-vs-gpt5-vs-gemini-prompting": "article-claude-vs-gpt5-vs-gemini-prompting",
     "/blog/best-prompt-for-image-generation": "article-best-prompt-for-image-generation",
     "/blog/best-prompt-for-email-writing": "article-best-prompt-for-email-writing",
-    "/blog/how-to-create-system-prompt": "article-how-to-create-system-prompt"
+    "/blog/how-to-create-system-prompt": "article-how-to-create-system-prompt",
+    "/blog/best-prompt-for-coding": "article-best-prompt-for-coding"
   };
 
   function normalizePath(pathname) {

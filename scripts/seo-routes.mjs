@@ -198,6 +198,21 @@ export const SEO_ROUTES = {
     keywords:
       "how to create a system prompt, Custom GPT system prompt, GPT builder instructions, system prompt engineering, AI persona prompt, ChatGPT system prompt, Claude system prompt, GPT instructions, custom GPT best practices, system prompt anatomy",
   },
+  "/blog/best-prompt-for-coding": {
+    routeKey: "article-best-prompt-for-coding",
+    h1: "article-best-prompt-for-coding",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for Coding: Debug Faster and Ship More with AI | PromptLab",
+    description:
+      "How to write the best prompt for coding: 4 copy-paste AI templates (write, debug, review, refactor) built on the 5-part framework, tested on Claude Code, Cursor, GitHub Copilot, ChatGPT, and Gemini.",
+    canonical: `${SITE}/blog/best-prompt-for-coding`,
+    headline: "Best Prompt for Coding: Debug Faster and Ship More with AI",
+    datePublished: "2026-06-14",
+    dateModified: "2026-06-14",
+    keywords:
+      "best prompt for coding, coding prompt, AI coding, debug prompt, Claude Code prompt, Cursor prompt, GitHub Copilot prompt, programmer prompt, pair programming prompt, LLM coding",
+  },
 };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
