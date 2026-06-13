@@ -117,6 +117,14 @@
       h1: "article-best-prompt-for-coding",
       lang: "en",
       ogType: "article",
+    },
+    "/blog/best-prompt-for-data-analysis": {
+      title: "How to Write a Prompt for Data Analysis (Step-by-Step)",
+      description: "The best prompt for data analysis uses the S.C.A.F. framework: Source, Columns, Aim, Format. Get 4 copy-paste templates and 3 mistakes to avoid.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-data-analysis",
+      h1: "article-best-prompt-for-data-analysis",
+      lang: "en",
+      ogType: "article",
     }
   };
 
@@ -135,7 +143,8 @@
     "/blog/best-prompt-for-image-generation": "article-best-prompt-for-image-generation",
     "/blog/best-prompt-for-email-writing": "article-best-prompt-for-email-writing",
     "/blog/how-to-create-system-prompt": "article-how-to-create-system-prompt",
-    "/blog/best-prompt-for-coding": "article-best-prompt-for-coding"
+    "/blog/best-prompt-for-coding": "article-best-prompt-for-coding",
+    "/blog/best-prompt-for-data-analysis": "article-best-prompt-for-data-analysis"
   };
 
   function normalizePath(pathname) {

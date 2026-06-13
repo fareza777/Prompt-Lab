@@ -213,6 +213,45 @@ export const SEO_ROUTES = {
     keywords:
       "best prompt for coding, coding prompt, AI coding, debug prompt, Claude Code prompt, Cursor prompt, GitHub Copilot prompt, programmer prompt, pair programming prompt, LLM coding",
   },
+  "/blog/best-prompt-for-data-analysis": {
+    routeKey: "article-best-prompt-for-data-analysis",
+    h1: "article-best-prompt-for-data-analysis",
+    lang: "en",
+    ogType: "article",
+    title: "How to Write a Prompt for Data Analysis (Step-by-Step)",
+    description: "The best prompt for data analysis uses the S.C.A.F. framework: Source, Columns, Aim, Format. Get 4 copy-paste templates and 3 mistakes to avoid.",
+    canonical: `${SITE}/blog/best-prompt-for-data-analysis`,
+    headline: "How to Write a Prompt for Data Analysis (Step-by-Step)",
+    datePublished: "2026-06-14",
+    dateModified: "2026-06-14",
+    keywords: "best prompt for data analysis, data analysis prompt, AI data prompt, CSV prompt, analytics prompt"
+  },
+  "/blog/best-prompt-for-data-analysis": {
+    routeKey: "article-best-prompt-for-data-analysis",
+    h1: "article-best-prompt-for-data-analysis",
+    lang: "en",
+    ogType: "article",
+    title: "How to Write a Prompt for Data Analysis (Step-by-Step)",
+    description: "The best prompt for data analysis uses the S.C.A.F. framework: Source, Columns, Aim, Format. Get 4 copy-paste templates and 3 mistakes to avoid.",
+    canonical: `${SITE}/blog/best-prompt-for-data-analysis`,
+    headline: "How to Write a Prompt for Data Analysis (Step-by-Step)",
+    datePublished: "2026-06-14",
+    dateModified: "2026-06-14",
+    keywords: "best prompt for data analysis, data analysis prompt, AI data prompt, CSV prompt, analytics prompt"
+  },
+  "/blog/best-prompt-for-data-analysis": {
+    routeKey: "article-best-prompt-for-data-analysis",
+    h1: "article-best-prompt-for-data-analysis",
+    lang: "en",
+    ogType: "article",
+    title: "How to Write a Prompt for Data Analysis (Step-by-Step)",
+    description: "The best prompt for data analysis uses the S.C.A.F. framework: Source, Columns, Aim, Format. Get 4 copy-paste templates and 3 mistakes to avoid.",
+    canonical: `${SITE}/blog/best-prompt-for-data-analysis`,
+    headline: "How to Write a Prompt for Data Analysis (Step-by-Step)",
+    datePublished: "2026-06-14",
+    dateModified: "2026-06-14",
+    keywords: "best prompt for data analysis, data analysis prompt, AI data prompt, CSV prompt, analytics prompt"
+  },
 };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
