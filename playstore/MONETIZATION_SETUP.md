@@ -116,6 +116,7 @@ Centang manual di Dashboard:
 ✅ Subscriptions created
 → 3. License testers (Gmail)
 → 4. Service account + Vercel env + AAB + uji beli
+→ Web: Lemon Squeezy — lihat `LEMON_SQUEEZY_SETUP.md`
 → 5. Store listing & policy hijau
 → Closed test 14 hari → Production
 ```

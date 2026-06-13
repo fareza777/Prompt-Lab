@@ -24,3 +24,4 @@ playwright-report/
 playwright-results.*
 .repo-inspect/
 .tools/
+.tmp_*

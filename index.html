@@ -12,11 +12,11 @@
     <meta id="meta-description" name="description" content="PromptLab — AI prompt workspace. Learn how to create the best prompt for ChatGPT, Claude, Gemini & Grok. Free prompt builder with readiness scoring, optimizer, and 50+ templates." />
     <meta name="keywords" content="how to create prompt, best prompt, AI prompt template, prompt builder, AI prompt tool, create prompts, prompt engineering, ChatGPT prompts, Claude prompts, prompt optimizer, prompt templates, AI workspace, prompt guide, prompt tutorial" />
     <meta name="author" content="PromptLab" />
-    <link rel="alternate" hreflang="en" href="https://prompt-lab.xyz/" />
-    <link rel="alternate" hreflang="x-default" href="https://prompt-lab.xyz/" />
+    <link id="hreflang-en" rel="alternate" hreflang="en" href="https://prompt-lab.xyz/" />
+    <link id="hreflang-x-default" rel="alternate" hreflang="x-default" href="https://prompt-lab.xyz/" />
 
     <!-- Open Graph -->
-    <meta property="og:type" content="website" />
+    <meta id="og-type" property="og:type" content="website" />
     <meta id="og-title" property="og:title" content="PromptLab — AI Prompt Workspace | How to Create the Best Prompt" />
     <meta id="og-description" property="og:description" content="Learn how to create the best AI prompt for ChatGPT, Claude, Gemini & Grok. Free prompt builder with readiness scoring, optimizer, and 50+ templates. Best prompt tool 2026." />
     <meta id="og-url" property="og:url" content="https://prompt-lab.xyz/" />
@@ -32,6 +32,7 @@
     <meta name="twitter:image" content="https://prompt-lab.xyz/og-image.png" />
 
     <link id="canonical-link" rel="canonical" href="https://prompt-lab.xyz/" />
+    <script src="/seo-route.js"></script>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
@@ -47,7 +48,7 @@
       "description": "AI prompt workspace. Build, optimize, and compare prompts for ChatGPT, Claude, Gemini, Grok, and more.",
       "applicationCategory": "UtilityApplication",
       "operatingSystem": "Web",
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "IDR" },
       "featureList": ["Prompt Builder", "Prompt Optimizer", "Readiness Score", "Templates Library", "Saved Prompts Library", "Side-by-side Compare"]
     }
     </script>
@@ -63,8 +64,8 @@
     }
     </script>
 
-    <!-- BlogPosting Structured Data: 4 articles for rich snippets in Google Search -->
-    <script type="application/ld+json">
+    <!-- BlogPosting / ItemList Structured Data (patched per route at build time) -->
+    <script type="application/ld+json" id="ld-blog-postings">
     [
       {
         "@context": "https://schema.org",
@@ -224,8 +225,8 @@
     ]
     </script>
 
-    <!-- BreadcrumbList Schema: helps Google display breadcrumbs in search results -->
-    <script type="application/ld+json">
+    <!-- BreadcrumbList Schema: patched per route at build time -->
+    <script type="application/ld+json" id="ld-breadcrumbs">
     {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
@@ -1243,9 +1244,46 @@
         }
       }
 
-      /* App styles (hidden when landing visible) */
-      .app-hidden { display: none !important; }
-      .landing-hidden { display: none !important; }
+      /* Route visibility: default = landing (no-JS fallback); seo-route.js sets data-route */
+      #blog-page,
+      [id^="article-page"],
+      #app-root {
+        display: none !important;
+      }
+      html:not([data-route]) #landing-page,
+      html[data-route="landing"] #landing-page { display: block !important; }
+      html[data-route="blog"] #landing-page { display: none !important; }
+      html[data-route="blog"] #blog-page { display: block !important; }
+      html[data-route="article"] #landing-page { display: none !important; }
+      html[data-route="article"] #article-page { display: block !important; }
+      html[data-route="article-chatgpt"] #landing-page { display: none !important; }
+      html[data-route="article-chatgpt"] #article-page-chatgpt { display: block !important; }
+      html[data-route="article-marketing"] #landing-page { display: none !important; }
+      html[data-route="article-marketing"] #article-page-marketing { display: block !important; }
+      html[data-route="article-9-tips"] #landing-page { display: none !important; }
+      html[data-route="article-9-tips"] #article-page-9-tips { display: block !important; }
+      html[data-route="article-how-to-create-prompt-for-chatgpt"] #landing-page { display: none !important; }
+      html[data-route="article-how-to-create-prompt-for-chatgpt"] #article-page-how-to-create-prompt-for-chatgpt { display: block !important; }
+      html[data-route="article-cara-buat-prompt-chatgpt"] #landing-page { display: none !important; }
+      html[data-route="article-cara-buat-prompt-chatgpt"] #article-page-cara-buat-prompt-chatgpt { display: block !important; }
+      html[data-route="article-best-prompt-for-marketing"] #landing-page { display: none !important; }
+      html[data-route="article-best-prompt-for-marketing"] #article-page-best-prompt-for-marketing { display: block !important; }
+      html[data-route="article-claude-vs-gpt5-vs-gemini-prompting"] #landing-page { display: none !important; }
+      html[data-route="article-claude-vs-gpt5-vs-gemini-prompting"] #article-page-claude-vs-gpt5-vs-gemini-prompting { display: block !important; }
+      html[data-route="article-best-prompt-for-image-generation"] #landing-page { display: none !important; }
+      html[data-route="article-best-prompt-for-image-generation"] #article-page-best-prompt-for-image-generation { display: block !important; }
+      html[data-route="article-best-prompt-for-email-writing"] #landing-page { display: none !important; }
+      html[data-route="article-best-prompt-for-email-writing"] #article-page-best-prompt-for-email-writing { display: block !important; }
+      html[data-route="article-how-to-create-system-prompt"] #landing-page { display: none !important; }
+      html[data-route="article-how-to-create-system-prompt"] #article-page-how-to-create-system-prompt { display: block !important; }
+      html[data-route="app"] #landing-page,
+      html.boot-app #landing-page,
+      html[data-route="app"] #blog-page,
+      html.boot-app #blog-page,
+      html[data-route="app"] [id^="article-page"],
+      html.boot-app [id^="article-page"] { display: none !important; }
+      html[data-route="app"] #app-root,
+      html.boot-app #app-root { display: block !important; }
 
       #app-splash {
         position: fixed;
@@ -1442,25 +1480,10 @@
       html.boot-app #article-page-how-to-create-system-prompt { display: none !important; }
       html.boot-app #app-root { display: block !important; }
     </style>
-    <script>
-      (function () {
-        var path = location.pathname.replace(/\/+$/, "") || "/";
-        var standalone =
-          window.matchMedia("(display-mode: standalone)").matches ||
-          window.navigator.standalone === true;
-        if (standalone && path === "/") {
-          location.replace("/app" + location.search + location.hash);
-          return;
-        }
-        if (path === "/app" || path.startsWith("/app/")) {
-          document.documentElement.classList.add("boot-app");
-        }
-      })();
-    </script>
   </head>
   <body>
     <!-- ============================== LANDING PAGE ============================== -->
-    <div id="landing-page" class="landing-hidden">
+    <div id="landing-page">
 
       <!-- Navbar -->
       <nav class="navbar" id="navbar">
@@ -1922,7 +1945,7 @@ Build a campaign prompt with:
     </div>
 
     <!-- ============================== BLOG LIST PAGE ============================== -->
-    <div id="blog-page" class="landing-hidden">
+    <div id="blog-page">
       <nav class="navbar" id="navbar-blog">
         <a href="/" class="nav-brand">
           <div class="nav-logo">P</div>
@@ -2032,7 +2055,7 @@ Build a campaign prompt with:
     </div>
 
     <!-- ============================== ARTICLE: PROMPT ENGINEERING GUIDE ============================== -->
-    <div id="article-page" class="landing-hidden">
+    <div id="article-page">
       <nav class="navbar" id="navbar-article">
         <a href="/" class="nav-brand">
           <div class="nav-logo">P</div>
@@ -2165,7 +2188,7 @@ Return as:
     </div>
 
     <!-- ============================== ARTICLE: CHATGPT VS CLAUDE ============================== -->
-    <div id="article-page-chatgpt" class="landing-hidden">
+    <div id="article-page-chatgpt">
       <nav class="navbar">
         <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
         <div class="nav-links">
@@ -2260,7 +2283,7 @@ For each improvement:
     </div>
 
     <!-- ============================== ARTICLE: MARKETING TEMPLATES ============================== -->
-    <div id="article-page-marketing" class="landing-hidden">
+    <div id="article-page-marketing">
       <nav class="navbar">
         <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
         <div class="nav-links">
@@ -2352,7 +2375,7 @@ Original content: [paste here]</code></pre>
     </div>
 
     <!-- ============================== APP ============================== -->
-    <div id="app-root" class="app-hidden">
+    <div id="app-root">
       <div id="app-splash" role="presentation" aria-hidden="true">
         <div class="app-splash__backdrop"></div>
         <div class="app-splash__orbits" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -2374,7 +2397,7 @@ Original content: [paste here]</code></pre>
     </div>
 
     <!-- ============================== ARTICLE: 9 TIPS CLAUDE PROMPTS ============================== -->
-    <div id="article-page-9-tips" class="landing-hidden">
+    <div id="article-page-9-tips">
       <nav class="navbar">
         <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
         <div class="nav-links">
@@ -2498,7 +2521,7 @@ Now: [the actual task, starting with a verb]</code></pre>
     </div>
 
     <!-- ============================== ARTICLE: HOW TO CREATE A PROMPT FOR CHATGPT ============================== -->
-    <div id="article-page-how-to-create-prompt-for-chatgpt" class="landing-hidden">
+    <div id="article-page-how-to-create-prompt-for-chatgpt">
       <nav class="navbar">
         <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
         <div class="nav-links">
@@ -2734,7 +2757,7 @@ Question: [YOUR QUESTION]</code></pre>
       </article>
     </div>
 
-    <div id="article-page-cara-buat-prompt-chatgpt" class="landing-hidden">
+    <div id="article-page-cara-buat-prompt-chatgpt">
       <nav class="navbar">
         <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
         <div class="nav-links">
@@ -2912,7 +2935,7 @@ Code:
     </div>
 
     <!-- ============================== ARTICLE: BEST PROMPT FOR MARKETING ============================== -->
-    <div id="article-page-best-prompt-for-marketing" class="landing-hidden">
+    <div id="article-page-best-prompt-for-marketing">
       <nav class="navbar">
         <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
         <div class="nav-links">
@@ -3161,7 +3184,7 @@ Testimonial:
     </div>
 
     <!-- ============================== ARTICLE: CLAUDE VS GPT-5 VS GEMINI ============================== -->
-    <div id="article-page-claude-vs-gpt5-vs-gemini-prompting" class="landing-hidden">
+    <div id="article-page-claude-vs-gpt5-vs-gemini-prompting">
       <nav class="navbar">
         <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
         <div class="nav-links">
@@ -3425,7 +3448,7 @@ No preamble. No recap. No filler.
     </div>
 
     <!-- ============================== ARTICLE: BEST PROMPT FOR IMAGE GENERATION ============================== -->
-    <div id="article-page-best-prompt-for-image-generation" class="landing-hidden">
+    <div id="article-page-best-prompt-for-image-generation">
       <nav class="navbar">
         <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
         <div class="nav-links">
@@ -3662,7 +3685,7 @@ NEGATIVE (optional, Midjourney only): --no [3-5 specific terms to exclude]</code
     </div>
 
     <!-- ============================== ARTICLE: EMAIL WRITING ============================== -->
-    <div id="article-page-best-prompt-for-email-writing" class="landing-hidden">
+    <div id="article-page-best-prompt-for-email-writing">
       <nav class="navbar">
         <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
         <div class="nav-links">
@@ -3887,7 +3910,7 @@ Customer Engineering</code></pre>
 
       </article>
     </div>
-    <div id="article-page-how-to-create-system-prompt" class="landing-hidden">
+    <div id="article-page-how-to-create-system-prompt">
       <nav class="navbar">
         <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
         <div class="nav-links">
@@ -4070,239 +4093,27 @@ bury the CTA, or produce a single variant when copy is requested.</code></pre>
 
 </article>
     </div>
-    <!-- ============================== ROUTE SWITCHER ============================== -->
+    <!-- ============================== ROUTE SWITCHER (UI polish; SEO in /seo-route.js) ============================== -->
     <script>
-      (function() {
-        var path = window.location.pathname.replace(/\/+$/, '') || '/';
-        var standalone =
-          window.matchMedia('(display-mode: standalone)').matches ||
-          window.navigator.standalone === true;
-        if (standalone && path === '/') {
-          window.location.replace('/app' + window.location.search + window.location.hash);
-          return;
+      (function () {
+        if (window.PromptLabRoute) {
+          window.PromptLabRoute.applyH1Visibility();
         }
 
-        // === SEO META PER ROUTE ===
-        // Update <head> meta tags based on current route. Google indexes the initial HTML
-        // before JS runs, but for users navigating via the SPA router (and for crawlers that
-        // execute JS like Googlebot), this gives accurate title/description/canonical/og:url.
-        var seo = {
-          '/': {
-            title: 'PromptLab — AI Prompt Workspace | How to Create the Best Prompt',
-            description: 'Learn how to create the best AI prompt for ChatGPT, Claude, Gemini & Grok. Free prompt builder with readiness scoring, optimizer, and 50+ templates. Best prompt tool 2026.',
-            ogUrl: 'https://prompt-lab.xyz',
-            canonical: 'https://prompt-lab.xyz',
-            h1: 'landing'
-          },
-          '/blog': {
-            title: 'PromptLab Blog — AI Prompt Engineering Tips, Guides & Best Prompts',
-            description: 'How to create effective AI prompts. Best prompt templates for ChatGPT, Claude, Gemini, marketers, students, and developers. Tutorials, comparisons, and copy-paste templates.',
-            ogUrl: 'https://prompt-lab.xyz/blog',
-            canonical: 'https://prompt-lab.xyz/blog',
-            h1: 'blog'
-          },
-          '/blog/prompt-engineering-guide': {
-            title: 'The Complete Guide to Prompt Engineering in 2026 | PromptLab',
-            description: 'How to create a prompt that works: the 5-part prompt structure (Role, Context, Task, Constraints, Format), advanced techniques, and 8 common mistakes. Best prompt guide 2026.',
-            ogUrl: 'https://prompt-lab.xyz/blog/prompt-engineering-guide',
-            canonical: 'https://prompt-lab.xyz/blog/prompt-engineering-guide',
-            h1: 'article-guide'
-          },
-          '/blog/chatgpt-vs-claude-prompts': {
-            title: 'ChatGPT vs Claude: How to Write Prompts for Each | PromptLab',
-            description: 'Side-by-side comparison of how to create the best prompt for ChatGPT vs Claude. Tone, XML tags, system prompts, and real examples for marketing, coding, and research.',
-            ogUrl: 'https://prompt-lab.xyz/blog/chatgpt-vs-claude-prompts',
-            canonical: 'https://prompt-lab.xyz/blog/chatgpt-vs-claude-prompts',
-            h1: 'article-chatgpt'
-          },
-          '/blog/prompt-templates-marketing': {
-            title: '10 Prompt Templates Every Marketer Needs | Best AI Prompts 2026 | PromptLab',
-            description: 'How to create the best prompt for marketing: 10 copy-paste AI templates for social media, email, ads, blogs, and product copy. Optimized for ChatGPT, Claude, and Gemini.',
-            ogUrl: 'https://prompt-lab.xyz/blog/prompt-templates-marketing',
-            canonical: 'https://prompt-lab.xyz/blog/prompt-templates-marketing',
-            h1: 'article-marketing'
-          },
-          '/blog/9-tips-claude-prompts': {
-            title: '9 Tips to Write a Claude Prompt That Actually Works | Best Claude Prompts | PromptLab',
-            description: 'How to create the best Claude prompt: 9 practical rules from Anthropic with bad/good examples and a copy-paste template. Master Claude prompts in 7 minutes.',
-            ogUrl: 'https://prompt-lab.xyz/blog/9-tips-claude-prompts',
-            canonical: 'https://prompt-lab.xyz/blog/9-tips-claude-prompts',
-            h1: 'article-9-tips'
-          },
-          '/blog/how-to-create-prompt-for-chatgpt': {
-            title: 'How to Create a Prompt for ChatGPT That Gets 10x Better Results | PromptLab',
-            description: 'How to create the best prompt for ChatGPT: the CRISPE 6-part framework (Capacity, Request, Insight, Statement, Personality, Experiment), 12 copy-paste prompts, before/after scoring, and the 6 mistakes that kill ChatGPT output quality.',
-            ogUrl: 'https://prompt-lab.xyz/blog/how-to-create-prompt-for-chatgpt',
-            canonical: 'https://prompt-lab.xyz/blog/how-to-create-prompt-for-chatgpt',
-            h1: 'article-how-to-create-prompt-for-chatgpt'
-          },
-          '/blog/cara-buat-prompt-chatgpt': {
-            title: 'Cara Buat Prompt ChatGPT yang Bagus: Panduan Praktis Bahasa Indonesia (2026) | PromptLab',
-            description: 'Cara buat prompt ChatGPT yang bagus: framework CRISPE 6-bagian dalam bahasa Indonesia, 8 template siap copy-paste, dan 5 kesalahan yang sering bunuh kualitas output. Panduan praktis untuk marketer, ASN, dan profesional Indonesia.',
-            ogUrl: 'https://prompt-lab.xyz/blog/cara-buat-prompt-chatgpt',
-            canonical: 'https://prompt-lab.xyz/blog/cara-buat-prompt-chatgpt',
-            h1: 'article-cara-buat-prompt-chatgpt'
-          },
-          '/blog/best-prompt-for-marketing': {
-            title: 'Best Prompt for Marketing: 7 Templates That Convert in 2026 | PromptLab',
-            description: 'How to create the best prompt for marketing: 7 copy-paste AI templates for LinkedIn ads, email subject lines, landing pages, Facebook/Instagram ads, blog outlines, product copy, and testimonials. Tested across ChatGPT, Claude, and Gemini.',
-            ogUrl: 'https://prompt-lab.xyz/blog/best-prompt-for-marketing',
-            canonical: 'https://prompt-lab.xyz/blog/best-prompt-for-marketing',
-            h1: 'article-best-prompt-for-marketing'
-          },
-          '/blog/claude-vs-gpt5-vs-gemini-prompting': {
-            title: 'Claude vs GPT-5 vs Gemini: Best Prompting Practices for Each | PromptLab',
-            description: 'How to write the best prompt for Claude 4.7, GPT-5, and Gemini 2.5 Pro: model-specific techniques, side-by-side tests, and one unified template that works on all three. With XML tags, reasoning effort, and multimodal prompting.',
-            ogUrl: 'https://prompt-lab.xyz/blog/claude-vs-gpt5-vs-gemini-prompting',
-            canonical: 'https://prompt-lab.xyz/blog/claude-vs-gpt5-vs-gemini-prompting',
-            h1: 'article-claude-vs-gpt5-vs-gemini-prompting'
-          },
-          '/blog/best-prompt-for-image-generation': {
-            title: 'How to Write a Prompt for Image Generation (Midjourney, DALL-E, Flux) | PromptLab',
-            description: 'How to write the best prompt for image generation: the 6-part image prompt formula (subject, action, environment, lighting, style, composition) with model-specific tuning for Midjourney, DALL-E, and Flux. Includes --no, --sref, hex codes, and a unified template that works on all three.',
-            ogUrl: 'https://prompt-lab.xyz/blog/best-prompt-for-image-generation',
-            canonical: 'https://prompt-lab.xyz/blog/best-prompt-for-image-generation',
-            h1: 'article-best-prompt-for-image-generation'
-          },
-          '/blog/best-prompt-for-email-writing': {
-            title: 'AI Prompt for Email Writing: 5 Templates That Get Replies | PromptLab',
-            description: 'How to write the best prompt for email writing: 5 copy-paste AI templates for cold outreach, follow-ups, internal updates, sales proposals, and customer support. Built on the 5-part prompt framework, tested on ChatGPT, Claude, and Gemini.',
-            ogUrl: 'https://prompt-lab.xyz/blog/best-prompt-for-email-writing',
-            canonical: 'https://prompt-lab.xyz/blog/best-prompt-for-email-writing',
-            h1: 'article-best-prompt-for-email-writing'
-          },
-          '/blog/how-to-create-system-prompt': {
-            title: 'How to Create a System Prompt for Custom GPTs (Complete Guide) | PromptLab',
-            description: 'How to create a system prompt for Custom GPTs: the 4-part anatomy (persona, scope, output contract, anti-patterns) with a full copy-paste prompt for a B2B copywriter GPT, plus model-specific tweaks for ChatGPT, Claude, and Gemini.',
-            ogUrl: 'https://prompt-lab.xyz/blog/how-to-create-system-prompt',
-            canonical: 'https://prompt-lab.xyz/blog/how-to-create-system-prompt',
-            h1: 'article-how-to-create-system-prompt'
-          }
-        };
+        var observer = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) entry.target.classList.add("visible");
+          });
+        }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
 
-        // Route mapping
-        var routes = {
-          '/': 'landing',
-          '/app': 'app',
-          '/blog': 'blog',
-          '/blog/prompt-engineering-guide': 'article',
-          '/blog/chatgpt-vs-claude-prompts': 'article-chatgpt',
-          '/blog/prompt-templates-marketing': 'article-marketing',
-          '/blog/9-tips-claude-prompts': 'article-9-tips',
-          '/blog/how-to-create-prompt-for-chatgpt': 'article-how-to-create-prompt-for-chatgpt',
-          '/blog/cara-buat-prompt-chatgpt': 'article-cara-buat-prompt-chatgpt',
-          '/blog/best-prompt-for-marketing': 'article-best-prompt-for-marketing',
-          '/blog/claude-vs-gpt5-vs-gemini-prompting': 'article-claude-vs-gpt5-vs-gemini-prompting',
-          '/blog/best-prompt-for-image-generation': 'article-best-prompt-for-image-generation',
-          '/blog/best-prompt-for-email-writing': 'article-best-prompt-for-email-writing',
-          '/blog/how-to-create-system-prompt': 'article-how-to-create-system-prompt'
-        };
-
-        var route = routes[path] || 'landing';
-        var isApp = path === '/app' || path.startsWith('/app/');
-
-        // Update SEO meta tags for this route
-        var meta = seo[path];
-        if (meta) {
-          document.getElementById('page-title').textContent = meta.title;
-          document.getElementById('meta-description').setAttribute('content', meta.description);
-          document.getElementById('og-title').setAttribute('content', meta.title);
-          document.getElementById('og-description').setAttribute('content', meta.description);
-          document.getElementById('og-url').setAttribute('content', meta.ogUrl);
-          document.getElementById('twitter-title').setAttribute('content', meta.title);
-          document.getElementById('twitter-description').setAttribute('content', meta.description);
-          document.getElementById('canonical-link').setAttribute('href', meta.canonical);
-        }
-
-        // Show ONLY the H1 for the active page, hide others (Google best practice: 1 H1 per page).
-        // Pages that are hidden via class are not visible to Google, but their H1s are still in DOM.
-        // We mark non-active H1s with aria-hidden so screen readers + Google's structured data skip them.
-        document.querySelectorAll('[data-page-h1]').forEach(function(h1) {
-          if (meta && h1.getAttribute('data-page-h1') === meta.h1) {
-            h1.removeAttribute('aria-hidden');
-          } else {
-            h1.setAttribute('aria-hidden', 'true');
-          }
+        document.querySelectorAll(".fade-up").forEach(function (el) {
+          observer.observe(el);
         });
 
-        // Hide everything first
-        document.getElementById('landing-page').className = 'landing-hidden';
-        document.getElementById('blog-page').className = 'landing-hidden';
-        document.getElementById('article-page').className = 'landing-hidden';
-        document.getElementById('article-page-chatgpt').className = 'landing-hidden';
-        document.getElementById('article-page-marketing').className = 'landing-hidden';
-        document.getElementById('article-page-9-tips').className = 'landing-hidden';
-        document.getElementById('article-page-how-to-create-prompt-for-chatgpt').className = 'landing-hidden';
-        document.getElementById('article-page-cara-buat-prompt-chatgpt').className = 'landing-hidden';
-        document.getElementById('article-page-best-prompt-for-marketing').className = 'landing-hidden';
-        document.getElementById('article-page-claude-vs-gpt5-vs-gemini-prompting').className = 'landing-hidden';
-        document.getElementById('article-page-best-prompt-for-image-generation').className = 'landing-hidden';
-        document.getElementById('article-page-best-prompt-for-email-writing').className = 'landing-hidden';
-        document.getElementById('article-page-how-to-create-system-prompt').className = 'landing-hidden';
-        document.getElementById('app-root').className = 'app-hidden';
-
-        // Show correct page
-        switch(route) {
-          case 'app':
-            document.getElementById('app-root').className = '';
-            break;
-          case 'blog':
-            document.getElementById('blog-page').className = '';
-            break;
-          case 'article':
-            document.getElementById('article-page').className = '';
-            break;
-          case 'article-chatgpt':
-            document.getElementById('article-page-chatgpt').className = '';
-            break;
-          case 'article-marketing':
-            document.getElementById('article-page-marketing').className = '';
-            break;
-          case 'article-9-tips':
-            document.getElementById('article-page-9-tips').className = '';
-            break;
-          case 'article-how-to-create-prompt-for-chatgpt':
-            document.getElementById('article-page-how-to-create-prompt-for-chatgpt').className = '';
-            break;
-          case 'article-cara-buat-prompt-chatgpt':
-            document.getElementById('article-page-cara-buat-prompt-chatgpt').className = '';
-            break;
-          case 'article-best-prompt-for-marketing':
-            document.getElementById('article-page-best-prompt-for-marketing').className = '';
-            break;
-          case 'article-claude-vs-gpt5-vs-gemini-prompting':
-            document.getElementById('article-page-claude-vs-gpt5-vs-gemini-prompting').className = '';
-            break;
-          case 'article-best-prompt-for-image-generation':
-            document.getElementById('article-page-best-prompt-for-image-generation').className = '';
-            break;
-          case 'article-best-prompt-for-email-writing':
-            document.getElementById('article-page-best-prompt-for-email-writing').className = '';
-            break;
-          case 'article-how-to-create-system-prompt':
-            document.getElementById('article-page-how-to-create-system-prompt').className = '';
-            break;
-          default:
-            document.getElementById('landing-page').className = '';
-        }
-
-        // Scroll animations
-        var observer = new IntersectionObserver(function(entries) {
-          entries.forEach(function(entry) {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('visible');
-            }
-          });
-        }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
-
-        document.querySelectorAll('.fade-up').forEach(function(el) { observer.observe(el); });
-
-        // Navbar scroll effect
-        window.addEventListener('scroll', function() {
-          var navs = document.querySelectorAll('.navbar');
-          navs.forEach(function(nav) {
-            if (window.scrollY > 50) { nav.classList.add('scrolled'); }
-            else { nav.classList.remove('scrolled'); }
+        window.addEventListener("scroll", function () {
+          document.querySelectorAll(".navbar").forEach(function (nav) {
+            if (window.scrollY > 50) nav.classList.add("scrolled");
+            else nav.classList.remove("scrolled");
           });
         });
       })();

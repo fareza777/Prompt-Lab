@@ -1,36 +1,32 @@
-// postbuild.mjs — split SEO landing (/) from React app (/app)
-import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+// postbuild.mjs — split app shell (/app) from marketing site (/)
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { generateSeoPages } from "./generate-seo-pages.mjs";
 
 const dist = join(process.cwd(), "dist");
 const indexHtml = join(dist, "index.html");
-const landingHtml = join(dist, "landing.html");
 const appHtml = join(dist, "app.html");
 
+const APP_NOINDEX = '<meta name="robots" content="noindex, nofollow" data-app-noindex="1" />';
+
 function patchAppHtml(html) {
-  return html
+  let out = html
     .replace("<html lang=\"en\">", "<html lang=\"en\" class=\"boot-app\">")
-    .replace('<div id="app-root" class="app-hidden">', '<div id="app-root">')
-    .replace('<div id="landing-page" class="landing-hidden">', '<div id="landing-page" class="landing-hidden" hidden>')
-    .replace('<div id="blog-page" class="landing-hidden">', '<div id="blog-page" class="landing-hidden" hidden>');
+    .replace('<div id="app-root">', '<div id="app-root">');
+
+  if (!out.includes("data-app-noindex")) {
+    out = out.replace("</head>", `  ${APP_NOINDEX}\n  <script src="/seo-route.js"></script>\n</head>`);
+  }
+
+  return out
+    .replace("<html lang=\"en\" class=\"boot-app\">", "<html lang=\"en\" class=\"boot-app\" data-route=\"app\">");
 }
 
-// 1. Copy Vite bundle (monolith) → app.html for /app
 if (existsSync(indexHtml)) {
   const raw = readFileSync(indexHtml, "utf8");
   writeFileSync(appHtml, patchAppHtml(raw));
-  console.log("✓ index.html → app.html (app shell)");
-}
-
-// 2. Landing-only page becomes /
-if (existsSync(landingHtml)) {
-  let landing = readFileSync(landingHtml, "utf8");
-  if (!landing.includes("display-mode: standalone")) {
-    const redirect = `<script>(function(){var s=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;if(s)location.replace("/app");})();</script>`;
-    landing = landing.replace("</head>", `  ${redirect}\n</head>`);
-  }
-  writeFileSync(indexHtml, landing);
-  console.log("✓ landing.html → index.html (SEO home)");
+  console.log("✓ index.html → app.html (app shell, noindex)");
+  generateSeoPages();
 } else {
-  console.error("✗ landing.html not found in dist/");
+  console.error("✗ index.html not found in dist/");
 }

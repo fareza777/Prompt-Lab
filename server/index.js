@@ -55,6 +55,11 @@ import {
   verifyPlaySubscriptionPurchase,
 } from "./playBillingGoogle.js";
 import {
+  handleLemonSqueezyWebhook,
+  parseLemonSqueezyWebhook,
+  verifyLemonSqueezySignature,
+} from "./lemonSqueezyBilling.js";
+import {
   clearRuntimeConfigCache,
   getCachedPublishedModelSettings,
   mergeModelSettingsLayers,
@@ -132,6 +137,55 @@ const defaultOpenRouterFallbackModels = [
 ];
 
 app.use(cors({ origin: true }));
+
+app.post(
+  "/api/billing/lemon-squeezy-webhook",
+  express.raw({ type: "application/json", limit: "256kb" }),
+  async (req, res) => {
+    try {
+      const secret = process.env.LEMON_SQUEEZY_WEBHOOK_SECRET || "";
+      const signature = req.get("X-Signature") || "";
+      const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body || "");
+
+      const verified = verifyLemonSqueezySignature(rawBody, signature, secret);
+      if (!verified.ok) {
+        res.status(401).json({ error: verified.error });
+        return;
+      }
+
+      const parsed = parseLemonSqueezyWebhook(rawBody);
+      if (!parsed.ok) {
+        res.status(400).json({ error: parsed.error });
+        return;
+      }
+
+      const admin = createServiceRoleSupabaseClient();
+      if (!admin) {
+        res.status(503).json({ error: "SUPABASE_SERVICE_ROLE_KEY is required for billing webhooks." });
+        return;
+      }
+
+      const result = await handleLemonSqueezyWebhook(admin, parsed.payload, parsed.eventName);
+      if (!result.ok) {
+        console.error("lemon squeezy webhook", parsed.eventName, result.error);
+        res.status(result.userId ? 422 : 400).json({ error: result.error || "Webhook handling failed." });
+        return;
+      }
+
+      res.json({
+        ok: true,
+        event: parsed.eventName,
+        ignored: Boolean(result.ignored),
+        plan: result.plan || null,
+        userId: result.userId || null,
+      });
+    } catch (error) {
+      console.error("lemon squeezy webhook error", error);
+      res.status(500).json({ error: error.message || "Webhook error." });
+    }
+  }
+);
+
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", async (req, res) => {

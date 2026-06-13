@@ -176,7 +176,7 @@ export const MEMBERSHIP_MARKETING = {
     highlights: ["50k tokens/month", "25 saved prompts", "5 custom templates"],
   },
   Pro: {
-    price: "$3/mo",
+    price: "Rp 49.000/bulan",
     detail: "Higher quota, priority OCR, DOCX/PPTX export, AI Compare & Optimizer.",
     highlights: [
       "500k tokens/month",
@@ -186,7 +186,7 @@ export const MEMBERSHIP_MARKETING = {
     ],
   },
   Business: {
-    price: "$12/mo",
+    price: "Rp 199.000/bulan",
     detail: "Everything in Pro plus priority model routing, team library, highest limits.",
     highlights: [
       "2M tokens/month",

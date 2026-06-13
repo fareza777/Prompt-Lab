@@ -53,6 +53,11 @@ import {
   verifyPlayPurchaseOnServer,
 } from "./playBilling.js";
 import {
+  getWebBillingHint,
+  getWebCheckoutUrlForPlan,
+  isWebCheckoutConfigured,
+} from "./webBilling.js";
+import {
   canExportFormat,
   canUseFeature,
   getEntitlements,
@@ -1684,14 +1689,16 @@ function App() {
       return;
     }
 
-    const checkoutUrls = {
-      Pro: import.meta.env.VITE_WEB_CHECKOUT_PRO_URL || "",
-      Business: import.meta.env.VITE_WEB_CHECKOUT_BUSINESS_URL || "",
-    };
-    const checkoutUrl = checkoutUrls[planName] || "";
+    const checkoutUrl = getWebCheckoutUrlForPlan(planName, {
+      email: accountState.email,
+      userId: accountState.userId,
+      name: accountState.name,
+    });
     if (checkoutUrl) {
       window.open(checkoutUrl, "_blank", "noopener,noreferrer");
-      setBillingMessage(`Opening web checkout for ${planName}. Your account will update after payment confirmation.`);
+      setBillingMessage(
+        `Opening Lemon Squeezy checkout for ${planName}. Your plan updates automatically after payment — tap Refresh membership below if needed.`
+      );
       flashAction(`${planName} checkout opened`);
       return;
     }
@@ -2229,8 +2236,10 @@ function App() {
     billingMessage,
     upgradeViaPlayBilling,
     requestMembershipUpgrade,
+    loadUserProfile,
     playBillingReady,
     playBillingHint,
+    webCheckoutReady: isWebCheckoutConfigured(),
   };
 
   return <V2App {...shared} />;
@@ -3442,13 +3451,17 @@ function V2PublicSettings(props) {
     billingBusy,
     billingMessage,
     requestMembershipUpgrade,
+    loadUserProfile,
     playBillingReady,
     playBillingHint,
+    webCheckoutReady,
     libraryLimit,
     customTemplateLimit,
     entitlements,
   } = props;
   const [section, setSection] = useState("Account");
+  const [refreshingMembership, setRefreshingMembership] = useState(false);
+  const membershipHint = playBillingReady ? playBillingHint : getWebBillingHint({ checkoutConfigured: webCheckoutReady });
   const [authMode, setAuthMode] = useState("sign-in");
   const [authEmail, setAuthEmail] = useState(accountState.email || "");
   const [authName, setAuthName] = useState(accountState.name || "");
@@ -3588,8 +3601,8 @@ function V2PublicSettings(props) {
               </div>
               <span className="v2-score-badge">{accountState.plan}</span>
             </div>
-            {playBillingHint?.message && (
-              <p className="v2-note">{playBillingHint.message}</p>
+            {membershipHint?.message && (
+              <p className="v2-note">{membershipHint.message}</p>
             )}
             <div className="v2-plan-grid premium">
               {Object.entries(membershipPlans).map(([plan, info]) => {
@@ -3622,7 +3635,9 @@ function V2PublicSettings(props) {
                           ? "Default tier"
                           : playBillingReady
                             ? "Tap to buy on Play"
-                            : "Request web upgrade"}
+                            : webCheckoutReady
+                              ? "Open Lemon Squeezy checkout"
+                              : "Request web upgrade"}
                     </em>
                   </button>
                 );
@@ -3630,6 +3645,25 @@ function V2PublicSettings(props) {
             </div>
             {billingMessage && <p className="v2-note warn">{billingMessage}</p>}
             {billingBusy && <p className="v2-note">Processing membership upgrade...</p>}
+            {accountState.userId && (
+              <div className="v2-actions wrap">
+                <button
+                  className="v2-btn"
+                  type="button"
+                  disabled={refreshingMembership || billingBusy}
+                  onClick={async () => {
+                    setRefreshingMembership(true);
+                    try {
+                      await loadUserProfile({ id: accountState.userId, email: accountState.email });
+                    } finally {
+                      setRefreshingMembership(false);
+                    }
+                  }}
+                >
+                  {refreshingMembership ? "Refreshing..." : "Refresh membership"}
+                </button>
+              </div>
+            )}
             <div className="v2-quota-meter">
               <div><span>Quota</span><strong>{(accountState.quotaUsed / 1000).toFixed(1)}k / {(accountState.quotaLimit / 1000).toFixed(0)}k tokens</strong></div>
               <i><b style={{ width: `${quotaPercent}%` }} /></i>

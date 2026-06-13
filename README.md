@@ -95,7 +95,7 @@ Quota dihitung di backend saat `/api/generate-prompt` berhasil:
 - Backend membaca entitlement user dari Supabase.
 - Jika quota tidak cukup, request ditolak sebelum memanggil model AI.
 - Jika berhasil, backend mencatat `usage_events` dan menaikkan `profiles.quota_used`.
-- Plan buttons never activate paid access locally. Android purchases use Play Billing verification, while web purchases use `VITE_WEB_CHECKOUT_PRO_URL` / `VITE_WEB_CHECKOUT_BUSINESS_URL` when configured or fall back to a membership request email.
+- Plan buttons never activate paid access locally. Android purchases use Play Billing verification, while web purchases use Lemon Squeezy checkout (`VITE_WEB_CHECKOUT_*`) + webhook — see `playstore/LEMON_SQUEEZY_SETUP.md`.
 
 Jika SQL tahap 1 sudah pernah dijalankan sebelum fitur quota ini, cukup jalankan `supabase/phase-2-quota-upgrade.sql` agar fungsi `get_my_entitlement` dan `record_usage_event` tersedia.
 

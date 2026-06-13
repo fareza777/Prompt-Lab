@@ -1,0 +1,9 @@
+.tools/
+android-app/
+node_modules/
+dist/
+.claude/
+playstore/*.aab
+playstore/*.apk
+.tmp_*
+*.bak.*
