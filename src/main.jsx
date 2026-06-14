@@ -155,7 +155,7 @@ const defaultModelSettings = {
   ocrModel: "baidu/qianfan-ocr-fast:free",
   primaryModel: "MiniMax-M3",
   provider: "minimax",
-  timeoutMs: "38000",
+  timeoutMs: "55000",
 };
 const modeProfiles = {
   Fast: {

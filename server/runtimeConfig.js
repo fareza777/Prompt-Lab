@@ -28,7 +28,7 @@ export function getEnvDefaultModelSettings() {
     ocrModel: process.env.OPENROUTER_OCR_MODEL || "baidu/qianfan-ocr-fast:free",
     primaryModel: process.env.MINIMAX_MODEL || "MiniMax-M3",
     provider: "minimax",
-    timeoutMs: String(process.env.MINIMAX_PRIMARY_TIMEOUT_MS || "38000"),
+    timeoutMs: String(process.env.MINIMAX_PRIMARY_TIMEOUT_MS || "55000"),
   };
 
   const openRouterDefaults = {

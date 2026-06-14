@@ -734,7 +734,7 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
   }
 });
 
-const VERCEL_FUNCTION_BUDGET_MS = Number(process.env.VERCEL_FUNCTION_BUDGET_MS || 52000);
+const VERCEL_FUNCTION_BUDGET_MS = Number(process.env.VERCEL_FUNCTION_BUDGET_MS || 58000);
 const RETRY_ON_EMPTY_RESERVE_MS = 22000;
 const PREMIUM_PASS_RESERVE_MS = 28000;
 
@@ -779,6 +779,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       attachments
     );
     const runtime = getRuntimeProvider(payload.modelSettings);
+    const leanProvider = runtime.provider === "minimax";
     quotaEstimate = estimateGenerationTokens(payload, attachments, membership.plan);
     quotaSession = await getQuotaSession(req, quotaEstimate);
 
@@ -813,7 +814,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         let retried = false;
         let truncatedOutput = isCompletionTruncated(completion);
 
-        if (isPromptTooShort(prompt) && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
+        if (!leanProvider && isPromptTooShort(prompt) && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
           retried = true;
           try {
             generation = await createOpenRouterCompletion(payload, attachments, runtime, membership.plan, startedAt);
@@ -832,7 +833,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         // v2: structure validator + retry untuk OpenRouter path.
         const orStructCheck = validatePromptStructure(prompt);
         const structRetryBudget = remainingBudget();
-        if (!orStructCheck.valid && structRetryBudget > RETRY_ON_EMPTY_RESERVE_MS) {
+        if (!leanProvider && !orStructCheck.valid && structRetryBudget > RETRY_ON_EMPTY_RESERVE_MS) {
           try {
             const retryMessages = [
               { role: "system", content: buildIntentSystemPromptXml(payload) },
@@ -1650,7 +1651,7 @@ function sanitizeBaseUrl(value) {
 function normalizeTimeout(value) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return 0;
-  return Math.min(Math.max(Math.round(parsed), 5000), 55000);
+  return Math.min(Math.max(Math.round(parsed), 5000), VERCEL_FUNCTION_BUDGET_MS - 2000);
 }
 
 function getRuntimeProvider(modelSettings = {}) {
@@ -1759,11 +1760,26 @@ function getOpenRouterTiming(mode) {
 }
 
 function resolveProviderTiming(payload, runtime, generationMode) {
+  if (runtime.provider === "minimax") {
+    const primaryBudgetCap = VERCEL_FUNCTION_BUDGET_MS - 2000;
+    const configured = normalizeTimeout(payload.modelSettings?.timeoutMs);
+    const envPrimary = normalizeTimeout(process.env.MINIMAX_PRIMARY_TIMEOUT_MS);
+    let primaryTimeoutMs = configured || envPrimary || 55000;
+    if (generationMode === "patient") {
+      primaryTimeoutMs = primaryBudgetCap;
+    } else {
+      primaryTimeoutMs = Math.min(Math.max(primaryTimeoutMs, 50000), primaryBudgetCap);
+    }
+    return {
+      primaryTimeoutMs,
+      fallbackTimeoutMs: Math.min(12000, Math.max(6000, VERCEL_FUNCTION_BUDGET_MS - primaryTimeoutMs - 1500)),
+    };
+  }
+
   const capped = capProviderTimeouts(getOpenRouterTiming(generationMode));
   const primaryBudgetCap = Math.max(15000, VERCEL_FUNCTION_BUDGET_MS - 8000);
   const configured = normalizeTimeout(payload.modelSettings?.timeoutMs);
-  const envPrimary =
-    runtime.provider === "minimax" ? normalizeTimeout(process.env.MINIMAX_PRIMARY_TIMEOUT_MS) : 0;
+  const envPrimary = 0;
 
   let primaryTimeoutMs = capped.primaryTimeoutMs;
   if (configured) {
@@ -1773,15 +1789,6 @@ function resolveProviderTiming(payload, runtime, generationMode) {
   }
 
   let fallbackTimeoutMs = capped.fallbackTimeoutMs;
-  if (runtime.provider === "minimax") {
-    const patientFloor = payload.generationMode === "patient" ? primaryBudgetCap : 42000;
-    primaryTimeoutMs = Math.min(Math.max(primaryTimeoutMs, patientFloor), primaryBudgetCap);
-    fallbackTimeoutMs = Math.min(
-      normalizeTimeout(process.env.MINIMAX_FALLBACK_TIMEOUT_MS) || 18000,
-      Math.max(10000, VERCEL_FUNCTION_BUDGET_MS - primaryTimeoutMs - 3500)
-    );
-  }
-
   return { primaryTimeoutMs, fallbackTimeoutMs };
 }
 
@@ -1792,6 +1799,7 @@ async function createOpenRouterCompletion(
   plan = "Free",
   requestStartedAt = Date.now()
 ) {
+  const leanGeneration = runtime.provider === "minimax";
   const maxTokens = resolveGenerateMaxTokens(plan, payload);
   const messages = [
     {
@@ -1800,18 +1808,20 @@ async function createOpenRouterCompletion(
     },
     {
       role: "user",
-      content: buildOpenRouterContent(payload, attachments),
+      content: buildOpenRouterContent(payload, attachments, { lean: leanGeneration }),
     },
   ];
   const primaryModel = payload.modelSettings?.primaryModel || runtime.defaultModel;
-  let fallbackModels = getOpenRouterFallbackModels(
-    primaryModel,
-    payload.generationMode,
-    payload.modelSettings?.fallbackModels,
-    runtime.provider
-  );
+  let fallbackModels = leanGeneration
+    ? []
+    : getOpenRouterFallbackModels(
+        primaryModel,
+        payload.generationMode,
+        payload.modelSettings?.fallbackModels,
+        runtime.provider
+      );
   if (runtime.provider === "minimax") {
-    fallbackModels = fallbackModels.slice(0, 1);
+    fallbackModels = [];
   }
   const timing = resolveProviderTiming(payload, runtime, payload.generationMode);
 
@@ -1832,6 +1842,7 @@ async function createOpenRouterCompletion(
       usedFallbackModel: false,
     };
   } catch (error) {
+    if (runtime.provider === "minimax") throw error;
     if (!shouldTryFallbackModel(error) || fallbackModels.length === 0) throw error;
     const elapsed = Date.now() - requestStartedAt;
     const remaining = VERCEL_FUNCTION_BUDGET_MS - elapsed - 2000;
@@ -2152,9 +2163,17 @@ function getOptimizerEngineInstruction(payload) {
 - Output final harus langsung berupa prompt hasil optimize yang siap dicopy.`;
 }
 
-function buildPromptSpecInstruction(payload, attachments = []) {
+function buildPromptSpecInstruction(payload, attachments = [], { lean = false } = {}) {
   const pack = getDomainPromptPack(payload);
   const attachmentManifest = buildAttachmentManifest(attachments);
+  if (lean) {
+    return `Domain pack:
+- Domain: ${pack.domain}
+- Role: ${pack.role}
+- Requirements: ${pack.requirements.slice(0, 5).join("; ")}
+- Constraints: ${pack.constraints.slice(0, 4).join("; ")}
+${attachmentManifest ? `- Attachments:\n${attachmentManifest}` : ""}`;
+  }
   return `Prompt Spec JSON planning step:
 - Before writing the final prompt, internally create this JSON object:
 {
@@ -2187,9 +2206,7 @@ Render rule:
 - Use the JSON only to render one final executable prompt.
 - The final prompt must preserve the selected deliverable: ${payload.outputType || "not selected"}.
 
-${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative, payload.prompt))}
-
-${buildImageVideoPromptAddon(payload)}`;
+${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative, payload.prompt))}`;
 }
 
 function getDomainPromptPack(payload = {}) {
@@ -2949,13 +2966,39 @@ ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(pay
   return content;
 }
 
-function buildOpenRouterContent(payload, attachments) {
+function buildOpenRouterContent(payload, attachments, { lean = false } = {}) {
   const conditionalInstructions = getConditionalInstructions(payload, attachments);
   const deliverableGuard = getDeliverableGuard(payload, attachments);
   const targetGuidance = getTargetModelGuidance(payload.modelTarget, payload);
+  const promptSpec = buildPromptSpecInstruction(payload, attachments, { lean });
+  const antiGeneric = lean ? "" : getAntiGenericGuard();
+  if (lean) {
+    const baseText = `Buat prompt final untuk kebutuhan berikut.
+
+Narasi user:
+${payload.narrative}
+
+Kategori: ${payload.category}
+Tone: ${payload.tone}
+Target AI: ${payload.modelTarget}
+Jenis Output: ${payload.outputType || "Tidak dipilih"}
+
+${promptSpec}
+${deliverableGuard}
+${targetGuidance}${conditionalInstructions}
+Output WAJIB langsung berupa prompt final siap copy-paste. Tanpa preface atau meta brief.
+
+${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative))}`;
+    const attachmentText = attachments
+      .map((file) =>
+        file.excerpt
+          ? `\n\nLampiran ${file.filename}: ${file.excerpt}`
+          : `\n\nLampiran ${file.filename} (${file.mime}, ${formatBytes(file.size)}).`
+      )
+      .join("");
+    return `${baseText}${attachmentText}`;
+  }
   const intentEngine = getIntentEngineInstruction(payload, attachments);
-  const promptSpec = buildPromptSpecInstruction(payload, attachments);
-  const antiGeneric = getAntiGenericGuard();
   const baseText = `Buat prompt terbaik untuk kebutuhan berikut.
 
 Narasi user:

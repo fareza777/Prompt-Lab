@@ -59,12 +59,3 @@ test("resolveGenerateMaxTokens scales by plan and phased game briefs", () => {
   assert.ok(businessGame >= 6000);
   assert.ok(getEntitlements("Business").generateMaxTokens > getEntitlements("Free").generateMaxTokens);
 });
-
-test("resolveGenerateMaxTokens caps video prompts for faster provider turnaround", () => {
-  const video = resolveGenerateMaxTokens("Free", {
-    narrative: "buat video 10 detik",
-    category: "Video AI",
-    outputType: "Video Prompt",
-  });
-  assert.equal(video, 3000);
-});
