@@ -89,6 +89,31 @@ export function buildIntentSystemPromptXml(payload = {}) {
 }
 
 /**
+ * Compact system prompt for MiniMax — same deliverable lock, far fewer tokens than full XML engine.
+ * @param {object} payload
+ * @returns {string}
+ */
+export function buildLeanIntentSystemPrompt(payload = {}) {
+  const target = payload.modelTarget || payload.targetModel || "General";
+  const deliverable = payload.outputType || "tidak dipilih";
+  const tone = payload.tone || "Profesional";
+  const langCode = payload.outputLanguage || "id";
+  const meta = getLanguageMeta(langCode);
+  const media = buildImageVideoPromptAddon({ ...payload, outputLanguage: langCode });
+  const blocks = [
+    `<role>PromptLab — ${meta.architectLabel}.</role>`,
+    `<objective>Render ONE copy-paste-ready prompt in ${meta.label}. No chatty preface.</objective>`,
+    `<deliverable_lock>Deliverable: ${deliverable}. Never swap deliverable type.</deliverable_lock>`,
+    `<target_ai>${target}</target_ai>`,
+    `<tone>${tone}</tone>`,
+    getLanguageLockInstruction(langCode),
+  ];
+  if (media) blocks.push(media);
+  blocks.push("<output>Return only the final prompt.</output>");
+  return blocks.join("\n");
+}
+
+/**
  * @param {object} payload
  * @returns {string}
  */

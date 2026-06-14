@@ -27,8 +27,10 @@ export function resolveMinimaxBaseUrl(rawBaseUrl, apiKey = "") {
  */
 export function buildProviderChatCompletionBody(runtime, { model, messages, max_tokens, temperature = 0.4 }) {
   const body = { model, messages, max_tokens, temperature };
+  // MiniMax Python SDK merges extra_body into the JSON root; the JS OpenAI SDK does not.
+  // thinking must be a top-level field or M3 runs extended reasoning and hits serverless timeouts.
   if (runtime?.provider === "minimax" && isMinimaxThinkingModel(model)) {
-    body.extra_body = { thinking: { type: "disabled" } };
+    body.thinking = { type: "disabled" };
   }
   return body;
 }

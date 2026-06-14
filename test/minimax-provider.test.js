@@ -26,7 +26,8 @@ test("buildProviderChatCompletionBody disables M3 thinking for prompt tasks", ()
       max_tokens: 500,
     }
   );
-  assert.deepEqual(body.extra_body, { thinking: { type: "disabled" } });
+  assert.deepEqual(body.thinking, { type: "disabled" });
+  assert.equal(body.extra_body, undefined);
 });
 
 test("buildProviderChatCompletionBody leaves OpenRouter requests unchanged", () => {
@@ -38,5 +39,6 @@ test("buildProviderChatCompletionBody leaves OpenRouter requests unchanged", () 
       max_tokens: 500,
     }
   );
+  assert.equal(body.thinking, undefined);
   assert.equal(body.extra_body, undefined);
 });

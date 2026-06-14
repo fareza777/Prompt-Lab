@@ -24,6 +24,7 @@ import {
 } from "../src/imageVideoPromptDelivery.js";
 import {
   buildIntentSystemPromptXml,
+  buildLeanIntentSystemPrompt,
   buildOptimizerSystemPromptXml,
   buildCompareSystemPromptXml,
   validatePromptStructure,
@@ -1830,7 +1831,7 @@ async function createOpenRouterCompletion(
   const messages = [
     {
       role: "system",
-      content: buildIntentSystemPromptXml(payload),
+      content: leanGeneration ? buildLeanIntentSystemPrompt(payload) : buildIntentSystemPromptXml(payload),
     },
     {
       role: "user",
