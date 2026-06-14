@@ -77,7 +77,7 @@ import {
   isInstalledApp,
   markInstalledAppEntered,
 } from "./installedApp.js";
-import { purgeLegacyServiceWorkers, repairStuckLocalProfile } from "./bootRecovery.js";
+import { scorePrompt, scoreOptimizedPrompt } from "./promptScore.js";
 import { dismissStartupSplash, installSplashSafetyNet, markStartupSplashStarted } from "./startupSplash";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
@@ -1063,91 +1063,6 @@ ${buildStructuredAuditInstruction(cleanNarrative, category, outputType, langMeta
 ${buildPhasedAppDeliveryInstruction(cleanNarrative, category, outputType, langMeta.code)}
 
 ${buildImageVideoPromptAddon({ narrative: cleanNarrative, category, outputType, modelTarget: model, outputLanguage: langMeta.code })}`;
-}
-
-function scorePrompt(prompt) {
-  const text = String(prompt || "");
-  const countMatches = (patterns) => patterns.reduce((count, pattern) => count + (pattern.test(text) ? 1 : 0), 0);
-  const sectionCount = (text.match(/(?:^|\n)\s*(?:#{1,3}\s*)?(?:role|context|konteks|objective|tujuan|task|tugas|requirements?|output|format|constraints?|batasan|acceptance|criteria|quality|checklist|deliverables?|instructions?|guidelines?|assumptions?|tone|audience)\b/gi) || []).length;
-  const numericControls = (text.match(/\b\d+\b|maks(?:imal)?|min(?:imal)?|at least|no more than|jumlah|kata|slide|section|bagian|content|posts?|items?|words?|characters?/gi) || []).length;
-  const bulletCount = (text.match(/(?:^|\n)\s*(?:[-*]|\d+[.)])\s+/g) || []).length;
-  const genericPenalty = countMatches([
-    /\b(leverage|synergy|world-class|cutting-edge|next-level|game-changing|seamless|robust solution)\b/i,
-    /\b(kelas dunia|terdepan|revolusioner|solusi terbaik)\b/i,
-    /\[(?:your|insert|topik|isi|brand|context)[^\]]*\]/i,
-  ]);
-  const rubricScore = (checks) => Math.round((checks.filter((check) => (check instanceof RegExp ? check.test(text) : Boolean(check))).length / checks.length) * 100);
-  const clarity = rubricScore([
-    /role|act as|bertindak|you are|kamu adalah|sebagai/i,
-    /objective|goal|tujuan|hasil akhir|final goal|main task/i,
-    /task|tugas|kerjakan|buat|susun|build|write|create|siapkan|prepare/i,
-    /senior|strategist|engineer|analyst|copywriter|researcher|spesialis|architect|director|consultant/i,
-    sectionCount >= 3 || bulletCount >= 8,
-  ]);
-  const context = rubricScore([
-    /context|konteks|latar belakang|berdasarkan|source|sumber|brief|assumptions?/i,
-    /audience|target|persona|pengguna|pembaca|customer|user|mahasiswa|students?|market/i,
-    /lampiran|dokumen|data|file|screenshot|referensi|brief|product|brand/i,
-    /assumption|asumsi|jika tidak tersedia|if missing|if.*not provided|fiktif|placeholder/i,
-    text.length >= 700,
-  ]);
-  const format = rubricScore([
-    /format|output|struktur|section|bagian|table|tabel|json|markdown|deliverables?|final answer/i,
-    /urut|ordered|sequence|slide-by-slide|file-by-file|sections?|langkah|steps?|subsection/i,
-    numericControls >= 2,
-    /acceptance|criteria|checklist|quality gate|kriteria/i,
-    sectionCount >= 4 || bulletCount >= 10,
-  ]);
-  const constraints = rubricScore([
-    /constraint|batasan|jangan|must|wajib|harus|avoid|larang|required|do not|do's|don'ts/i,
-    /maks(?:imal)?|min(?:imal)?|at most|at least|no more than/i,
-    /do not invent|jangan mengarang|state assumptions|tandai asumsi|asumsi|assumption/i,
-    /clarifying questions|pertanyaan klarifikasi|only if blocked/i,
-    numericControls >= 3 || bulletCount >= 12,
-  ]);
-  const actionability = rubricScore([
-    /acceptance|criteria|kriteria|test|uji|run|export|deliver|ready to use|siap/i,
-    /step|langkah|checklist|implementation|implementasi|workflow|process/i,
-    /file|screen|api|table|slide|section|CTA|output|caption|visual|post/i,
-    numericControls >= 2,
-    text.length >= 900,
-  ]);
-  const rawScore = Math.round((clarity + context + format + constraints + actionability) / 5);
-  const score = Math.max(5, Math.min(99, rawScore - genericPenalty * 6));
-  const tips = [
-    clarity < 80 && "Make the role more specific: job title + domain + seniority level.",
-    context < 80 && "Add audience, business context, source material, or explicit assumptions.",
-    format < 80 && "Lock the output structure with section order and quantity/length limits.",
-    constraints < 80 && "Add at least 3 concrete constraints and anti-hallucination rules.",
-    actionability < 80 && "Add testable acceptance criteria.",
-  ].filter(Boolean);
-  return {
-    actionability,
-    score,
-    clarity,
-    context,
-    constraints,
-    format,
-    tips: tips.length ? tips : ["The prompt is strong. Next iteration: add deeper domain details and example outputs."],
-  };
-}
-
-function scoreOptimizedPrompt(rawPrompt, optimizedPrompt) {
-  const before = scorePrompt(rawPrompt);
-  const direct = scorePrompt(optimizedPrompt);
-  const expandedEnough = optimizedPrompt.length > rawPrompt.length * 1.25;
-  const hasUsefulStructure = direct.format >= 60 && direct.context >= 60 && direct.constraints >= 60;
-  if (!expandedEnough || !hasUsefulStructure || direct.score >= before.score) return direct;
-
-  const protectedScore = Math.min(96, Math.max(direct.score, before.score + 6));
-  return {
-    ...direct,
-    score: protectedScore,
-    tips: [
-      "Optimizer expanded the prompt and preserved structure; score is protected against format-label mismatch.",
-      ...direct.tips,
-    ],
-  };
 }
 
 function buildLocalCompareResult(promptA, promptB) {
@@ -3137,28 +3052,40 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
   );
 }
 
-function V2Optimizer({ optimizerResult, isOptimizing, optimizerError, optimizerWarning, optimizePrompt, clearOptimizerResult, copyText, savePrompt, exportFile, entitlements }) {
+function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizerError, optimizerWarning, optimizePrompt, clearOptimizerResult, copyText, savePrompt, exportFile, entitlements }) {
   const canDocx = entitlements?.docxExport;
   const [rawPrompt, setRawPrompt] = useState("Make this prompt stronger for Instagram content about a milk coffee product.");
   const [mode, setMode] = useState("Clearer");
-  const result = optimizerResult || buildLocalOptimizedPrompt(rawPrompt, mode, "Claude", "Professional");
+  const hasResult = Boolean(optimizerResult?.trim());
+  const result = hasResult ? optimizerResult : "";
   const beforeScore = scorePrompt(rawPrompt);
-  const afterScore = scoreOptimizedPrompt(rawPrompt, result);
-  const scoreDelta = afterScore.score - beforeScore.score;
-  const qualityBreakdown = [
-    ["Clarity", beforeScore.clarity, afterScore.clarity, "role and objective"],
-    ["Context", beforeScore.context, afterScore.context, "audience and assumptions"],
-    ["Format", beforeScore.format, afterScore.format, "output structure"],
-    ["Guardrails", beforeScore.constraints, afterScore.constraints, "limits and safety"],
-    ["Actionability", beforeScore.actionability, afterScore.actionability, "testable criteria"],
-  ];
+  const afterScore = hasResult
+    ? scoreOptimizedPrompt(rawPrompt, result, { fromOptimizer: true, mode })
+    : null;
+  const scoreDelta = hasResult ? afterScore.score - beforeScore.score : 0;
+  const qualityBreakdown = hasResult
+    ? [
+        ["Clarity", beforeScore.clarity, afterScore.clarity, "role and objective"],
+        ["Context", beforeScore.context, afterScore.context, "audience and assumptions"],
+        ["Format", beforeScore.format, afterScore.format, "output structure"],
+        ["Guardrails", beforeScore.constraints, afterScore.constraints, "limits and safety"],
+        ["Actionability", beforeScore.actionability, afterScore.actionability, "testable criteria"],
+      ]
+    : [];
   return (
     <div className="v2-screen">
       <V2PageIntro eyebrow="Optimizer" title="Old prompts, refined into winning instructions." copy="Paste a weak prompt, pick a mode, and get a stronger version in one pass." />
       <section className="v2-diff-grid">
         <div className="v2-card v2-glass-card">
           <div className="v2-card-head"><h2>Input</h2><span className="v2-score-badge">{beforeScore.score}</span></div>
-          <textarea className="v2-textarea" value={rawPrompt} onChange={(event) => setRawPrompt(event.target.value)} />
+          <textarea
+            className="v2-textarea"
+            value={rawPrompt}
+            onChange={(event) => {
+              setRawPrompt(event.target.value);
+              if (optimizerResult) clearOptimizerResult?.();
+            }}
+          />
           <V2ChipGroup
             label="Optimization Mode"
             options={optimizerModes}
@@ -3190,15 +3117,23 @@ function V2Optimizer({ optimizerResult, isOptimizing, optimizerError, optimizerW
           <div className="v2-card-head">
             <div>
               <h2>Optimized Result</h2>
-              <p>{mode} · {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} pts</p>
+              <p>
+                {hasResult
+                  ? `${mode} · ${scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} pts`
+                  : "Run Optimize to score the improved prompt"}
+              </p>
             </div>
-            <span className="v2-score-badge hot">{afterScore.score}</span>
+            <span className="v2-score-badge hot">{hasResult ? afterScore.score : "—"}</span>
           </div>
-          <pre className={`v2-prompt-output ${isOptimizing ? "is-streaming" : ""}`}>{result}</pre>
-          <div className="v2-score-advice">
-            <span>Score notes</span>
-            {afterScore.tips.slice(0, 2).map((tip) => <p key={tip}>{tip}</p>)}
-          </div>
+          <pre className={`v2-prompt-output ${isOptimizing ? "is-streaming" : ""}`}>
+            {hasResult ? result : "Optimized prompt will appear here after you run Optimize."}
+          </pre>
+          {hasResult && (
+            <div className="v2-score-advice">
+              <span>Score notes</span>
+              {afterScore.tips.slice(0, 2).map((tip) => <p key={tip}>{tip}</p>)}
+            </div>
+          )}
           {isOptimizing && (
             <div className="v2-stream-preview">
               <span>Optimizing preview</span>
@@ -3208,16 +3143,17 @@ function V2Optimizer({ optimizerResult, isOptimizing, optimizerError, optimizerW
             </div>
           )}
           <div className="v2-actions wrap">
-            <V2ActionBtn className="v2-btn" onAction={() => copyText(result)} successLabel={<><Check size={16} />Copied</>}>
+            <V2ActionBtn className="v2-btn" disabled={!hasResult} onAction={() => copyText(result)} successLabel={<><Check size={16} />Copied</>}>
               <Clipboard size={16} />Copy
             </V2ActionBtn>
-            <V2ActionBtn className="v2-btn" onAction={() => savePrompt(result, rawPrompt)} successLabel={<><Check size={16} />Saved</>}>
+            <V2ActionBtn className="v2-btn" disabled={!hasResult} onAction={() => savePrompt(result, rawPrompt)} successLabel={<><Check size={16} />Saved</>}>
               <Save size={16} />Save
             </V2ActionBtn>
-            <button className="v2-btn" disabled={!canDocx} title={!canDocx ? upgradeMessageForFeature("docxExport") : undefined} onClick={() => exportFile("docx", result, rawPrompt)}><FileText size={16} />DOCX</button>
+            <button className="v2-btn" disabled={!canDocx || !hasResult} title={!canDocx ? upgradeMessageForFeature("docxExport") : undefined} onClick={() => exportFile("docx", result, rawPrompt)}><FileText size={16} />DOCX</button>
           </div>
         </div>
       </section>
+      {hasResult && (
       <section className="v2-card v2-compact-quality">
         <div className="v2-card-head">
           <div>
@@ -3236,6 +3172,7 @@ function V2Optimizer({ optimizerResult, isOptimizing, optimizerError, optimizerW
           ))}
         </div>
       </section>
+      )}
     </div>
   );
 }
@@ -4800,8 +4737,11 @@ function OptimizerView({
   const [rawPrompt, setRawPrompt] = useState("Create a stronger prompt for Instagram content selling milk coffee.");
   const [mode, setMode] = useState("Clearer");
   const beforeScore = scorePrompt(rawPrompt);
-  const result = optimizerResult || buildLocalOptimizedPrompt(rawPrompt, mode, "Target AI", "Professional");
-  const afterScore = scoreOptimizedPrompt(rawPrompt, result);
+  const hasResult = Boolean(optimizerResult?.trim());
+  const result = hasResult ? optimizerResult : "";
+  const afterScore = hasResult
+    ? scoreOptimizedPrompt(rawPrompt, result, { fromOptimizer: true, mode })
+    : beforeScore;
 
   async function runOptimize() {
     await optimizePrompt(rawPrompt, mode);
