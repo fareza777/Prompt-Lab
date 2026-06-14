@@ -226,6 +226,19 @@ export const SEO_ROUTES = {
     dateModified: "2026-06-14",
     keywords: "best prompt for data analysis, data analysis prompt, AI data prompt, CSV prompt, analytics prompt"
   },
+  "/blog/best-prompt-for-social-media": {
+    routeKey: "best-prompt-for-social-media",
+    h1: "article-best-prompt-for-social-media",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for Social Media: 8 Templates That Drive Engagement | PromptLab",
+    description: "8 drop-in prompts for Instagram captions, LinkedIn posts, Twitter threads, and TikTok scripts.",
+    canonical: `${SITE}/blog/best-prompt-for-social-media`,
+    headline: "Best Prompt for Social Media: 8 Templates That Drive Engagement",
+    datePublished: "2026-06-15",
+    dateModified: "2026-06-15",
+    keywords: "best prompt for social media, social media prompt, Instagram prompt, LinkedIn prompt, Twitter prompt, TikTok script, AI content templates"
+  },
   "/blog/best-prompt-for-data-analysis": {
     routeKey: "article-best-prompt-for-data-analysis",
     h1: "article-best-prompt-for-data-analysis",

@@ -125,6 +125,14 @@
       h1: "article-best-prompt-for-data-analysis",
       lang: "en",
       ogType: "article",
+    },
+    "/blog/best-prompt-for-social-media": {
+      title: "Best Prompt for Social Media: 8 Templates That Drive Engagement | PromptLab",
+      description: "8 drop-in prompts for Instagram captions, LinkedIn posts, Twitter threads, and TikTok scripts.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-social-media",
+      h1: "article-best-prompt-for-social-media",
+      lang: "en",
+      ogType: "article",
     }
   };
 
@@ -144,7 +152,8 @@
     "/blog/best-prompt-for-email-writing": "article-best-prompt-for-email-writing",
     "/blog/how-to-create-system-prompt": "article-how-to-create-system-prompt",
     "/blog/best-prompt-for-coding": "article-best-prompt-for-coding",
-    "/blog/best-prompt-for-data-analysis": "article-best-prompt-for-data-analysis"
+    "/blog/best-prompt-for-data-analysis": "article-best-prompt-for-data-analysis",
+    "/blog/best-prompt-for-social-media": "best-prompt-for-social-media"
   };
 
   function normalizePath(pathname) {
