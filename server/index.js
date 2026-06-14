@@ -72,6 +72,10 @@ import {
   savePublishedModelSettings,
   toPublicRuntimeConfig,
 } from "./runtimeConfig.js";
+import {
+  buildProviderChatCompletionBody,
+  resolveMinimaxBaseUrl,
+} from "./minimaxProvider.js";
 
 const app = express();
 
@@ -307,7 +311,7 @@ app.post("/api/test-provider", express.json({ limit: "64kb" }), async (req, res)
     if (runtime.provider !== "openai") {
       const completion = await withTimeout(
         runtime.client.chat.completions.create(
-          {
+          buildProviderChatCompletionBody(runtime, {
             model,
             messages: [
               {
@@ -317,7 +321,7 @@ app.post("/api/test-provider", express.json({ limit: "64kb" }), async (req, res)
               },
             ],
             max_tokens: 220,
-          },
+          }),
           { timeout: 20000 }
         ),
         20000,
@@ -845,7 +849,12 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
             if (retryTimeoutMs >= 8000) {
               const retryMaxTokens = resolveGenerateMaxTokens(membership.plan, payload);
               const retryRes = await withTimeout(runtime.client.chat.completions.create(
-                { model: primaryModelLocal, messages: retryMessages, max_tokens: retryMaxTokens, temperature: 0.4 },
+                buildProviderChatCompletionBody(runtime, {
+                  model: primaryModelLocal,
+                  messages: retryMessages,
+                  max_tokens: retryMaxTokens,
+                  temperature: 0.4,
+                }),
                 { timeout: retryTimeoutMs }
               ), retryTimeoutMs, primaryModelLocal);
               const retriedRaw = retryRes.choices?.[0]?.message?.content || "";
@@ -926,7 +935,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
           prompt,
         });
       } catch (error) {
-        console.warn("openrouter fallback", error.status || error.code || error.message);
+        console.warn("generate provider failed", formatProviderError(error));
         const fallbackPrompt = buildFallbackPrompt(payload, attachments);
         await finishGenerateResponse(res, quotaSession, {
           eventType: "generate_prompt",
@@ -1210,19 +1219,27 @@ Output hanya bullet points cacat, tanpa pengantar.`,
   let critique = "";
   try {
     const critiqueRes = await withTimeout(runtime.client.chat.completions.create(
-      {
+      buildProviderChatCompletionBody(runtime, {
         model: primaryModel,
         messages: critiqueMessages,
         max_tokens: 600,
         temperature: 0.2,
-      },
+      }),
       { timeout: timing.primaryTimeoutMs }
     ), timing.primaryTimeoutMs, primaryModel);
     critique = critiqueRes.choices?.[0]?.message?.content || "";
   } catch (error) {
     if (shouldTryFallbackModel(error) && fallbackModels.length > 0) {
       try {
-        const fb = await tryOpenRouterFallbackModels(runtime.client, fallbackModels, critiqueMessages, timing.fallbackTimeoutMs, 600, 0.2);
+        const fb = await tryOpenRouterFallbackModels(
+          runtime.client,
+          fallbackModels,
+          critiqueMessages,
+          timing.fallbackTimeoutMs,
+          600,
+          0.2,
+          runtime
+        );
         critique = fb.completion.choices?.[0]?.message?.content || "";
       } catch {
         critique = "";
@@ -1255,12 +1272,12 @@ Output: prompt final saja.`,
 
   try {
     const refineRes = await withTimeout(runtime.client.chat.completions.create(
-      {
+      buildProviderChatCompletionBody(runtime, {
         model: primaryModel,
         messages: refineMessages,
         max_tokens: refineMaxTokens,
         temperature: 0.4,
-      },
+      }),
       { timeout: timing.primaryTimeoutMs }
     ), timing.primaryTimeoutMs, primaryModel);
     const refined = refineRes.choices?.[0]?.message?.content || "";
@@ -1269,7 +1286,15 @@ Output: prompt final saja.`,
   } catch (error) {
     if (shouldTryFallbackModel(error) && fallbackModels.length > 0) {
       try {
-        const fb = await tryOpenRouterFallbackModels(runtime.client, fallbackModels, refineMessages, timing.fallbackTimeoutMs, refineMaxTokens, 0.4);
+        const fb = await tryOpenRouterFallbackModels(
+          runtime.client,
+          fallbackModels,
+          refineMessages,
+          timing.fallbackTimeoutMs,
+          refineMaxTokens,
+          0.4,
+          runtime
+        );
         const refined = fb.completion.choices?.[0]?.message?.content || "";
         const sanitized = sanitizePromptOutput(refined);
         return sanitized && !isPromptTooShort(sanitized) ? sanitized : basePrompt;
@@ -1668,9 +1693,10 @@ function getRuntimeProvider(modelSettings = {}) {
 
   if (runtimeProvider === "minimax") {
     const apiKey = modelSettings.apiKey || process.env.MINIMAX_API_KEY || "";
-    const baseURL =
-      sanitizeBaseUrl(modelSettings.baseUrl || process.env.MINIMAX_BASE_URL || "https://api.minimaxi.chat/v1") ||
-      "https://api.minimaxi.chat/v1";
+    const baseURL = resolveMinimaxBaseUrl(
+      modelSettings.baseUrl || process.env.MINIMAX_BASE_URL || "",
+      apiKey
+    );
     return {
       baseURL,
       client: apiKey ? new OpenAI({ apiKey, baseURL }) : null,
@@ -1824,17 +1850,22 @@ async function createOpenRouterCompletion(
     fallbackModels = [];
   }
   const timing = resolveProviderTiming(payload, runtime, payload.generationMode);
+  const elapsedBeforeCall = Date.now() - requestStartedAt;
+  const primaryTimeoutMs = Math.min(
+    timing.primaryTimeoutMs,
+    Math.max(12000, VERCEL_FUNCTION_BUDGET_MS - elapsedBeforeCall - 2000)
+  );
 
   try {
     const completion = await withTimeout(runtime.client.chat.completions.create(
-      {
+      buildProviderChatCompletionBody(runtime, {
         model: primaryModel,
         messages,
         max_tokens: maxTokens,
         temperature: 0.4,
-      },
-      { timeout: timing.primaryTimeoutMs }
-    ), timing.primaryTimeoutMs, primaryModel);
+      }),
+      { timeout: primaryTimeoutMs }
+    ), primaryTimeoutMs, primaryModel);
     return {
       completion,
       maxTokens,
@@ -1854,7 +1885,9 @@ async function createOpenRouterCompletion(
       fallbackModels,
       messages,
       fallbackTimeout,
-      maxTokens
+      maxTokens,
+      0.4,
+      runtime
     );
     return {
       completion,
@@ -1887,12 +1920,12 @@ async function createOpenRouterOptimizeCompletion(payload, runtime = getRuntimeP
 
   try {
     return await withTimeout(runtime.client.chat.completions.create(
-      {
+      buildProviderChatCompletionBody(runtime, {
         model: primaryModel,
         messages,
         max_tokens: 1600,
         temperature: 0.4,
-      },
+      }),
       { timeout: timing.primaryTimeoutMs }
     ), timing.primaryTimeoutMs, primaryModel);
   } catch (error) {
@@ -1901,7 +1934,15 @@ async function createOpenRouterOptimizeCompletion(payload, runtime = getRuntimeP
       `openrouter optimize primary failed, trying fallback chain`,
       error.status || error.code || error.message
     );
-    return (await tryOpenRouterFallbackModels(runtime.client, fallbackModels, messages, timing.fallbackTimeoutMs, 1600)).completion;
+    return (await tryOpenRouterFallbackModels(
+      runtime.client,
+      fallbackModels,
+      messages,
+      timing.fallbackTimeoutMs,
+      1600,
+      0.4,
+      runtime
+    )).completion;
   }
 }
 
@@ -1927,12 +1968,12 @@ async function createOpenRouterCompareCompletion(payload, runtime = getRuntimePr
 
   try {
     const completion = await withTimeout(runtime.client.chat.completions.create(
-      {
+      buildProviderChatCompletionBody(runtime, {
         model: primaryModel,
         messages,
         max_tokens: 1800,
         temperature: 0.2,
-      },
+      }),
       { timeout: timing.primaryTimeoutMs }
     ), timing.primaryTimeoutMs, primaryModel);
     return {
@@ -1949,7 +1990,8 @@ async function createOpenRouterCompareCompletion(payload, runtime = getRuntimePr
       messages,
       timing.fallbackTimeoutMs,
       1800,
-      0.2
+      0.2,
+      runtime
     );
     return {
       completion,
@@ -2008,7 +2050,15 @@ function getOpenRouterFallbackModels(
   return models.slice(0, provider === "minimax" ? 2 : 3);
 }
 
-async function tryOpenRouterFallbackModels(client, models, messages, timeoutMs, maxTokens = 2200, temperature = 0.4) {
+async function tryOpenRouterFallbackModels(
+  client,
+  models,
+  messages,
+  timeoutMs,
+  maxTokens = 2200,
+  temperature = 0.4,
+  runtime = null
+) {
   const errors = [];
   let lastError = null;
 
@@ -2017,12 +2067,12 @@ async function tryOpenRouterFallbackModels(client, models, messages, timeoutMs, 
       console.warn(`trying openrouter fallback model ${model}`);
       const perModelTimeout = Math.min(timeoutMs, 22000);
       const completion = await withTimeout(client.chat.completions.create(
-        {
+        buildProviderChatCompletionBody(runtime || { provider: "openrouter" }, {
           model,
           messages,
           max_tokens: maxTokens,
           temperature,
-        },
+        }),
         { timeout: perModelTimeout }
       ), perModelTimeout, model);
       return { completion, errors };

@@ -150,7 +150,7 @@ function createDefaultAccountState() {
 const defaultAccountState = createDefaultAccountState();
 const defaultModelSettings = {
   apiKey: "",
-  baseUrl: "https://api.minimaxi.chat/v1",
+  baseUrl: "",
   fallbackModels: "MiniMax-M2.5-highspeed\nMiniMax-M2.7-highspeed",
   ocrModel: "baidu/qianfan-ocr-fast:free",
   primaryModel: "MiniMax-M3",

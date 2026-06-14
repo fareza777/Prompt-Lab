@@ -21,7 +21,7 @@ export function getEnvDefaultModelSettings() {
 
   const minimaxDefaults = {
     apiKey: "",
-    baseUrl: process.env.MINIMAX_BASE_URL || "https://api.minimaxi.chat/v1",
+    baseUrl: process.env.MINIMAX_BASE_URL || "",
     fallbackModels: fallbackModels.length
       ? fallbackModels
       : ["MiniMax-M2.5-highspeed", "MiniMax-M2.7-highspeed"],
