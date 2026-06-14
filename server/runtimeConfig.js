@@ -63,10 +63,24 @@ function pickNonEmpty(target, source, keys) {
   });
 }
 
+function envPrefersMinimax() {
+  return (
+    String(process.env.AI_PROVIDER || "").toLowerCase() === "minimax" &&
+    Boolean(String(process.env.MINIMAX_API_KEY || "").trim())
+  );
+}
+
+/** Published OpenRouter routing (e.g. mimo) must not override Vercel MiniMax when env is configured. */
+function publishedConflictsWithEnvMinimax(published) {
+  if (!published) return false;
+  if (String(published.provider || "").toLowerCase() === "minimax") return false;
+  return envPrefersMinimax();
+}
+
 /** Merge env → published (DB) → optional admin request overrides. API keys never come from DB. */
 export function mergeModelSettingsLayers({ published, request, allowRequestOverride = false }) {
   const merged = { ...getEnvDefaultModelSettings() };
-  if (published) {
+  if (published && !publishedConflictsWithEnvMinimax(published)) {
     pickNonEmpty(merged, published, [
       "provider",
       "baseUrl",
@@ -75,6 +89,8 @@ export function mergeModelSettingsLayers({ published, request, allowRequestOverr
       "fallbackModels",
       "timeoutMs",
     ]);
+  } else if (published) {
+    pickNonEmpty(merged, published, ["ocrModel", "fallbackModels"]);
   }
   if (allowRequestOverride && request) {
     pickNonEmpty(merged, request, [

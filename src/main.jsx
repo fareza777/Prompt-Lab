@@ -724,7 +724,7 @@ ${attachments
   .map(
     (file, index) =>
       `<document index="${index + 1}" name="${file.name}" type="${file.kind}" size="${file.sizeLabel}">
-${file.excerpt ? file.excerpt : "Content is not available in the local preview. Use the file metadata as initial context."}
+${file.excerpt ? file.excerpt : "File preview is not available here. Using file metadata as context."}
 </document>`
   )
   .join("\n")}
@@ -1145,7 +1145,7 @@ function buildLocalCompareResult(promptA, promptB) {
   return {
     winner,
     winner_label: winner === "A" ? "Prompt A" : winner === "B" ? "Prompt B" : "Tie",
-    summary: winner === "tie" ? "Both prompts are close by local readiness scoring." : `Prompt ${winner} has stronger local readiness.`,
+    summary: winner === "tie" ? "Both prompts score similarly on structure and clarity." : `Prompt ${winner} reads stronger on structure and clarity.`,
     scores: {
       A: {
         clarity: scoreA.clarity,
@@ -1182,7 +1182,7 @@ function getLocalPromptRisks(prompt = "") {
   if (!/role|act as|bertindak/i.test(prompt)) risks.push("Role is not explicit.");
   if (!/format|output|struktur|json|markdown/i.test(prompt)) risks.push("Output format is not locked.");
   if (!/constraint|batasan|jangan|must|wajib/i.test(prompt)) risks.push("Constraints are weak.");
-  return risks.length ? risks : ["No major local risks detected."];
+  return risks.length ? risks : ["No major issues detected."];
 }
 
 function buildLocalOptimizedPrompt(rawPrompt, mode, targetModel, tone) {
@@ -1303,7 +1303,7 @@ function App() {
   const [attachments, setAttachments] = useState([]);
   const [generatedPrompt, setGeneratedPrompt] = useState("");
   const [generationSource, setGenerationSource] = useState("local");
-  const [generationModel, setGenerationModel] = useState("Local draft");
+  const [generationModel, setGenerationModel] = useState("");
   const [generationStatus, setGenerationStatus] = useState("local");
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -1501,10 +1501,14 @@ function App() {
   useEffect(() => {
     setGeneratedPrompt("");
     setGenerationSource("local");
-    setGenerationModel("Local draft");
+    setGenerationModel("");
     setGenerationStatus("local");
     setWarningMessage("");
   }, [narrative, category, tone, model, outputType, attachments.length]);
+
+  useEffect(() => {
+    refreshHealth();
+  }, []);
 
   useEffect(() => {
     if (active === "Settings") refreshHealth();
@@ -1849,7 +1853,7 @@ function App() {
 
       setGeneratedPrompt(data.prompt || localPrompt);
       setGenerationSource(data.source || "server");
-      setGenerationModel(data.model || (data.source === "fallback" ? "Local fallback" : "Local draft"));
+      setGenerationModel(data.model || "");
       setGenerationStatus(data.modelStatus || data.source || "server");
       applyServerQuota(data.quota);
       setWarningMessage([uploadPlan.warning, data.warning].filter(Boolean).join(" "));
@@ -1862,7 +1866,7 @@ function App() {
       const quotaOnly = /usage quota|quota exceeded|quota token|failed to record quota/i.test(message);
       setGeneratedPrompt(localPrompt);
       setGenerationSource("local");
-      setGenerationModel("Local draft");
+      setGenerationModel("");
       setGenerationStatus(quotaOnly ? "local-quota-warning" : "local-error");
       if (quotaOnly) {
         setErrorMessage("");
@@ -1919,7 +1923,7 @@ function App() {
       setPiiFindings(Array.isArray(data.piiFindings) ? data.piiFindings : []);
       return data.prompt;
     } catch (error) {
-      const message = error.message || "Backend unavailable, using local optimizer.";
+      const message = error.message || "Could not reach the AI service. Showing a quick optimization preview.";
       const quotaOnly = /quota token|quota exceeded|usage quota/i.test(message);
       if (quotaOnly) {
         setOptimizerError(message);
@@ -1944,7 +1948,7 @@ function App() {
     if (!canUseFeature(accountState.plan, "aiCompare")) {
       const fallback = buildLocalCompareResult(compareA, compareB);
       setCompareResult(fallback);
-      setCompareSource("Local judge");
+      setCompareSource("score-based");
       setCompareWarning(upgradeMessageForFeature("aiCompare"));
       setIsComparing(false);
       return fallback;
@@ -1971,7 +1975,7 @@ function App() {
       setCompareBiasMitigation(data.result?.bias_mitigation || "");
       return data.result;
     } catch (error) {
-      const message = error.message || "Compare provider unavailable, using local judge.";
+      const message = error.message || "AI compare is unavailable. Using readiness scores instead.";
       const quotaOnly = /quota token|quota exceeded|usage quota/i.test(message);
       if (quotaOnly) {
         setCompareError(message);
@@ -1980,7 +1984,7 @@ function App() {
       }
       const fallback = buildLocalCompareResult(compareA, compareB);
       setCompareResult(fallback);
-      setCompareSource("Local judge");
+      setCompareSource("score-based");
       setCompareError(message);
       return fallback;
     } finally {
@@ -2468,7 +2472,7 @@ function V2App(props) {
         <div className="v2-side-card">
           <span>Session</span>
           <strong>{isGenerating ? "Generating" : "Ready"}</strong>
-          <p>{statusLabel(generationStatus, generationSource)} · {generationModel}</p>
+          <GenerationStatusHint status={generationStatus} source={generationSource} isGenerating={isGenerating} as="p" />
         </div>
       </aside>
 
@@ -2609,11 +2613,12 @@ function V2Header({ active, setActive, settingsStatus, isGenerating, generationS
     Settings: "Manage account, membership, prompt defaults, privacy, and support.",
   };
   const syncLabel = isGenerating
-    ? statusLabel(generationStatus, generationSource)
+    ? "Generating..."
     : isGuestMode || !accountState?.userId
-      ? "Local only"
+      ? "On this device"
       : "Synced";
   const syncClass = isGenerating ? "busy" : isGuestMode || !accountState?.userId ? "local" : "";
+  const engineLabel = settingsStatus == null ? "" : settingsStatus.ok ? "AI online" : "Preview mode";
   return (
     <header className="v2-headerbar">
       <div>
@@ -2627,9 +2632,11 @@ function V2Header({ active, setActive, settingsStatus, isGenerating, generationS
           <span>Search library</span>
           <kbd>⌘K</kbd>
         </button>
-        <span className={`v2-health ${settingsStatus?.ok ? "ready" : ""}`}>
-          {settingsStatus?.ok ? "Provider ready" : "Local fallback ready"}
-        </span>
+        {engineLabel && (
+          <span className={`v2-health ${settingsStatus?.ok ? "ready" : ""}`}>
+            {engineLabel}
+          </span>
+        )}
         <button className="v2-icon-btn" onClick={() => setActive("Settings")} title="Settings">
           <Settings size={18} />
         </button>
@@ -2780,7 +2787,7 @@ function V2Builder(props) {
         <div className="v2-hero-status">
           <span>Readiness</span>
           <strong>{metrics.score}</strong>
-          <small>{statusLabel(generationStatus, generationSource)}</small>
+          <GenerationStatusHint status={generationStatus} source={generationSource} isGenerating={isGenerating} />
         </div>
       </V2PageIntro>
 
@@ -2918,6 +2925,7 @@ function isAiGeneratedOutput(generationSource, generationStatus) {
   return (
     generationStatus === "primary-model" ||
     generationStatus === "fallback-model" ||
+    generationSource === "minimax" ||
     generationSource === "openrouter" ||
     generationSource === "openai" ||
     generationSource === "server"
@@ -2954,7 +2962,7 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
           <div className="v2-ring" style={{ "--score": `${metrics.score * 3.6}deg` }}><span>{metrics.score}</span></div>
           <div>
             <h3>{metrics.score >= 85 ? "Ready to use" : "Needs work"}</h3>
-            <p>Local rule-based score from five prompt quality checks.</p>
+            <p>Checks clarity, context, format, constraints, and actionability.</p>
           </div>
         </div>
         <V2Metric label="Clarity" value={metrics.clarity} />
@@ -3327,14 +3335,14 @@ function V2Compare({
       key: "A",
       title: "Prompt A",
       score: aiScores?.A?.overall ?? scoreA.score,
-      bestFor: compareResult?.best_for?.A || "Local score before AI judge.",
+      bestFor: compareResult?.best_for?.A || "Readiness score before AI judge.",
       risks: compareResult?.risks?.A || getLocalPromptRisks(compareA),
     },
     {
       key: "B",
       title: "Prompt B",
       score: aiScores?.B?.overall ?? scoreB.score,
-      bestFor: compareResult?.best_for?.B || "Local score before AI judge.",
+      bestFor: compareResult?.best_for?.B || "Readiness score before AI judge.",
       risks: compareResult?.risks?.B || getLocalPromptRisks(compareB),
     },
     {
@@ -4005,7 +4013,7 @@ function V2AdminSettings(props) {
             <Rocket size={16} />
             {globalPublishBusy ? "Publishing…" : "Publish globally"}
           </button>
-          <button className="v2-btn" onClick={saveModelSettings} disabled={globalPublishBusy}><Save size={16} />Save local draft</button>
+          <button className="v2-btn" onClick={saveModelSettings} disabled={globalPublishBusy}><Save size={16} />Save draft</button>
           <button className="v2-btn primary" onClick={testProvider} disabled={isTestingProvider || globalPublishBusy}><Zap size={16} />{isTestingProvider ? "Testing..." : "Test Provider"}</button>
           <button className="v2-btn" onClick={refreshHealth} disabled={globalPublishBusy}><Gauge size={16} />Health</button>
           <button className="v2-btn" onClick={loadAdminRuntimeConfig} disabled={globalPublishBusy}><Database size={16} />Reload published</button>
@@ -4014,7 +4022,7 @@ function V2AdminSettings(props) {
         {isTestingProvider && (
           <V2MiniPipeline eyebrow="Provider test" title="Checking model route..." steps={["Endpoint", "Auth", "Model", "Response"]} />
         )}
-        {settingsSavedAt && <p className="v2-note">Local draft saved at {settingsSavedAt}</p>}
+        {settingsSavedAt && <p className="v2-note">Draft saved at {settingsSavedAt}</p>}
         {providerTestStatus && <p className="v2-note warn">{providerTestStatus}</p>}
       </div>
     </section>
@@ -4165,7 +4173,7 @@ function BuilderCommandStrip({ metrics, attachments, model, outputType, generati
     { icon: ShieldCheck, label: "Quality Gate", value: `${metrics.score}% ready`, tone: "mint" },
     { icon: BrainCircuit, label: "Target Engine", value: model, tone: "blue" },
     { icon: Layers3, label: "Deliverable", value: outputType, tone: "cyan" },
-    { icon: Clock3, label: "Mode", value: generationMode || statusLabel(generationStatus), tone: "amber" },
+    { icon: Clock3, label: "Mode", value: generationMode || "Balanced", tone: "amber" },
   ];
 
   return (
@@ -4269,12 +4277,46 @@ function AttachmentZone({ attachments, addAttachments, removeAttachment }) {
   );
 }
 
+function formatFeatureSourceLabel(source) {
+  if (!source || source === "local") return "";
+  if (source === "score-based" || source === "Local judge") return "Score-based";
+  if (source === "openrouter" || source === "minimax" || source === "openai" || source === "server") return "AI";
+  if (source === "fallback") return "Preview";
+  return "";
+}
+
+function userGenerationLabel(status, source, isGenerating = false) {
+  if (isGenerating) return "Generating...";
+  if (status === "local-quota-warning") return "";
+  if (status === "local-fallback" || status === "local-error" || source === "fallback") {
+    return "Preview";
+  }
+  if (
+    status === "primary-model" ||
+    status === "fallback-model" ||
+    source === "minimax" ||
+    source === "openrouter" ||
+    source === "openai" ||
+    source === "server"
+  ) {
+    return "AI generated";
+  }
+  return "";
+}
+
+function GenerationStatusHint({ status, source, isGenerating = false, as: Tag = "small", className = "" }) {
+  const label = userGenerationLabel(status, source, isGenerating);
+  if (!label) return null;
+  return <Tag className={className}>{label}</Tag>;
+}
+
 function statusLabel(status, source) {
   if (status === "primary-model") return "Primary model";
   if (status === "fallback-model") return "Fallback model";
   if (status === "local-fallback") return "Local fallback";
   if (status === "local-error") return "Local backup";
   if (source === "fallback") return "Local fallback";
+  if (source === "minimax") return "MiniMax";
   if (source === "openrouter") return "OpenRouter";
   if (source === "openai") return "OpenAI";
   return "Local draft";
@@ -4345,7 +4387,16 @@ function ResultPanel({
       </div>
       <div className="prompt-output">
         <div className="prompt-toolbar">
-          <span>Optimized Prompt <em>{statusLabel(generationStatus, generationSource)}</em></span>
+          {(() => {
+            const label = userGenerationLabel(generationStatus, generationSource);
+            return label ? (
+              <span>
+                Optimized Prompt <em>{label}</em>
+              </span>
+            ) : (
+              <span>Optimized Prompt</span>
+            );
+          })()}
           <div>
             <button className="icon-button small" onClick={() => copyText(prompt)} title="Copy">
               {copied ? <Check size={16} /> : <Clipboard size={16} />}
@@ -4356,10 +4407,6 @@ function ResultPanel({
           </div>
         </div>
         <pre>{prompt}</pre>
-      </div>
-      <div className="generation-status">
-        <span>Engine</span>
-        <strong>{generationModel}</strong>
       </div>
       {warningMessage && <p className="warning-note">{warningMessage}</p>}
       {errorMessage && <p className="error-note">{errorMessage}</p>}
@@ -4433,9 +4480,11 @@ function OptimizerView({
         <div className="panel-heading">
           <div>
             <h2>Optimized Result</h2>
-            <p>Hasil optimasi siap disimpan ke Library.</p>
+            <p>Optimized result — ready to save to Library.</p>
           </div>
-          <strong className="status-pill">{optimizerSource}</strong>
+          {formatFeatureSourceLabel(optimizerSource) && (
+            <strong className="status-pill">{formatFeatureSourceLabel(optimizerSource)}</strong>
+          )}
         </div>
         <div className="metric-list">
           <Metric label="Clarity" value={afterScore.clarity} />
