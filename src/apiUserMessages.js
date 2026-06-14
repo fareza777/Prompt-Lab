@@ -28,5 +28,6 @@ export const API_MSG = {
   premiumQualityApplied: "Premium Quality Mode: critique and refine pass applied.",
   backendUnavailableLocalPrompt: "Could not reach the AI service. Showing a quick preview — try Generate again.",
   providerRateLimitedGenerate: "AI rate limit reached. Wait a moment, then try Generate again.",
-  providerTimeoutGenerate: "AI took too long to respond. Showing a quick preview — try Generate again.",
+  providerTimeoutGenerate:
+    "AI took too long to respond (this is not your quota). Showing a quick preview — try Generate again.",
 };

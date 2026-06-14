@@ -806,7 +806,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       }
 
       try {
-        let generation = await createOpenRouterCompletion(payload, attachments, runtime, membership.plan);
+        let generation = await createOpenRouterCompletion(payload, attachments, runtime, membership.plan, startedAt);
         let completion = generation.completion;
         let rawPrompt = completion.choices?.[0]?.message?.content || "";
         let prompt = sanitizePromptOutput(rawPrompt);
@@ -816,7 +816,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         if (isPromptTooShort(prompt) && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
           retried = true;
           try {
-            generation = await createOpenRouterCompletion(payload, attachments, runtime, membership.plan);
+            generation = await createOpenRouterCompletion(payload, attachments, runtime, membership.plan, startedAt);
             completion = generation.completion;
             rawPrompt = completion.choices?.[0]?.message?.content || "";
             prompt = sanitizePromptOutput(rawPrompt);
@@ -1758,14 +1758,41 @@ function getOpenRouterTiming(mode) {
   };
 }
 
+function resolveProviderTiming(payload, runtime, generationMode) {
+  const capped = capProviderTimeouts(getOpenRouterTiming(generationMode));
+  const primaryBudgetCap = Math.max(15000, VERCEL_FUNCTION_BUDGET_MS - 8000);
+  const configured = normalizeTimeout(payload.modelSettings?.timeoutMs);
+  const envPrimary =
+    runtime.provider === "minimax" ? normalizeTimeout(process.env.MINIMAX_PRIMARY_TIMEOUT_MS) : 0;
+
+  let primaryTimeoutMs = capped.primaryTimeoutMs;
+  if (configured) {
+    primaryTimeoutMs = Math.min(configured, primaryBudgetCap);
+  } else if (envPrimary) {
+    primaryTimeoutMs = Math.min(envPrimary, primaryBudgetCap);
+  }
+
+  let fallbackTimeoutMs = capped.fallbackTimeoutMs;
+  if (runtime.provider === "minimax") {
+    const patientFloor = payload.generationMode === "patient" ? primaryBudgetCap : 42000;
+    primaryTimeoutMs = Math.min(Math.max(primaryTimeoutMs, patientFloor), primaryBudgetCap);
+    fallbackTimeoutMs = Math.min(
+      normalizeTimeout(process.env.MINIMAX_FALLBACK_TIMEOUT_MS) || 18000,
+      Math.max(10000, VERCEL_FUNCTION_BUDGET_MS - primaryTimeoutMs - 3500)
+    );
+  }
+
+  return { primaryTimeoutMs, fallbackTimeoutMs };
+}
+
 async function createOpenRouterCompletion(
   payload,
   attachments,
   runtime = getRuntimeProvider(payload.modelSettings),
-  plan = "Free"
+  plan = "Free",
+  requestStartedAt = Date.now()
 ) {
   const maxTokens = resolveGenerateMaxTokens(plan, payload);
-  const startedAt = Date.now();
   const messages = [
     {
       role: "system",
@@ -1786,13 +1813,7 @@ async function createOpenRouterCompletion(
   if (runtime.provider === "minimax") {
     fallbackModels = fallbackModels.slice(0, 1);
   }
-  let timing = capProviderTimeouts(getOpenRouterTiming(payload.generationMode));
-  if (payload.modelSettings?.timeoutMs) {
-    timing.primaryTimeoutMs = Math.min(
-      Number(payload.modelSettings.timeoutMs) || timing.primaryTimeoutMs,
-      timing.primaryTimeoutMs
-    );
-  }
+  const timing = resolveProviderTiming(payload, runtime, payload.generationMode);
 
   try {
     const completion = await withTimeout(runtime.client.chat.completions.create(
@@ -1812,15 +1833,16 @@ async function createOpenRouterCompletion(
     };
   } catch (error) {
     if (!shouldTryFallbackModel(error) || fallbackModels.length === 0) throw error;
-    if (Date.now() - startedAt > VERCEL_FUNCTION_BUDGET_MS - 14000) {
-      throw error;
-    }
+    const elapsed = Date.now() - requestStartedAt;
+    const remaining = VERCEL_FUNCTION_BUDGET_MS - elapsed - 2000;
+    if (remaining < 12000) throw error;
+    const fallbackTimeout = Math.min(timing.fallbackTimeoutMs, remaining, 22000);
     const primaryError = formatProviderError(error);
     const { completion, errors } = await tryOpenRouterFallbackModels(
       runtime.client,
       fallbackModels,
       messages,
-      timing.fallbackTimeoutMs,
+      fallbackTimeout,
       maxTokens
     );
     return {
@@ -1982,7 +2004,7 @@ async function tryOpenRouterFallbackModels(client, models, messages, timeoutMs, 
   for (const model of models) {
     try {
       console.warn(`trying openrouter fallback model ${model}`);
-      const perModelTimeout = Math.min(timeoutMs, 18000);
+      const perModelTimeout = Math.min(timeoutMs, 22000);
       const completion = await withTimeout(client.chat.completions.create(
         {
           model,

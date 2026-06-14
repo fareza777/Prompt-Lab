@@ -120,6 +120,10 @@ export function resolveGenerateMaxTokens(
   if (shouldUseStructuredAudit(narrative, category, outputType)) {
     max = Math.max(max, normalizePlanName(plan) === "Business" ? 5000 : 4200);
   }
+  if (/video\s*prompt/i.test(String(outputType)) || /video\s*ai/i.test(String(category))) {
+    const planName = normalizePlanName(plan);
+    max = Math.min(max, planName === "Business" ? 4000 : planName === "Pro" ? 3600 : 3000);
+  }
   return Math.min(8000, Math.max(2200, max));
 }
 
