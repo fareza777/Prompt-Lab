@@ -1,3 +1,4 @@
+import { buildImageVideoPromptAddon } from "../src/imageVideoPromptDelivery.js";
 import { getLanguageLockInstruction, getLanguageMeta } from "../src/promptLanguage.js";
 import { buildPhasedAppDeliveryInstruction } from "../src/phasedAppDelivery.js";
 import { buildStructuredAuditInstruction } from "../src/structuredAuditDelivery.js";
@@ -43,6 +44,8 @@ export function buildIntentSystemPromptXml(payload = {}) {
     "  - User minta PPT → output prompt untuk membuat PPT.",
     "  - User minta Word/dokumen → output prompt untuk Word-style report.",
     "  - User minta aplikasi/app/website → output prompt untuk runnable application code.",
+    "  - User minta Image Prompt → output prompt text-to-image (main + negative + ratio + model tuning).",
+    "  - User minta Video Prompt → output prompt text-to-video dengan durasi, scene list, camera, dan negative prompt.",
     "  - Jangan pernah swap deliverable di tengah render.",
     "</deliverable_lock>",
     `<target_ai>${target}</target_ai>`,
@@ -77,6 +80,8 @@ export function buildIntentSystemPromptXml(payload = {}) {
       const blocks = [];
       if (audit) blocks.push(`<structured_audit>\n${audit.replace(/\n/g, "\n  ")}\n</structured_audit>`);
       if (phased) blocks.push(`<phased_delivery>\n${phased.replace(/\n/g, "\n  ")}\n</phased_delivery>`);
+      const media = buildImageVideoPromptAddon({ ...payload, outputLanguage: langCode });
+      if (media) blocks.push(media.replace(/\n/g, "\n  "));
       return blocks.join("\n");
     })(),
     "<output>Return only the final prompt, langsung copy-paste ready.</output>",
@@ -208,7 +213,15 @@ export function detectDomains(payload = {}) {
     { domain: "runnable application", re: /\b(aplikasi|app|website|web app|dashboard|sistem|platform|software|frontend|backend|full-?stack|api|kasir|pos)\b/i },
     { domain: "presentation planning", re: /\b(ppt|powerpoint|presentasi|slide|deck|pitch)\b/i },
     { domain: "structured document", re: /\b(word|docx|dokumen|laporan|report|proposal|memo|sop|kebijakan)\b/i },
-    { domain: "creative photo editing tool", re: /\b(foto|photo|image|gambar|edit foto|midjourney|dall-?e|stable diffusion)\b/i },
+    { domain: "creative photo editing tool", re: /\b(edit foto|photo editor|image editor|editor foto)\b/i },
+    {
+      domain: "AI image generation prompt",
+      re: /\b(image prompt|text[\s-]?to[\s-]?image|t2i|midjourney|dall-?e|flux|stable diffusion|sdxl|ideogram|leonardo|firefly|image ai)\b/i,
+    },
+    {
+      domain: "AI video generation prompt",
+      re: /\b(video prompt|text[\s-]?to[\s-]?video|t2v|runway|kling|sora|pika|haiper|luma|veo|minimax video|hailuo|seedance|video ai|generate video)\b/i,
+    },
     { domain: "survey or form analysis", re: /\b(survey|kuesioner|questionnaire|formulir|riset|responden|sample)\b/i },
     { domain: "legal & compliance", re: /\b(legal|hukum|kontrak|perjanjian|nda|tos|privacy|gdpr|uu pdp|compliance|regulasi)\b/i },
     { domain: "finance & accounting", re: /\b(finance|keuangan|akuntansi|laporan keuangan|pajak|tax|invoice|cashflow|budget|investor|valuation)\b/i },
@@ -295,6 +308,50 @@ const EXPANDED_PACKS = {
     constraints: ["hindari edit mustahil", "preserve identitas saat dibutuhkan", "tandai asumsi visual"],
     outputControls: ["main prompt", "negative prompt", "variant style", "quality settings"],
     qualityGates: ["intent visual jelas", "constraint mengurangi artifact", "settings eksplisit"],
+  },
+  "AI image generation prompt": {
+    domain: "AI image generation prompt",
+    role: "senior text-to-image prompt director (Midjourney, DALL·E, Flux, SDXL)",
+    requirements: [
+      "subject & action/pose",
+      "environment",
+      "lighting recipe",
+      "style & medium",
+      "composition & camera/lens",
+      "negative prompt",
+      "aspect ratio",
+      "model-specific tuning",
+    ],
+    constraints: ["hindari teks panjang di gambar kecuali diminta", "tandai asumsi visual", "pisahkan main vs negative"],
+    outputControls: ["main prompt", "negative prompt", "aspect ratio", "2 variants (safe/bold)", "model notes"],
+    qualityGates: ["6-part formula lengkap", "negative prompt mengurangi artifact", "ratio & style eksplisit"],
+  },
+  "AI video generation prompt": {
+    domain: "AI video generation prompt",
+    role: "senior text-to-video prompt director (Runway, Kling, Sora, Pika, MiniMax/Hailuo, Luma, Veo)",
+    requirements: [
+      "total duration (seconds)",
+      "aspect ratio & platform",
+      "scene list with timestamps",
+      "camera move per scene",
+      "lighting & mood",
+      "motion speed & continuity",
+      "negative prompt",
+      "audio/SFX cues (optional)",
+    ],
+    constraints: [
+      "satu ide visual per beat",
+      "hook dalam 0–3 detik pertama",
+      "jangan scene tanpa camera direction",
+      "tandai continuity karakter/props",
+    ],
+    outputControls: [
+      "master prompt",
+      "shot list table (time | visual | camera | motion | audio)",
+      "negative prompt",
+      "platform export notes",
+    ],
+    qualityGates: ["durasi eksplisit", "setiap scene punya camera+motion", "hook kuat", "continuity jelas"],
   },
   "survey or form analysis": {
     domain: "survey or form analysis",

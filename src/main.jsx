@@ -66,6 +66,7 @@ import {
 } from "./planEntitlements.js";
 import { buildPhasedAppDeliveryInstruction } from "./phasedAppDelivery.js";
 import { buildStructuredAuditInstruction } from "./structuredAuditDelivery.js";
+import { buildImageVideoPromptAddon } from "./imageVideoPromptDelivery.js";
 import { API_MSG } from "./apiUserMessages.js";
 import { isSuperAccount, SUPER_QUOTA_LIMIT } from "./superAccounts.js";
 import {
@@ -83,13 +84,13 @@ installSplashSafetyNet();
 repairStuckLocalProfile();
 purgeLegacyServiceWorkers();
 
-const categories = ["Marketing", "Content Creator", "Business", "Coding", "Academic", "Image AI"];
+const categories = ["Marketing", "Content Creator", "Business", "Coding", "Academic", "Image AI", "Video AI"];
 const tones = ["Professional", "Casual", "Persuasive", "Creative"];
 const models = ["ChatGPT", "Claude", "Gemini", "Grok", "Others"];
-const outputTypes = ["Application Code", "Word Document", "PPT", "Technical Design", "Analysis", "Content"];
+const outputTypes = ["Application Code", "Word Document", "PPT", "Technical Design", "Analysis", "Content", "Image Prompt", "Video Prompt"];
 const optimizerModes = ["Clearer", "Shorter", "More Detailed", "Academic", "Marketing", "Coding"];
 const generationModes = ["Fast", "Balanced", "Patient Free"];
-const providerOptions = ["openrouter", "openai", "custom"];
+const providerOptions = ["minimax", "openrouter", "openai", "custom"];
 const membershipPlans = Object.fromEntries(
   Object.entries(MEMBERSHIP_MARKETING).map(([plan, marketing]) => [
     plan,
@@ -149,13 +150,12 @@ function createDefaultAccountState() {
 const defaultAccountState = createDefaultAccountState();
 const defaultModelSettings = {
   apiKey: "",
-  baseUrl: "https://openrouter.ai/api/v1",
-  fallbackModels:
-    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free\nopenai/gpt-oss-20b:free\nqwen/qwen3-next-80b-a3b-instruct:free",
+  baseUrl: "https://api.minimaxi.chat/v1",
+  fallbackModels: "MiniMax-M2.5-highspeed\nMiniMax-M2.7-highspeed",
   ocrModel: "baidu/qianfan-ocr-fast:free",
-  primaryModel: "deepseek/deepseek-v4-flash",
-  provider: "openrouter",
-  timeoutMs: "40000",
+  primaryModel: "MiniMax-M3",
+  provider: "minimax",
+  timeoutMs: "38000",
 };
 const modeProfiles = {
   Fast: {
@@ -234,10 +234,28 @@ const templates = [
     title: "Product Image Prompt",
     category: "Image AI",
     model: "Others",
-    outputType: "Content",
+    outputType: "Image Prompt",
     tone: "Creative",
     prompt:
-      "Create a product visual prompt with composition, lighting, background, material, and negative prompt.",
+      "Create a product hero image prompt: subject, material, composition, studio lighting, background, lens, color palette, negative prompt, aspect ratio 4:5, and Midjourney + Flux tuning notes.",
+  },
+  {
+    title: "Cinematic Video Prompt",
+    category: "Video AI",
+    model: "Grok",
+    outputType: "Video Prompt",
+    tone: "Creative",
+    prompt:
+      "Create a 15-second vertical ad video prompt for a cold brew coffee brand: hook 0-2s, 4 scenes with timestamps, camera moves, lighting, motion speed, negative prompt, and Runway/Kling export notes.",
+  },
+  {
+    title: "TikTok AI Video Shot List",
+    category: "Video AI",
+    model: "Grok",
+    outputType: "Video Prompt",
+    tone: "Casual",
+    prompt:
+      "Write a 12-second TikTok text-to-video prompt with shot list table (time | visual | camera | motion | audio), 9:16 ratio, viral hook, product demo beat, and brand-safe variant.",
   },
   {
     title: "Mobile App PRD",
@@ -437,7 +455,8 @@ function inferRole(category) {
     Business: "business development consultant",
     Coding: "senior software engineer",
     Academic: "academic research assistant",
-    "Image AI": "AI visual prompt director",
+    "Image AI": "AI image generation prompt director",
+    "Video AI": "AI video generation prompt director",
   };
   return roles[category] || "professional prompt engineer";
 }
@@ -446,12 +465,14 @@ function inferIntentBlueprint(narrative, category, outputType, attachments = [])
   const text = `${narrative || ""} ${category || ""} ${outputType || ""}`.toLowerCase();
   const asksGame = /\b(game|permainan|platformer|mario|phaser|side[\s-]?scroll|level\s*\d+|aksi\s*2d)\b/i.test(text);
   const asksApp =
-    /\b(app|aplikasi|dashboard|website|web app|sistem|software|frontend|backend|full-stack|fullstack|tool|tools|editor|builder|kasir|pos)\b/i.test(text) ||
-    asksGame ||
-    /application code/i.test(outputType);
+    !/video\s*prompt|image\s*prompt/i.test(outputType || "") &&
+    (/\b(app|aplikasi|dashboard|website|web app|sistem|software|frontend|backend|full-stack|fullstack|tool|tools|editor|builder|kasir|pos)\b/i.test(text) ||
+      asksGame ||
+      /application code/i.test(outputType));
   const asksPresentation = /\b(ppt|powerpoint|presentation|presentasi|slides?)\b/i.test(text);
   const asksDocument = /\b(word|docx|document|dokumen|report|laporan|proposal)\b/i.test(text);
-  const asksImage = /\b(image|gambar|foto|photo|visual|edit foto|photo editor|midjourney|desain)\b/i.test(text);
+  const asksImage = /\b(image|gambar|foto|photo|visual|midjourney|dall-?e|flux|image prompt)\b/i.test(text);
+  const asksVideo = /\b(video|runway|kling|sora|pika|t2v|text to video|video prompt|reels|tiktok)\b/i.test(text);
 
   const domainRules = [
     {
@@ -489,6 +510,27 @@ function inferIntentBlueprint(narrative, category, outputType, attachments = [])
         "level JSON",
         "phased implementation",
       ],
+    },
+    {
+      match: /\b(video prompt|text[\s-]?to[\s-]?video|t2v|runway|kling|sora|pika|generate video|ai video|minimax video|hailuo)\b/i,
+      domain: "AI video generation",
+      archetype: "text-to-video prompt with duration, shot list, camera moves, and negative prompt",
+      expansions: [
+        "duration & aspect ratio",
+        "scene timestamps",
+        "camera move per scene",
+        "lighting & mood",
+        "motion speed",
+        "negative prompt",
+        "platform export",
+        "continuity notes",
+      ],
+    },
+    {
+      match: /\b(image prompt|text[\s-]?to[\s-]?image|t2i|midjourney|dall-?e|flux|stable diffusion)\b/i,
+      domain: "AI image generation",
+      archetype: "text-to-image prompt with 6-part formula and model tuning",
+      expansions: ["subject", "environment", "lighting", "style", "composition", "negative prompt", "aspect ratio"],
     },
     {
       match: /\b(edit foto|photo editor|image editor|editor foto|foto editor)\b/i,
@@ -539,13 +581,21 @@ function inferIntentBlueprint(narrative, category, outputType, attachments = [])
           ? "Visual prompt system"
           : `${category || "General"} prompt workflow`;
 
-  const deliverable = asksApp
+  const deliverable = /video\s*prompt/i.test(outputType || "")
+    ? "Text-to-video generation prompt"
+    : /image\s*prompt/i.test(outputType || "")
+      ? "Text-to-image generation prompt"
+      : asksApp
     ? "Runnable application specification"
     : asksPresentation
       ? "Slide-by-slide presentation prompt"
       : asksDocument
         ? "Structured document prompt"
-        : outputType || "Ready-to-use AI prompt";
+        : asksVideo
+          ? "Text-to-video generation prompt"
+          : asksImage
+            ? "Text-to-image generation prompt"
+            : outputType || "Ready-to-use AI prompt";
 
   const baseExpansions = matched?.expansions || [
     "intent summary",
@@ -658,6 +708,7 @@ function buildClaudePrompt({
   tone,
   outputType,
   attachments,
+  model = "Claude",
   mode = "builder",
 }) {
   const cleanNarrative =
@@ -739,6 +790,8 @@ Tool and evidence instruction:
 ${buildStructuredAuditInstruction(cleanNarrative, category, outputType, langMeta.code)}
 
 ${buildPhasedAppDeliveryInstruction(cleanNarrative, category, outputType, langMeta.code)}
+
+${buildImageVideoPromptAddon({ narrative: cleanNarrative, category, outputType, modelTarget: model, outputLanguage: langMeta.code })}
 
 ${reasoningLine}`;
 }
@@ -925,7 +978,7 @@ function V2ActionToast({ message }) {
 
 function buildPrompt(narrative, category, tone, model, outputType, attachments) {
   if (isClaudeTarget(model)) {
-    return buildClaudePrompt({ narrative, category, tone, outputType, attachments });
+    return buildClaudePrompt({ narrative, category, tone, outputType, attachments, model });
   }
 
   const cleanNarrative =
@@ -995,7 +1048,9 @@ Constraints:
 
 ${buildStructuredAuditInstruction(cleanNarrative, category, outputType, langMeta.code)}
 
-${buildPhasedAppDeliveryInstruction(cleanNarrative, category, outputType, langMeta.code)}`;
+${buildPhasedAppDeliveryInstruction(cleanNarrative, category, outputType, langMeta.code)}
+
+${buildImageVideoPromptAddon({ narrative: cleanNarrative, category, outputType, modelTarget: model, outputLanguage: langMeta.code })}`;
 }
 
 function scorePrompt(prompt) {

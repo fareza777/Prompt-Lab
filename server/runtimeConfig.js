@@ -10,6 +10,7 @@ export function clearRuntimeConfigCache() {
 }
 
 export function getEnvDefaultModelSettings() {
+  const provider = String(process.env.AI_PROVIDER || "minimax").toLowerCase();
   const fallbackRaw =
     process.env.OPENROUTER_FALLBACK_MODELS || process.env.OPENROUTER_FALLBACK_MODEL || "";
   const fallbackModels = String(fallbackRaw)
@@ -18,15 +19,38 @@ export function getEnvDefaultModelSettings() {
     .filter(Boolean)
     .slice(0, 6);
 
-  return {
+  const minimaxDefaults = {
+    apiKey: "",
+    baseUrl: process.env.MINIMAX_BASE_URL || "https://api.minimaxi.chat/v1",
+    fallbackModels: fallbackModels.length
+      ? fallbackModels
+      : ["MiniMax-M2.5-highspeed", "MiniMax-M2.7-highspeed"],
+    ocrModel: process.env.OPENROUTER_OCR_MODEL || "baidu/qianfan-ocr-fast:free",
+    primaryModel: process.env.MINIMAX_MODEL || "MiniMax-M3",
+    provider: "minimax",
+    timeoutMs: String(process.env.MINIMAX_PRIMARY_TIMEOUT_MS || "38000"),
+  };
+
+  const openRouterDefaults = {
     apiKey: "",
     baseUrl: process.env.OPENROUTER_BASE_URL || process.env.CUSTOM_LLM_BASE_URL || "",
     fallbackModels,
     ocrModel: process.env.OPENROUTER_OCR_MODEL || "baidu/qianfan-ocr-fast:free",
     primaryModel: process.env.OPENROUTER_MODEL || "deepseek/deepseek-v4-flash",
-    provider: String(process.env.AI_PROVIDER || "openrouter").toLowerCase(),
+    provider: "openrouter",
     timeoutMs: String(process.env.OPENROUTER_PRIMARY_TIMEOUT_MS || ""),
   };
+
+  if (provider === "minimax") return minimaxDefaults;
+  if (provider === "openai") {
+    return {
+      ...openRouterDefaults,
+      provider: "openai",
+      primaryModel: process.env.OPENAI_MODEL || "gpt-5-mini",
+      baseUrl: "",
+    };
+  }
+  return openRouterDefaults;
 }
 
 function pickNonEmpty(target, source, keys) {

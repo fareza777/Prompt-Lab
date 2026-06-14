@@ -17,6 +17,12 @@ import { createClient } from "@supabase/supabase-js";
 import { buildPhasedAppDeliveryInstruction } from "../src/phasedAppDelivery.js";
 import { buildStructuredAuditInstruction } from "../src/structuredAuditDelivery.js";
 import {
+  buildGrokVideoFrameworkInstruction,
+  buildImageVideoPromptAddon,
+  detectImageVideoIntent,
+  isGrokTarget,
+} from "../src/imageVideoPromptDelivery.js";
+import {
   buildIntentSystemPromptXml,
   buildOptimizerSystemPromptXml,
   buildCompareSystemPromptXml,
@@ -120,7 +126,8 @@ const openrouter = process.env.OPENROUTER_API_KEY
       },
     })
   : null;
-const provider = process.env.AI_PROVIDER || (openrouter ? "openrouter" : "openai");
+const provider =
+  process.env.AI_PROVIDER || (process.env.MINIMAX_API_KEY ? "minimax" : openrouter ? "openrouter" : "openai");
 const openRouterPrimaryTimeoutMs = Number(process.env.OPENROUTER_PRIMARY_TIMEOUT_MS || 55000);
 const openRouterFallbackTimeoutMs = Number(process.env.OPENROUTER_FALLBACK_TIMEOUT_MS || 55000);
 const openRouterOcrModel = process.env.OPENROUTER_OCR_MODEL || "baidu/qianfan-ocr-fast:free";
@@ -721,9 +728,22 @@ app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, r
   }
 });
 
-const VERCEL_FUNCTION_BUDGET_MS = Number(process.env.VERCEL_FUNCTION_BUDGET_MS || 55000);
-const RETRY_ON_EMPTY_RESERVE_MS = 18000;
-const PREMIUM_PASS_RESERVE_MS = 32000;
+const VERCEL_FUNCTION_BUDGET_MS = Number(process.env.VERCEL_FUNCTION_BUDGET_MS || 52000);
+const RETRY_ON_EMPTY_RESERVE_MS = 22000;
+const PREMIUM_PASS_RESERVE_MS = 28000;
+
+function capProviderTimeouts(timing, { primaryReserveMs = 14000, fallbackReserveMs = 22000 } = {}) {
+  const capped = { ...timing };
+  capped.primaryTimeoutMs = Math.min(
+    Number(capped.primaryTimeoutMs) || 28000,
+    Math.max(12000, VERCEL_FUNCTION_BUDGET_MS - primaryReserveMs)
+  );
+  capped.fallbackTimeoutMs = Math.min(
+    Number(capped.fallbackTimeoutMs) || 20000,
+    Math.max(8000, VERCEL_FUNCTION_BUDGET_MS - fallbackReserveMs)
+  );
+  return capped;
+}
 
 app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res) => {
   const startedAt = Date.now();
@@ -805,23 +825,27 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
 
         // v2: structure validator + retry untuk OpenRouter path.
         const orStructCheck = validatePromptStructure(prompt);
-        if (!orStructCheck.valid && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
+        const structRetryBudget = remainingBudget();
+        if (!orStructCheck.valid && structRetryBudget > RETRY_ON_EMPTY_RESERVE_MS) {
           try {
             const retryMessages = [
               { role: "system", content: buildIntentSystemPromptXml(payload) },
               { role: "user", content: buildStructureRetryInstruction(prompt, orStructCheck.missing) },
             ];
             const primaryModelLocal = payload.modelSettings?.primaryModel || runtime.defaultModel;
-            const timingLocal = getOpenRouterTiming(payload.generationMode);
-            const retryMaxTokens = resolveGenerateMaxTokens(membership.plan, payload);
-            const retryRes = await withTimeout(runtime.client.chat.completions.create(
-              { model: primaryModelLocal, messages: retryMessages, max_tokens: retryMaxTokens, temperature: 0.4 },
-              { timeout: timingLocal.primaryTimeoutMs }
-            ), timingLocal.primaryTimeoutMs, primaryModelLocal);
-            const retriedRaw = retryRes.choices?.[0]?.message?.content || "";
-            const retried = sanitizePromptOutput(retriedRaw);
-            if (retried && !isPromptTooShort(retried)) {
-              prompt = retried;
+            const timingLocal = capProviderTimeouts(getOpenRouterTiming(payload.generationMode));
+            const retryTimeoutMs = Math.min(timingLocal.primaryTimeoutMs, structRetryBudget - 2500);
+            if (retryTimeoutMs >= 8000) {
+              const retryMaxTokens = resolveGenerateMaxTokens(membership.plan, payload);
+              const retryRes = await withTimeout(runtime.client.chat.completions.create(
+                { model: primaryModelLocal, messages: retryMessages, max_tokens: retryMaxTokens, temperature: 0.4 },
+                { timeout: retryTimeoutMs }
+              ), retryTimeoutMs, primaryModelLocal);
+              const retriedRaw = retryRes.choices?.[0]?.message?.content || "";
+              const retried = sanitizePromptOutput(retriedRaw);
+              if (retried && !isPromptTooShort(retried)) {
+                prompt = retried;
+              }
             }
           } catch (retryError) {
             console.warn("openrouter structure retry failed", retryError.message);
@@ -1593,9 +1617,10 @@ function estimateCompareTokens(payload, { positionSwap = false } = {}) {
 }
 
 function normalizeProvider(value) {
-  const normalized = String(value || provider || "openrouter").toLowerCase();
+  const normalized = String(value || provider || process.env.AI_PROVIDER || "openrouter").toLowerCase();
   if (normalized === "openai") return "openai";
   if (normalized === "custom") return "custom";
+  if (normalized === "minimax") return "minimax";
   return "openrouter";
 }
 
@@ -1626,6 +1651,19 @@ function getRuntimeProvider(modelSettings = {}) {
       client: apiKey ? new OpenAI({ apiKey }) : null,
       defaultModel: process.env.OPENAI_MODEL || "gpt-5-mini",
       provider: "openai",
+    };
+  }
+
+  if (runtimeProvider === "minimax") {
+    const apiKey = modelSettings.apiKey || process.env.MINIMAX_API_KEY || "";
+    const baseURL =
+      sanitizeBaseUrl(modelSettings.baseUrl || process.env.MINIMAX_BASE_URL || "https://api.minimaxi.chat/v1") ||
+      "https://api.minimaxi.chat/v1";
+    return {
+      baseURL,
+      client: apiKey ? new OpenAI({ apiKey, baseURL }) : null,
+      defaultModel: process.env.MINIMAX_MODEL || "MiniMax-M3",
+      provider: "minimax",
     };
   }
 
@@ -1673,6 +1711,9 @@ function sanitizeModelName(value) {
 }
 
 function getDefaultOpenRouterModel() {
+  if (normalizeProvider(process.env.AI_PROVIDER) === "minimax") {
+    return process.env.MINIMAX_MODEL || "MiniMax-M3";
+  }
   return process.env.OPENROUTER_MODEL || "deepseek/deepseek-v4-flash";
 }
 
@@ -1725,13 +1766,21 @@ async function createOpenRouterCompletion(
     },
   ];
   const primaryModel = payload.modelSettings?.primaryModel || runtime.defaultModel;
-  const fallbackModels = getOpenRouterFallbackModels(
+  let fallbackModels = getOpenRouterFallbackModels(
     primaryModel,
     payload.generationMode,
     payload.modelSettings?.fallbackModels
   );
-  const timing = getOpenRouterTiming(payload.generationMode);
-  if (payload.modelSettings?.timeoutMs) timing.primaryTimeoutMs = payload.modelSettings.timeoutMs;
+  if (runtime.provider === "minimax") {
+    fallbackModels = fallbackModels.slice(0, 1);
+  }
+  let timing = capProviderTimeouts(getOpenRouterTiming(payload.generationMode));
+  if (payload.modelSettings?.timeoutMs) {
+    timing.primaryTimeoutMs = Math.min(
+      Number(payload.modelSettings.timeoutMs) || timing.primaryTimeoutMs,
+      timing.primaryTimeoutMs
+    );
+  }
 
   try {
     const completion = await withTimeout(runtime.client.chat.completions.create(
@@ -1883,6 +1932,7 @@ async function tryOpenRouterFallbackModels(client, models, messages, timeoutMs, 
   for (const model of models) {
     try {
       console.warn(`trying openrouter fallback model ${model}`);
+      const perModelTimeout = Math.min(timeoutMs, 18000);
       const completion = await withTimeout(client.chat.completions.create(
         {
           model,
@@ -1890,8 +1940,8 @@ async function tryOpenRouterFallbackModels(client, models, messages, timeoutMs, 
           max_tokens: maxTokens,
           temperature,
         },
-        { timeout: timeoutMs }
-      ), timeoutMs, model);
+        { timeout: perModelTimeout }
+      ), perModelTimeout, model);
       return { completion, errors };
     } catch (error) {
       lastError = error;
@@ -1931,7 +1981,7 @@ function formatProviderError(error) {
 }
 
 function buildOptimizerInstruction(payload) {
-  const targetGuidance = getTargetModelGuidance(payload.targetModel);
+  const targetGuidance = getTargetModelGuidance(payload.targetModel, payload);
   const optimizerEngine = getOptimizerEngineInstruction(payload);
   const specInstruction = buildPromptSpecInstruction(
     {
@@ -2065,7 +2115,9 @@ Render rule:
 - Use the JSON only to render one final executable prompt.
 - The final prompt must preserve the selected deliverable: ${payload.outputType || "not selected"}.
 
-${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative, payload.prompt))}`;
+${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative, payload.prompt))}
+
+${buildImageVideoPromptAddon(payload)}`;
 }
 
 function getDomainPromptPack(payload = {}) {
@@ -2150,7 +2202,7 @@ function getDomainPromptPack(payload = {}) {
 }
 
 function buildCompareInstruction(payload) {
-  const targetGuidance = getTargetModelGuidance(payload.targetModel);
+  const targetGuidance = getTargetModelGuidance(payload.targetModel, payload);
   return `Act as PromptLab Compare Judge.
 
 Important:
@@ -2400,9 +2452,12 @@ function isClaudeTarget(modelTarget) {
   return /claude/i.test(String(modelTarget || ""));
 }
 
-function getTargetModelGuidance(modelTarget) {
-  if (!isClaudeTarget(modelTarget)) return "";
-  return `
+function getTargetModelGuidance(modelTarget, payload = {}) {
+  const target = String(modelTarget || "");
+  const blocks = [];
+
+  if (isClaudeTarget(target)) {
+    blocks.push(`
 
 Instruksi khusus untuk Claude:
 - Letakkan dokumen/lampiran panjang di bagian atas prompt dalam tag <documents>, lalu letakkan tugas dan instruksi setelahnya.
@@ -2412,7 +2467,22 @@ Instruksi khusus untuk Claude:
 - Bila tugas kreatif atau aplikasi terbuka, tambahkan kalimat: "Go beyond the basics. Polish like a real client deliverable."
 - Bila tugas kompleks, tambahkan kalimat: "Think before answering (maximum reasoning)."
 - Bila membutuhkan web/tools, tulis eksplisit: "Use web search/tools aggressively and verify important claims."
-- Pertahankan jenis deliverable dari user sebagai batas utama.`;
+- Pertahankan jenis deliverable dari user sebagai batas utama.`);
+  }
+
+  if (isGrokTarget(target)) {
+    blocks.push(`
+
+Instruksi khusus untuk Grok:
+- Tulis prompt dengan nada tajam, konkret, dan tempo cepat — hindari corporate fluff.
+- Untuk konten sosial/video: prioritaskan hook di 0–2 detik dan satu ide visual per beat.
+- Gunakan action verbs dan batas panjang eksplisit per bagian.`);
+    if (detectImageVideoIntent(payload).asksVideo) {
+      blocks.push(`\n${buildGrokVideoFrameworkInstruction(payload.outputLanguage || "id").replace(/<\/?grok_video_director_layer>/g, "")}`);
+    }
+  }
+
+  return blocks.join("");
 }
 
 function getConditionalInstructions(payload, attachments) {
@@ -2734,7 +2804,7 @@ async function extractImageText(file, modelSettings = {}, plan = "Free") {
 function buildOpenAIContent(payload, attachments) {
   const conditionalInstructions = getConditionalInstructions(payload, attachments);
   const deliverableGuard = getDeliverableGuard(payload, attachments);
-  const targetGuidance = getTargetModelGuidance(payload.modelTarget);
+  const targetGuidance = getTargetModelGuidance(payload.modelTarget, payload);
   const intentEngine = getIntentEngineInstruction(payload, attachments);
   const promptSpec = buildPromptSpecInstruction(payload, attachments);
   const antiGeneric = getAntiGenericGuard();
@@ -2810,7 +2880,7 @@ ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(pay
 function buildOpenRouterContent(payload, attachments) {
   const conditionalInstructions = getConditionalInstructions(payload, attachments);
   const deliverableGuard = getDeliverableGuard(payload, attachments);
-  const targetGuidance = getTargetModelGuidance(payload.modelTarget);
+  const targetGuidance = getTargetModelGuidance(payload.modelTarget, payload);
   const intentEngine = getIntentEngineInstruction(payload, attachments);
   const promptSpec = buildPromptSpecInstruction(payload, attachments);
   const antiGeneric = getAntiGenericGuard();
@@ -2892,7 +2962,7 @@ ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(pay
 function buildFallbackPrompt(payload, attachments) {
   const conditionalInstructions = getConditionalInstructions(payload, attachments);
   const deliverableGuard = getDeliverableGuard(payload, attachments);
-  const targetGuidance = getTargetModelGuidance(payload.modelTarget);
+  const targetGuidance = getTargetModelGuidance(payload.modelTarget, payload);
   const intentEngine = getIntentEngineInstruction(payload, attachments);
   const pack = getDomainPromptPack(payload);
   const langMeta = getLanguageMeta(payload.outputLanguage || resolveOutputLanguage(payload.narrative));
