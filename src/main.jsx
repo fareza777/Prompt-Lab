@@ -4,6 +4,7 @@ import LandingPage from "./LandingPage.jsx";
 import {
   Archive,
   ArrowRightLeft,
+  BarChart3,
   BookOpenText,
   Bot,
   BrainCircuit,
@@ -35,6 +36,7 @@ import {
   Sparkles,
   Trash2,
   User,
+  Users,
   Wand2,
   X,
   Zap,
@@ -133,6 +135,13 @@ function resolveQuotaResetLabel(value) {
   return quotaDateFormatter.format(nextQuotaResetDate());
 }
 
+function formatQuotaSummary(account) {
+  const used = Number(account?.quotaUsed || 0);
+  if (account?.quotaUnlimited) return `${(used / 1000).toFixed(1)}k / Unlimited`;
+  const limit = Math.max(1, Number(account?.quotaLimit || 1));
+  return `${(used / 1000).toFixed(1)}k / ${(limit / 1000).toFixed(0)}k`;
+}
+
 function createDefaultAccountState() {
   return {
     userId: "",
@@ -142,6 +151,7 @@ function createDefaultAccountState() {
     plan: "Free",
     quotaUsed: 0,
     quotaLimit: 50000,
+    quotaUnlimited: false,
     quotaReset: resolveQuotaResetLabel(),
     playBilling: "Not connected",
   };
@@ -891,6 +901,7 @@ function normalizeAccountState(raw) {
     ...raw,
     plan,
     role: raw.role === "admin" ? "admin" : "user",
+    quotaUnlimited: Boolean(raw.quotaUnlimited),
     quotaLimit: Number(raw.quotaLimit || membershipPlans[plan].quota || defaultAccountState.quotaLimit),
     quotaReset: resolveQuotaResetLabel(resetSource),
     quotaUsed: quotaExpired ? 0 : Number(raw.quotaUsed || 0),
@@ -910,6 +921,7 @@ function profileToAccount(profile, user) {
     quotaLimit: unlimited
       ? SUPER_QUOTA_LIMIT
       : Number(profile?.quota_limit || membershipPlans[plan].quota || defaultAccountState.quotaLimit),
+    quotaUnlimited: unlimited,
     quotaReset: resolveQuotaResetLabel(profile?.quota_reset_at),
     playBilling: profile?.play_billing || defaultAccountState.playBilling,
   });
@@ -1343,6 +1355,12 @@ function App() {
   const [isTestingProvider, setIsTestingProvider] = useState(false);
   const [settingsSavedAt, setSettingsSavedAt] = useState("");
   const [globalPublishBusy, setGlobalPublishBusy] = useState(false);
+  const [adminAnalytics, setAdminAnalytics] = useState(null);
+  const [adminAnalyticsLoading, setAdminAnalyticsLoading] = useState(false);
+  const [adminUsers, setAdminUsers] = useState(null);
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
+  const [adminUsersSearch, setAdminUsersSearch] = useState("");
+  const [adminActionStatus, setAdminActionStatus] = useState("");
   const [globalPublishAt, setGlobalPublishAt] = useState("");
   const [globalConfigSource, setGlobalConfigSource] = useState("env");
   const [optimizerResult, setOptimizerResult] = useState("");
@@ -1513,6 +1531,14 @@ function App() {
   useEffect(() => {
     if (active === "Settings") refreshHealth();
   }, [active]);
+
+  useEffect(() => {
+    if (active === "Admin" && accountState.role === "admin") {
+      loadAdminAnalytics();
+      loadAdminUsers();
+      loadAdminRuntimeConfig();
+    }
+  }, [active, accountState.role, accountState.userId]);
 
   useEffect(() => {
     setCompareResult(null);
@@ -2096,6 +2122,73 @@ function App() {
     }
   }
 
+  async function loadAdminAnalytics() {
+    if (accountState.role !== "admin" || !accountState.userId) return;
+    setAdminAnalyticsLoading(true);
+    try {
+      const response = await fetch(`${apiBase}/api/admin/analytics/overview`, {
+        headers: await getAuthHeaders(),
+      });
+      const data = await readApiJson(response);
+      if (!response.ok) throw new Error(data.error || "Failed to load analytics.");
+      setAdminAnalytics(data.overview || null);
+    } catch (error) {
+      setAdminActionStatus(error.message || "Analytics unavailable.");
+    } finally {
+      setAdminAnalyticsLoading(false);
+    }
+  }
+
+  async function loadAdminUsers(search = adminUsersSearch) {
+    if (accountState.role !== "admin" || !accountState.userId) return;
+    setAdminUsersLoading(true);
+    try {
+      const params = new URLSearchParams({ limit: "100" });
+      if (search?.trim()) params.set("search", search.trim());
+      const response = await fetch(`${apiBase}/api/admin/users?${params}`, {
+        headers: await getAuthHeaders(),
+      });
+      const data = await readApiJson(response);
+      if (!response.ok) throw new Error(data.error || "Failed to load users.");
+      setAdminUsers(data);
+    } catch (error) {
+      setAdminActionStatus(error.message || "User list unavailable.");
+    } finally {
+      setAdminUsersLoading(false);
+    }
+  }
+
+  async function updateAdminUser(userId, patch) {
+    setAdminActionStatus("Saving user...");
+    try {
+      const response = await fetch(`${apiBase}/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+        body: JSON.stringify(patch),
+      });
+      const data = await readApiJson(response);
+      if (!response.ok) throw new Error(data.error || "Failed to update user.");
+      setAdminActionStatus("User updated.");
+      await loadAdminUsers();
+      await loadAdminAnalytics();
+      if (userId === accountState.userId) await loadUserProfile();
+    } catch (error) {
+      setAdminActionStatus(error.message || "Update failed.");
+    }
+  }
+
+  async function grantSuperUser(userId) {
+    const resetDate = new Date();
+    resetDate.setDate(resetDate.getDate() + 365);
+    await updateAdminUser(userId, {
+      role: "admin",
+      plan: "Business",
+      quotaLimit: SUPER_QUOTA_LIMIT,
+      quotaUsed: 0,
+      quotaResetAt: resetDate.toISOString().slice(0, 10),
+    });
+  }
+
   async function refreshHealth() {
     try {
       const response = await fetch(`${apiBase}/api/health`);
@@ -2263,6 +2356,17 @@ function App() {
     providerTestStatus,
     isTestingProvider,
     testProvider,
+    adminAnalytics,
+    adminAnalyticsLoading,
+    adminUsers,
+    adminUsersLoading,
+    adminUsersSearch,
+    setAdminUsersSearch,
+    loadAdminAnalytics,
+    loadAdminUsers,
+    updateAdminUser,
+    grantSuperUser,
+    adminActionStatus,
     exportStatus,
     exportFile,
     apiBase,
@@ -2385,7 +2489,15 @@ function V2App(props) {
         .slice(0, 3),
     [library]
   );
-  const quotaPercent = Math.min(100, Math.round(((accountState.quotaUsed || 0) / Math.max(1, accountState.quotaLimit || 1)) * 100));
+  const quotaPercent = accountState.quotaUnlimited
+    ? 0
+    : Math.min(100, Math.round(((accountState.quotaUsed || 0) / Math.max(1, accountState.quotaLimit || 1)) * 100));
+  const isAdmin = accountState.role === "admin";
+  const navigation = useMemo(() => navItems(isAdmin), [isAdmin]);
+
+  useEffect(() => {
+    if (active === "Admin" && !isAdmin) setActive("Settings");
+  }, [active, isAdmin, setActive]);
 
   useEffect(() => {
     localStorage.removeItem("promptlab-guest");
@@ -2434,7 +2546,7 @@ function V2App(props) {
           </div>
         </div>
         <nav className="v2-nav">
-          {navItems().map(([item, Icon]) => (
+          {navigation.map(([item, Icon]) => (
             <button key={item} className={active === item ? "active" : ""} onClick={() => setActive(item)} title={item}>
               <Icon size={18} />
               <span>{item}</span>
@@ -2461,13 +2573,13 @@ function V2App(props) {
             <p className="v2-small">Save a prompt to see recents here.</p>
           )}
         </div>
-        <button className="v2-quota-card" type="button" onClick={() => setActive("Settings")}>
+        <button className="v2-quota-card" type="button" onClick={() => setActive(isAdmin ? "Admin" : "Settings")}>
           <div>
             <span>Quota</span>
-            <em>{(accountState.quotaUsed / 1000).toFixed(1)}k / {(accountState.quotaLimit / 1000).toFixed(0)}k</em>
+            <em>{formatQuotaSummary(accountState)}</em>
           </div>
           <i><b style={{ width: `${quotaPercent}%` }} /></i>
-          <small>Resets {accountState.quotaReset} · <strong>{accountState.plan}</strong></small>
+          <small>Resets {accountState.quotaReset} · <strong>{accountState.plan}</strong>{accountState.quotaUnlimited ? " · Unlimited" : ""}</small>
         </button>
         <div className="v2-side-card">
           <span>Session</span>
@@ -2493,8 +2605,9 @@ function V2App(props) {
         {active === "Library" && <V2Library {...props} />}
         {active === "Compare" && <V2Compare {...props} />}
         {active === "Settings" && <V2Settings {...props} />}
+        {active === "Admin" && isAdmin && <V2AdminDashboard {...props} />}
       </main>
-      <BottomNav active={active} setActive={setActive} />
+      <BottomNav active={active} setActive={setActive} isAdmin={isAdmin} />
       <V2ActionToast message={props.actionToast} />
     </div>
   );
@@ -2611,6 +2724,7 @@ function V2Header({ active, setActive, settingsStatus, isGenerating, generationS
     Library: "Manage your best prompts as reusable work assets.",
     Compare: "Run an AI judge on two prompt versions before sending them.",
     Settings: "Manage account, membership, prompt defaults, privacy, and support.",
+    Admin: "Analytics, users, and global model routing for production.",
   };
   const syncLabel = isGenerating
     ? "Generating..."
@@ -2636,6 +2750,11 @@ function V2Header({ active, setActive, settingsStatus, isGenerating, generationS
           <span className={`v2-health ${settingsStatus?.ok ? "ready" : ""}`}>
             {engineLabel}
           </span>
+        )}
+        {accountState?.role === "admin" && (
+          <button className="v2-icon-btn" onClick={() => setActive("Admin")} title="Admin dashboard">
+            <KeyRound size={18} />
+          </button>
         )}
         <button className="v2-icon-btn" onClick={() => setActive("Settings")} title="Settings">
           <Settings size={18} />
@@ -3537,7 +3656,6 @@ function V2PublicSettings(props) {
     ["Prompt Defaults", SlidersHorizontal],
     ["Data & Privacy", ShieldCheck],
     ["Support", LifeBuoy],
-    ...(isAdmin ? [["Admin Console", KeyRound]] : []),
   ];
   const copyData = () => {
     const data = { account: accountState, library, customTemplates, exportedAt: new Date().toISOString() };
@@ -3728,7 +3846,7 @@ function V2PublicSettings(props) {
               </div>
             )}
             <div className="v2-quota-meter">
-              <div><span>Quota</span><strong>{(accountState.quotaUsed / 1000).toFixed(1)}k / {(accountState.quotaLimit / 1000).toFixed(0)}k tokens</strong></div>
+              <div><span>Quota</span><strong>{formatQuotaSummary(accountState)} tokens</strong></div>
               <i><b style={{ width: `${quotaPercent}%` }} /></i>
               <small>Resets {accountState.quotaReset}. Usage updates after Builder, Compare, and Optimizer runs.</small>
               {import.meta.env.VITE_APP_BUILD && (
@@ -3863,6 +3981,9 @@ function V2PublicSettings(props) {
             <div className="v2-runbook-row"><span>1</span><p>Report generation errors with a screenshot and prompt category.</p></div>
             <div className="v2-runbook-row"><span>2</span><p>For billing issues, include the Google Play order ID or web checkout receipt after payment is connected.</p></div>
             <div className="v2-runbook-row"><span>3</span><p>For data requests, use the account email shown in Profile.</p></div>
+            {isAdmin && (
+              <p className="v2-note">Admin dashboard: open <button type="button" className="v2-link-btn" onClick={() => props.setActive?.("Admin")}>Admin</button> in the sidebar.</p>
+            )}
           </div>
 
           <div className="v2-card v2-settings-card">
@@ -3882,11 +4003,240 @@ function V2PublicSettings(props) {
           </div>
         </section>
       )}
+    </div>
+  );
+}
 
-      {section === "Admin Console" && isAdmin && (
+function V2AdminDashboard(props) {
+  const [section, setSection] = useState("Overview");
+  const sections = [
+    ["Overview", BarChart3],
+    ["Users", Users],
+    ["Model & AI", Database],
+  ];
+  const fallbackModels = props.modelSettings.fallbackModels
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const providerReady = Boolean(props.settingsStatus?.ok && props.settingsStatus?.ai);
+
+  return (
+    <div className="v2-screen v2-settings-screen v2-admin-screen">
+      <V2PageIntro
+        eyebrow="Admin"
+        title="Dashboard, analytics, and production controls."
+        copy="Monitor usage, manage members, and publish global AI routing. API keys stay in Vercel env vars."
+      >
+        <div className="v2-hero-status">
+          <span>Access</span>
+          <strong>Super admin</strong>
+          <small>{props.accountState.email}</small>
+        </div>
+      </V2PageIntro>
+
+      <div className="v2-settings-tabs" role="tablist" aria-label="Admin sections">
+        {sections.map(([name, Icon]) => (
+          <button key={name} className={section === name ? "active" : ""} onClick={() => setSection(name)}>
+            <Icon size={16} />
+            <span>{name}</span>
+          </button>
+        ))}
+      </div>
+
+      {props.adminActionStatus && <p className="v2-note warn">{props.adminActionStatus}</p>}
+
+      {section === "Overview" && (
+        <V2AdminOverview
+          analytics={props.adminAnalytics}
+          loading={props.adminAnalyticsLoading}
+          onRefresh={props.loadAdminAnalytics}
+        />
+      )}
+      {section === "Users" && (
+        <V2AdminUsers
+          usersPayload={props.adminUsers}
+          loading={props.adminUsersLoading}
+          search={props.adminUsersSearch}
+          onSearchChange={props.setAdminUsersSearch}
+          onSearch={props.loadAdminUsers}
+          onGrantSuper={props.grantSuperUser}
+          onUpdateUser={props.updateAdminUser}
+        />
+      )}
+      {section === "Model & AI" && (
         <V2AdminSettings {...props} fallbackModels={fallbackModels} providerReady={providerReady} />
       )}
     </div>
+  );
+}
+
+function V2AdminOverview({ analytics, loading, onRefresh }) {
+  const maxDayTokens = Math.max(1, ...(analytics?.usageByDay || []).map((row) => row.tokens));
+  return (
+    <section className="v2-settings-grid public">
+      <div className="v2-card v2-settings-card">
+        <div className="v2-card-head">
+          <div>
+            <h2>Platform Overview</h2>
+            <p>Users, token usage, and billing signals from Supabase.</p>
+          </div>
+          <button className="v2-btn" onClick={onRefresh} disabled={loading}>{loading ? "Loading…" : "Refresh"}</button>
+        </div>
+        {analytics ? (
+          <>
+            <div className="v2-stats-strip">
+              <V2Stat label="Total users" value={analytics.totalUsers} detail={`${analytics.signups30} signups / 30d`} compact />
+              <V2Stat label="Active users" value={analytics.activeUsers30} detail="Used AI in 30d" compact />
+              <V2Stat label="Tokens / 7d" value={`${(analytics.tokens7 / 1000).toFixed(1)}k`} detail={`${(analytics.tokens30 / 1000).toFixed(1)}k / 30d`} compact />
+              <V2Stat label="Events / 30d" value={analytics.events30} detail="generate, optimize, compare" compact />
+            </div>
+            <div className="v2-info-grid">
+              {Object.entries(analytics.planDistribution || {}).map(([plan, count]) => (
+                <V2Info key={plan} label={`Plan · ${plan}`} value={count} />
+              ))}
+              {Object.entries(analytics.eventTypes || {}).map(([type, count]) => (
+                <V2Info key={type} label={`Event · ${type}`} value={count} />
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className="v2-note">{loading ? "Loading analytics…" : "No analytics yet. Run phase-8 indexes SQL if queries are slow."}</p>
+        )}
+      </div>
+
+      {analytics?.usageByDay?.length > 0 && (
+        <div className="v2-card v2-settings-card">
+          <div className="v2-card-head">
+            <div>
+              <h2>Token Usage (30 days)</h2>
+              <p>Daily estimated tokens from usage_events.</p>
+            </div>
+          </div>
+          <div className="v2-admin-chart">
+            {analytics.usageByDay.map((row) => (
+              <div key={row.date} className="v2-admin-chart-bar" title={`${row.date}: ${row.tokens} tokens`}>
+                <i style={{ height: `${Math.max(8, Math.round((row.tokens / maxDayTokens) * 100))}%` }} />
+                <span>{row.date.slice(5)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {analytics?.membershipRecent?.length > 0 && (
+        <div className="v2-card v2-settings-card">
+          <div className="v2-card-head">
+            <div>
+              <h2>Recent Billing Events</h2>
+              <p>Play / Lemon Squeezy membership changes.</p>
+            </div>
+          </div>
+          <div className="v2-admin-table-wrap">
+            <table className="v2-admin-table">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Provider</th>
+                  <th>Event</th>
+                  <th>Plan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {analytics.membershipRecent.map((row) => (
+                  <tr key={row.id}>
+                    <td>{new Date(row.created_at).toLocaleString("en-US")}</td>
+                    <td>{row.provider}</td>
+                    <td>{row.event_type}</td>
+                    <td>{row.plan}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function V2AdminUsers({ usersPayload, loading, search, onSearchChange, onSearch, onGrantSuper, onUpdateUser }) {
+  const users = usersPayload?.users || [];
+  return (
+    <section className="v2-settings-grid public">
+      <div className="v2-card v2-settings-card">
+        <div className="v2-card-head">
+          <div>
+            <h2>Users</h2>
+            <p>Search members, change plan, or grant super admin + unlimited quota.</p>
+          </div>
+          <span className="v2-score-badge">{usersPayload?.total ?? 0}</span>
+        </div>
+        <div className="v2-admin-user-search">
+          <input
+            className="v2-input"
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Search email or name"
+            onKeyDown={(event) => event.key === "Enter" && onSearch(search)}
+          />
+          <button className="v2-btn" onClick={() => onSearch(search)} disabled={loading}>Search</button>
+        </div>
+        <div className="v2-admin-table-wrap">
+          <table className="v2-admin-table">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Plan</th>
+                <th>Role</th>
+                <th>Quota</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && users.length === 0 ? (
+                <tr><td colSpan={5}>Loading users…</td></tr>
+              ) : users.length === 0 ? (
+                <tr><td colSpan={5}>No users found.</td></tr>
+              ) : (
+                users.map((user) => (
+                  <tr key={user.id}>
+                    <td>
+                      <strong>{user.email}</strong>
+                      <small>{user.fullName || "—"}</small>
+                    </td>
+                    <td>
+                      <select
+                        className="v2-input compact"
+                        value={user.plan}
+                        onChange={(event) => onUpdateUser(user.id, { plan: event.target.value })}
+                      >
+                        <option>Free</option>
+                        <option>Pro</option>
+                        <option>Business</option>
+                      </select>
+                    </td>
+                    <td>{user.role}</td>
+                    <td>{`${(user.quotaUsed / 1000).toFixed(1)}k / ${user.quotaLimit >= 1_000_000_000 ? "∞" : `${(user.quotaLimit / 1000).toFixed(0)}k`}`}</td>
+                    <td className="v2-admin-actions">
+                      {user.role !== "admin" && (
+                        <button className="v2-btn" type="button" onClick={() => onGrantSuper(user.id)}>Make super</button>
+                      )}
+                      <button
+                        className="v2-btn"
+                        type="button"
+                        onClick={() => onUpdateUser(user.id, { quotaUsed: 0 })}
+                      >
+                        Reset usage
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -3920,7 +4270,7 @@ function V2AdminSettings(props) {
       <div className="v2-card v2-settings-card v2-account-card">
         <div className="v2-card-head">
           <div>
-            <h2>Admin Console</h2>
+            <h2>Model &amp; AI Settings</h2>
             <p>Publish model routing for every user on production (Vercel). API keys stay in Vercel env vars.</p>
           </div>
           <span className={`v2-health ${providerReady ? "ready" : ""}`}>{providerReady ? "Ready" : "Offline"}</span>
@@ -4084,8 +4434,8 @@ function Brand() {
   );
 }
 
-function navItems() {
-  return [
+function navItems(isAdmin = false) {
+  const items = [
     ["Builder", PenLine],
     ["Optimizer", Wand2],
     ["Templates", BookOpenText],
@@ -4093,12 +4443,14 @@ function navItems() {
     ["Compare", ArrowRightLeft],
     ["Settings", Settings],
   ];
+  if (isAdmin) items.push(["Admin", KeyRound]);
+  return items;
 }
 
-function Nav({ active, setActive }) {
+function Nav({ active, setActive, isAdmin = false }) {
   return (
     <nav className="nav-list">
-      {navItems().map(([item, Icon]) => (
+      {navItems(isAdmin).map(([item, Icon]) => (
         <button key={item} className={active === item ? "active" : ""} onClick={() => setActive(item)} title={item}>
           <Icon size={18} />
           <span>{item}</span>
@@ -4108,10 +4460,10 @@ function Nav({ active, setActive }) {
   );
 }
 
-function BottomNav({ active, setActive }) {
+function BottomNav({ active, setActive, isAdmin = false }) {
   return (
     <nav className="bottom-nav v2-bottom-nav">
-      {navItems().map(([item, Icon]) => (
+      {navItems(isAdmin).map(([item, Icon]) => (
         <button key={item} className={active === item ? "active" : ""} onClick={() => setActive(item)}>
           <Icon size={18} />
           <span>{item}</span>

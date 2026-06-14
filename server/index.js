@@ -73,6 +73,7 @@ import {
   savePublishedModelSettings,
   toPublicRuntimeConfig,
 } from "./runtimeConfig.js";
+import { fetchAdminOverview, fetchAdminUsers, patchAdminUser } from "./adminApi.js";
 import {
   buildProviderChatCompletionBody,
   resolveMinimaxBaseUrl,
@@ -295,6 +296,65 @@ app.put("/api/admin/runtime-config", express.json({ limit: "64kb" }), async (req
   } catch (error) {
     const statusCode = error.statusCode || 500;
     res.status(statusCode).json({ error: error.publicMessage || error.message || "Failed to publish config." });
+  }
+});
+
+app.get("/api/admin/analytics/overview", async (req, res) => {
+  try {
+    await requireAdminMembership(req);
+    const admin = createServiceRoleSupabaseClient();
+    if (!admin) {
+      res.status(503).json({ error: "SUPABASE_SERVICE_ROLE_KEY is required for admin analytics." });
+      return;
+    }
+    const overview = await fetchAdminOverview(admin);
+    res.json({ ok: true, overview });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.publicMessage || error.message || "Failed to load analytics." });
+  }
+});
+
+app.get("/api/admin/users", async (req, res) => {
+  try {
+    await requireAdminMembership(req);
+    const admin = createServiceRoleSupabaseClient();
+    if (!admin) {
+      res.status(503).json({ error: "SUPABASE_SERVICE_ROLE_KEY is required for user management." });
+      return;
+    }
+    const result = await fetchAdminUsers(admin, {
+      limit: req.query.limit,
+      offset: req.query.offset,
+      search: req.query.search,
+    });
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.publicMessage || error.message || "Failed to load users." });
+  }
+});
+
+app.patch("/api/admin/users/:userId", express.json({ limit: "16kb" }), async (req, res) => {
+  try {
+    await requireAdminMembership(req);
+    const admin = createServiceRoleSupabaseClient();
+    if (!admin) {
+      res.status(503).json({ error: "SUPABASE_SERVICE_ROLE_KEY is required for user management." });
+      return;
+    }
+    const body = req.body || {};
+    const updated = await patchAdminUser(admin, req.params.userId, {
+      plan: body.plan,
+      role: body.role,
+      quotaLimit: body.quotaLimit,
+      quotaUsed: body.quotaUsed,
+      quotaResetAt: body.quotaResetAt,
+    });
+    res.json({ ok: true, user: updated });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.publicMessage || error.message || "Failed to update user." });
   }
 });
 
