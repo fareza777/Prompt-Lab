@@ -77,6 +77,7 @@ import {
   isInstalledApp,
   markInstalledAppEntered,
 } from "./installedApp.js";
+import { purgeLegacyServiceWorkers, repairStuckLocalProfile } from "./bootRecovery.js";
 import { scorePrompt, scoreOptimizedPrompt } from "./promptScore.js";
 import { dismissStartupSplash, installSplashSafetyNet, markStartupSplashStarted } from "./startupSplash";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
@@ -5315,17 +5316,28 @@ function mountPromptLab() {
   const standalone =
     typeof window !== "undefined" &&
     (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true);
-  const showApp = path === "/app" || path.startsWith("/app/") || standalone;
+  const showApp =
+    path === "/app" ||
+    path.startsWith("/app/") ||
+    /^\/promptlab$/i.test(path) ||
+    standalone;
 
-  root.innerHTML = "";
-  if (showApp) {
-    createRoot(root).render(
-      <AppErrorBoundary>
-        <App />
-      </AppErrorBoundary>
-    );
-  } else {
-    createRoot(root).render(<LandingPage />);
+  try {
+    root.innerHTML = "";
+    if (showApp) {
+      createRoot(root).render(
+        <AppErrorBoundary>
+          <App />
+        </AppErrorBoundary>
+      );
+    } else {
+      createRoot(root).render(<LandingPage />);
+    }
+    dismissStartupSplash();
+  } catch (error) {
+    console.error("PromptLab mount failed", error);
+    root.innerHTML = `<main class="v2-boot-error" data-theme="v2" style="min-height:100vh;padding:24px;color:#e8f4f6;background:#061011;font-family:system-ui,sans-serif"><h1>PromptLab failed to load</h1><p>${error?.message || "Unknown error"}</p><button type="button" onclick="location.reload()" style="margin-top:16px;padding:10px 16px;cursor:pointer">Reload</button></main>`;
+    dismissStartupSplash();
   }
 }
 
