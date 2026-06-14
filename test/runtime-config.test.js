@@ -48,4 +48,20 @@ describe("mergeModelSettingsLayers", () => {
     assert.equal(merged.primaryModel, "MiniMax-M2.7-highspeed");
     assert.equal(merged.timeoutMs, "42000");
   });
+
+  it("keeps MiniMax fallback models when published OpenRouter config is stale", () => {
+    process.env.AI_PROVIDER = "minimax";
+    process.env.MINIMAX_API_KEY = "sk-test";
+    process.env.MINIMAX_MODEL = "MiniMax-M3";
+
+    const merged = mergeModelSettingsLayers({
+      published: {
+        provider: "openrouter",
+        primaryModel: "xiaomi/mimo-v2-flash",
+        fallbackModels: ["deepseek/deepseek-v4-flash", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"],
+      },
+    });
+
+    assert.deepEqual(merged.fallbackModels, ["MiniMax-M2.5-highspeed", "MiniMax-M2.7-highspeed"]);
+  });
 });

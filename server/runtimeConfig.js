@@ -90,7 +90,7 @@ export function mergeModelSettingsLayers({ published, request, allowRequestOverr
       "timeoutMs",
     ]);
   } else if (published) {
-    pickNonEmpty(merged, published, ["ocrModel", "fallbackModels"]);
+    pickNonEmpty(merged, published, ["ocrModel"]);
   }
   if (allowRequestOverride && request) {
     pickNonEmpty(merged, request, [

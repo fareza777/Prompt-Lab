@@ -209,14 +209,20 @@ app.get("/api/health", async (req, res) => {
       fallbackModel:
         runtime.provider === "openai"
           ? null
-          : getOpenRouterFallbackModels(modelSettings.primaryModel || runtime.defaultModel)[0] || null,
+          : getOpenRouterFallbackModels(
+              modelSettings.primaryModel || runtime.defaultModel,
+              "balanced",
+              modelSettings.fallbackModels,
+              runtime.provider
+            )[0] || null,
       fallbackModels:
         runtime.provider === "openai"
           ? []
           : getOpenRouterFallbackModels(
               modelSettings.primaryModel || runtime.defaultModel,
               "balanced",
-              modelSettings.fallbackModels
+              modelSettings.fallbackModels,
+              runtime.provider
             ),
       ocrModel: modelSettings.ocrModel || getDefaultOcrModel(),
       configSource: meta?.updatedAt ? "published" : "env",
@@ -855,7 +861,12 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
         let qualityNote = "";
         if (payload.qualityMode === "premium" && !isPromptTooShort(prompt) && remainingBudget() > PREMIUM_PASS_RESERVE_MS) {
           const primaryModel = payload.modelSettings?.primaryModel || runtime.defaultModel;
-          const fallbackModels = getOpenRouterFallbackModels(primaryModel, payload.generationMode, payload.modelSettings?.fallbackModels);
+          const fallbackModels = getOpenRouterFallbackModels(
+            primaryModel,
+            payload.generationMode,
+            payload.modelSettings?.fallbackModels,
+            runtime.provider
+          );
           const timing = getOpenRouterTiming(payload.generationMode);
           if (payload.modelSettings?.timeoutMs) timing.primaryTimeoutMs = payload.modelSettings.timeoutMs;
           try {
@@ -930,7 +941,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
           source: "fallback",
           model: "Local fallback",
           modelStatus: "local-fallback",
-          warning: API_MSG.providerOverloadGenerate,
+          warning: resolveGenerateFallbackWarning(error),
           prompt: fallbackPrompt,
         });
       }
@@ -1769,7 +1780,8 @@ async function createOpenRouterCompletion(
   let fallbackModels = getOpenRouterFallbackModels(
     primaryModel,
     payload.generationMode,
-    payload.modelSettings?.fallbackModels
+    payload.modelSettings?.fallbackModels,
+    runtime.provider
   );
   if (runtime.provider === "minimax") {
     fallbackModels = fallbackModels.slice(0, 1);
@@ -1834,7 +1846,8 @@ async function createOpenRouterOptimizeCompletion(payload, runtime = getRuntimeP
   const fallbackModels = getOpenRouterFallbackModels(
     primaryModel,
     payload.generationMode,
-    payload.modelSettings?.fallbackModels
+    payload.modelSettings?.fallbackModels,
+    runtime.provider
   );
   const timing = getOpenRouterTiming(payload.generationMode);
   if (payload.modelSettings?.timeoutMs) timing.primaryTimeoutMs = payload.modelSettings.timeoutMs;
@@ -1913,16 +1926,53 @@ async function createOpenRouterCompareCompletion(payload, runtime = getRuntimePr
   }
 }
 
-function getOpenRouterFallbackModels(primaryModel = getDefaultOpenRouterModel(), mode = "balanced", overrideModels = []) {
-  const configured = (process.env.OPENROUTER_FALLBACK_MODELS || process.env.OPENROUTER_FALLBACK_MODEL || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-  const merged = [...(overrideModels || []), ...configured, ...defaultOpenRouterFallbackModels];
-  const models = [...new Set(merged)].filter((model) => model && model !== primaryModel);
+function isOpenRouterStyleModelId(model = "") {
+  return /[/:]/.test(String(model));
+}
+
+function resolveGenerateFallbackWarning(error) {
+  const status = Number(error?.status);
+  const message = String(error?.message || "").toLowerCase();
+  if (status === 429 || /rate limit|too many requests/i.test(message)) {
+    return API_MSG.providerRateLimitedGenerate;
+  }
+  if (/timeout|timed out/i.test(message)) {
+    return API_MSG.providerTimeoutGenerate;
+  }
+  if ([401, 403].includes(status)) {
+    return API_MSG.apiKeyInactiveGenerate;
+  }
+  return API_MSG.providerOverloadGenerate;
+}
+
+function getOpenRouterFallbackModels(
+  primaryModel = getDefaultOpenRouterModel(),
+  mode = "balanced",
+  overrideModels = [],
+  provider = "openrouter"
+) {
+  let merged;
+  if (provider === "minimax") {
+    merged = [
+      ...(Array.isArray(overrideModels) ? overrideModels : []),
+      "MiniMax-M2.5-highspeed",
+      "MiniMax-M2.7-highspeed",
+    ];
+  } else {
+    const configured = (process.env.OPENROUTER_FALLBACK_MODELS || process.env.OPENROUTER_FALLBACK_MODEL || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    merged = [...(overrideModels || []), ...configured, ...defaultOpenRouterFallbackModels];
+  }
+  const models = [...new Set(merged)].filter((model) => {
+    if (!model || model === primaryModel) return false;
+    if (provider === "minimax" && isOpenRouterStyleModelId(model)) return false;
+    return true;
+  });
   if (mode === "fast") return models.slice(0, 2);
   if (mode === "patient") return models;
-  return models.slice(0, 3);
+  return models.slice(0, provider === "minimax" ? 2 : 3);
 }
 
 async function tryOpenRouterFallbackModels(client, models, messages, timeoutMs, maxTokens = 2200, temperature = 0.4) {
