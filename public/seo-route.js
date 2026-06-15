@@ -153,7 +153,7 @@
     "/blog/how-to-create-system-prompt": "article-how-to-create-system-prompt",
     "/blog/best-prompt-for-coding": "article-best-prompt-for-coding",
     "/blog/best-prompt-for-data-analysis": "article-best-prompt-for-data-analysis",
-    "/blog/best-prompt-for-social-media": "best-prompt-for-social-media"
+    "/blog/best-prompt-for-social-media": "article-best-prompt-for-social-media"
   };
 
   function normalizePath(pathname) {
