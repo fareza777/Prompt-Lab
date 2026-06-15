@@ -118,19 +118,19 @@
       lang: "en",
       ogType: "article",
     },
-    "/blog/best-prompt-for-social-media": {
-      title: "Best Prompt for Social Media: 8 Templates That Drive Engagement | PromptLab",
-      description: "8 drop-in prompts for Instagram captions, LinkedIn posts, Twitter threads, and TikTok scripts.",
-      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-social-media",
-      h1: "article-best-prompt-for-social-media",
-      lang: "en",
-      ogType: "article",
-    },
     "/blog/best-prompt-for-data-analysis": {
       title: "How to Write a Prompt for Data Analysis (Step-by-Step)",
       description: "The best prompt for data analysis uses the S.C.A.F. framework: Source, Columns, Aim, Format. Get 4 copy-paste templates and 3 mistakes to avoid.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-data-analysis",
       h1: "article-best-prompt-for-data-analysis",
+      lang: "en",
+      ogType: "article",
+    },
+    "/blog/best-prompt-for-social-media": {
+      title: "Best Prompt for Social Media: 8 Templates That Drive Engagement | PromptLab",
+      description: "8 drop-in prompts for Instagram captions, LinkedIn posts, Twitter threads, and TikTok scripts.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-social-media",
+      h1: "article-best-prompt-for-social-media",
       lang: "en",
       ogType: "article",
     }
@@ -152,8 +152,8 @@
     "/blog/best-prompt-for-email-writing": "article-best-prompt-for-email-writing",
     "/blog/how-to-create-system-prompt": "article-how-to-create-system-prompt",
     "/blog/best-prompt-for-coding": "article-best-prompt-for-coding",
-    "/blog/best-prompt-for-social-media": "article-best-prompt-for-social-media",
-    "/blog/best-prompt-for-data-analysis": "article-best-prompt-for-data-analysis"
+    "/blog/best-prompt-for-data-analysis": "article-best-prompt-for-data-analysis",
+    "/blog/best-prompt-for-social-media": "article-best-prompt-for-social-media"
   };
 
   function normalizePath(pathname) {
@@ -166,7 +166,14 @@
   }
 
   var HREFLANG_PAIRS = {
-
+    "/blog/cara-buat-prompt-chatgpt": {
+      id: "https://prompt-lab.xyz/blog/cara-buat-prompt-chatgpt",
+      en: "https://prompt-lab.xyz/blog/how-to-create-prompt-for-chatgpt",
+    },
+    "/blog/how-to-create-prompt-for-chatgpt": {
+      id: "https://prompt-lab.xyz/blog/cara-buat-prompt-chatgpt",
+      en: "https://prompt-lab.xyz/blog/how-to-create-prompt-for-chatgpt",
+    }
   };
 
   function applyHreflang(path, canonical) {
