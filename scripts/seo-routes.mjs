@@ -227,7 +227,7 @@ export const SEO_ROUTES = {
     keywords: "best prompt for data analysis, data analysis prompt, AI data prompt, CSV prompt, analytics prompt"
   },
   "/blog/best-prompt-for-social-media": {
-    routeKey: "best-prompt-for-social-media",
+    routeKey: "article-best-prompt-for-social-media",
     h1: "article-best-prompt-for-social-media",
     lang: "en",
     ogType: "article",
