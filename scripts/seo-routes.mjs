@@ -226,6 +226,19 @@ export const SEO_ROUTES = {
     dateModified: "2026-06-15",
     keywords: "best prompt for data analysis, data analysis prompt, AI data prompt, CSV prompt, analytics prompt"
   },
+  "/blog/best-prompt-for-resume": {
+    routeKey: "article-best-prompt-for-resume",
+    h1: "article-best-prompt-for-resume",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for Resume Writing: Stand Out in 2026 ATS | PromptLab",
+    description: 'The best prompt for resume writing uses the 5-part framework to turn a thin job history into an ATS-optimized 1-pager that lands interviews. 4 copy-paste templates (from-scratch, bullet polish, cover letter, ATS audit) tested on ChatGPT, Claude, and Gemini, plus 3 mistakes that ship a resume straight to the rejection pile — including the LLM-fabricated metric trap that gets caught in the phone screen.',
+    canonical: `${SITE}/blog/best-prompt-for-resume`,
+    headline: "Best Prompt for Resume Writing: Stand Out in 2026 ATS",
+    datePublished: "2026-06-16",
+    dateModified: "2026-06-16",
+    keywords: 'best prompt for resume, resume prompt, CV prompt, ATS-friendly resume, ChatGPT resume, resume writing AI, AI resume prompt, ATS optimization, resume keywords, job application prompt'
+  },
   "/blog/best-prompt-for-social-media": {
     routeKey: "article-best-prompt-for-social-media",
     h1: "article-best-prompt-for-social-media",

@@ -235,7 +235,7 @@
         "url": "https://prompt-lab.xyz/blog/best-prompt-for-coding",
         "image": "https://prompt-lab.xyz/og-image.png",
         "keywords": "best prompt for coding, coding prompt, AI coding, debug prompt, Claude Code prompt, Cursor prompt, GitHub Copilot prompt, programmer prompt, pair programming prompt, LLM coding"
-      }
+      },
       {
         "@type": "BlogPosting",
         "headline": "How to Write a Prompt for Data Analysis (Step-by-Step)",
@@ -261,7 +261,19 @@
         "image": "https://prompt-lab.xyz/og-image.png",
         "keywords": "best prompt for social media, social media prompt, Instagram prompt, LinkedIn prompt, Twitter prompt, TikTok script, AI content templates"
       },
-
+      {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Best Prompt for Resume Writing: Stand Out in 2026 ATS",
+        "url": "https://prompt-lab.xyz/blog/best-prompt-for-resume",
+        "datePublished": "2026-06-16",
+        "dateModified": "2026-06-16",
+        "author": {"@type": "Organization", "name": "PromptLab"},
+        "publisher": {"@type": "Organization", "name": "PromptLab", "logo": {"@type": "ImageObject", "url": "https://prompt-lab.xyz/logo.png"}},
+        "description": 'The best prompt for resume writing uses the 5-part framework to turn a thin job history into an ATS-optimized 1-pager that lands interviews. 4 copy-paste templates (from-scratch, bullet polish, cover letter, ATS audit) tested on ChatGPT, Claude, and Gemini, plus 3 mistakes that ship a resume straight to the rejection pile — including the LLM-fabricated metric trap that gets caught in the phone screen.',
+        "image": "https://prompt-lab.xyz/og-image.png",
+        "keywords": 'best prompt for resume, resume prompt, CV prompt, ATS-friendly resume, ChatGPT resume, resume writing AI, AI resume prompt, ATS optimization, resume keywords, job application prompt'
+      }
     ]
     </script>
 
@@ -1294,6 +1306,7 @@
       html[data-route="landing"] #landing-page { display: block !important; }
       html[data-route="blog"] #landing-page { display: none !important; }
       html[data-route="blog"] #blog-page { display: block !important; }
+      html[data-route="blog"] [id^="article-page"] { display: none !important; }
       html[data-route="article"] #landing-page { display: none !important; }
       html[data-route="article"] #article-page { display: block !important; }
       html[data-route="article-chatgpt"] #landing-page { display: none !important; }
@@ -1313,24 +1326,22 @@
       html[data-route="article-best-prompt-for-image-generation"] #landing-page { display: none !important; }
       html[data-route="article-best-prompt-for-image-generation"] #article-page-best-prompt-for-image-generation{ display: block !important; }
       html[data-route="article-best-prompt-for-email-writing"] #landing-page { display: none !important; }
-      html[data-route="article-best-prompt-for-email-writing"] #article-page-best-prompt-for-email-writing, #article-page-how-to-create-system-prompt{ display: block !important; }
+      html[data-route="article-best-prompt-for-email-writing"] #article-page-best-prompt-for-email-writing { display: block !important; }
       html[data-route="article-how-to-create-system-prompt"] #landing-page { display: none !important; }
       html[data-route="article-how-to-create-system-prompt"] #article-page-how-to-create-system-prompt{ display: block !important; }
       html[data-route="article-best-prompt-for-social-media"] #landing-page { display: none !important; }
-      html[data-route="article-best-prompt-for-social-media"] #article-page-best-prompt-for-social-media{ display: block !important; }
+      html[data-route="article-best-prompt-for-social-media"] #article-page-best-prompt-for-social-media, #article-page-best-prompt-for-resume{ display: block !important; }
       html[data-route="app"] #landing-page,
       html.boot-app #landing-page,
       html[data-route="app"] #blog-page,
       html.boot-app #blog-page,
       html[data-route="app"] [id^="article-page"],
       html.boot-app [id^="article-page"] { display: none !important; }
+      html[data-route="article-best-prompt-for-data-analysis"] #landing-page { display: none !important; }
+      html[data-route="article-best-prompt-for-data-analysis"] #article-page-best-prompt-for-data-analysis { display: block !important; }
+      html[data-route="article-best-prompt-for-coding"] #landing-page { display: none !important; }
+      html[data-route="article-best-prompt-for-coding"] #article-page-best-prompt-for-coding { display: block !important; }
       html[data-route="app"] #app-root,
-      html.boot-app #article-page-best-prompt-for-coding{ display: none !important; }
-            html[data-route="article-best-prompt-for-data-analysis"] #landing-page { display: none !important; }
-      html[data-route="article-best-prompt-for-data-analysis"] #article-page-best-prompt-for-data-analysis{ display: block !important; }
-html.boot-app #article-page-best-prompt-for-data-analysis { display: none !important; }
-      html.boot-app #article-page-best-prompt-for-social-media { display: none !important; }
-
       html.boot-app #app-root { display: block !important; }
 
       #app-splash {
@@ -1473,63 +1484,67 @@ html.boot-app #article-page-best-prompt-for-data-analysis { display: none !impor
       }
 
       /* Article detail page */
-      #article-page, #article-page-chatgpt, #article-page-marketing, #article-page-9-tips, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt, #article-page-best-prompt-for-marketing, #article-page-claude-vs-gpt5-vs-gemini-prompting, #article-page-best-prompt-for-image-generation, #article-page-best-prompt-for-email-writing, #article-page-how-to-create-system-prompt, #article-page-best-prompt-for-coding, #article-page-best-prompt-for-data-analysis {
-      #article-page .article-header, #article-page-chatgpt .article-header, #article-page-marketing .article-header, #article-page-9-tips .article-header, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt .article-header, #article-page-best-prompt-for-marketing .article-header, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-header, #article-page-best-prompt-for-image-generation .article-header, #article-page-best-prompt-for-email-writing .article-header, #article-page-how-to-create-system-prompt .article-header, #article-page-best-prompt-for-coding .article-header, #article-page-best-prompt-for-data-analysis .article-header {
-      #article-page .article-meta, #article-page-chatgpt .article-meta, #article-page-marketing .article-meta, #article-page-9-tips .article-meta, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt .article-meta, #article-page-best-prompt-for-marketing .article-meta, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-meta, #article-page-best-prompt-for-image-generation .article-meta, #article-page-best-prompt-for-email-writing .article-meta, #article-page-how-to-create-system-prompt .article-meta, #article-page-best-prompt-for-coding .article-meta, #article-page-best-prompt-for-data-analysis .article-meta {
-      #article-page .article-header h1, #article-page-chatgpt .article-header h1, #article-page-marketing .article-header h1, #article-page-9-tips .article-header h1, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt .article-header h1, #article-page-best-prompt-for-marketing .article-header h1, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-header h1, #article-page-best-prompt-for-image-generation .article-header h1, #article-page-best-prompt-for-email-writing .article-header h1, #article-page-how-to-create-system-prompt .article-header h1, #article-page-best-prompt-for-coding .article-header h1, #article-page-best-prompt-for-data-analysis .article-header h1 {
-      #article-page .article-body, #article-page-chatgpt .article-body, #article-page-marketing .article-body, #article-page-9-tips .article-body, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt .article-body, #article-page-best-prompt-for-marketing .article-body, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body, #article-page-best-prompt-for-image-generation .article-body, #article-page-best-prompt-for-email-writing .article-body, #article-page-how-to-create-system-prompt .article-body, #article-page-best-prompt-for-coding .article-body, #article-page-best-prompt-for-data-analysis .article-body {
-      #article-page .article-body h2, #article-page-chatgpt .article-body h2, #article-page-marketing .article-body h2, #article-page-9-tips .article-body h2, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt .article-body h2, #article-page-best-prompt-for-marketing .article-body h2, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body h2, #article-page-best-prompt-for-image-generation .article-body h2, #article-page-best-prompt-for-email-writing .article-body h2, #article-page-how-to-create-system-prompt .article-body h2, #article-page-best-prompt-for-coding .article-body h2, #article-page-best-prompt-for-data-analysis .article-body h2 {
-      #article-page .article-body h3, #article-page-chatgpt .article-body h3, #article-page-marketing .article-body h3, #article-page-9-tips .article-body h3, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt .article-body h3, #article-page-best-prompt-for-marketing .article-body h3, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body h3, #article-page-best-prompt-for-image-generation .article-body h3, #article-page-best-prompt-for-email-writing .article-body h3, #article-page-how-to-create-system-prompt .article-body h3, #article-page-best-prompt-for-coding .article-body h3, #article-page-best-prompt-for-data-analysis .article-body h3 {
-      #article-page .article-body p, #article-page-chatgpt .article-body p, #article-page-marketing .article-body p, #article-page-9-tips .article-body p, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt .article-body p, #article-page-best-prompt-for-marketing .article-body p, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body p, #article-page-best-prompt-for-image-generation .article-body p, #article-page-best-prompt-for-email-writing .article-body p, #article-page-how-to-create-system-prompt .article-body p, #article-page-best-prompt-for-coding .article-body p, #article-page-best-prompt-for-data-analysis .article-body p {
-      #article-page .article-body ul, #article-page .article-body ol, #article-page-chatgpt .article-body ul, #article-page-chatgpt .article-body ol, #article-page-marketing .article-body ul, #article-page-marketing .article-body ol, #article-page-9-tips .article-body ul, #article-page-9-tips .article-body ol, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt .article-body ul, #article-page-how-to-create-prompt-for-chatgpt .article-body ol, #article-page-best-prompt-for-marketing .article-body ul, #article-page-best-prompt-for-marketing .article-body ol, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body ul, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body ol, #article-page-best-prompt-for-image-generation .article-body ul, #article-page-best-prompt-for-image-generation .article-body ol, #article-page-best-prompt-for-email-writing .article-body ul, #article-page-best-prompt-for-email-writing .article-body ol, #article-page-how-to-create-system-prompt .article-body ol, #article-page-best-prompt-for-coding .article-body ol, #article-page-best-prompt-for-data-analysis .article-body ol {
-      #article-page .article-body li, #article-page-chatgpt .article-body li, #article-page-marketing .article-body li, #article-page-9-tips .article-body li, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt .article-body li, #article-page-best-prompt-for-marketing .article-body li, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body li, #article-page-best-prompt-for-image-generation .article-body li, #article-page-best-prompt-for-email-writing .article-body li, #article-page-how-to-create-system-prompt .article-body li, #article-page-best-prompt-for-coding .article-body li, #article-page-best-prompt-for-data-analysis .article-body li {
+      #article-page, #article-page-chatgpt, #article-page-marketing, #article-page-9-tips, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt, #article-page-best-prompt-for-marketing, #article-page-claude-vs-gpt5-vs-gemini-prompting, #article-page-best-prompt-for-image-generation, #article-page-best-prompt-for-email-writing, #article-page-how-to-create-system-prompt, #article-page-best-prompt-for-coding, #article-page-best-prompt-for-data-analysis, #article-page-best-prompt-for-social-media , #article-page-best-prompt-for-resume { min-height: 100vh; padding-top: 100px; }
+      #article-page .article-header, #article-page-chatgpt .article-header, #article-page-marketing .article-header, #article-page-9-tips .article-header, #article-page-how-to-create-prompt-for-chatgpt .article-header, #article-page-cara-buat-prompt-chatgpt .article-header, #article-page-best-prompt-for-marketing .article-header, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-header, #article-page-best-prompt-for-image-generation .article-header, #article-page-best-prompt-for-email-writing .article-header, #article-page-how-to-create-system-prompt .article-header, #article-page-best-prompt-for-coding .article-header, #article-page-best-prompt-for-data-analysis .article-header, #article-page-best-prompt-for-social-media .article-header , #article-page-best-prompt-for-resume .article-header { text-align: center; padding: 60px 24px 40px; max-width: 800px; margin: 0 auto; }
+      #article-page .article-meta, #article-page-chatgpt .article-meta, #article-page-marketing .article-meta, #article-page-9-tips .article-meta, #article-page-how-to-create-prompt-for-chatgpt .article-meta, #article-page-cara-buat-prompt-chatgpt .article-meta, #article-page-best-prompt-for-marketing .article-meta, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-meta, #article-page-best-prompt-for-image-generation .article-meta, #article-page-best-prompt-for-email-writing .article-meta, #article-page-how-to-create-system-prompt .article-meta, #article-page-best-prompt-for-coding .article-meta, #article-page-best-prompt-for-data-analysis .article-meta, #article-page-best-prompt-for-social-media .article-meta , #article-page-best-prompt-for-resume .article-meta { font-size: 14px; color: var(--text-muted); margin-bottom: 16px; }
+      #article-page .article-header h1, #article-page-chatgpt .article-header h1, #article-page-marketing .article-header h1, #article-page-9-tips .article-header h1, #article-page-how-to-create-prompt-for-chatgpt .article-header h1, #article-page-cara-buat-prompt-chatgpt .article-header h1, #article-page-best-prompt-for-marketing .article-header h1, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-header h1, #article-page-best-prompt-for-image-generation .article-header h1, #article-page-best-prompt-for-email-writing .article-header h1, #article-page-how-to-create-system-prompt .article-header h1, #article-page-best-prompt-for-coding .article-header h1, #article-page-best-prompt-for-data-analysis .article-header h1, #article-page-best-prompt-for-social-media .article-header h1 , #article-page-best-prompt-for-resume .article-header h1 { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; }
+      #article-page .article-body, #article-page-chatgpt .article-body, #article-page-marketing .article-body, #article-page-9-tips .article-body, #article-page-how-to-create-prompt-for-chatgpt .article-body, #article-page-cara-buat-prompt-chatgpt .article-body, #article-page-best-prompt-for-marketing .article-body, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body, #article-page-best-prompt-for-image-generation .article-body, #article-page-best-prompt-for-email-writing .article-body, #article-page-how-to-create-system-prompt .article-body, #article-page-best-prompt-for-coding .article-body, #article-page-best-prompt-for-data-analysis .article-body, #article-page-best-prompt-for-social-media .article-body , #article-page-best-prompt-for-resume .article-body { max-width: 720px; margin: 0 auto; padding: 0 24px 120px; }
+      #article-page .article-body h2, #article-page-chatgpt .article-body h2, #article-page-marketing .article-body h2, #article-page-9-tips .article-body h2, #article-page-how-to-create-prompt-for-chatgpt .article-body h2, #article-page-cara-buat-prompt-chatgpt .article-body h2, #article-page-best-prompt-for-marketing .article-body h2, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body h2, #article-page-best-prompt-for-image-generation .article-body h2, #article-page-best-prompt-for-email-writing .article-body h2, #article-page-how-to-create-system-prompt .article-body h2, #article-page-best-prompt-for-coding .article-body h2, #article-page-best-prompt-for-data-analysis .article-body h2, #article-page-best-prompt-for-social-media .article-body h2 , #article-page-best-prompt-for-resume .article-body h2 { font-size: 1.5rem; font-weight: 700; margin: 40px 0 16px; }
+      #article-page .article-body h3, #article-page-chatgpt .article-body h3, #article-page-marketing .article-body h3, #article-page-9-tips .article-body h3, #article-page-how-to-create-prompt-for-chatgpt .article-body h3, #article-page-cara-buat-prompt-chatgpt .article-body h3, #article-page-best-prompt-for-marketing .article-body h3, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body h3, #article-page-best-prompt-for-image-generation .article-body h3, #article-page-best-prompt-for-email-writing .article-body h3, #article-page-how-to-create-system-prompt .article-body h3, #article-page-best-prompt-for-coding .article-body h3, #article-page-best-prompt-for-data-analysis .article-body h3, #article-page-best-prompt-for-social-media .article-body h3 , #article-page-best-prompt-for-resume .article-body h3 { font-size: 1.2rem; font-weight: 600; margin: 32px 0 12px; color: var(--accent); }
+      #article-page .article-body p, #article-page-chatgpt .article-body p, #article-page-marketing .article-body p, #article-page-9-tips .article-body p, #article-page-how-to-create-prompt-for-chatgpt .article-body p, #article-page-cara-buat-prompt-chatgpt .article-body p, #article-page-best-prompt-for-marketing .article-body p, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body p, #article-page-best-prompt-for-image-generation .article-body p, #article-page-best-prompt-for-email-writing .article-body p, #article-page-how-to-create-system-prompt .article-body p, #article-page-best-prompt-for-coding .article-body p, #article-page-best-prompt-for-data-analysis .article-body p, #article-page-best-prompt-for-social-media .article-body p , #article-page-best-prompt-for-resume .article-body p { font-size: 16px; color: var(--text-muted); line-height: 1.8; margin-bottom: 20px; }
+      #article-page .article-body ul, #article-page .article-body ol, #article-page-chatgpt .article-body ul, #article-page-chatgpt .article-body ol, #article-page-marketing .article-body ul, #article-page-marketing .article-body ol, #article-page-9-tips .article-body ul, #article-page-9-tips .article-body ol, #article-page-how-to-create-prompt-for-chatgpt .article-body ul, #article-page-how-to-create-prompt-for-chatgpt .article-body ol, #article-page-cara-buat-prompt-chatgpt .article-body ul, #article-page-cara-buat-prompt-chatgpt .article-body ol, #article-page-best-prompt-for-marketing .article-body ul, #article-page-best-prompt-for-marketing .article-body ol, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body ul, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body ol, #article-page-best-prompt-for-image-generation .article-body ul, #article-page-best-prompt-for-image-generation .article-body ol, #article-page-best-prompt-for-email-writing .article-body ul, #article-page-best-prompt-for-email-writing .article-body ol, #article-page-how-to-create-system-prompt .article-body ul, #article-page-how-to-create-system-prompt .article-body ol, #article-page-best-prompt-for-coding .article-body ul, #article-page-best-prompt-for-coding .article-body ol, #article-page-best-prompt-for-data-analysis .article-body ul, #article-page-best-prompt-for-data-analysis .article-body ol, #article-page-best-prompt-for-social-media .article-body ul, #article-page-best-prompt-for-social-media .article-body ol , #article-page-best-prompt-for-resume .article-body ul, #article-page-best-prompt-for-social-media .article-body ol { color: var(--text-muted); margin: 0 0 20px 24px; }
+      #article-page .article-body li, #article-page-chatgpt .article-body li, #article-page-marketing .article-body li, #article-page-9-tips .article-body li, #article-page-how-to-create-prompt-for-chatgpt .article-body li, #article-page-cara-buat-prompt-chatgpt .article-body li, #article-page-best-prompt-for-marketing .article-body li, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body li, #article-page-best-prompt-for-image-generation .article-body li, #article-page-best-prompt-for-email-writing .article-body li, #article-page-how-to-create-system-prompt .article-body li, #article-page-best-prompt-for-coding .article-body li, #article-page-best-prompt-for-data-analysis .article-body li, #article-page-best-prompt-for-social-media .article-body li , #article-page-best-prompt-for-resume .article-body li { margin-bottom: 8px; line-height: 1.7; }
       #article-page .article-body code,
       #article-page-chatgpt .article-body code,
       #article-page-marketing .article-body code,
       #article-page-9-tips .article-body code,
-      #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt .article-body code,
+      #article-page-how-to-create-prompt-for-chatgpt .article-body code,
+      #article-page-cara-buat-prompt-chatgpt .article-body code,
       #article-page-best-prompt-for-marketing .article-body code,
       #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body code,
       #article-page-best-prompt-for-image-generation .article-body code,
-      #article-page-best-prompt-for-email-writing .article-body code, #article-page-how-to-create-system-prompt .article-body code,
-      #article-page-best-prompt-for-coding .article-body code{
+      #article-page-best-prompt-for-email-writing .article-body code,
+      #article-page-how-to-create-system-prompt .article-body code,
+      #article-page-best-prompt-for-coding .article-body code,
+      #article-page-best-prompt-for-data-analysis .article-body code,
+      #article-page-best-prompt-for-social-media .article-body code , #article-page-best-prompt-for-resume .article-body code {
         background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; font-family: 'Geist Mono', monospace; font-size: 0.92em; color: #e0e7ff;
       }
       #article-page .article-body pre,
       #article-page-chatgpt .article-body pre,
       #article-page-marketing .article-body pre,
       #article-page-9-tips .article-body pre,
-      #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt .article-body pre,
+      #article-page-how-to-create-prompt-for-chatgpt .article-body pre,
+      #article-page-cara-buat-prompt-chatgpt .article-body pre,
       #article-page-best-prompt-for-marketing .article-body pre,
       #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body pre,
       #article-page-best-prompt-for-image-generation .article-body pre,
-      #article-page-best-prompt-for-email-writing .article-body pre, #article-page-how-to-create-system-prompt .article-body pre,
-      #article-page-best-prompt-for-coding .article-body pre{
+      #article-page-best-prompt-for-email-writing .article-body pre,
+      #article-page-how-to-create-system-prompt .article-body pre,
+      #article-page-best-prompt-for-coding .article-body pre,
+      #article-page-best-prompt-for-data-analysis .article-body pre,
+      #article-page-best-prompt-for-social-media .article-body pre , #article-page-best-prompt-for-resume .article-body pre {
         background: #0d1117; border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin: 24px 0; overflow-x: auto; line-height: 1.6;
       }
-      #article-page .article-body pre code, #article-page-chatgpt .article-body pre code, #article-page-marketing .article-body pre code, #article-page-9-tips .article-body pre code, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt .article-body pre code, #article-page-best-prompt-for-marketing .article-body pre code, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body pre code, #article-page-best-prompt-for-image-generation .article-body pre code, #article-page-best-prompt-for-email-writing .article-body pre code, #article-page-how-to-create-system-prompt .article-body pre code, #article-page-best-prompt-for-coding .article-body pre code, #article-page-best-prompt-for-data-analysis .article-body pre code {
+      #article-page .article-body pre code, #article-page-chatgpt .article-body pre code, #article-page-marketing .article-body pre code, #article-page-9-tips .article-body pre code, #article-page-how-to-create-prompt-for-chatgpt .article-body pre code, #article-page-cara-buat-prompt-chatgpt .article-body pre code, #article-page-best-prompt-for-marketing .article-body pre code, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body pre code, #article-page-best-prompt-for-image-generation .article-body pre code, #article-page-best-prompt-for-email-writing .article-body pre code, #article-page-how-to-create-system-prompt .article-body pre code, #article-page-best-prompt-for-coding .article-body pre code, #article-page-best-prompt-for-data-analysis .article-body pre code, #article-page-best-prompt-for-social-media .article-body pre code , #article-page-best-prompt-for-resume .article-body pre code { background: none; padding: 0; font-size: 13px; color: var(--text-muted); }
       #article-page .article-body .tip-box,
       #article-page-chatgpt .article-body .tip-box,
       #article-page-marketing .article-body .tip-box,
       #article-page-9-tips .article-body .tip-box,
-      #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt .article-body .tip-box,
+      #article-page-how-to-create-prompt-for-chatgpt .article-body .tip-box,
+      #article-page-cara-buat-prompt-chatgpt .article-body .tip-box,
       #article-page-best-prompt-for-marketing .article-body .tip-box,
       #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body .tip-box,
       #article-page-best-prompt-for-image-generation .article-body .tip-box,
-      #article-page-best-prompt-for-email-writing .article-body .tip-box, #article-page-how-to-create-system-prompt .article-body .tip-box, #article-page-how-to-create-system-prompt .article-body .tip-box, #article-page-how-to-create-system-prompt .article-body .tip-box,
-      #article-page-best-prompt-for-coding .article-body .tip-box{
+      #article-page-best-prompt-for-email-writing .article-body .tip-box,
+      #article-page-how-to-create-system-prompt .article-body .tip-box,
+      #article-page-best-prompt-for-coding .article-body .tip-box,
+      #article-page-best-prompt-for-data-analysis .article-body .tip-box,
+      #article-page-best-prompt-for-social-media .article-body .tip-box , #article-page-best-prompt-for-resume .article-body .tip-box {
         background: rgba(56,189,248,0.05); border: 1px solid rgba(56,189,248,0.15);
         border-radius: 12px; padding: 20px 24px; margin: 24px 0;
       }
-      #article-page .article-body .tip-box strong, #article-page-chatgpt .article-body .tip-box strong, #article-page-marketing .article-body .tip-box strong, #article-page-9-tips .article-body .tip-box strong, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt .article-body .tip-box strong, #article-page-best-prompt-for-marketing .article-body .tip-box strong, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body .tip-box strong, #article-page-best-prompt-for-image-generation .article-body .tip-box strong, #article-page-best-prompt-for-email-writing .article-body .tip-box strong, #article-page-how-to-create-system-prompt .article-body .tip-box strong, #article-page-best-prompt-for-coding .article-body .tip-box strong, #article-page-best-prompt-for-data-analysis .article-body .tip-box strong {
-      html.boot-app #landing-page,
-      html.boot-app #blog-page,
-      html.boot-app #article-page,
-      html.boot-app #article-page-chatgpt,
-      html.boot-app #article-page-marketing,
-      html.boot-app #article-page-best-prompt-for-email-writing, #article-page-how-to-create-system-prompt{ display: none !important; }
-      html.boot-app #article-page-how-to-create-system-prompt{ display: none !important; }
-      html.boot-app #app-root { display: block !important; }
+      #article-page .article-body .tip-box strong, #article-page-chatgpt .article-body .tip-box strong, #article-page-marketing .article-body .tip-box strong, #article-page-9-tips .article-body .tip-box strong, #article-page-how-to-create-prompt-for-chatgpt .article-body .tip-box strong, #article-page-cara-buat-prompt-chatgpt .article-body .tip-box strong, #article-page-best-prompt-for-marketing .article-body .tip-box strong, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body .tip-box strong, #article-page-best-prompt-for-image-generation .article-body .tip-box strong, #article-page-best-prompt-for-email-writing .article-body .tip-box strong, #article-page-how-to-create-system-prompt .article-body .tip-box strong, #article-page-best-prompt-for-coding .article-body .tip-box strong, #article-page-best-prompt-for-data-analysis .article-body .tip-box strong, #article-page-best-prompt-for-social-media .article-body .tip-box strong , #article-page-best-prompt-for-resume .article-body .tip-box strong { color: var(--accent); }
     </style>
   </head>
   <body>
@@ -1870,7 +1885,18 @@ Build a campaign prompt with:
               <span class="blog-read-more">Read article →</span>
             </div>
           </a>
-          <a href="/blog/how-to-create-prompt-for-chatgpt"
+          <a href="/blog/how-to-create-prompt-for-chatgpt" class="blog-card fade-up">
+            <div class="blog-thumb">
+              <div class="blog-thumb-bg">💬</div>
+              <span class="blog-category">Tutorial</span>
+            </div>
+            <div class="blog-body">
+              <span class="blog-date">June 8, 2026</span>
+              <h3>How to Create a Prompt for ChatGPT That Gets 10x Better Results</h3>
+              <p>The exact framework OpenAI doesn't publish — 12 copy-paste prompts, before/after scoring, and the 6 mistakes that kill ChatGPT output quality.</p>
+              <span class="blog-read-more">Read article →</span>
+            </div>
+          </a>
           <a href="/blog/best-prompt-for-coding" class="blog-card fade-up">
             <div class="blog-thumb">
               <div class="blog-thumb-bg">💻</div>
@@ -1889,24 +1915,12 @@ Build a campaign prompt with:
             <span class="blog-category">Tutorial</span>
           </div>
           <div class="blog-body">
-            <span class="blog-date">June 14, 2026</span>
+            <span class="blog-date">June 15, 2026</span>
             <h3>How to Write a Prompt for Data Analysis (Step-by-Step)</h3>
             <p>Turn a raw CSV into insights, charts, and a one-paragraph exec summary — with one prompt. The S.C.A.F. framework, 4 copy-paste templates, and 3 mistakes to avoid.</p>
             <span class="blog-read-more">Read guide →</span>
           </div>
         </a>
- class="blog-card fade-up">
-            <div class="blog-thumb">
-              <div class="blog-thumb-bg">💬</div>
-              <span class="blog-category">Tutorial</span>
-            </div>
-            <div class="blog-body">
-              <span class="blog-date">June 8, 2026</span>
-              <h3>How to Create a Prompt for ChatGPT That Gets 10x Better Results</h3>
-              <p>The exact framework OpenAI doesn't publish — 12 copy-paste prompts, before/after scoring, and the 6 mistakes that kill ChatGPT output quality.</p>
-              <span class="blog-read-more">Read article →</span>
-            </div>
-          </a>
           <a href="/blog/cara-buat-prompt-chatgpt" class="blog-card fade-up">
             <div class="blog-thumb">
               <div class="blog-thumb-bg">🇮🇩</div>
@@ -1976,6 +1990,18 @@ Build a campaign prompt with:
               <span class="blog-date">June 13, 2026</span>
               <h3>How to Create a System Prompt for Custom GPTs (Complete Guide)</h3>
               <p>The anatomy of a great system prompt: persona, scope, output contract, and anti-patterns — with 3 full examples for a B2B copywriter GPT, a research assistant, and a tutor.</p>
+              <span class="blog-read-more">Read article →</span>
+            </div>
+          </a>
+          <a href="/blog/best-prompt-for-resume" class="blog-card fade-up" data-route="article-best-prompt-for-resume">
+            <div class="blog-thumb">
+              <div class="blog-thumb-bg">📄</div>
+              <span class="blog-category">Tutorial</span>
+            </div>
+            <div class="blog-body">
+              <span class="blog-date">June 16, 2026</span>
+              <h3>Best Prompt for Resume Writing: Stand Out in 2026 ATS</h3>
+              <p>The 5-part prompt framework that turns a thin job history into an ATS-optimized 1-pager. 4 copy-paste templates for ChatGPT, Claude, and Gemini, with the 3 mistakes that ship resumes to the rejection pile.</p>
               <span class="blog-read-more">Read article →</span>
             </div>
           </a>
@@ -2057,14 +2083,6 @@ Build a campaign prompt with:
             <span class="blog-list-meta">June 5, 2026 · Tutorial · 8 min read</span>
             <h3>The Complete Guide to Prompt Engineering in 2026</h3>
             <p>Master the art of writing effective AI prompts. From basic structure to advanced techniques like chain-of-thought and few-shot learning.</p>
-          </div>
-        </a>
-        <a href="/blog/best-prompt-for-social-media" class="blog-list-card" data-route="article-best-prompt-for-social-media">
-          <div class="blog-list-thumb">📱</div>
-          <div class="blog-list-content">
-            <span class="blog-list-meta">June 15, 2026 · Templates · 7 min read</span>
-            <h3>Best Prompt for Social Media: 8 Templates That Drive Engagement</h3>
-            <p>8 drop-in prompts for Instagram captions, LinkedIn posts, Twitter threads, and TikTok scripts.</p>
           </div>
         </a>
         <a href="/blog/chatgpt-vs-claude-prompts" class="blog-list-card">
@@ -2158,9 +2176,25 @@ Build a campaign prompt with:
         <a href="/blog/best-prompt-for-data-analysis" class="blog-list-card">
           <div class="blog-list-thumb">📊</div>
           <div class="blog-list-content">
-            <span class="blog-list-meta">June 14, 2026 · Tutorial · 9 min read</span>
+            <span class="blog-list-meta">June 15, 2026 · Tutorial · 9 min read</span>
             <h3>How to Write a Prompt for Data Analysis (Step-by-Step)</h3>
             <p>Turn a raw CSV into insights, charts, and a one-paragraph exec summary — with one prompt. The S.C.A.F. framework and 4 copy-paste templates.</p>
+          </div>
+        </a>
+        <a href="/blog/best-prompt-for-social-media" class="blog-list-card">
+          <div class="blog-list-thumb">📱</div>
+          <div class="blog-list-content">
+            <span class="blog-list-meta">June 15, 2026 · Templates · 7 min read</span>
+            <h3>Best Prompt for Social Media: 8 Templates That Drive Engagement</h3>
+            <p>8 drop-in prompts for Instagram captions, LinkedIn posts, Twitter threads, and TikTok scripts.</p>
+          </div>
+        </a>
+        <a href="/blog/best-prompt-for-resume" class="blog-list-card">
+          <div class="blog-list-thumb">📄</div>
+          <div class="blog-list-content">
+            <span class="blog-list-meta">June 16, 2026 · Tutorial · 8 min read</span>
+            <h3>Best Prompt for Resume Writing: Stand Out in 2026 ATS</h3>
+            <p>The 5-part prompt framework that turns a thin job history into an ATS-optimized 1-pager. 4 copy-paste templates for ChatGPT, Claude, and Gemini.</p>
           </div>
         </a>
       </div>
@@ -2399,6 +2433,10 @@ For each improvement:
                 <div class="tip-box" style="margin-top:32px">
             <strong>Related:</strong> <a href="/blog/how-to-create-system-prompt" style="color:var(--accent)">How to Create a System Prompt for Custom GPTs (Complete Guide)</a> — the 4-part anatomy (persona, scope, output contract, anti-patterns) for the long-lived "Instructions" field of a Custom GPT, with a full copy-paste prompt for a B2B copywriter GPT.
           </div>
+
+                <div class="tip-box">
+                  <strong>Related:</strong> <a href="/blog/best-prompt-for-resume" style="color:var(--accent)">Best Prompt for Resume Writing: Stand Out in 2026 ATS</a> — the resume-specific application of these Claude-prompt patterns: the 5-part framework turned into 4 copy-paste templates (from-scratch, bullet polish, cover letter, ATS audit) with the anti-fabrication rule that prevents the most common AI-resume phone-screen trap.
+                </div>
         </article>
     </div>
 
@@ -4031,6 +4069,10 @@ Customer Engineering</code></pre>
           <strong>Related:</strong> <a href="/blog/chatgpt-vs-claude-prompts" style="color:var(--accent)">ChatGPT vs Claude: How to Write Prompts for Each</a> — the side-by-side comparison of how the same email prompt lands on ChatGPT vs Claude, with tone, format, and instruction-following differences explained in detail.
         </div>
 
+        <div class="tip-box">
+          <strong>Related:</strong> <a href="/blog/best-prompt-for-resume" style="color:var(--accent)">Best Prompt for Resume Writing: Stand Out in 2026 ATS</a> — the 5-part prompt framework from the email templates applied to resume writing: 4 copy-paste prompts (from-scratch, bullet polish, cover letter, ATS audit) with the same anti-pattern discipline that prevents fabricated metrics and pretty-formatting ATS rejection.
+        </div>
+
       </article>
     </div>
     <div id="article-page-how-to-create-system-prompt">
@@ -4416,14 +4458,18 @@ FORMAT: Return 1) the refactored code, 2) a 3-bullet diff summary (what changed 
       </article>
     </div>
 
-    <div id="article-page-best-prompt-for-data-analysis" class="article-page" data-page-h1="article-best-prompt-for-data-analysis" hidden>
-      <nav class="article-nav"><a href="#/" class="back-link" data-link>← Back to Home</a></nav>
-      <header class="article-header">
-        <span class="article-category">Tutorial</span>
-        <h1>How to Write a Prompt for Data Analysis (Step-by-Step)</h1>
-        <p class="article-tagline">Turn a raw CSV into insights, charts, and a one-paragraph exec summary — with one prompt.</p>
-        <div class="article-meta">2026-06-15 · Tutorial · 9 min read</div>
-      </header>
+    <div id="article-page-best-prompt-for-data-analysis">
+      <nav class="navbar">
+        <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
+        <div class="nav-links">
+          <a href="/">Home</a><a href="/#features">Features</a><a href="/blog">Blog</a>
+          <a href="/app" class="nav-cta">Open App →</a>
+        </div>
+      </nav>
+      <div class="article-header">
+        <span class="article-meta">June 15, 2026 · Tutorial · 9 min read</span>
+        <h1 data-page-h1="article-best-prompt-for-data-analysis">How to Write a Prompt for Data Analysis (Step-by-Step)</h1>
+      </div>
       <article class="article-body">
 <p>If you have ever pasted a CSV into ChatGPT, Claude, or Gemini and watched the model confidently invent columns, miscount rows, or "summarise" a trend that does not exist, you already know why finding the <strong>best prompt for data analysis</strong> is harder than it looks. Data is structured, model context is finite, and most off-the-shelf prompts assume the AI already understands your schema — it does not. A good data-analysis prompt is essentially a contract: it tells the model exactly which file to read, what shape the data has, what question to answer, and how to format the answer back.</p>
 
@@ -4573,14 +4619,18 @@ Constraints:
       </article>
     </div>
 
-        <div id="article-page-best-prompt-for-social-media" class="article-page" data-page-h1="article-best-prompt-for-social-media" hidden>
-      <nav class="article-nav"><a href="#/" class="back-link" data-link>← Back to Home</a></nav>
-      <header class="article-header">
-        <span class="article-category">Templates</span>
-        <h1>Best Prompt for Social Media: 8 Templates That Drive Engagement</h1>
-        <p class="article-tagline">8 drop-in prompts for Instagram captions, LinkedIn posts, Twitter threads, and TikTok scripts.</p>
-        <div class="article-meta">2026-06-15 · Templates · 7 min read</div>
-      </header>
+    <div id="article-page-best-prompt-for-social-media">
+      <nav class="navbar">
+        <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
+        <div class="nav-links">
+          <a href="/">Home</a><a href="/#features">Features</a><a href="/blog">Blog</a>
+          <a href="/app" class="nav-cta">Open App →</a>
+        </div>
+      </nav>
+      <div class="article-header">
+        <span class="article-meta">June 15, 2026 · Templates · 7 min read</span>
+        <h1 data-page-h1="article-best-prompt-for-social-media">Best Prompt for Social Media: 8 Templates That Drive Engagement</h1>
+      </div>
       <article class="article-body">
 <h2 id="why-most-ai-posts-fall-flat">Why Most AI Social Media Posts Fall Flat</h2>
 <p>If you've ever pasted a topic into ChatGPT and posted the first result on LinkedIn, you already know the outcome. The caption sounds like everyone else's. The hook is a breathless "Let's dive in 🔥." The CTA is "Thoughts?" with a single emoji. According to <strong>CampaignSwift's</strong> agency research, "the difference between mediocre AI output and content your clients approve on the first round" is almost always prompt structure, not model quality. With ChatGPT now reaching 900 million weekly active users as of February 2026 (up 125% year-over-year, per OpenAI via Reuters), the feed is flooded with default-style posts. The only way to stand out is to feed the model the brief it actually needs: voice, platform, format, and a measurable goal.</p>
@@ -4778,6 +4828,160 @@ Self-check: Is there a clear moment of tension? If not, rewrite. Score 1–10 on
 
 <div class="tip-box"><strong>Related:</strong> <a href="/blog/9-tips-claude-prompts" style="color:var(--accent)">9 Tips Claude Prompts</a> · <a href="/blog/best-prompt-for-marketing" style="color:var(--accent)">Best Prompt for Marketing</a> · <a href="/blog/prompt-templates-marketing" style="color:var(--accent)">Prompt Templates for Marketing</a></div>
 
+      </article>
+    </div>
+
+    <div id="article-page-best-prompt-for-resume">
+      <nav class="navbar">
+        <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
+        <div class="nav-links">
+          <a href="/">Home</a><a href="/#features">Features</a><a href="/blog">Blog</a>
+          <a href="/app" class="nav-cta">Open App →</a>
+        </div>
+      </nav>
+      <div class="article-header">
+        <span class="article-meta">June 16, 2026 · Tutorial · 8 min read</span>
+        <h1 data-page-h1="article-best-prompt-for-resume">Best Prompt for Resume Writing: Stand Out in 2026 ATS</h1>
+      </div>
+<article class="article-body">
+              <h2>Why a Generic "Write My Resume" Prompt Fails</h2>
+      <p>Most people open ChatGPT, type <em>"write me a resume for a software engineer role"</em>, and get back a generic college-career-center handout. The problem isn't the model — it's the <strong>best prompt for resume</strong> being the wrong one. The model got three nouns and no constraints, so it produces a generic doc — one that lands in the 75% of resumes that <a href="/blog/9-tips-claude-prompts" style="color:var(--accent)">ATS systems</a> reject before a human ever opens it.</p>
+      <p>The fix is the 5-part prompt framework. Specify the <em>role you want the model to play</em>, the <em>raw material</em> it should rewrite, the <em>target job</em>, the <em>output contract</em> (length, format, tone), and the <em>anti-patterns</em> it must avoid. This article gives you 4 copy-paste prompts built on that framework, plus the 3 mistakes that ship a resume straight to the rejection pile.</p>
+
+      <h2>The 3-Second Rule: What an ATS Actually Does</h2>
+      <p>An ATS doesn't "read" your resume. It parses the file, extracts fields, and scores the document against the job description on three axes: <strong>keyword match</strong>, <strong>recency</strong>, and <strong>formatting integrity</strong>. A 2026 CVCraft study of Fortune 500 hiring pipelines found that resumes matching 60%+ of job keywords pass ATS screening 90% of the time, while the average unoptimized resume scores around 55%.</p>
+      <p>That 55%-to-90% gap is exactly what a good prompt closes. The LLM is your keyword-stuffing assistant; the recruiter phone screen is where you actually get hired. So the goal is not "write a perfect resume" — it is "produce a doc the ATS forwards to a human."</p>
+
+      <h2>The Framework: 5 Parts Every Resume Prompt Needs</h2>
+      <p>Every prompt below follows this 5-part skeleton. Skip any one and the output degrades.</p>
+      <ol>
+        <li><strong>Role.</strong> "You are a senior technical recruiter with 12 years of experience screening resumes for FAANG-tier companies" is dramatically better than "act as an expert."</li>
+        <li><strong>Raw material.</strong> Paste your actual job history and skills. The model can't invent experience you didn't give it — but it <em>can</em> rewrite what you have at a higher level of clarity and impact.</li>
+        <li><strong>Target job.</strong> Paste the full job description. The LLM extracts keywords, required skills, and seniority signals and aligns your existing bullets to them.</li>
+        <li><strong>Output contract.</strong> Specify length, format, tone, and structural rules (reverse-chronological, no tables, no headers).</li>
+        <li><strong>Anti-patterns.</strong> List what the model must NOT do: no fabricated metrics, no buzzword stacking, no invented tools, no first-person pronouns. The difference between passing the phone screen and getting caught in a lie.</li>
+      </ol>
+      <p>That 5-part skeleton is the same prompt-engineering thinking behind our <a href="/blog/prompt-engineering-guide" style="color:var(--accent)">general prompt-engineering guide</a> — applied to a domain where the cost of a bad output isn't a mediocre blog post, it's a 6-month job search.</p>
+
+      <h2>Prompt 1: The From-Scratch Resume</h2>
+      <p>Use this when you have a rough job history (LinkedIn export, old resume, brain dump) and want a clean v1 you can iterate on.</p>
+<pre><code>You are a senior technical recruiter with 12 years of experience screening resumes for top-tier tech companies. Your job is to rewrite the candidate's raw career history into an ATS-optimized 1-page resume tailored to a specific target role.
+
+ROLE: Senior Backend Engineer (Python, distributed systems, 5+ years experience)
+
+RAW MATERIAL:
+- Current title: Software Engineer II at Acme Payments (2022–present)
+  * Built a Kafka pipeline processing 4M events/day for fraud detection
+  * Reduced p99 API latency from 850ms to 120ms via query batching
+  * Mentored 2 junior engineers; ran the on-call rotation for 18 months
+- Previous: Software Engineer at Beta Logistics (2020–2022)
+  * Migrated monolith to microservices on Kubernetes, cut deploy time 60%
+  * Owned the inventory sync service, integrated with 3PL APIs
+- Skills: Python, Go (working), PostgreSQL, Redis, Kafka, AWS (ECS, Lambda, S3), Terraform, Datadog
+- Education: BS Computer Science, State University, 2020
+
+TARGET JOB: [paste full job description here]
+
+OUTPUT CONTRACT:
+- 1 page, plain text, no tables, no columns, no headers
+- Reverse-chronological order
+- Each role: company, title, dates, then 3–5 bullets
+- Bullets start with strong action verbs (Built, Reduced, Owned, Migrated, Led)
+- Quantify impact wherever the raw material supports it (do not invent numbers)
+- No first-person pronouns, no "I", no "my"
+- Skills section at the bottom as a comma-separated list
+
+ANTI-PATTERNS — DO NOT:
+- Fabricate metrics, certifications, or tools the candidate did not list
+- Add generic "team player" / "hard worker" / "passionate" filler
+- Invent company names, titles, or dates
+- Use tables, text boxes, graphics, or any element that breaks ATS parsing
+- Include a photo, age, marital status, or any non-US/EU standard field
+
+Return the finished resume plus a 3-bullet "keyword alignment" note showing which target-job keywords you used and where.</code></pre>
+      <p>The "keyword alignment note" line is the most underrated part. It forces the model to <em>show its work</em> on the axis the ATS scores you on, and you can audit it against the job description in 30 seconds.</p>
+
+      <h2>Prompt 2: The Bullet-Point Polish</h2>
+      <p>Your bullets read like a job description ("Responsible for managing the API team") instead of an impact statement ("Led a 4-engineer API team, shipped 12 services, owned 99.95% SLO"). This prompt upgrades bullets without rewriting the whole document.</p>
+<pre><code>You are a resume-writing specialist who rewrites weak duty-statements into strong impact-statements using the XYZ formula: "Accomplished [X], as measured by [Y], by doing [Z]."
+
+Rewrite the bullets below. For each input bullet, output:
+1. The rewritten bullet (1 line, max 25 words, starts with a strong past-tense verb, quantified where possible)
+2. A 1-sentence "why this works" note pointing out the structure (action, metric, scope)
+
+DO NOT:
+- Add metrics the original does not support (use "[ADD METRIC]" as a placeholder if a number is missing)
+- Change the underlying meaning of what the candidate did
+- Use present tense for past roles
+- Stack adjectives ("highly motivated", "results-driven", "passionate")
+
+INPUT BULLETS:
+- "Responsible for the customer onboarding flow"
+- "Worked on improving database performance"
+- "Helped migrate the codebase to a new framework"
+- "Was part of the team that built the analytics dashboard"
+- "Did code reviews and mentored junior developers"</code></pre>
+      <p>The XYZ formula forces the LLM to commit to a measurable outcome — the single biggest signal a senior recruiter scans for. Even when the input is vague, the model must find a real metric or flag a "[ADD METRIC]" placeholder, never invent.</p>
+
+      <h2>Prompt 3: The Cover-Letter Companion</h2>
+      <p>A resume tells the ATS you match; a cover letter tells the recruiter <em>why</em>. Run this prompt with Prompt 1 against the same target job for a complete packet.</p>
+<pre><code>You are a hiring manager who has read 10,000 cover letters and now auto-rejects 95% of them in the first 2 sentences. Write a 3-paragraph cover letter for the candidate below that you would actually read past the first line.
+
+STRUCTURE:
+- Paragraph 1 (2–3 sentences): A specific, falsifiable claim about why THIS company, not a generic "I'm excited to apply." Reference a recent product launch, engineering blog post, or strategic move.
+- Paragraph 2 (3–4 sentences): One concrete project from the candidate's history that maps to the job's hardest requirement. Quantify if possible.
+- Paragraph 3 (2–3 sentences): A short close with a single low-friction ask (a 20-minute intro call, not "the opportunity to discuss my background further").
+
+TONE: Confident, specific, no buzzwords. Read like a human wrote it at 9pm on a Tuesday, not a LinkedIn AI assistant at 3am.
+
+CANDIDATE RAW MATERIAL: [paste same as Prompt 1]
+TARGET JOB: [paste full job description]
+
+ANTI-PATTERNS — DO NOT:
+- Open with "I am writing to express my interest in..."
+- Use "passionate", "driven", "synergy", "leverage", or "dynamic"
+- Restate the resume; reference one project and go deep
+- Exceed 250 words total
+- Include "References available upon request" (it's 2026; nobody says this)</code></pre>
+      <p>The "no buzzwords" line does heavy lifting. LLMs default to corporate-speak (the training data skews that way); banning the top 5 overused words cuts the "AI-generated smell" by roughly half — the difference between a letter a recruiter reads and one they skim.</p>
+
+      <h2>Prompt 4: The ATS Score Audit</h2>
+      <p>Before you submit, run your existing resume + target job through this prompt. It simulates what an ATS does and tells you exactly which keywords you're missing.</p>
+<pre><code>You are an ATS parser modeled on Greenhouse and Lever. Score the resume below against the target job description on these axes:
+1. Keyword match (0–100%): which job-description keywords appear in the resume, which are missing?
+2. Formatting integrity (pass/fail): any tables, columns, headers, graphics, or non-standard sections that would break parsing?
+3. Recency weighting (0–100%): does the most recent role get the most detail and the most senior bullet?
+4. Length appropriateness (0–100%): is it 1 page for under 10 years experience, 2 pages for senior/principal?
+
+OUTPUT FORMAT:
+- Overall ATS score (0–100)
+- Top 5 missing keywords ranked by importance
+- 3 specific bullet-level edits that would raise the score by 10+ points
+- A "do not submit" verdict if formatting integrity fails
+
+RESUME: [paste your current resume]
+TARGET JOB: [paste full job description]</code></pre>
+      <p>This prompt is your last-mile QA. It catches the formatting traps (a 2-column sidebar that parses as garbage), keyword gaps ("Kubernetes" vs "k8s"), and recency inversion (first job with 5 bullets, current with 2). Run it before every application.</p>
+
+      <h2>The 3 Mistakes That Ship a Resume to the Rejection Pile</h2>
+      <p>These three failure modes come up in every coaching session — the real reason "I used ChatGPT and still didn't hear back."</p>
+      <p><strong>Mistake 1: Letting the model invent experience.</strong> The most common ChatGPT resume failure. You paste a thin job history, the model fills the gaps with plausible-sounding but fabricated metrics. A senior recruiter asks about that 40% in the phone screen. You have no idea where it came from. The conversation ends. <em>Fix:</em> the anti-patterns section of every prompt above explicitly bans fabrication. Replace anything you can't defend with "[ADD METRIC]" or a real number.</p>
+      <p><strong>Mistake 2: Skipping the target-job description.</strong> A resume that isn't tailored to a specific job is a lottery ticket. Skipping the target-job field — and pasting your generic resume into Prompt 1 with the job-description placeholder unfilled — is the most common cause of a 55% ATS score. <em>Fix:</em> paste the full job description. Every time. No exceptions.</p>
+      <p><strong>Mistake 3: Pretty formatting that breaks ATS parsing.</strong> The "fancy" resume template The "fancy" resume template with the two-column sidebar, colored header, and skill icons looks great in the PDF preview and parses as zero fields in the ATS. <em>Fix:</em> use a single-column plain-text template, or run Prompt 4 to audit the formatted version before submitting. The 60% of rejections that are formatting-related (per Resume Optimizer Pro 2026) are entirely preventable.</p>
+
+      <h2>Putting It Together: The 15-Minute Application Workflow</h2>
+      <p>Workflow per application: (1) run Prompt 4 against your current resume to get the ATS score; (2) run Prompt 1 with the target job and raw material; (3) run Prompt 3 for the cover letter; (4) re-run Prompt 4 on the new resume to confirm 85%+. Total: 15 minutes, vs. an hour and worse output before.</p>
+      <p>The win is reuse: build the raw material once, keep the prompts in a doc, and every application becomes a 15-minute iteration loop. Same leverage as the <a href="/blog/best-prompt-for-email-writing" style="color:var(--accent)">email-writing prompts</a> — once a template works, the marginal cost of the next application drops to near zero.</p>
+
+      <div class="tip-box">
+        <strong>Related:</strong> <a href="/blog/9-tips-claude-prompts" style="color:var(--accent)">9 Tips for Writing Better Claude Prompts (Anthropic-Approved)</a> — the same 5-part framework (role, context, task, format, anti-patterns) applied to Claude specifically, with Anthropic's own prompt-engineering playbook examples.
+      </div>
+      <div class="tip-box">
+        <strong>Related:</strong> <a href="/blog/prompt-engineering-guide" style="color:var(--accent)">The Complete Prompt Engineering Guide (2026)</a> — the foundational guide the resume prompts build on: temperature, chain-of-thought, few-shot examples, and the 4 prompt patterns every serious user should know.
+      </div>
+      <div class="tip-box">
+        <strong>Related:</strong> <a href="/blog/best-prompt-for-email-writing" style="color:var(--accent)">AI Prompt for Email Writing: 5 Templates That Get Replies</a> — the same structured-prompt thinking applied to the highest-volume writing task: cold outreach, follow-ups, internal updates, and customer support emails, with the tone-and-anti-pattern rules that prevent the "AI-generated" smell.
+      </div>
       </article>
     </div>
 
