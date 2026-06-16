@@ -222,35 +222,48 @@ export const SEO_ROUTES = {
     description: "The best prompt for data analysis uses the S.C.A.F. framework: Source, Columns, Aim, Format. Get 4 copy-paste templates and 3 mistakes to avoid.",
     canonical: `${SITE}/blog/best-prompt-for-data-analysis`,
     headline: "How to Write a Prompt for Data Analysis (Step-by-Step)",
-    datePublished: "2026-06-14",
-    dateModified: "2026-06-14",
+    datePublished: "2026-06-15",
+    dateModified: "2026-06-15",
     keywords: "best prompt for data analysis, data analysis prompt, AI data prompt, CSV prompt, analytics prompt"
   },
-  "/blog/best-prompt-for-data-analysis": {
-    routeKey: "article-best-prompt-for-data-analysis",
-    h1: "article-best-prompt-for-data-analysis",
+  "/blog/best-prompt-for-resume": {
+    routeKey: "article-best-prompt-for-resume",
+    h1: "article-best-prompt-for-resume",
     lang: "en",
     ogType: "article",
-    title: "How to Write a Prompt for Data Analysis (Step-by-Step)",
-    description: "The best prompt for data analysis uses the S.C.A.F. framework: Source, Columns, Aim, Format. Get 4 copy-paste templates and 3 mistakes to avoid.",
-    canonical: `${SITE}/blog/best-prompt-for-data-analysis`,
-    headline: "How to Write a Prompt for Data Analysis (Step-by-Step)",
-    datePublished: "2026-06-14",
-    dateModified: "2026-06-14",
-    keywords: "best prompt for data analysis, data analysis prompt, AI data prompt, CSV prompt, analytics prompt"
+    title: "Best Prompt for Resume Writing: Stand Out in 2026 ATS | PromptLab",
+    description: 'The best prompt for resume writing uses the 5-part framework to turn a thin job history into an ATS-optimized 1-pager that lands interviews. 4 copy-paste templates (from-scratch, bullet polish, cover letter, ATS audit) tested on ChatGPT, Claude, and Gemini, plus 3 mistakes that ship a resume straight to the rejection pile — including the LLM-fabricated metric trap that gets caught in the phone screen.',
+    canonical: `${SITE}/blog/best-prompt-for-resume`,
+    headline: "Best Prompt for Resume Writing: Stand Out in 2026 ATS",
+    datePublished: "2026-06-16",
+    dateModified: "2026-06-16",
+    keywords: 'best prompt for resume, resume prompt, CV prompt, ATS-friendly resume, ChatGPT resume, resume writing AI, AI resume prompt, ATS optimization, resume keywords, job application prompt'
   },
-  "/blog/best-prompt-for-data-analysis": {
-    routeKey: "article-best-prompt-for-data-analysis",
-    h1: "article-best-prompt-for-data-analysis",
+  "/blog/best-prompt-for-social-media": {
+    routeKey: "article-best-prompt-for-social-media",
+    h1: "article-best-prompt-for-social-media",
     lang: "en",
     ogType: "article",
-    title: "How to Write a Prompt for Data Analysis (Step-by-Step)",
-    description: "The best prompt for data analysis uses the S.C.A.F. framework: Source, Columns, Aim, Format. Get 4 copy-paste templates and 3 mistakes to avoid.",
-    canonical: `${SITE}/blog/best-prompt-for-data-analysis`,
-    headline: "How to Write a Prompt for Data Analysis (Step-by-Step)",
-    datePublished: "2026-06-14",
-    dateModified: "2026-06-14",
-    keywords: "best prompt for data analysis, data analysis prompt, AI data prompt, CSV prompt, analytics prompt"
+    title: "Best Prompt for Social Media: 8 Templates That Drive Engagement | PromptLab",
+    description: "8 drop-in prompts for Instagram captions, LinkedIn posts, Twitter threads, and TikTok scripts.",
+    canonical: `${SITE}/blog/best-prompt-for-social-media`,
+    headline: "Best Prompt for Social Media: 8 Templates That Drive Engagement",
+    datePublished: "2026-06-15",
+    dateModified: "2026-06-15",
+    keywords: "best prompt for social media, social media prompt, Instagram prompt, LinkedIn prompt, Twitter prompt, TikTok script, AI content templates"
+  },
+  "/blog/best-prompt-for-storytelling": {
+    routeKey: "article-best-prompt-for-storytelling",
+    h1: "article-best-prompt-for-storytelling",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for Storytelling: 6 Frameworks That Hook Readers | PromptLab",
+    description: "How to write the best prompt for storytelling: 6 copy-paste AI frameworks (Save the Cat, Fichtean, Hero's Journey, In Medias Res, Seven-Point, and Pixar's 4-sentence) that turn a one-line idea into a 5-page short story with a hook and payoff. Tested on Claude, ChatGPT, and Gemini.",
+    canonical: `${SITE}/blog/best-prompt-for-storytelling`,
+    headline: "Best Prompt for Storytelling: 6 Frameworks That Hook Readers",
+    datePublished: "2026-06-17",
+    dateModified: "2026-06-17",
+    keywords: "best prompt for storytelling, story prompt, narrative prompt, fiction prompt, creative writing prompt, Save the Cat prompt, Hero's Journey prompt, In Medias Res prompt, Claude storytelling, ChatGPT story"
   },
 };
 

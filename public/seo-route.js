@@ -125,6 +125,30 @@
       h1: "article-best-prompt-for-data-analysis",
       lang: "en",
       ogType: "article",
+    },
+    "/blog/best-prompt-for-resume": {
+      title: "Best Prompt for Resume Writing: Stand Out in 2026 ATS | PromptLab",
+      description: "The best prompt for resume writing uses the 5-part framework to turn a thin job history into an ATS-optimized 1-pager that lands interviews. 4 copy-paste templates (from-scratch, bullet polish, cover letter, ATS audit) tested on ChatGPT, Claude, and Gemini, plus 3 mistakes that ship a resume straight to the rejection pile — including the LLM-fabricated metric trap that gets caught in the phone screen.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-resume",
+      h1: "article-best-prompt-for-resume",
+      lang: "en",
+      ogType: "article",
+    },
+    "/blog/best-prompt-for-social-media": {
+      title: "Best Prompt for Social Media: 8 Templates That Drive Engagement | PromptLab",
+      description: "8 drop-in prompts for Instagram captions, LinkedIn posts, Twitter threads, and TikTok scripts.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-social-media",
+      h1: "article-best-prompt-for-social-media",
+      lang: "en",
+      ogType: "article",
+    },
+    "/blog/best-prompt-for-storytelling": {
+      title: "Best Prompt for Storytelling: 6 Frameworks That Hook Readers | PromptLab",
+      description: "How to write the best prompt for storytelling: 6 copy-paste AI frameworks (Save the Cat, Fichtean, Hero's Journey, In Medias Res, Seven-Point, and Pixar's 4-sentence) that turn a one-line idea into a 5-page short story with a hook and payoff. Tested on Claude, ChatGPT, and Gemini.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-storytelling",
+      h1: "article-best-prompt-for-storytelling",
+      lang: "en",
+      ogType: "article",
     }
   };
 
@@ -144,7 +168,10 @@
     "/blog/best-prompt-for-email-writing": "article-best-prompt-for-email-writing",
     "/blog/how-to-create-system-prompt": "article-how-to-create-system-prompt",
     "/blog/best-prompt-for-coding": "article-best-prompt-for-coding",
-    "/blog/best-prompt-for-data-analysis": "article-best-prompt-for-data-analysis"
+    "/blog/best-prompt-for-data-analysis": "article-best-prompt-for-data-analysis",
+    "/blog/best-prompt-for-resume": "article-best-prompt-for-resume",
+    "/blog/best-prompt-for-social-media": "article-best-prompt-for-social-media",
+    "/blog/best-prompt-for-storytelling": "article-best-prompt-for-storytelling"
   };
 
   function normalizePath(pathname) {
