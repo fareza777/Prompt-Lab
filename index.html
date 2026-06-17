@@ -286,6 +286,19 @@
         "description": "6 prompt frameworks (Save the Cat, Fichtean, Hero's Journey, In Medias Res) that turn a one-line idea into a 5-page short story with a hook and payoff.",
         "image": "https://prompt-lab.xyz/og-image.png",
         "keywords": "best prompt for storytelling, story prompt, narrative prompt, fiction prompt, creative writing"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Best Prompt for Translation: Preserve Tone, Not Just Words",
+        "url": "https://prompt-lab.xyz/blog/best-prompt-for-translation",
+        "datePublished": "2026-06-18",
+        "dateModified": "2026-06-18",
+        "author": {"@type": "Organization", "name": "PromptLab"},
+        "publisher": {"@type": "Organization", "name": "PromptLab", "logo": {"@type": "ImageObject", "url": "https://prompt-lab.xyz/logo.png"}},
+        "description": "The best prompt for translation is a localization brief, not a word-swap. 4-part structure (role, scope, input, output) with glossary, tone, and cultural constraints. 4 templates for marketing, technical, conversational, and long-form translation.",
+        "image": "https://prompt-lab.xyz/og-image.png",
+        "keywords": "best prompt for translation, translation prompt, multilingual prompt, AI translation, Claude translation, localization prompt, glossary prompt, translation memory, idiom translation, LLM translation"
       }
     ]
     </script>
@@ -1357,9 +1370,10 @@
       html[data-route="article-best-prompt-for-coding"] #landing-page { display: none !important; }
       html[data-route="article-best-prompt-for-coding"] #article-page-best-prompt-for-coding { display: block !important; }
       html[data-route="article-best-prompt-for-storytelling"] #landing-page { display: none !important; }
-      html[data-route="article-best-prompt-for-storytelling"] #article-page-best-prompt-for-storytelling { display: block !important; }
-      html.boot-app #article-page-best-prompt-for-storytelling { display: none !important; }
+      html[data-route="article-best-prompt-for-storytelling"] #article-page-best-prompt-for-storytelling, #article-page-best-prompt-for-translation { display: block !important; }
+      html.boot-app #article-page-best-prompt-for-storytelling, #article-page-best-prompt-for-translation { display: none !important; }
             html[data-route="app"] #app-root,
+      html.boot-app #article-page-best-prompt-for-translation { display: none !important; }
       html.boot-app #app-root { display: block !important; }
 
       #app-splash {
@@ -1502,16 +1516,16 @@
       }
 
       /* Article detail page */
-      #article-page, #article-page-chatgpt, #article-page-marketing, #article-page-9-tips, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt, #article-page-best-prompt-for-marketing, #article-page-claude-vs-gpt5-vs-gemini-prompting, #article-page-best-prompt-for-image-generation, #article-page-best-prompt-for-email-writing, #article-page-how-to-create-system-prompt, #article-page-best-prompt-for-coding, #article-page-best-prompt-for-data-analysis, #article-page-best-prompt-for-social-media , #article-page-best-prompt-for-resume { min-height: 100vh; padding-top: 100px; }
-      #article-page .article-header, #article-page-chatgpt .article-header, #article-page-marketing .article-header, #article-page-9-tips .article-header, #article-page-how-to-create-prompt-for-chatgpt .article-header, #article-page-cara-buat-prompt-chatgpt .article-header, #article-page-best-prompt-for-marketing .article-header, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-header, #article-page-best-prompt-for-image-generation .article-header, #article-page-best-prompt-for-email-writing .article-header, #article-page-how-to-create-system-prompt .article-header, #article-page-best-prompt-for-coding .article-header, #article-page-best-prompt-for-data-analysis .article-header, #article-page-best-prompt-for-social-media .article-header , #article-page-best-prompt-for-resume .article-header { text-align: center; padding: 60px 24px 40px; max-width: 800px; margin: 0 auto; }
-      #article-page .article-meta, #article-page-chatgpt .article-meta, #article-page-marketing .article-meta, #article-page-9-tips .article-meta, #article-page-how-to-create-prompt-for-chatgpt .article-meta, #article-page-cara-buat-prompt-chatgpt .article-meta, #article-page-best-prompt-for-marketing .article-meta, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-meta, #article-page-best-prompt-for-image-generation .article-meta, #article-page-best-prompt-for-email-writing .article-meta, #article-page-how-to-create-system-prompt .article-meta, #article-page-best-prompt-for-coding .article-meta, #article-page-best-prompt-for-data-analysis .article-meta, #article-page-best-prompt-for-social-media .article-meta , #article-page-best-prompt-for-resume .article-meta { font-size: 14px; color: var(--text-muted); margin-bottom: 16px; }
-      #article-page .article-header h1, #article-page-chatgpt .article-header h1, #article-page-marketing .article-header h1, #article-page-9-tips .article-header h1, #article-page-how-to-create-prompt-for-chatgpt .article-header h1, #article-page-cara-buat-prompt-chatgpt .article-header h1, #article-page-best-prompt-for-marketing .article-header h1, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-header h1, #article-page-best-prompt-for-image-generation .article-header h1, #article-page-best-prompt-for-email-writing .article-header h1, #article-page-how-to-create-system-prompt .article-header h1, #article-page-best-prompt-for-coding .article-header h1, #article-page-best-prompt-for-data-analysis .article-header h1, #article-page-best-prompt-for-social-media .article-header h1 , #article-page-best-prompt-for-resume .article-header h1 { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; }
-      #article-page .article-body, #article-page-chatgpt .article-body, #article-page-marketing .article-body, #article-page-9-tips .article-body, #article-page-how-to-create-prompt-for-chatgpt .article-body, #article-page-cara-buat-prompt-chatgpt .article-body, #article-page-best-prompt-for-marketing .article-body, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body, #article-page-best-prompt-for-image-generation .article-body, #article-page-best-prompt-for-email-writing .article-body, #article-page-how-to-create-system-prompt .article-body, #article-page-best-prompt-for-coding .article-body, #article-page-best-prompt-for-data-analysis .article-body, #article-page-best-prompt-for-social-media .article-body , #article-page-best-prompt-for-resume .article-body { max-width: 720px; margin: 0 auto; padding: 0 24px 120px; }
-      #article-page .article-body h2, #article-page-chatgpt .article-body h2, #article-page-marketing .article-body h2, #article-page-9-tips .article-body h2, #article-page-how-to-create-prompt-for-chatgpt .article-body h2, #article-page-cara-buat-prompt-chatgpt .article-body h2, #article-page-best-prompt-for-marketing .article-body h2, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body h2, #article-page-best-prompt-for-image-generation .article-body h2, #article-page-best-prompt-for-email-writing .article-body h2, #article-page-how-to-create-system-prompt .article-body h2, #article-page-best-prompt-for-coding .article-body h2, #article-page-best-prompt-for-data-analysis .article-body h2, #article-page-best-prompt-for-social-media .article-body h2 , #article-page-best-prompt-for-resume .article-body h2 { font-size: 1.5rem; font-weight: 700; margin: 40px 0 16px; }
-      #article-page .article-body h3, #article-page-chatgpt .article-body h3, #article-page-marketing .article-body h3, #article-page-9-tips .article-body h3, #article-page-how-to-create-prompt-for-chatgpt .article-body h3, #article-page-cara-buat-prompt-chatgpt .article-body h3, #article-page-best-prompt-for-marketing .article-body h3, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body h3, #article-page-best-prompt-for-image-generation .article-body h3, #article-page-best-prompt-for-email-writing .article-body h3, #article-page-how-to-create-system-prompt .article-body h3, #article-page-best-prompt-for-coding .article-body h3, #article-page-best-prompt-for-data-analysis .article-body h3, #article-page-best-prompt-for-social-media .article-body h3 , #article-page-best-prompt-for-resume .article-body h3 { font-size: 1.2rem; font-weight: 600; margin: 32px 0 12px; color: var(--accent); }
-      #article-page .article-body p, #article-page-chatgpt .article-body p, #article-page-marketing .article-body p, #article-page-9-tips .article-body p, #article-page-how-to-create-prompt-for-chatgpt .article-body p, #article-page-cara-buat-prompt-chatgpt .article-body p, #article-page-best-prompt-for-marketing .article-body p, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body p, #article-page-best-prompt-for-image-generation .article-body p, #article-page-best-prompt-for-email-writing .article-body p, #article-page-how-to-create-system-prompt .article-body p, #article-page-best-prompt-for-coding .article-body p, #article-page-best-prompt-for-data-analysis .article-body p, #article-page-best-prompt-for-social-media .article-body p , #article-page-best-prompt-for-resume .article-body p { font-size: 16px; color: var(--text-muted); line-height: 1.8; margin-bottom: 20px; }
-      #article-page .article-body ul, #article-page .article-body ol, #article-page-chatgpt .article-body ul, #article-page-chatgpt .article-body ol, #article-page-marketing .article-body ul, #article-page-marketing .article-body ol, #article-page-9-tips .article-body ul, #article-page-9-tips .article-body ol, #article-page-how-to-create-prompt-for-chatgpt .article-body ul, #article-page-how-to-create-prompt-for-chatgpt .article-body ol, #article-page-cara-buat-prompt-chatgpt .article-body ul, #article-page-cara-buat-prompt-chatgpt .article-body ol, #article-page-best-prompt-for-marketing .article-body ul, #article-page-best-prompt-for-marketing .article-body ol, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body ul, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body ol, #article-page-best-prompt-for-image-generation .article-body ul, #article-page-best-prompt-for-image-generation .article-body ol, #article-page-best-prompt-for-email-writing .article-body ul, #article-page-best-prompt-for-email-writing .article-body ol, #article-page-how-to-create-system-prompt .article-body ul, #article-page-how-to-create-system-prompt .article-body ol, #article-page-best-prompt-for-coding .article-body ul, #article-page-best-prompt-for-coding .article-body ol, #article-page-best-prompt-for-data-analysis .article-body ul, #article-page-best-prompt-for-data-analysis .article-body ol, #article-page-best-prompt-for-social-media .article-body ul, #article-page-best-prompt-for-social-media .article-body ol , #article-page-best-prompt-for-resume .article-body ul, #article-page-best-prompt-for-social-media .article-body ol { color: var(--text-muted); margin: 0 0 20px 24px; }
-      #article-page .article-body li, #article-page-chatgpt .article-body li, #article-page-marketing .article-body li, #article-page-9-tips .article-body li, #article-page-how-to-create-prompt-for-chatgpt .article-body li, #article-page-cara-buat-prompt-chatgpt .article-body li, #article-page-best-prompt-for-marketing .article-body li, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body li, #article-page-best-prompt-for-image-generation .article-body li, #article-page-best-prompt-for-email-writing .article-body li, #article-page-how-to-create-system-prompt .article-body li, #article-page-best-prompt-for-coding .article-body li, #article-page-best-prompt-for-data-analysis .article-body li, #article-page-best-prompt-for-social-media .article-body li , #article-page-best-prompt-for-resume .article-body li { margin-bottom: 8px; line-height: 1.7; }
+#article-page, #article-page-chatgpt, #article-page-marketing, #article-page-9-tips, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt, #article-page-best-prompt-for-marketing, #article-page-claude-vs-gpt5-vs-gemini-prompting, #article-page-best-prompt-for-image-generation, #article-page-best-prompt-for-email-writing, #article-page-how-to-create-system-prompt, #article-page-best-prompt-for-coding, #article-page-best-prompt-for-data-analysis, #article-page-best-prompt-for-social-media, #article-page-best-prompt-for-resume, #article-page-best-prompt-for-storytelling, #article-page-best-prompt-for-translation { min-height: 100vh; padding-top: 100px; }
+      #article-page .article-header, #article-page-chatgpt .article-header, #article-page-marketing .article-header, #article-page-9-tips .article-header, #article-page-how-to-create-prompt-for-chatgpt .article-header, #article-page-cara-buat-prompt-chatgpt .article-header, #article-page-best-prompt-for-marketing .article-header, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-header, #article-page-best-prompt-for-image-generation .article-header, #article-page-best-prompt-for-email-writing .article-header, #article-page-how-to-create-system-prompt .article-header, #article-page-best-prompt-for-coding .article-header, #article-page-best-prompt-for-data-analysis .article-header, #article-page-best-prompt-for-social-media .article-header , #article-page-best-prompt-for-resume .article-header, #article-page-best-prompt-for-storytelling .article-header, #article-page-best-prompt-for-translation .article-header { text-align: center; padding: 60px 24px 40px; max-width: 800px; margin: 0 auto; }
+      #article-page .article-meta, #article-page-chatgpt .article-meta, #article-page-marketing .article-meta, #article-page-9-tips .article-meta, #article-page-how-to-create-prompt-for-chatgpt .article-meta, #article-page-cara-buat-prompt-chatgpt .article-meta, #article-page-best-prompt-for-marketing .article-meta, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-meta, #article-page-best-prompt-for-image-generation .article-meta, #article-page-best-prompt-for-email-writing .article-meta, #article-page-how-to-create-system-prompt .article-meta, #article-page-best-prompt-for-coding .article-meta, #article-page-best-prompt-for-data-analysis .article-meta, #article-page-best-prompt-for-social-media .article-meta , #article-page-best-prompt-for-resume .article-meta, #article-page-best-prompt-for-storytelling .article-meta, #article-page-best-prompt-for-translation .article-meta { font-size: 14px; color: var(--text-muted); margin-bottom: 16px; }
+      #article-page .article-header h1, #article-page-chatgpt .article-header h1, #article-page-marketing .article-header h1, #article-page-9-tips .article-header h1, #article-page-how-to-create-prompt-for-chatgpt .article-header h1, #article-page-cara-buat-prompt-chatgpt .article-header h1, #article-page-best-prompt-for-marketing .article-header h1, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-header h1, #article-page-best-prompt-for-image-generation .article-header h1, #article-page-best-prompt-for-email-writing .article-header h1, #article-page-how-to-create-system-prompt .article-header h1, #article-page-best-prompt-for-coding .article-header h1, #article-page-best-prompt-for-data-analysis .article-header h1, #article-page-best-prompt-for-social-media .article-header h1 , #article-page-best-prompt-for-resume .article-header h1, #article-page-best-prompt-for-storytelling .article-header h1, #article-page-best-prompt-for-translation .article-header h1 { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; }
+      #article-page .article-body, #article-page-chatgpt .article-body, #article-page-marketing .article-body, #article-page-9-tips .article-body, #article-page-how-to-create-prompt-for-chatgpt .article-body, #article-page-cara-buat-prompt-chatgpt .article-body, #article-page-best-prompt-for-marketing .article-body, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body, #article-page-best-prompt-for-image-generation .article-body, #article-page-best-prompt-for-email-writing .article-body, #article-page-how-to-create-system-prompt .article-body, #article-page-best-prompt-for-coding .article-body, #article-page-best-prompt-for-data-analysis .article-body, #article-page-best-prompt-for-social-media .article-body , #article-page-best-prompt-for-resume .article-body, #article-page-best-prompt-for-storytelling .article-body, #article-page-best-prompt-for-translation .article-body { max-width: 720px; margin: 0 auto; padding: 0 24px 120px; }
+      #article-page .article-body h2, #article-page-chatgpt .article-body h2, #article-page-marketing .article-body h2, #article-page-9-tips .article-body h2, #article-page-how-to-create-prompt-for-chatgpt .article-body h2, #article-page-cara-buat-prompt-chatgpt .article-body h2, #article-page-best-prompt-for-marketing .article-body h2, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body h2, #article-page-best-prompt-for-image-generation .article-body h2, #article-page-best-prompt-for-email-writing .article-body h2, #article-page-how-to-create-system-prompt .article-body h2, #article-page-best-prompt-for-coding .article-body h2, #article-page-best-prompt-for-data-analysis .article-body h2, #article-page-best-prompt-for-social-media .article-body h2 , #article-page-best-prompt-for-resume .article-body h2, #article-page-best-prompt-for-storytelling .article-body h2, #article-page-best-prompt-for-translation .article-body h2 { font-size: 1.5rem; font-weight: 700; margin: 40px 0 16px; }
+      #article-page .article-body h3, #article-page-chatgpt .article-body h3, #article-page-marketing .article-body h3, #article-page-9-tips .article-body h3, #article-page-how-to-create-prompt-for-chatgpt .article-body h3, #article-page-cara-buat-prompt-chatgpt .article-body h3, #article-page-best-prompt-for-marketing .article-body h3, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body h3, #article-page-best-prompt-for-image-generation .article-body h3, #article-page-best-prompt-for-email-writing .article-body h3, #article-page-how-to-create-system-prompt .article-body h3, #article-page-best-prompt-for-coding .article-body h3, #article-page-best-prompt-for-data-analysis .article-body h3, #article-page-best-prompt-for-social-media .article-body h3 , #article-page-best-prompt-for-resume .article-body h3, #article-page-best-prompt-for-storytelling .article-body h3, #article-page-best-prompt-for-translation .article-body h3 { font-size: 1.2rem; font-weight: 600; margin: 32px 0 12px; color: var(--accent); }
+      #article-page .article-body p, #article-page-chatgpt .article-body p, #article-page-marketing .article-body p, #article-page-9-tips .article-body p, #article-page-how-to-create-prompt-for-chatgpt .article-body p, #article-page-cara-buat-prompt-chatgpt .article-body p, #article-page-best-prompt-for-marketing .article-body p, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body p, #article-page-best-prompt-for-image-generation .article-body p, #article-page-best-prompt-for-email-writing .article-body p, #article-page-how-to-create-system-prompt .article-body p, #article-page-best-prompt-for-coding .article-body p, #article-page-best-prompt-for-data-analysis .article-body p, #article-page-best-prompt-for-social-media .article-body p , #article-page-best-prompt-for-resume .article-body p, #article-page-best-prompt-for-storytelling .article-body p, #article-page-best-prompt-for-translation .article-body p { font-size: 16px; color: var(--text-muted); line-height: 1.8; margin-bottom: 20px; }
+      #article-page .article-body ul, #article-page .article-body ol, #article-page-chatgpt .article-body ul, #article-page-chatgpt .article-body ol, #article-page-marketing .article-body ul, #article-page-marketing .article-body ol, #article-page-9-tips .article-body ul, #article-page-9-tips .article-body ol, #article-page-how-to-create-prompt-for-chatgpt .article-body ul, #article-page-how-to-create-prompt-for-chatgpt .article-body ol, #article-page-cara-buat-prompt-chatgpt .article-body ul, #article-page-cara-buat-prompt-chatgpt .article-body ol, #article-page-best-prompt-for-marketing .article-body ul, #article-page-best-prompt-for-marketing .article-body ol, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body ul, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body ol, #article-page-best-prompt-for-image-generation .article-body ul, #article-page-best-prompt-for-image-generation .article-body ol, #article-page-best-prompt-for-email-writing .article-body ul, #article-page-best-prompt-for-email-writing .article-body ol, #article-page-how-to-create-system-prompt .article-body ul, #article-page-how-to-create-system-prompt .article-body ol, #article-page-best-prompt-for-coding .article-body ul, #article-page-best-prompt-for-coding .article-body ol, #article-page-best-prompt-for-data-analysis .article-body ul, #article-page-best-prompt-for-data-analysis .article-body ol, #article-page-best-prompt-for-social-media .article-body ul, #article-page-best-prompt-for-social-media .article-body ol , #article-page-best-prompt-for-resume .article-body ul, #article-page-best-prompt-for-resume .article-body ol, #article-page-best-prompt-for-storytelling .article-body ul, #article-page-best-prompt-for-translation .article-body ul, #article-page-best-prompt-for-storytelling .article-body ol, #article-page-best-prompt-for-translation .article-body ol { color: var(--text-muted); margin: 0 0 20px 24px; }
+      #article-page .article-body li, #article-page-chatgpt .article-body li, #article-page-marketing .article-body li, #article-page-9-tips .article-body li, #article-page-how-to-create-prompt-for-chatgpt .article-body li, #article-page-cara-buat-prompt-chatgpt .article-body li, #article-page-best-prompt-for-marketing .article-body li, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body li, #article-page-best-prompt-for-image-generation .article-body li, #article-page-best-prompt-for-email-writing .article-body li, #article-page-how-to-create-system-prompt .article-body li, #article-page-best-prompt-for-coding .article-body li, #article-page-best-prompt-for-data-analysis .article-body li, #article-page-best-prompt-for-social-media .article-body li , #article-page-best-prompt-for-resume .article-body li, #article-page-best-prompt-for-storytelling .article-body li, #article-page-best-prompt-for-translation .article-body li { margin-bottom: 8px; line-height: 1.7; }
       #article-page .article-body code,
       #article-page-chatgpt .article-body code,
       #article-page-marketing .article-body code,
@@ -1525,7 +1539,7 @@
       #article-page-how-to-create-system-prompt .article-body code,
       #article-page-best-prompt-for-coding .article-body code,
       #article-page-best-prompt-for-data-analysis .article-body code,
-      #article-page-best-prompt-for-social-media .article-body code , #article-page-best-prompt-for-resume .article-body code {
+      #article-page-best-prompt-for-social-media .article-body code , #article-page-best-prompt-for-resume .article-body code, #article-page-best-prompt-for-storytelling .article-body code {
         background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; font-family: 'Geist Mono', monospace; font-size: 0.92em; color: #e0e7ff;
       }
       #article-page .article-body pre,
@@ -1541,10 +1555,10 @@
       #article-page-how-to-create-system-prompt .article-body pre,
       #article-page-best-prompt-for-coding .article-body pre,
       #article-page-best-prompt-for-data-analysis .article-body pre,
-      #article-page-best-prompt-for-social-media .article-body pre , #article-page-best-prompt-for-resume .article-body pre {
+      #article-page-best-prompt-for-social-media .article-body pre , #article-page-best-prompt-for-resume .article-body pre, #article-page-best-prompt-for-storytelling .article-body pre {
         background: #0d1117; border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin: 24px 0; overflow-x: auto; line-height: 1.6;
       }
-      #article-page .article-body pre code, #article-page-chatgpt .article-body pre code, #article-page-marketing .article-body pre code, #article-page-9-tips .article-body pre code, #article-page-how-to-create-prompt-for-chatgpt .article-body pre code, #article-page-cara-buat-prompt-chatgpt .article-body pre code, #article-page-best-prompt-for-marketing .article-body pre code, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body pre code, #article-page-best-prompt-for-image-generation .article-body pre code, #article-page-best-prompt-for-email-writing .article-body pre code, #article-page-how-to-create-system-prompt .article-body pre code, #article-page-best-prompt-for-coding .article-body pre code, #article-page-best-prompt-for-data-analysis .article-body pre code, #article-page-best-prompt-for-social-media .article-body pre code , #article-page-best-prompt-for-resume .article-body pre code { background: none; padding: 0; font-size: 13px; color: var(--text-muted); }
+      #article-page .article-body pre code, #article-page-chatgpt .article-body pre code, #article-page-marketing .article-body pre code, #article-page-9-tips .article-body pre code, #article-page-how-to-create-prompt-for-chatgpt .article-body pre code, #article-page-cara-buat-prompt-chatgpt .article-body pre code, #article-page-best-prompt-for-marketing .article-body pre code, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body pre code, #article-page-best-prompt-for-image-generation .article-body pre code, #article-page-best-prompt-for-email-writing .article-body pre code, #article-page-how-to-create-system-prompt .article-body pre code, #article-page-best-prompt-for-coding .article-body pre code, #article-page-best-prompt-for-data-analysis .article-body pre code, #article-page-best-prompt-for-social-media .article-body pre code , #article-page-best-prompt-for-resume .article-body pre code, #article-page-best-prompt-for-storytelling .article-body pre code, #article-page-best-prompt-for-translation .article-body pre code { background: none; padding: 0; font-size: 13px; color: var(--text-muted); }
       #article-page .article-body .tip-box,
       #article-page-chatgpt .article-body .tip-box,
       #article-page-marketing .article-body .tip-box,
@@ -1558,11 +1572,11 @@
       #article-page-how-to-create-system-prompt .article-body .tip-box,
       #article-page-best-prompt-for-coding .article-body .tip-box,
       #article-page-best-prompt-for-data-analysis .article-body .tip-box,
-      #article-page-best-prompt-for-social-media .article-body .tip-box , #article-page-best-prompt-for-resume .article-body .tip-box {
+      #article-page-best-prompt-for-social-media .article-body .tip-box , #article-page-best-prompt-for-resume .article-body .tip-box, #article-page-best-prompt-for-storytelling .article-body .tip-box {
         background: rgba(56,189,248,0.05); border: 1px solid rgba(56,189,248,0.15);
         border-radius: 12px; padding: 20px 24px; margin: 24px 0;
       }
-      #article-page .article-body .tip-box strong, #article-page-chatgpt .article-body .tip-box strong, #article-page-marketing .article-body .tip-box strong, #article-page-9-tips .article-body .tip-box strong, #article-page-how-to-create-prompt-for-chatgpt .article-body .tip-box strong, #article-page-cara-buat-prompt-chatgpt .article-body .tip-box strong, #article-page-best-prompt-for-marketing .article-body .tip-box strong, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body .tip-box strong, #article-page-best-prompt-for-image-generation .article-body .tip-box strong, #article-page-best-prompt-for-email-writing .article-body .tip-box strong, #article-page-how-to-create-system-prompt .article-body .tip-box strong, #article-page-best-prompt-for-coding .article-body .tip-box strong, #article-page-best-prompt-for-data-analysis .article-body .tip-box strong, #article-page-best-prompt-for-social-media .article-body .tip-box strong , #article-page-best-prompt-for-resume .article-body .tip-box strong { color: var(--accent); }
+      #article-page .article-body .tip-box strong, #article-page-chatgpt .article-body .tip-box strong, #article-page-marketing .article-body .tip-box strong, #article-page-9-tips .article-body .tip-box strong, #article-page-how-to-create-prompt-for-chatgpt .article-body .tip-box strong, #article-page-cara-buat-prompt-chatgpt .article-body .tip-box strong, #article-page-best-prompt-for-marketing .article-body .tip-box strong, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body .tip-box strong, #article-page-best-prompt-for-image-generation .article-body .tip-box strong, #article-page-best-prompt-for-email-writing .article-body .tip-box strong, #article-page-how-to-create-system-prompt .article-body .tip-box strong, #article-page-best-prompt-for-coding .article-body .tip-box strong, #article-page-best-prompt-for-data-analysis .article-body .tip-box strong, #article-page-best-prompt-for-social-media .article-body .tip-box strong , #article-page-best-prompt-for-resume .article-body .tip-box strong, #article-page-best-prompt-for-storytelling .article-body, #article-page-best-prompt-for-translation .article-body .tip-box strong { color: var(--accent); }
     </style>
   </head>
   <body>
@@ -2035,6 +2049,18 @@ Build a campaign prompt with:
               <span class="blog-read-more">Read article →</span>
             </div>
           </a>
+          <a href="/blog/best-prompt-for-translation" class="blog-card fade-up" data-route="article-best-prompt-for-translation">
+            <div class="blog-thumb">
+              <div class="blog-thumb-bg">🌍</div>
+              <span class="blog-category">Tutorial</span>
+            </div>
+            <div class="blog-body">
+              <span class="blog-date">June 18, 2026</span>
+              <h3>Best Prompt for Translation: Preserve Tone, Not Just Words</h3>
+              <p>The 4-part prompt that turns an idiomatic source text into a native-feeling target text — with glossary, tone, and cultural notes.</p>
+              <span class="blog-read-more">Read article →</span>
+            </div>
+          </a>
         </div>
         <div style="text-align: center; margin-top: 48px;">
           <a href="/blog" class="btn btn-secondary">View All Articles →</a>
@@ -2233,6 +2259,14 @@ Build a campaign prompt with:
             <span class="blog-list-meta">June 17, 2026 · Tutorial · 9 min read</span>
             <h3>Best Prompt for Storytelling: 6 Frameworks That Hook Readers</h3>
             <p>6 prompt frameworks that turn a one-line idea into a 5-page short story with a hook and payoff.</p>
+          </div>
+        </a>
+        <a href="/blog/best-prompt-for-translation" class="blog-list-card">
+          <div class="blog-list-thumb">🌍</div>
+          <div class="blog-list-content">
+            <span class="blog-list-meta">June 18, 2026 · Tutorial · 7 min read</span>
+            <h3>Best Prompt for Translation: Preserve Tone, Not Just Words</h3>
+            <p>The 4-part prompt that turns an idiomatic source text into a native-feeling target text — with glossary, tone, and cultural notes.</p>
           </div>
         </a>
       </div>
@@ -2447,6 +2481,10 @@ For each improvement:
         </div>
 
         <p>The best way to learn is to experiment. <a href="/app" style="color:var(--accent)">Open PromptLab</a>, create a prompt, and compare the results. For platform-specific templates, see our <a href="/blog/best-prompt-for-social-media" style="color:var(--accent)">social media prompt guide</a>. The readiness score will tell you if your prompt works well for both models — or if it needs adjustment.</p>
+
+        <div class="tip-box">
+          <strong>Related:</strong> <a href="/blog/best-prompt-for-translation" style="color:var(--accent)">Best Prompt for Translation: Preserve Tone, Not Just Words</a> — the 4-part prompt structure (role, scope, input, output) applied to translation and localization, with glossary, tone, and cultural-adaptation rules for marketing, technical, conversational, and long-form content.
+        </div>
 
         <div class="tip-box">
           <strong>Related:</strong> <a href="/blog/how-to-create-prompt-for-chatgpt" style="color:var(--accent)">How to Create a Prompt for ChatGPT That Gets 10x Better Results</a> — go deeper on ChatGPT-specific prompting with 12 copy-paste prompts, the CRISPE framework, and 6 common mistakes.
@@ -2711,6 +2749,9 @@ Now: [the actual task, starting with a verb]</code></pre>
 
         <div class="tip-box">
           <strong>Related:</strong> <a href="/blog/best-prompt-for-image-generation" style="color:var(--accent)">How to Write a Prompt for Image Generation (Midjourney, DALL-E, Flux)</a> — the same structured-prompt thinking applied to image generation: the 6-part formula (subject, action, environment, lighting, style, composition) and model-specific tuning for Midjourney, DALL-E, and Flux.
+        </div>
+        <div class="tip-box">
+          <strong>Related:</strong> <a href="/blog/best-prompt-for-translation" style="color:var(--accent)">Best Prompt for Translation: Preserve Tone, Not Just Words</a> — the same role/scope/input/output framework applied to translation and localization, with glossary, tone, and cultural-adaptation rules that turn word-swaps into native-feeling target text.
         </div>
 
         <div class="tip-box">
@@ -5228,6 +5269,177 @@ End with: the next sentence, fully translated, no commentary.</code></pre>
   <strong>Already know the basics and want 9 sharper tricks?</strong> <a href="/blog/9-tips-claude-prompts" style="color:var(--accent)">9 tips to make Claude prompts work harder</a> covers power phrases, role scaffolding, and the "tone of collaboration" pattern Anthropic ships in their docs.
 </div>
 </content>
+
+</article>
+    </div>
+
+
+    <div id="article-page-best-prompt-for-translation">
+      <nav class="navbar">
+        <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
+        <div class="nav-links">
+          <a href="/">Home</a><a href="/#features">Features</a><a href="/blog">Blog</a>
+          <a href="/app" class="nav-cta">Open App →</a>
+        </div>
+      </nav>
+      <div class="article-header">
+        <span class="article-meta">June 18, 2026 · Tutorial · 7 min read</span>
+        <h1 data-page-h1="article-best-prompt-for-translation">Best Prompt for Translation: Preserve Tone, Not Just Words</h1>
+      </div>
+<article class="article-body">
+
+        <p>When you ask an LLM to "translate this into Indonesian," you get a literal word-swap that loses everything that makes a sentence feel written for a human. The <strong>best prompt for translation</strong> isn't a translation prompt at all — it's a <em>localization brief</em> that gives the model a glossary, a tone target, an audience, and a definition of done. In this guide, you'll get the 4-part structure we use to turn an idiomatic source text into a target text a native reader would actually trust.</p>
+
+        <p>Most translation failures aren't vocabulary failures. They're context failures. A phrase like "<em>we'll circle back</em>" is a meeting-room idiom in English, not a sentence. Translated literally into Indonesian, German, or Japanese, it becomes nonsense. The model isn't broken — your prompt just didn't tell it that you care about tone, register, and cultural fit, not just lexical correspondence.</p>
+
+        <h2>Why "translate this" is the worst possible prompt</h2>
+
+        <p>A bare "translate" instruction hands the model three problems at once: tone inference, terminology choice, and idiomatic rendering. It silently picks a register (usually the safest middle), silently picks a terminology policy (usually the first match), and silently picks an idiom strategy (usually literal). You get a draft that reads as "translated by a machine" because the machine had no signal that you wanted anything else.</p>
+
+        <p>Translated.com, a translation research firm that runs production LLM pipelines, puts it bluntly: a generic prompt asking a model to "translate this text professionally" is insufficient for any real workflow. The fix is "context engineering" — surrounding the model with glossaries, style guides, and translation memories that anchor the output to a defined target. That's not a luxury. It's the minimum bar for anything that will be read by a real audience.</p>
+
+        <h2>The 4-part prompt structure that actually works</h2>
+
+        <p>After testing dozens of variations across English ↔ Indonesian, English ↔ German, and English ↔ Japanese, the structure that consistently produces native-feeling output looks like this:</p>
+
+        <pre><code>1. ROLE:   You are a professional [source]→[target] translator specializing in [domain].
+        2. SCOPE:  Preserve tone, register, and cultural nuance — not just words.
+                   Maintain idioms as natural target-language equivalents; do not literalize.
+        3. INPUT:  Source text: &lt;text&gt;
+                   Glossary (mandatory terms): &lt;term1&gt; → &lt;translation1&gt;, &lt;term2&gt; → &lt;translation2&gt;
+                   Tone: [formal / casual / marketing / academic / etc.]
+                   Audience: [description of who will read this]
+        4. OUTPUT: Return only the translation. After the translation, list any terms
+                   where you deviated from the glossary and why, plus any cultural
+                   adaptations you made.</code></pre>
+
+        <p>The role line sets the model's voice. The scope line defines what success means — and explicitly forbids the lazy literal strategy. The input block gives it the raw text plus the constraints (glossary, tone, audience). The output block tells it what to deliver and what trade-off notes to surface for your review.</p>
+
+        <h2>Template 1: Marketing copy with brand voice</h2>
+
+        <p>Marketing translation breaks the worst when you let the model "smooth it out." Brand voice is the whole asset. Here's a prompt that protects it.</p>
+
+        <pre><code>You are a senior EN→ID marketing translator for a B2B SaaS brand whose
+        voice is direct, warm, and confident — never hype-y.
+
+        Source text:
+        &lt;your landing page paragraph&gt;
+
+        Glossary (use exactly):
+        - "workspace" → "ruang kerja" (NOT "tempat kerja")
+        - "onboarding" → "penyiapan awal" (NOT "orientasi")
+        - "workflow" → "alur kerja"
+
+        Tone: confident, second-person, short sentences.
+        Audience: Indonesian operations managers at 50-200 person companies.
+        Do not literalize idioms. If a phrase has no natural ID equivalent,
+        adapt the meaning while keeping the brand voice.
+
+        Return:
+        1. The translation.
+        2. A short list of idiom adaptations you made and why.</code></pre>
+
+        <p>Notice the glossary lines use "NOT" — that's deliberate. Without it, models default to the first dictionary translation. Spelling out the negative constraint saves a full round-trip.</p>
+
+        <h2>Template 2: Technical documentation (preserve precision)</h2>
+
+        <p>Technical translation has the opposite problem: you need precision, not warmth. Keep code identifiers in English, translate comments and UI strings, and never let the model "improve" the technical content.</p>
+
+        <pre><code>You are a technical documentation translator. Source EN, target ID.
+        Audience: Indonesian software developers.
+
+        Rules:
+        - Translate only natural-language text. Keep all code, identifiers,
+          filenames, and command-line examples in English.
+        - For code comments, translate the meaning but keep the code working.
+        - If a UI label is short (≤3 words), match the official product
+          Indonesian localization. If unsure, leave a [TODO: ID] marker.
+        - Do not "improve" the technical content. If the source is unclear,
+          flag it with [SOURCE UNCLEAR: reason] rather than guessing.
+
+        Source:
+        &lt;paste the doc section here&gt;
+
+        Output:
+        1. The translation with preserved code blocks.
+        2. A flagged-issues list at the end.</code></pre>
+
+        <p>The "[SOURCE UNCLEAR]" pattern is the key. It tells the model that admitting confusion is better than inventing a plausible-sounding answer — which is exactly how mistranslations enter production.</p>
+
+        <h2>Template 3: Conversational text (preserve register)</h2>
+
+        <p>Emails, Slack messages, support tickets — these are the hardest to get right because the entire meaning is in the register. A formal translation of a casual message is, in effect, a different message.</p>
+
+        <pre><code>You are translating a casual EN→ID chat message. The relationship
+        between the speakers is [colleagues / friends / customer support].
+
+        Preserve the register exactly. If the source uses contractions,
+        slang, or emoji, the target must too. If the source is formal
+        and polite (e.g., a support reply), keep it polite — don't make
+        it chummy.
+
+        Source:
+        &lt;the message&gt;
+
+        Return:
+        1. The translation.
+        2. One sentence explaining how you matched the register.</code></pre>
+
+        <p>The "one sentence explaining how you matched the register" is a small but powerful forcing function. It makes the model show its work, which lets you catch register drift in seconds instead of re-reading the whole output.</p>
+
+        <h2>Template 4: Long-form content (books, articles, reports)</h2>
+
+        <p>For longer pieces, the trick is to translate in <em>scenes</em>, not paragraphs. Each scene should have its own tone brief, and you should hold the glossary consistent across all of them.</p>
+
+        <pre><code>You are translating a long-form [article / chapter / report].
+        Source EN, target ID. Domain: [e.g., business, journalism, fiction].
+
+        Master glossary (applies to all scenes):
+        - &lt;term1&gt; → &lt;translation1&gt;
+        - &lt;term2&gt; → &lt;translation2&gt;
+
+        Current scene: [describe what this section is about and its emotional tone]
+        Length: [target word count for this scene — match the source ±10%]
+
+        Source text:
+        &lt;paste the scene here&gt;
+
+        Output:
+        1. The translation.
+        2. A "scene notes" block: any tone choices, idiom adaptations,
+           and any terms that didn't fit the glossary and what you used instead.</code></pre>
+
+        <p>Translating in scenes with a shared glossary is the same trick novelists use to keep character voice consistent — and it scales. Whether you're doing a 2,000-word blog post or a 60,000-word book, the discipline of a scene-level brief plus a master glossary prevents drift.</p>
+
+        <h2>The three mistakes that ruin translation prompts</h2>
+
+        <p>After running hundreds of these prompts, three failure modes show up over and over. All three are fixable.</p>
+
+        <p><strong>Mistake 1: One mega-prompt for every document type.</strong> A prompt optimized for marketing voice will butcher technical docs. A prompt optimized for technical docs will sound dead in marketing. Use different prompts for different registers. If you find yourself writing "translate this carefully and preserve tone," you've already lost — "preserve tone" means nothing without specifying <em>which</em> tone.</p>
+
+        <p><strong>Mistake 2: No negative constraints on the glossary.</strong> Just listing "workspace → ruang kerja" isn't enough. Models will sometimes pick a different translation if they think it fits the context better. Add "NOT 'tempat kerja'" explicitly. The extra 10 words save a 20-minute review cycle.</p>
+
+        <p><strong>Mistake 3: Skipping the output format block.</strong> If you don't tell the model to return its idiom adaptations and term choices, you'll never know where to look when a reviewer flags "this doesn't sound right." Build the audit trail into the prompt itself, and you get free quality control with zero extra effort.</p>
+
+        <h2>How to evaluate the output (it's not just BLEU)</h2>
+
+        <p>BLEU score — the old machine-translation metric — counts string overlap with a human reference translation. It works fine for narrow domains where you have many references. It works poorly for creative or idiomatic text, because the "right" translation can be syntactically nothing like the source while still being the right answer.</p>
+
+        <p>For LLM-based translation, the field is moving toward COMET and similar learned metrics, which correlate better with human judgment. But the honest answer is: for anything tone-sensitive, you need a native speaker to read the draft and rate it on three axes: <em>accuracy</em> (meaning preserved), <em>naturalness</em> (sounds like a native wrote it), and <em>fitness</em> (fits the audience and domain). A 7-minute human review catches more than any automated metric.</p>
+
+        <h2>Putting it all together</h2>
+
+        <p>The reason this works is that you've replaced one vague instruction ("translate this") with a brief a junior translator would actually find useful. The model is a fast, cheap, very literal junior translator. Your job is to brief it like a senior project manager briefs a junior human translator: here's the role, here's the glossary, here's the tone, here's what success looks like, and here's what I want flagged for review.</p>
+
+        <p>Once you internalize the 4-part structure — role, scope, input, output — you can adapt it to any domain in five minutes. The templates above are starting points, not endings. The fastest way to make them yours is to translate three real pieces of content with three different domains this week. By the third one, the prompt will feel obvious, and the output will be a draft you can actually send to a reviewer instead of a draft you have to rewrite from scratch.</p>
+
+        <p>The <strong>best prompt for translation</strong> is the one that treats translation as localization, not word-swapping. Give the model a brief, not a sentence, and you'll stop reading outputs that sound like they came from a very polite robot.</p>
+
+        <p>If you want a broader view of how <a href="/blog/9-tips-claude-prompts" style="color:var(--accent)">Claude handles prompt structure</a> beyond translation, the <a href="/blog/cara-buat-prompt-chatgpt" style="color:var(--accent)">ChatGPT prompt fundamentals</a> article covers the same role/scope/input/output pattern in a general setting. And if you're choosing which model to use for a multilingual workflow, our <a href="/blog/claude-vs-gpt5-vs-gemini-prompting" style="color:var(--accent)">Claude vs GPT-5 vs Gemini comparison</a> breaks down how each handles idiomatic text. For a deeper dive into <a href="/blog/9-tips-claude-prompts" style="color:var(--accent)">advanced prompt structure</a>, the 9-tips guide is the canonical reference on this site.</p>
+
+        <div class="tip-box"><strong>Related:</strong> <a href="/blog/9-tips-claude-prompts" style="color:var(--accent)">9 Tips Claude Prompts — the structural patterns this article builds on</a></div>
+        <div class="tip-box"><strong>Related:</strong> <a href="/blog/cara-buat-prompt-chatgpt" style="color:var(--accent)">Cara Buat Prompt ChatGPT — the Indonesian-language version of the same framework</a></div>
+        <div class="tip-box"><strong>Related:</strong> <a href="/blog/claude-vs-gpt5-vs-gemini-prompting" style="color:var(--accent)">Claude vs GPT-5 vs Gemini Prompting — which model handles multilingual work best</a></div>
 
 </article>
     </div>

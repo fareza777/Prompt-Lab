@@ -149,6 +149,14 @@
       h1: "article-best-prompt-for-storytelling",
       lang: "en",
       ogType: "article",
+    },
+    "/blog/best-prompt-for-translation": {
+      title: "Best Prompt for Translation: Preserve Tone, Not Just Words | PromptLab",
+      description: "The best prompt for translation is a localization brief, not a word-swap: 4-part structure (role, scope, input, output) with glossary, tone, and cultural constraints. 4 copy-paste templates for marketing, technical, conversational, and long-form translation tested on Claude, ChatGPT, and Gemini.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-translation",
+      h1: "article-best-prompt-for-translation",
+      lang: "en",
+      ogType: "article",
     }
   };
 
@@ -171,7 +179,8 @@
     "/blog/best-prompt-for-data-analysis": "article-best-prompt-for-data-analysis",
     "/blog/best-prompt-for-resume": "article-best-prompt-for-resume",
     "/blog/best-prompt-for-social-media": "article-best-prompt-for-social-media",
-    "/blog/best-prompt-for-storytelling": "article-best-prompt-for-storytelling"
+    "/blog/best-prompt-for-storytelling": "article-best-prompt-for-storytelling",
+    "/blog/best-prompt-for-translation": "article-best-prompt-for-translation"
   };
 
   function normalizePath(pathname) {

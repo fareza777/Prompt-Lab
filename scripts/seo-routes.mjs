@@ -265,6 +265,19 @@ export const SEO_ROUTES = {
     dateModified: "2026-06-17",
     keywords: "best prompt for storytelling, story prompt, narrative prompt, fiction prompt, creative writing prompt, Save the Cat prompt, Hero's Journey prompt, In Medias Res prompt, Claude storytelling, ChatGPT story"
   },
+  "/blog/best-prompt-for-translation": {
+    routeKey: "article-best-prompt-for-translation",
+    h1: "article-best-prompt-for-translation",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for Translation: Preserve Tone, Not Just Words | PromptLab",
+    description: "The best prompt for translation is a localization brief, not a word-swap: 4-part structure (role, scope, input, output) with glossary, tone, and cultural constraints. 4 copy-paste templates for marketing, technical, conversational, and long-form translation tested on Claude, ChatGPT, and Gemini.",
+    canonical: `${SITE}/blog/best-prompt-for-translation`,
+    headline: "Best Prompt for Translation: Preserve Tone, Not Just Words",
+    datePublished: "2026-06-18",
+    dateModified: "2026-06-18",
+    keywords: "best prompt for translation, translation prompt, multilingual prompt, AI translation, Claude translation, localization prompt, glossary prompt, translation memory, idiom translation, LLM translation"
+  },
 };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
