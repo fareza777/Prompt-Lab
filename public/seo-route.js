@@ -189,7 +189,7 @@
     "/blog/best-prompt-for-social-media": "article-best-prompt-for-social-media",
     "/blog/best-prompt-for-storytelling": "article-best-prompt-for-storytelling",
     "/blog/best-prompt-for-translation": "article-best-prompt-for-translation",
-    "/blog/best-prompt-for-product-description": undefined
+    "/blog/best-prompt-for-product-description": "article-best-prompt-for-product-description"
   };
 
   function normalizePath(pathname) {
