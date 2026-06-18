@@ -278,6 +278,18 @@ export const SEO_ROUTES = {
     dateModified: "2026-06-18",
     keywords: "best prompt for translation, translation prompt, multilingual prompt, AI translation, Claude translation, localization prompt, glossary prompt, translation memory, idiom translation, LLM translation"
   },
+  [`${SITE}/blog/best-prompt-for-product-description`]: {
+    h1: "article-best-prompt-for-product-description",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for Product Description: Convert Browsers to Buyers | PromptLab",
+    description: "The best prompt for product description turns a 3-bullet spec sheet into a 200-word conversion-focused page. 5 copy-paste templates built on AIDA, PAS, and FAB frameworks with 4 common-mistake fixes for ecommerce copy.",
+    canonical: `${SITE}/blog/best-prompt-for-product-description`,
+    headline: "Best Prompt for Product Description: Convert Browsers to Buyers",
+    datePublished: "2026-06-19",
+    dateModified: "2026-06-19",
+    keywords: "best prompt for product description, product copy prompt, ecommerce prompt, Shopify prompt, ChatGPT product, AIDA, PAS, FAB, product description template"
+  },
 };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
