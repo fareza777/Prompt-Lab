@@ -158,7 +158,7 @@
       lang: "en",
       ogType: "article",
     },
-    "https://prompt-lab.xyz/blog/best-prompt-for-product-description": {
+    "/blog/best-prompt-for-product-description": {
       title: "Best Prompt for Product Description: Convert Browsers to Buyers | PromptLab",
       description: "The best prompt for product description turns a 3-bullet spec sheet into a 200-word conversion-focused page. 5 copy-paste templates built on AIDA, PAS, and FAB frameworks with 4 common-mistake fixes for ecommerce copy.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-product-description",
@@ -189,7 +189,7 @@
     "/blog/best-prompt-for-social-media": "article-best-prompt-for-social-media",
     "/blog/best-prompt-for-storytelling": "article-best-prompt-for-storytelling",
     "/blog/best-prompt-for-translation": "article-best-prompt-for-translation",
-    "https://prompt-lab.xyz/blog/best-prompt-for-product-description": undefined
+    "/blog/best-prompt-for-product-description": undefined
   };
 
   function normalizePath(pathname) {

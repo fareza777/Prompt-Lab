@@ -278,7 +278,7 @@ export const SEO_ROUTES = {
     dateModified: "2026-06-18",
     keywords: "best prompt for translation, translation prompt, multilingual prompt, AI translation, Claude translation, localization prompt, glossary prompt, translation memory, idiom translation, LLM translation"
   },
-  [`${SITE}/blog/best-prompt-for-product-description`]: {
+  "/blog/best-prompt-for-product-description": {
     h1: "article-best-prompt-for-product-description",
     lang: "en",
     ogType: "article",
