@@ -291,6 +291,19 @@ export const SEO_ROUTES = {
     dateModified: "2026-06-19",
     keywords: "best prompt for product description, product copy prompt, ecommerce prompt, Shopify prompt, ChatGPT product, AIDA, PAS, FAB, product description template"
   },
+  "/blog/best-prompt-for-business-plan": {
+    routeKey: "article-best-prompt-for-business-plan",
+    h1: "article-best-prompt-for-business-plan",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for Business Plan: From Idea to Investor-Ready | PromptLab",
+    description: "The best prompt for business plan generation turns a half-formed idea into a 10-page investor-ready document. 7-section framework, 4 copy-paste prompts (discovery, master, financials, polish), and the 3 mistakes that kill AI-generated plans in 2026.",
+    canonical: `${SITE}/blog/best-prompt-for-business-plan`,
+    headline: "Best Prompt for Business Plan: From Idea to Investor-Ready",
+    datePublished: "2026-06-20",
+    dateModified: "2026-06-20",
+    keywords: "best prompt for business plan, business plan prompt, startup prompt, AI business plan, ChatGPT business plan, Claude business plan, investor-ready plan, TAM SAM SOM prompt, financial projection prompt, lean canvas prompt"
+  },
 };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));

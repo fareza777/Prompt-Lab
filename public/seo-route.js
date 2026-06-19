@@ -165,6 +165,14 @@
       h1: "article-best-prompt-for-product-description",
       lang: "en",
       ogType: "article",
+    },
+    "/blog/best-prompt-for-business-plan": {
+      title: "Best Prompt for Business Plan: From Idea to Investor-Ready | PromptLab",
+      description: "The best prompt for business plan generation turns a half-formed idea into a 10-page investor-ready document. 7-section framework, 4 copy-paste prompts (discovery, master, financials, polish), and the 3 mistakes that kill AI-generated plans in 2026.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-business-plan",
+      h1: "article-best-prompt-for-business-plan",
+      lang: "en",
+      ogType: "article",
     }
   };
 
@@ -189,7 +197,8 @@
     "/blog/best-prompt-for-social-media": "article-best-prompt-for-social-media",
     "/blog/best-prompt-for-storytelling": "article-best-prompt-for-storytelling",
     "/blog/best-prompt-for-translation": "article-best-prompt-for-translation",
-    "/blog/best-prompt-for-product-description": "article-best-prompt-for-product-description"
+    "/blog/best-prompt-for-product-description": "article-best-prompt-for-product-description",
+    "/blog/best-prompt-for-business-plan": "article-best-prompt-for-business-plan"
   };
 
   function normalizePath(pathname) {
