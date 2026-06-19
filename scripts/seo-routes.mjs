@@ -279,6 +279,7 @@ export const SEO_ROUTES = {
     keywords: "best prompt for translation, translation prompt, multilingual prompt, AI translation, Claude translation, localization prompt, glossary prompt, translation memory, idiom translation, LLM translation"
   },
   "/blog/best-prompt-for-product-description": {
+    routeKey: "article-best-prompt-for-product-description",
     h1: "article-best-prompt-for-product-description",
     lang: "en",
     ogType: "article",
