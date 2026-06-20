@@ -173,6 +173,14 @@
       h1: "article-best-prompt-for-business-plan",
       lang: "en",
       ogType: "article",
+    },
+    "/blog/best-prompt-for-cover-letter": {
+      title: "Best Prompt for Cover Letter: Get Past the ATS Robot | PromptLab",
+      description: "The best prompt for cover letter uses the A.R.C.S. framework (Audience, Role, Context, Shape) to turn a 1-line job description into a 3-paragraph letter that passes ATS and gets callbacks. 4 copy-paste templates (entry-level, mid-career, career-changer, executive) tested on ChatGPT, Claude, and Gemini, plus 3 mistakes that get AI cover letters rejected by recruiters.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-cover-letter",
+      h1: "article-best-prompt-for-cover-letter",
+      lang: "en",
+      ogType: "article",
     }
   };
 
@@ -198,7 +206,8 @@
     "/blog/best-prompt-for-storytelling": "article-best-prompt-for-storytelling",
     "/blog/best-prompt-for-translation": "article-best-prompt-for-translation",
     "/blog/best-prompt-for-product-description": "article-best-prompt-for-product-description",
-    "/blog/best-prompt-for-business-plan": "article-best-prompt-for-business-plan"
+    "/blog/best-prompt-for-business-plan": "article-best-prompt-for-business-plan",
+    "/blog/best-prompt-for-cover-letter": "article-best-prompt-for-cover-letter"
   };
 
   function normalizePath(pathname) {

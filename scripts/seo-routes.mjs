@@ -304,6 +304,19 @@ export const SEO_ROUTES = {
     dateModified: "2026-06-20",
     keywords: "best prompt for business plan, business plan prompt, startup prompt, AI business plan, ChatGPT business plan, Claude business plan, investor-ready plan, TAM SAM SOM prompt, financial projection prompt, lean canvas prompt"
   },
+  "/blog/best-prompt-for-cover-letter": {
+    routeKey: "article-best-prompt-for-cover-letter",
+    h1: "article-best-prompt-for-cover-letter",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for Cover Letter: Get Past the ATS Robot | PromptLab",
+    description: "The best prompt for cover letter uses the A.R.C.S. framework (Audience, Role, Context, Shape) to turn a 1-line job description into a 3-paragraph letter that passes ATS and gets callbacks. 4 copy-paste templates (entry-level, mid-career, career-changer, executive) tested on ChatGPT, Claude, and Gemini, plus 3 mistakes that get AI cover letters rejected by recruiters.",
+    canonical: `${SITE}/blog/best-prompt-for-cover-letter`,
+    headline: "Best Prompt for Cover Letter: Get Past the ATS Robot",
+    datePublished: "2026-06-21",
+    dateModified: "2026-06-21",
+    keywords: "best prompt for cover letter, cover letter prompt, job application prompt, ChatGPT cover letter, AI cover letter, ATS cover letter, cover letter template, recruiter letter prompt, ARCS framework, cover letter AI"
+  },
 };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
