@@ -181,6 +181,14 @@
       h1: "article-best-prompt-for-cover-letter",
       lang: "en",
       ogType: "article",
+    },
+    "/blog/best-prompt-for-seo": {
+      title: "Best Prompt for SEO: Rank on Page 1 in 2026 | PromptLab",
+      description: "The best prompt for SEO uses the 5-part S.E.A.R.C.H. framework to turn a single target keyword into a search-intent-matched, AI-Overview-citation-ready article. 4 copy-paste templates (master prompt, rewriter, meta description, content audit) plus the 3 mistakes that get AI SEO content filtered out by the Google Helpful Content Update.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-seo",
+      h1: "article-best-prompt-for-seo",
+      lang: "en",
+      ogType: "article",
     }
   };
 
@@ -207,7 +215,8 @@
     "/blog/best-prompt-for-translation": "article-best-prompt-for-translation",
     "/blog/best-prompt-for-product-description": "article-best-prompt-for-product-description",
     "/blog/best-prompt-for-business-plan": "article-best-prompt-for-business-plan",
-    "/blog/best-prompt-for-cover-letter": "article-best-prompt-for-cover-letter"
+    "/blog/best-prompt-for-cover-letter": "article-best-prompt-for-cover-letter",
+    "/blog/best-prompt-for-seo": "article-best-prompt-for-seo"
   };
 
   function normalizePath(pathname) {

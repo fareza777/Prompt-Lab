@@ -317,6 +317,19 @@ export const SEO_ROUTES = {
     dateModified: "2026-06-21",
     keywords: "best prompt for cover letter, cover letter prompt, job application prompt, ChatGPT cover letter, AI cover letter, ATS cover letter, cover letter template, recruiter letter prompt, ARCS framework, cover letter AI"
   },
+  "/blog/best-prompt-for-seo": {
+    routeKey: "article-best-prompt-for-seo",
+    h1: "article-best-prompt-for-seo",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for SEO: Rank on Page 1 in 2026 | PromptLab",
+    description: "The best prompt for SEO uses the 5-part S.E.A.R.C.H. framework to turn a single target keyword into a search-intent-matched, AI-Overview-citation-ready article. 4 copy-paste templates (master prompt, rewriter, meta description, content audit) plus the 3 mistakes that get AI SEO content filtered out by the Google Helpful Content Update.",
+    canonical: `${SITE}/blog/best-prompt-for-seo`,
+    headline: "Best Prompt for SEO: Rank on Page 1 in 2026",
+    datePublished: "2026-06-22",
+    dateModified: "2026-06-22",
+    keywords: "best prompt for SEO, SEO prompt, AI content SEO, ranking prompt, Ahrefs prompt, ChatGPT SEO, AI Overview citation, E-E-A-T prompt, helpful content update, SEO content prompt"
+  },
 };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
