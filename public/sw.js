@@ -1,5 +1,5 @@
 /** PromptLab SW — network-first for app shell; avoid stale hashed JS on mobile. */
-const CACHE_NAME = "promptlab-shell-v3";
+const CACHE_NAME = "promptlab-shell-v4";
 const SHELL_ASSETS = [
   "/manifest.webmanifest",
   "/promptlab-icon.svg",

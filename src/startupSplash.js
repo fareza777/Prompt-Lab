@@ -23,6 +23,15 @@ export function markStartupSplashStarted() {
   const el = splashElement();
   if (!el) return;
   el.dataset.startedAt = String(performance.now());
+  const path = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
+  const standalone =
+    window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  const isApp =
+    path === "/app" ||
+    path.startsWith("/app/") ||
+    /^\/promptlab$/i.test(path) ||
+    standalone;
+  if (!isApp) dismissStartupSplash();
 }
 
 /** If React fails to mount, do not trap the user on splash forever. */

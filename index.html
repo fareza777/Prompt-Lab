@@ -33,6 +33,24 @@
 
     <link id="canonical-link" rel="canonical" href="https://prompt-lab.xyz/" />
     <script src="/seo-route.js"></script>
+    <style id="boot-critical">
+      /* Unbreakable route visibility — must not depend on the large inline stylesheet below */
+      #blog-page, [id^="article-page"], #app-root, #app-splash { display: none !important; }
+      html:not([data-route]) #landing-page,
+      html[data-route="landing"] #landing-page { display: block !important; }
+      html.boot-app #landing-page,
+      html[data-route="app"] #landing-page,
+      html.boot-app #blog-page,
+      html[data-route="app"] #blog-page,
+      html.boot-app [id^="article-page"],
+      html[data-route="app"] [id^="article-page"] { display: none !important; }
+      html.boot-app #app-root,
+      html[data-route="app"] #app-root { display: block !important; }
+      html.boot-app #app-splash,
+      html[data-route="app"] #app-splash { display: grid !important; }
+      html.boot-app #app-splash.is-exiting,
+      html[data-route="app"] #app-splash.is-exiting { display: none !important; }
+    </style>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
@@ -1432,7 +1450,7 @@
         position: fixed;
         inset: 0;
         z-index: 99999;
-        display: grid;
+        display: none;
         place-items: center;
         overflow: hidden;
         background: #061011;
@@ -1568,67 +1586,31 @@
       }
 
       /* Article detail page */
-#article-page, #article-page-chatgpt, #article-page-marketing, #article-page-9-tips, #article-page-how-to-create-prompt-for-chatgpt, #article-page-cara-buat-prompt-chatgpt, #article-page-best-prompt-for-marketing, #article-page-claude-vs-gpt5-vs-gemini-prompting, #article-page-best-prompt-for-image-generation, #article-page-best-prompt-for-email-writing, #article-page-how-to-create-system-prompt, #article-page-best-prompt-for-coding, #article-page-best-prompt-for-data-analysis, #article-page-best-prompt-for-social-media, #article-page-best-prompt-for-resume, #article-page-best-prompt-for-storytelling, #article-page-best-prompt-for-translation, #article-page-best-prompt-for-product-description, #article-page-best-prompt-for-business-plan {
-            #article-page .article-header, #article-page-chatgpt .article-header, #article-page-marketing .article-header, #article-page-9-tips .article-header, #article-page-how-to-create-prompt-for-chatgpt .article-header, #article-page-cara-buat-prompt-chatgpt .article-header, #article-page-best-prompt-for-marketing .article-header, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-header, #article-page-best-prompt-for-image-generation .article-header, #article-page-best-prompt-for-email-writing .article-header, #article-page-how-to-create-system-prompt .article-header, #article-page-best-prompt-for-coding .article-header, #article-page-best-prompt-for-data-analysis .article-header, #article-page-best-prompt-for-social-media .article-header , #article-page-best-prompt-for-resume .article-header, #article-page-best-prompt-for-storytelling .article-header, #article-page-best-prompt-for-translation .article-header, #article-page-best-prompt-for-product-description .article-header, #article-page-best-prompt-for-business-plan .article-header {
-            #article-page .article-meta, #article-page-chatgpt .article-meta, #article-page-marketing .article-meta, #article-page-9-tips .article-meta, #article-page-how-to-create-prompt-for-chatgpt .article-meta, #article-page-cara-buat-prompt-chatgpt .article-meta, #article-page-best-prompt-for-marketing .article-meta, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-meta, #article-page-best-prompt-for-image-generation .article-meta, #article-page-best-prompt-for-email-writing .article-meta, #article-page-how-to-create-system-prompt .article-meta, #article-page-best-prompt-for-coding .article-meta, #article-page-best-prompt-for-data-analysis .article-meta, #article-page-best-prompt-for-social-media .article-meta , #article-page-best-prompt-for-resume .article-meta, #article-page-best-prompt-for-storytelling .article-meta, #article-page-best-prompt-for-translation .article-meta, #article-page-best-prompt-for-product-description .article-meta, #article-page-best-prompt-for-business-plan .article-meta {
-            #article-page .article-header h1, #article-page-chatgpt .article-header h1, #article-page-marketing .article-header h1, #article-page-9-tips .article-header h1, #article-page-how-to-create-prompt-for-chatgpt .article-header h1, #article-page-cara-buat-prompt-chatgpt .article-header h1, #article-page-best-prompt-for-marketing .article-header h1, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-header h1, #article-page-best-prompt-for-image-generation .article-header h1, #article-page-best-prompt-for-email-writing .article-header h1, #article-page-how-to-create-system-prompt .article-header h1, #article-page-best-prompt-for-coding .article-header h1, #article-page-best-prompt-for-data-analysis .article-header h1, #article-page-best-prompt-for-social-media .article-header h1 , #article-page-best-prompt-for-resume .article-header h1, #article-page-best-prompt-for-storytelling .article-header h1, #article-page-best-prompt-for-translation .article-header h1, #article-page-best-prompt-for-product-description .article-header h1, #article-page-best-prompt-for-business-plan .article-header h1 {
-            #article-page .article-body, #article-page-chatgpt .article-body, #article-page-marketing .article-body, #article-page-9-tips .article-body, #article-page-how-to-create-prompt-for-chatgpt .article-body, #article-page-cara-buat-prompt-chatgpt .article-body, #article-page-best-prompt-for-marketing .article-body, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body, #article-page-best-prompt-for-image-generation .article-body, #article-page-best-prompt-for-email-writing .article-body, #article-page-how-to-create-system-prompt .article-body, #article-page-best-prompt-for-coding .article-body, #article-page-best-prompt-for-data-analysis .article-body, #article-page-best-prompt-for-social-media .article-body , #article-page-best-prompt-for-resume .article-body, #article-page-best-prompt-for-storytelling .article-body, #article-page-best-prompt-for-translation .article-body, #article-page-best-prompt-for-product-description .article-body, #article-page-best-prompt-for-business-plan .article-body {
-            #article-page .article-body h2, #article-page-chatgpt .article-body h2, #article-page-marketing .article-body h2, #article-page-9-tips .article-body h2, #article-page-how-to-create-prompt-for-chatgpt .article-body h2, #article-page-cara-buat-prompt-chatgpt .article-body h2, #article-page-best-prompt-for-marketing .article-body h2, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body h2, #article-page-best-prompt-for-image-generation .article-body h2, #article-page-best-prompt-for-email-writing .article-body h2, #article-page-how-to-create-system-prompt .article-body h2, #article-page-best-prompt-for-coding .article-body h2, #article-page-best-prompt-for-data-analysis .article-body h2, #article-page-best-prompt-for-social-media .article-body h2 , #article-page-best-prompt-for-resume .article-body h2, #article-page-best-prompt-for-storytelling .article-body h2, #article-page-best-prompt-for-translation .article-body h2, #article-page-best-prompt-for-product-description .article-body h2, #article-page-best-prompt-for-business-plan .article-body h2 {
-            #article-page .article-body h3, #article-page-chatgpt .article-body h3, #article-page-marketing .article-body h3, #article-page-9-tips .article-body h3, #article-page-how-to-create-prompt-for-chatgpt .article-body h3, #article-page-cara-buat-prompt-chatgpt .article-body h3, #article-page-best-prompt-for-marketing .article-body h3, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body h3, #article-page-best-prompt-for-image-generation .article-body h3, #article-page-best-prompt-for-email-writing .article-body h3, #article-page-how-to-create-system-prompt .article-body h3, #article-page-best-prompt-for-coding .article-body h3, #article-page-best-prompt-for-data-analysis .article-body h3, #article-page-best-prompt-for-social-media .article-body h3 , #article-page-best-prompt-for-resume .article-body h3, #article-page-best-prompt-for-storytelling .article-body h3, #article-page-best-prompt-for-translation .article-body h3, #article-page-best-prompt-for-product-description .article-body h3, #article-page-best-prompt-for-business-plan .article-body h3 {
-            #article-page .article-body p, #article-page-chatgpt .article-body p, #article-page-marketing .article-body p, #article-page-9-tips .article-body p, #article-page-how-to-create-prompt-for-chatgpt .article-body p, #article-page-cara-buat-prompt-chatgpt .article-body p, #article-page-best-prompt-for-marketing .article-body p, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body p, #article-page-best-prompt-for-image-generation .article-body p, #article-page-best-prompt-for-email-writing .article-body p, #article-page-how-to-create-system-prompt .article-body p, #article-page-best-prompt-for-coding .article-body p, #article-page-best-prompt-for-data-analysis .article-body p, #article-page-best-prompt-for-social-media .article-body p , #article-page-best-prompt-for-resume .article-body p, #article-page-best-prompt-for-storytelling .article-body p, #article-page-best-prompt-for-translation .article-body p, #article-page-best-prompt-for-product-description .article-body p, #article-page-best-prompt-for-business-plan .article-body p {
-            #article-page .article-body ul, #article-page .article-body ol, #article-page-chatgpt .article-body ul, #article-page-chatgpt .article-body ol, #article-page-marketing .article-body ul, #article-page-marketing .article-body ol, #article-page-9-tips .article-body ul, #article-page-9-tips .article-body ol, #article-page-how-to-create-prompt-for-chatgpt .article-body ul, #article-page-how-to-create-prompt-for-chatgpt .article-body ol, #article-page-cara-buat-prompt-chatgpt .article-body ul, #article-page-cara-buat-prompt-chatgpt .article-body ol, #article-page-best-prompt-for-marketing .article-body ul, #article-page-best-prompt-for-marketing .article-body ol, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body ul, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body ol, #article-page-best-prompt-for-image-generation .article-body ul, #article-page-best-prompt-for-image-generation .article-body ol, #article-page-best-prompt-for-email-writing .article-body ul, #article-page-best-prompt-for-email-writing .article-body ol, #article-page-how-to-create-system-prompt .article-body ul, #article-page-how-to-create-system-prompt .article-body ol, #article-page-best-prompt-for-coding .article-body ul, #article-page-best-prompt-for-coding .article-body ol, #article-page-best-prompt-for-data-analysis .article-body ul, #article-page-best-prompt-for-data-analysis .article-body ol, #article-page-best-prompt-for-social-media .article-body ul, #article-page-best-prompt-for-social-media .article-body ol , #article-page-best-prompt-for-resume .article-body ul, #article-page-best-prompt-for-resume .article-body ol, #article-page-best-prompt-for-storytelling .article-body ul, #article-page-best-prompt-for-storytelling .article-body ol, #article-page-best-prompt-for-translation .article-body ul, #article-page-best-prompt-for-translation .article-body ol, #article-page-best-prompt-for-product-description .article-body ul, #article-page-best-prompt-for-product-description .article-body ol, #article-page-best-prompt-for-business-plan .article-body ol {
-            #article-page .article-body li, #article-page-chatgpt .article-body li, #article-page-marketing .article-body li, #article-page-9-tips .article-body li, #article-page-how-to-create-prompt-for-chatgpt .article-body li, #article-page-cara-buat-prompt-chatgpt .article-body li, #article-page-best-prompt-for-marketing .article-body li, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body li, #article-page-best-prompt-for-image-generation .article-body li, #article-page-best-prompt-for-email-writing .article-body li, #article-page-how-to-create-system-prompt .article-body li, #article-page-best-prompt-for-coding .article-body li, #article-page-best-prompt-for-data-analysis .article-body li, #article-page-best-prompt-for-social-media .article-body li , #article-page-best-prompt-for-resume .article-body li, #article-page-best-prompt-for-storytelling .article-body li, #article-page-best-prompt-for-translation .article-body li, #article-page-best-prompt-for-product-description .article-body li, #article-page-best-prompt-for-business-plan .article-body li {
-      #article-page .article-body code,
-      #article-page-chatgpt .article-body code,
-      #article-page-marketing .article-body code,
-      #article-page-9-tips .article-body code,
-      #article-page-how-to-create-prompt-for-chatgpt .article-body code,
-      #article-page-cara-buat-prompt-chatgpt .article-body code,
-      #article-page-best-prompt-for-marketing .article-body code,
-      #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body code,
-      #article-page-best-prompt-for-image-generation .article-body code,
-      #article-page-best-prompt-for-email-writing .article-body code,
-      #article-page-how-to-create-system-prompt .article-body code,
-      #article-page-best-prompt-for-coding .article-body code,
-      #article-page-best-prompt-for-data-analysis .article-body code,
-            #article-page-best-prompt-for-social-media .article-body code , #article-page-best-prompt-for-resume .article-body code, #article-page-best-prompt-for-storytelling .article-body code, #article-page-best-prompt-for-translation .article-body code, #article-page-best-prompt-for-product-description .article-body code, #article-page-best-prompt-for-business-plan .article-body code {
-        background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; font-family: 'Geist Mono', monospace; font-size: 0.92em; color: #e0e7ff;
+      [id^="article-page"] { min-height: 100vh; padding-top: 100px; }
+      [id^="article-page"] .article-header { text-align: center; padding: 60px 24px 40px; max-width: 800px; margin: 0 auto; }
+      [id^="article-page"] .article-meta { font-size: 14px; color: var(--text-muted); margin-bottom: 16px; }
+      [id^="article-page"] .article-header h1 { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; }
+      [id^="article-page"] .article-body { max-width: 720px; margin: 0 auto; padding: 0 24px 120px; }
+      [id^="article-page"] .article-body h2 { font-size: 1.5rem; font-weight: 700; margin: 40px 0 16px; }
+      [id^="article-page"] .article-body h3 { font-size: 1.2rem; font-weight: 600; margin: 32px 0 12px; color: var(--accent); }
+      [id^="article-page"] .article-body p { font-size: 16px; color: var(--text-muted); line-height: 1.8; margin-bottom: 20px; }
+      [id^="article-page"] .article-body ul,
+      [id^="article-page"] .article-body ol { color: var(--text-muted); margin: 0 0 20px 24px; }
+      [id^="article-page"] .article-body li { margin-bottom: 8px; line-height: 1.7; }
+      [id^="article-page"] .article-body code {
+        background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px;
+        font-family: 'Geist Mono', monospace; font-size: 0.92em; color: #e0e7ff;
       }
-      #article-page .article-body pre,
-      #article-page-chatgpt .article-body pre,
-      #article-page-marketing .article-body pre,
-      #article-page-9-tips .article-body pre,
-      #article-page-how-to-create-prompt-for-chatgpt .article-body pre,
-      #article-page-cara-buat-prompt-chatgpt .article-body pre,
-      #article-page-best-prompt-for-marketing .article-body pre,
-      #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body pre,
-      #article-page-best-prompt-for-image-generation .article-body pre,
-      #article-page-best-prompt-for-email-writing .article-body pre,
-      #article-page-how-to-create-system-prompt .article-body pre,
-      #article-page-best-prompt-for-coding .article-body pre,
-      #article-page-best-prompt-for-data-analysis .article-body pre,
-            #article-page-best-prompt-for-social-media .article-body pre , #article-page-best-prompt-for-resume .article-body pre, #article-page-best-prompt-for-storytelling .article-body pre, #article-page-best-prompt-for-translation .article-body pre, #article-page-best-prompt-for-product-description .article-body pre, #article-page-best-prompt-for-business-plan .article-body pre {
-        background: #0d1117; border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin: 24px 0; overflow-x: auto; line-height: 1.6;
+      [id^="article-page"] .article-body pre {
+        background: #0d1117; border: 1px solid var(--border); border-radius: 12px;
+        padding: 20px 24px; margin: 24px 0; overflow-x: auto; line-height: 1.6;
       }
-            #article-page .article-body pre code, #article-page-chatgpt .article-body pre code, #article-page-marketing .article-body pre code, #article-page-9-tips .article-body pre code, #article-page-how-to-create-prompt-for-chatgpt .article-body pre code, #article-page-cara-buat-prompt-chatgpt .article-body pre code, #article-page-best-prompt-for-marketing .article-body pre code, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body pre code, #article-page-best-prompt-for-image-generation .article-body pre code, #article-page-best-prompt-for-email-writing .article-body pre code, #article-page-how-to-create-system-prompt .article-body pre code, #article-page-best-prompt-for-coding .article-body pre code, #article-page-best-prompt-for-data-analysis .article-body pre code, #article-page-best-prompt-for-social-media .article-body pre code , #article-page-best-prompt-for-resume .article-body pre code, #article-page-best-prompt-for-storytelling .article-body pre code, #article-page-best-prompt-for-translation .article-body pre code, #article-page-best-prompt-for-product-description .article-body pre code, #article-page-best-prompt-for-business-plan .article-body pre code {
-      #article-page .article-body .tip-box,
-      #article-page-chatgpt .article-body .tip-box,
-      #article-page-marketing .article-body .tip-box,
-      #article-page-9-tips .article-body .tip-box,
-      #article-page-how-to-create-prompt-for-chatgpt .article-body .tip-box,
-      #article-page-cara-buat-prompt-chatgpt .article-body .tip-box,
-      #article-page-best-prompt-for-marketing .article-body .tip-box,
-      #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body .tip-box,
-      #article-page-best-prompt-for-image-generation .article-body .tip-box,
-      #article-page-best-prompt-for-email-writing .article-body .tip-box,
-      #article-page-how-to-create-system-prompt .article-body .tip-box,
-      #article-page-best-prompt-for-coding .article-body .tip-box,
-      #article-page-best-prompt-for-data-analysis .article-body .tip-box,
-            #article-page-best-prompt-for-social-media .article-body .tip-box , #article-page-best-prompt-for-resume .article-body .tip-box, #article-page-best-prompt-for-storytelling .article-body .tip-box, #article-page-best-prompt-for-translation .article-body .tip-box, #article-page-best-prompt-for-product-description .article-body .tip-box, #article-page-best-prompt-for-business-plan .article-body .tip-box {
+      [id^="article-page"] .article-body pre code { background: none; padding: 0; font-size: 13px; color: var(--text-muted); }
+      [id^="article-page"] .article-body .tip-box {
         background: rgba(56,189,248,0.05); border: 1px solid rgba(56,189,248,0.15);
         border-radius: 12px; padding: 20px 24px; margin: 24px 0;
       }
-            #article-page .article-body .tip-box strong, #article-page-chatgpt .article-body .tip-box strong, #article-page-marketing .article-body .tip-box strong, #article-page-9-tips .article-body .tip-box strong, #article-page-how-to-create-prompt-for-chatgpt .article-body .tip-box strong, #article-page-cara-buat-prompt-chatgpt .article-body .tip-box strong, #article-page-best-prompt-for-marketing .article-body .tip-box strong, #article-page-claude-vs-gpt5-vs-gemini-prompting .article-body .tip-box strong, #article-page-best-prompt-for-image-generation .article-body .tip-box strong, #article-page-best-prompt-for-email-writing .article-body .tip-box strong, #article-page-how-to-create-system-prompt .article-body .tip-box strong, #article-page-best-prompt-for-coding .article-body .tip-box strong, #article-page-best-prompt-for-data-analysis .article-body .tip-box strong, #article-page-best-prompt-for-social-media .article-body .tip-box strong , #article-page-best-prompt-for-resume .article-body .tip-box strong, #article-page-best-prompt-for-storytelling .article-body .tip-box strong, #article-page-best-prompt-for-translation .article-body .tip-box strong, #article-page-best-prompt-for-product-description .article-body .tip-box strong, #article-page-best-prompt-for-business-plan .article-body .tip-box strong {
+      [id^="article-page"] .article-body .tip-box strong { color: var(--accent); }
     </style>
   </head>
   <body>
@@ -6095,6 +6077,16 @@ love the opportunity".</code></pre>
             else nav.classList.remove("scrolled");
           });
         });
+      })();
+    </script>
+    <script>
+      (function () {
+        var path = (location.pathname || "/").replace(/\/+$/, "") || "/";
+        var isApp = path === "/app" || path.indexOf("/app/") === 0;
+        if (!isApp) {
+          var splash = document.getElementById("app-splash");
+          if (splash) splash.remove();
+        }
       })();
     </script>
   </body>

@@ -22,9 +22,37 @@ function patchAppHtml(html) {
     .replace("<html lang=\"en\" class=\"boot-app\">", "<html lang=\"en\" class=\"boot-app\" data-route=\"app\">");
 }
 
+function relocateModuleScriptsToBody(html) {
+  const scriptTags = [];
+  const withoutHeadScripts = html.replace(
+    /\s*<script type="module"[^>]*><\/script>\s*/g,
+    (match) => {
+      scriptTags.push(match.trim());
+      return "\n";
+    }
+  );
+  const linkTags = [];
+  const withoutPreloads = withoutHeadScripts.replace(
+    /\s*<link rel="modulepreload"[^>]*>\s*/g,
+    (match) => {
+      linkTags.push(match.trim());
+      return "\n";
+    }
+  );
+  const bundle = [...linkTags, ...scriptTags].join("\n    ");
+  if (!bundle) return html;
+  return withoutPreloads.replace("</body>", `    ${bundle}\n  </body>`);
+}
+
+function patchBuiltHtml(html) {
+  return relocateModuleScriptsToBody(html);
+}
+
 if (existsSync(indexHtml)) {
   const raw = readFileSync(indexHtml, "utf8");
-  writeFileSync(appHtml, patchAppHtml(raw));
+  const patched = patchBuiltHtml(raw);
+  writeFileSync(indexHtml, patched);
+  writeFileSync(appHtml, patchAppHtml(patched));
   console.log("✓ index.html → app.html (app shell, noindex)");
   generateSeoPages();
 } else {

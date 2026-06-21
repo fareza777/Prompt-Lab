@@ -5521,6 +5521,8 @@ function mountPromptLab() {
     /^\/promptlab$/i.test(path) ||
     standalone;
 
+  if (!showApp) dismissStartupSplash();
+
   try {
     root.innerHTML = "";
     if (showApp) {
