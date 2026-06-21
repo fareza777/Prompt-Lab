@@ -2,6 +2,12 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { HREFLANG_PAIRS, SEO_ROUTES, SITE } from "./seo-routes.mjs";
 
+for (const [path, meta] of Object.entries(SEO_ROUTES)) {
+  if (path !== "/" && !meta.routeKey) {
+    throw new Error(`seo-routes.mjs: missing routeKey for ${path}`);
+  }
+}
+
 function jsString(s) {
   return JSON.stringify(s);
 }
