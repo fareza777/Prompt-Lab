@@ -42,7 +42,11 @@ import {
   Zap,
 } from "lucide-react";
 import "./styles.css";
-import { countWords } from "./optimizerDiff";
+import { countWords, inferOptimizerChanges } from "./optimizerDiff";
+import { mergeLibraryPayload, pullUserLibrary, pushUserLibrary } from "./librarySync.js";
+import { V2CommandPalette } from "./commandPalette.jsx";
+import { V2EmptyState } from "./v2EmptyState.jsx";
+import { getUserInitials } from "./userInitials.js";
 import {
   getLanguageLockInstruction,
   getLanguageMeta,
@@ -1245,6 +1249,11 @@ function App() {
   const [copyStatus, setCopyStatus] = useState("");
   const [actionToast, setActionToast] = useState("");
   const [search, setSearch] = useState("");
+  const [templateSearch, setTemplateSearch] = useState("");
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [librarySyncStatus, setLibrarySyncStatus] = useState("");
+  const libraryPulledForUser = React.useRef("");
+  const libraryPushEnabled = React.useRef(false);
   const [selectedLibraryId, setSelectedLibraryId] = useState("");
   const [compareA, setCompareA] = useState("");
   const [compareB, setCompareB] = useState("");
@@ -1366,7 +1375,24 @@ function App() {
     let mounted = true;
 
     async function bootstrapSession() {
-      const { data, error } = await supabase.auth.getSession();
+      let data;
+      let error;
+      try {
+        const result = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise((_, reject) => {
+            window.setTimeout(() => reject(new Error("Session check timed out")), 8000);
+          }),
+        ]);
+        ({ data, error } = result);
+      } catch (sessionError) {
+        if (!mounted) return;
+        setAuthError(sessionError?.message || "Session check failed");
+        setAuthStatus("Session check failed");
+        setHasAuthSession(false);
+        setAuthSessionReady(true);
+        return;
+      }
       if (!mounted) return;
       if (error) {
         setAuthError(error.message);
@@ -1379,13 +1405,14 @@ function App() {
       if (user) {
         setHasAuthSession(true);
         setAuthStatus("Signed in");
-        await loadUserProfile(user);
+        setAuthSessionReady(true);
+        void loadUserProfile(user);
       } else {
         setHasAuthSession(false);
         setAccountState(createDefaultAccountState());
         setAuthStatus("Signed out");
+        setAuthSessionReady(true);
       }
-      setAuthSessionReady(true);
     }
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -1415,6 +1442,55 @@ function App() {
       loadAdminRuntimeConfig();
     }
   }, [authSessionReady, accountState.role, accountState.userId]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (!accountState.userId || !supabase || libraryPulledForUser.current === accountState.userId) return;
+    libraryPulledForUser.current = accountState.userId;
+    libraryPushEnabled.current = false;
+    let cancelled = false;
+    (async () => {
+      try {
+        const remote = await pullUserLibrary(supabase, accountState.userId);
+        if (cancelled) return;
+        if (remote) {
+          const merged = mergeLibraryPayload({ library, customTemplates }, remote);
+          setLibrary(merged.library.slice(0, libraryLimit));
+          setCustomTemplates(merged.customTemplates.slice(0, customTemplateLimit));
+          setLibrarySyncStatus("Synced from cloud");
+        } else {
+          setLibrarySyncStatus("Cloud library ready");
+        }
+      } catch {
+        setLibrarySyncStatus("Local library (cloud sync unavailable)");
+      } finally {
+        if (!cancelled) libraryPushEnabled.current = true;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [accountState.userId, libraryLimit, customTemplateLimit]);
+
+  useEffect(() => {
+    if (!accountState.userId || !supabase || !libraryPushEnabled.current) return undefined;
+    const timer = window.setTimeout(() => {
+      pushUserLibrary(supabase, accountState.userId, { library, customTemplates })
+        .then(() => setLibrarySyncStatus("Synced"))
+        .catch(() => setLibrarySyncStatus("Sync pending"));
+    }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [library, customTemplates, accountState.userId]);
 
   useEffect(() => {
     localStorage.setItem("promptlab-generation-mode", generationMode);
@@ -1595,6 +1671,26 @@ function App() {
     await loadUserProfile(data.user);
   }
 
+  async function signInWithGoogle() {
+    if (!supabase) {
+      setAuthError("Supabase is not configured.");
+      return;
+    }
+    setIsAuthBusy(true);
+    setAuthError("");
+    setAuthStatus("Redirecting to Google...");
+    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    });
+    setIsAuthBusy(false);
+    if (error) {
+      setAuthError(error.message);
+      setAuthStatus("Google sign in failed");
+    }
+  }
+
   async function signUpWithPassword(email, password, fullName) {
     if (!supabase) {
       setAuthError("Supabase is not configured.");
@@ -1631,6 +1727,9 @@ function App() {
     localStorage.removeItem("promptlab-guest");
     localStorage.removeItem("promptlab-onboarded");
     localStorage.removeItem("promptlab-auth-intent");
+    libraryPulledForUser.current = "";
+    libraryPushEnabled.current = false;
+    setLibrarySyncStatus("");
     setHasAuthSession(false);
     setAuthSessionReady(true);
     setAccountState(createDefaultAccountState());
@@ -2244,6 +2343,11 @@ function App() {
     duplicateLibraryItem,
     search,
     setSearch,
+    templateSearch,
+    setTemplateSearch,
+    commandPaletteOpen,
+    setCommandPaletteOpen,
+    librarySyncStatus,
     compareA,
     setCompareA,
     compareB,
@@ -2296,6 +2400,7 @@ function App() {
     isSupabaseConfigured,
     membershipPlans,
     signInWithPassword,
+    signInWithGoogle,
     signUpWithPassword,
     signOut,
     setBuilderFromTemplate,
@@ -2514,6 +2619,8 @@ function V2App(props) {
           generationSource={generationSource}
           isGuestMode={guestMode}
           accountState={accountState}
+          librarySyncStatus={props.librarySyncStatus}
+          onOpenCommandPalette={() => props.setCommandPaletteOpen(true)}
         />
         {active === "Builder" && <V2Builder {...props} />}
         {active === "Optimizer" && <V2Optimizer {...props} />}
@@ -2524,6 +2631,21 @@ function V2App(props) {
         {active === "Admin" && isAdmin && <V2AdminDashboard {...props} />}
       </main>
       <BottomNav active={active} setActive={setActive} isAdmin={isAdmin} />
+      <V2CommandPalette
+        open={props.commandPaletteOpen}
+        onClose={() => props.setCommandPaletteOpen(false)}
+        library={props.library}
+        templates={props.templates}
+        recentPrompts={recentPrompts}
+        onOpenBuilder={() => setActive("Builder")}
+        onOpenLibrary={() => setActive("Library")}
+        onOpenTemplates={() => setActive("Templates")}
+        onUseTemplate={(template) => props.setBuilderFromTemplate(template)}
+        onUseLibraryItem={(item) => {
+          setNarrative(item.content);
+          setActive("Builder");
+        }}
+      />
       <V2ActionToast message={props.actionToast} />
     </div>
   );
@@ -2536,6 +2658,7 @@ function V2AuthGate({
   isAuthBusy,
   isSupabaseConfigured,
   signInWithPassword,
+  signInWithGoogle,
   signUpWithPassword,
   onGuest,
   onResumeSession,
@@ -2602,6 +2725,9 @@ function V2AuthGate({
           <button className="v2-btn primary" onClick={submitAuth} disabled={isAuthBusy || !canSubmit}>
             {isAuthBusy ? "Checking..." : isSignIn ? "Sign In" : "Create Account"}
           </button>
+          <button className="v2-btn" type="button" onClick={() => signInWithGoogle?.()} disabled={isAuthBusy || !isSupabaseConfigured}>
+            Continue with Google
+          </button>
           <button className="v2-btn" onClick={onGuest}>Continue as Guest</button>
         </div>
         <p className="v2-note">Want Pro or Business? Create an account first, then open Settings → Membership to upgrade. Guest mode is for local trial only.</p>
@@ -2632,7 +2758,7 @@ function V2Onboarding({ onAuth, onGuest }) {
   );
 }
 
-function V2Header({ active, setActive, settingsStatus, isGenerating, generationStatus, generationSource, isGuestMode, accountState }) {
+function V2Header({ active, setActive, settingsStatus, isGenerating, generationStatus, generationSource, isGuestMode, accountState, librarySyncStatus, onOpenCommandPalette }) {
   const subtitles = {
     Builder: "Parse intent, lock guardrails, and ship model-ready prompts.",
     Optimizer: "Diff an old prompt into a sharper, safer instruction.",
@@ -2644,11 +2770,10 @@ function V2Header({ active, setActive, settingsStatus, isGenerating, generationS
   };
   const syncLabel = isGenerating
     ? "Generating..."
-    : isGuestMode || !accountState?.userId
-      ? "On this device"
-      : "Synced";
+    : librarySyncStatus || (isGuestMode || !accountState?.userId ? "On this device" : "Synced");
   const syncClass = isGenerating ? "busy" : isGuestMode || !accountState?.userId ? "local" : "";
   const engineLabel = settingsStatus == null ? "" : settingsStatus.ok ? "AI online" : "Preview mode";
+  const initials = getUserInitials(accountState);
   return (
     <header className="v2-headerbar">
       <div>
@@ -2656,14 +2781,14 @@ function V2Header({ active, setActive, settingsStatus, isGenerating, generationS
         <strong>{subtitles[active] || subtitles.Builder}</strong>
       </div>
       <div className="v2-header-actions">
-        <span className={`v2-sync ${syncClass}`}><i /> {syncLabel}</span>
-        <button className="v2-search" onClick={() => setActive("Library")}>
+        <span className={`v2-sync v2-header-pill ${syncClass}`}><i /> {syncLabel}</span>
+        <button className="v2-search" type="button" onClick={() => onOpenCommandPalette?.()}>
           <Search size={15} />
-          <span>Search library</span>
+          <span>Search</span>
           <kbd>⌘K</kbd>
         </button>
         {engineLabel && (
-          <span className={`v2-health ${settingsStatus?.ok ? "ready" : ""}`}>
+          <span className={`v2-health v2-header-pill ${settingsStatus?.ok ? "ready" : ""}`}>
             {engineLabel}
           </span>
         )}
@@ -2675,7 +2800,7 @@ function V2Header({ active, setActive, settingsStatus, isGenerating, generationS
         <button className="v2-icon-btn" onClick={() => setActive("Settings")} title="Settings">
           <Settings size={18} />
         </button>
-        <div className="v2-avatar">F</div>
+        <div className="v2-avatar" title={accountState?.email || accountState?.name || "Guest"}>{initials}</div>
       </div>
     </header>
   );
@@ -2744,7 +2869,7 @@ function EngineMetaBadges({ engineVersion, piiFindings }) {
             fontSize: 13,
           }}
         >
-          🛡️ Demi keamanan, kami men-redact{" "}
+          🛡️ For your security, we redacted{" "}
           {blockingPii.map((finding, index) => (
             <span key={finding.id}>
               <strong>
@@ -2753,7 +2878,7 @@ function EngineMetaBadges({ engineVersion, piiFindings }) {
               {index < blockingPii.length - 1 ? ", " : ""}
             </span>
           ))}{" "}
-          dari prompt-mu sebelum dikirim ke AI provider.
+          from your prompt before sending it to the AI provider.
         </p>
       )}
       {warnPii.length > 0 && (
@@ -2768,14 +2893,14 @@ function EngineMetaBadges({ engineVersion, piiFindings }) {
             fontSize: 13,
           }}
         >
-          ℹ️ Terdeteksi data pribadi (
+          ℹ️ Personal data detected (
           {warnPii.map((finding, index) => (
             <span key={finding.id}>
               {finding.count}× {finding.label}
               {index < warnPii.length - 1 ? ", " : ""}
             </span>
           ))}
-          ). Tidak diblokir — pastikan kamu memang ingin mengirimnya ke AI.
+          ). Not blocked — confirm you intend to send this to the AI.
         </p>
       )}
     </div>
@@ -2802,6 +2927,21 @@ function CompareBiasNote({ biasMitigation }) {
     );
   }
   return null;
+}
+
+function describeAttachmentOcr(file, plan) {
+  const isImage = file.kind === "image/screenshot" || /^image\//i.test(file.type || "");
+  if (!isImage) {
+    return {
+      label: "Text context",
+      detail: file.excerpt ? "Preview cached locally" : "Metadata only until generate",
+    };
+  }
+  const priority = getEntitlements(plan).ocrPriority;
+  return {
+    label: priority ? "OCR · Priority" : "OCR · Standard",
+    detail: file.excerpt ? "Text extracted locally" : "OCR runs when you generate",
+  };
 }
 
 function V2Builder(props) {
@@ -2844,11 +2984,17 @@ function V2Builder(props) {
           </label>
           {attachments.length > 0 && (
             <div className="v2-file-list">
-              {attachments.map((file) => (
-                <button key={file.id} onClick={() => removeAttachment(file.id)}>
-                  <FileText size={14} /> {file.name} <X size={14} />
-                </button>
-              ))}
+              {attachments.map((file) => {
+                const ocr = describeAttachmentOcr(file, accountState?.plan);
+                return (
+                  <div className="v2-attachment-row" key={file.id}>
+                    <button type="button" className="v2-attachment-main" onClick={() => removeAttachment(file.id)}>
+                      <FileText size={14} /> {file.name} <X size={14} />
+                    </button>
+                    <span className="v2-attachment-ocr" title={ocr.detail}>{ocr.label}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
           <div className="v2-field-grid">
@@ -3053,12 +3199,13 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
   );
 }
 
-function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizerError, optimizerWarning, optimizePrompt, clearOptimizerResult, copyText, savePrompt, exportFile, entitlements }) {
+function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizerError, optimizerWarning, optimizePrompt, clearOptimizerResult, copyText, savePrompt, exportFile, entitlements, setNarrative, setActive }) {
   const canDocx = entitlements?.docxExport;
   const [rawPrompt, setRawPrompt] = useState("Make this prompt stronger for Instagram content about a milk coffee product.");
   const [mode, setMode] = useState("Clearer");
   const hasResult = Boolean(optimizerResult?.trim());
   const result = hasResult ? optimizerResult : "";
+  const changes = hasResult ? inferOptimizerChanges(rawPrompt, result, mode) : [];
   const beforeScore = scorePrompt(rawPrompt);
   const afterScore = hasResult
     ? scoreOptimizedPrompt(rawPrompt, result, { fromOptimizer: true, mode })
@@ -3147,6 +3294,9 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
             <V2ActionBtn className="v2-btn" disabled={!hasResult} onAction={() => copyText(result)} successLabel={<><Check size={16} />Copied</>}>
               <Clipboard size={16} />Copy
             </V2ActionBtn>
+            <button className="v2-btn primary" type="button" disabled={!hasResult} onClick={() => { setNarrative?.(result); setActive?.("Builder"); }}>
+              <PenLine size={16} />Apply to Builder
+            </button>
             <V2ActionBtn className="v2-btn" disabled={!hasResult} onAction={() => savePrompt(result, rawPrompt)} successLabel={<><Check size={16} />Saved</>}>
               <Save size={16} />Save
             </V2ActionBtn>
@@ -3154,6 +3304,25 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
           </div>
         </div>
       </section>
+      {hasResult && changes.length > 0 && (
+        <section className="v2-card v2-optimizer-changes">
+          <div className="v2-card-head">
+            <div>
+              <h2>What changed</h2>
+              <p>Inferred improvements from the optimizer pass.</p>
+            </div>
+          </div>
+          <div className="v2-change-list">
+            {changes.map((change) => (
+              <article key={`${change.type}-${change.label}`}>
+                <span>{change.type}</span>
+                <strong>{change.label}</strong>
+                <p>{change.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
       {hasResult && (
       <section className="v2-card v2-compact-quality">
         <div className="v2-card-head">
@@ -3180,8 +3349,9 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
 
 function V2Templates({
   setBuilderFromTemplate,
-  search,
-  setSearch,
+  setActive,
+  templateSearch,
+  setTemplateSearch,
   templates: availableTemplates,
   customTemplates,
   customTemplateLimit,
@@ -3205,7 +3375,7 @@ function V2Templates({
   const options = ["All", ...new Set(availableTemplates.map((item) => item.category))];
   const filtered = availableTemplates.filter((item) => {
     const q = `${item.title} ${item.category} ${item.outputType} ${item.model} ${item.prompt}`.toLowerCase();
-    return (filter === "All" || item.category === filter) && q.includes(search.toLowerCase());
+    return (filter === "All" || item.category === filter) && q.includes(templateSearch.toLowerCase());
   });
   const featured = filtered[0];
   const gridTemplates = featured ? filtered.slice(1, 10) : filtered.slice(0, 9);
@@ -3234,7 +3404,7 @@ function V2Templates({
         <div>
           <span className="v2-eyebrow">Custom template</span>
           <strong>Add your own reusable pattern</strong>
-          <p>Saved locally in this browser. Use membership/database later for cross-device sync.</p>
+          <p>Saved to your account library when signed in. Guests keep templates on this device only.</p>
         </div>
         <input className="v2-input" value={templateDraft.title} onChange={(event) => setTemplateDraft((draft) => ({ ...draft, title: event.target.value }))} placeholder="Template title" />
         <textarea className="v2-textarea mini" value={templateDraft.prompt} onChange={(event) => setTemplateDraft((draft) => ({ ...draft, prompt: event.target.value }))} placeholder="Paste the reusable prompt pattern..." />
@@ -3247,7 +3417,7 @@ function V2Templates({
         </div>
       </section>
       <div className="v2-toolbar">
-        <div className="v2-search wide"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search templates..." /></div>
+        <div className="v2-search wide"><Search size={15} /><input value={templateSearch} onChange={(event) => setTemplateSearch(event.target.value)} placeholder="Search templates..." /></div>
         <div className="v2-chip-row">{options.map((item) => <button key={item} className={`v2-chip ${filter === item ? "active" : ""}`} onClick={() => setFilter(item)}>{item}</button>)}</div>
       </div>
       {featured && (
@@ -3264,7 +3434,15 @@ function V2Templates({
         </section>
       )}
       <section className="v2-template-grid">
-        {gridTemplates.map((template) => (
+        {gridTemplates.length === 0 ? (
+          <V2EmptyState
+            icon={BookOpenText}
+            title="No templates match"
+            copy="Try another filter or create a custom template from your Builder draft."
+            actionLabel="Open Builder"
+            onAction={() => setActive?.("Builder")}
+          />
+        ) : gridTemplates.map((template) => (
           <article className="v2-template-card v2-glass-card" key={`${template.custom ? "custom" : "built-in"}-${template.title}`}>
             <span>{template.category}</span>
             <strong>{template.title}</strong>
@@ -3286,7 +3464,7 @@ function V2Library(props) {
     filteredLibrary, selectedLibrary, selectedLibraryId, setSelectedLibraryId, search, setSearch,
     updateLibraryItem, deleteLibraryItem, duplicateLibraryItem, copyText, setCompareA, setCompareB,
     setActive, setNarrative, setCategory, setOutputType, exportFile,
-    libraryLimit, copyStatus, entitlements,
+    libraryLimit, copyStatus, entitlements, librarySyncStatus,
   } = props;
   const canDocx = entitlements?.docxExport;
   const currentItem = filteredLibrary.find((item) => item.id === selectedLibraryId) || filteredLibrary[0] || selectedLibrary;
@@ -3303,7 +3481,7 @@ function V2Library(props) {
   return (
     <div className="v2-screen">
       <V2PageIntro eyebrow="Library" title="Prompt archive that behaves like a workspace." copy="Search, edit, duplicate, export, and send prompts to Compare or Builder.">
-        <div className="v2-hero-status"><span>Saved</span><strong>{filteredLibrary.length}</strong><small>of {libraryLimit} local slots</small></div>
+        <div className="v2-hero-status"><span>Saved</span><strong>{filteredLibrary.length}</strong><small>{librarySyncStatus || `of ${libraryLimit} slots`}</small></div>
       </V2PageIntro>
       <section className="v2-stats-strip">
         <div className="v2-stat"><span>Saved prompts</span><strong>{filteredLibrary.length}</strong><small>of {libraryLimit} slots</small></div>
@@ -3320,7 +3498,15 @@ function V2Library(props) {
           </div>
           <div className="v2-toolbar compact"><div className="v2-search wide"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search prompts..." /></div></div>
           <div className="v2-table">
-            {rows.map((item) => (
+            {rows.length === 0 ? (
+              <V2EmptyState
+                icon={Library}
+                title="No saved prompts yet"
+                copy="Generate in Builder, then Save — or import from Templates."
+                actionLabel="Go to Builder"
+                onAction={() => setActive("Builder")}
+              />
+            ) : rows.map((item) => (
               <button key={item.id} className={currentItem?.id === item.id ? "active" : ""} onClick={() => setSelectedLibraryId(item.id)}>
                 <span>{item.title}<small>{item.tag} · {formatDate(item.updatedAt || item.createdAt)}</small></span>
                 <em>{item.folder}</em>
@@ -3331,7 +3517,7 @@ function V2Library(props) {
         <div className="v2-card v2-editor v2-glass-card">
           {currentItem ? (
             <>
-              <label className="v2-label">Judul</label>
+              <label className="v2-label">Title</label>
               <input className="v2-input" value={currentItem.title} onChange={(event) => updateLibraryItem(currentItem.id, { title: event.target.value })} />
               <div className="v2-two">
                 <div><label className="v2-label">Folder</label><input className="v2-input" value={currentItem.folder} onChange={(event) => updateLibraryItem(currentItem.id, { folder: event.target.value })} /></div>
@@ -3354,7 +3540,15 @@ function V2Library(props) {
                 <button className="v2-btn danger" onClick={() => deleteLibraryItem(currentItem.id)}><Trash2 size={16} />Delete</button>
               </div>
             </>
-          ) : <p className="v2-small">No saved prompts yet.</p>}
+          ) : (
+            <V2EmptyState
+              icon={Library}
+              title="No saved prompts yet"
+              copy="Save a prompt from Builder or Optimizer to start your library."
+              actionLabel="Go to Builder"
+              onAction={() => setActive("Builder")}
+            />
+          )}
         </div>
       </section>
     </div>
@@ -3551,6 +3745,7 @@ function V2PublicSettings(props) {
     isAuthBusy,
     isSupabaseConfigured,
     signInWithPassword,
+    signInWithGoogle,
     signUpWithPassword,
     signOut,
     library,
@@ -3688,6 +3883,9 @@ function V2PublicSettings(props) {
                   ) : (
                     <button className="v2-btn primary" onClick={submitSignUp} disabled={isAuthBusy || !authEmail || !authName || authPassword.length < 6}>Create Account</button>
                   )}
+                  <button className="v2-btn" type="button" onClick={() => signInWithGoogle?.()} disabled={isAuthBusy || !isSupabaseConfigured}>
+                    Continue with Google
+                  </button>
                 </>
               )}
             </div>
@@ -4399,9 +4597,10 @@ function Nav({ active, setActive, isAdmin = false }) {
 }
 
 function BottomNav({ active, setActive, isAdmin = false }) {
+  const items = navItems(isAdmin).filter(([name]) => name !== "Admin");
   return (
     <nav className="bottom-nav v2-bottom-nav">
-      {navItems(isAdmin).map(([item, Icon]) => (
+      {items.map(([item, Icon]) => (
         <button key={item} className={active === item ? "active" : ""} onClick={() => setActive(item)}>
           <Icon size={18} />
           <span>{item}</span>

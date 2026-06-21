@@ -1,6 +1,12 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { MEMBERSHIP_MARKETING } from "./planEntitlements.js";
+import { dismissStartupSplash } from "./startupSplash";
 
 export default function LandingPage() {
+  useEffect(() => {
+    dismissStartupSplash();
+  }, []);
+
   return (
     <div style={{ fontFamily: "system-ui, -apple-system, sans-serif", background: "#061011", color: "#e2e8f0", minHeight: "100vh", overflowX: "hidden" }}>
       {/* Hero */}
@@ -74,6 +80,26 @@ export default function LandingPage() {
           <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 12 }}>
             {["Marketing", "Social Media", "E-Commerce", "Legal & Compliance", "Finance", "Education", "Healthcare", "HR & People Ops", "Data Analytics", "Customer Support", "UX Research", "Video & Podcast", "Coding", "Creative / Image AI", "Academic", "Presentations", "Documents & Reports"].map(d => (
               <span key={d} style={{ background: "#0d1a1d", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 999, padding: "8px 18px", fontSize: 14, color: "#94a3b8", whiteSpace: "nowrap" }}>{d}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" style={{ padding: "100px 24px", background: "linear-gradient(180deg, transparent, rgba(56,189,248,0.04), transparent)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <h2 style={{ textAlign: "center", fontSize: "2.2rem", fontWeight: 700, marginBottom: 12 }}>Simple pricing, same as the app</h2>
+          <p style={{ textAlign: "center", color: "#94a3b8", marginBottom: 48 }}>Start free. Upgrade inside Settings when you need export, OCR priority, and AI tools.</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
+            {Object.entries(MEMBERSHIP_MARKETING).map(([plan, meta]) => (
+              <div key={plan} style={{ background: "#0d1a1d", border: plan === "Pro" ? "1px solid rgba(56,189,248,0.35)" : "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 28 }}>
+                <span style={{ fontSize: 13, color: "#38bdf8", fontWeight: 600 }}>{plan}</span>
+                <strong style={{ display: "block", fontSize: "1.6rem", margin: "10px 0 8px" }}>{meta.price}</strong>
+                <p style={{ color: "#94a3b8", fontSize: "0.95rem", minHeight: 48 }}>{meta.detail}</p>
+                <ul style={{ margin: "16px 0 0", paddingLeft: 18, color: "#cbd5e1", fontSize: 14, lineHeight: 1.7 }}>
+                  {meta.highlights.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              </div>
             ))}
           </div>
         </div>
