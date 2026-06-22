@@ -8,7 +8,7 @@
     "server": "node --use-system-ca server/index.js",
     "test": "node --test test/*.test.js",
     "test:smoke": "node scripts/smoke-ui.mjs",
-    "build": "node scripts/generate-seo-route-js.mjs && vite build && node scripts/postbuild.mjs",
+    "build": "node scripts/generate-seo-route-js.mjs && node scripts/generate-sitemap.mjs && vite build && node scripts/postbuild.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "playstore:check": "node --use-system-ca scripts/check-playstore-readiness.mjs",
     "icons:generate": "node --use-system-ca scripts/generate-pwa-icons.mjs",

@@ -23,6 +23,53 @@ function setMetaById(html, id, attr, value) {
   return html.replace(reAlt, `$1${escAttr(value)}$3`);
 }
 
+function removeMetaById(html, id) {
+  return html.replace(new RegExp(`\\s*<meta[^>]*\\bid="${id}"[^>]*>\\s*`, "gi"), "\n");
+}
+
+function isoArticleTime(date) {
+  return `${date}T00:00:00.000Z`;
+}
+
+function applyKeywordsAndArticleMeta(html, path, route) {
+  let out = html;
+  const isArticle = route.ogType === "article" && route.headline;
+
+  if (route.keywords) {
+    out = setMetaById(out, "meta-keywords", "content", route.keywords);
+  }
+
+  if (isArticle) {
+    out = setMetaById(out, "og-image-alt", "content", route.headline);
+    if (route.datePublished) {
+      out = setMetaById(
+        out,
+        "og-article-published",
+        "content",
+        isoArticleTime(route.datePublished)
+      );
+    }
+    if (route.dateModified || route.datePublished) {
+      out = setMetaById(
+        out,
+        "og-article-modified",
+        "content",
+        isoArticleTime(route.dateModified || route.datePublished)
+      );
+    }
+    return out;
+  }
+
+  out = removeMetaById(out, "og-article-published");
+  out = removeMetaById(out, "og-article-modified");
+
+  if (path === "/" || path === "/blog") {
+    out = setMetaById(out, "og-image-alt", "content", "PromptLab — AI Prompt Workspace");
+  }
+
+  return out;
+}
+
 function blogPostingSchema(route) {
   const posting = {
     "@context": "https://schema.org",
@@ -142,6 +189,7 @@ function patchHtml(baseHtml, path) {
   html = setMetaById(html, "twitter-description", "content", route.description);
   html = setMetaById(html, "canonical-link", "href", route.canonical);
   html = applyHreflangStatic(html, path, route.canonical);
+  html = applyKeywordsAndArticleMeta(html, path, route);
 
   if (path === "/blog") {
     html = replaceScriptInner(html, "ld-breadcrumbs", breadcrumbSchema(route));

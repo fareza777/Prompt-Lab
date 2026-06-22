@@ -23,6 +23,8 @@ export const SEO_ROUTES = {
     description:
       "Learn how to create the best AI prompt for ChatGPT, Claude, Gemini & Grok. Free prompt builder with readiness scoring, optimizer, and 50+ templates. Best prompt tool 2026.",
     canonical: `${SITE}/`,
+    keywords:
+      "how to create prompt, best prompt, AI prompt template, prompt builder, AI prompt tool, create prompts, prompt engineering, ChatGPT prompts, Claude prompts, prompt optimizer, prompt templates, AI workspace, prompt guide, prompt tutorial",
   },
   "/blog": {
     routeKey: "blog",
@@ -33,6 +35,8 @@ export const SEO_ROUTES = {
     description:
       "How to create effective AI prompts. Best prompt templates for ChatGPT, Claude, Gemini, marketers, students, and developers. Tutorials, comparisons, and copy-paste templates.",
     canonical: `${SITE}/blog`,
+    keywords:
+      "prompt engineering blog, AI prompt guides, best prompt templates, ChatGPT tutorials, Claude prompts, prompt tips, AI writing guides",
   },
   "/blog/prompt-engineering-guide": {
     routeKey: "article",

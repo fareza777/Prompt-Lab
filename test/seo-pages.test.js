@@ -21,6 +21,15 @@ test("every blog path has static SEO page after build", () => {
     );
     assert.ok(html.includes(`data-route="${route.routeKey}"`));
     assert.ok(html.includes(`lang="${route.lang}"`));
+    if (route.keywords) {
+      assert.ok(html.includes(route.keywords.split(",")[0].trim()));
+    }
+    if (route.headline && route.datePublished) {
+      assert.ok(html.includes(`property="article:published_time"`));
+      assert.ok(html.includes(`${route.datePublished}T00:00:00.000Z`));
+      assert.ok(html.includes(`property="og:image:alt"`));
+      assert.ok(html.includes(route.headline));
+    }
   }
 });
 

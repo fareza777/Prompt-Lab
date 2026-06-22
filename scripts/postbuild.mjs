@@ -2,6 +2,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { generateSeoPages } from "./generate-seo-pages.mjs";
+import { generateSitemap } from "./generate-sitemap.mjs";
 
 const dist = join(process.cwd(), "dist");
 const indexHtml = join(dist, "index.html");
@@ -55,6 +56,9 @@ if (existsSync(indexHtml)) {
   writeFileSync(appHtml, patchAppHtml(patched));
   console.log("✓ index.html → app.html (app shell, noindex)");
   generateSeoPages();
+  generateSitemap(dist);
+  generateSitemap(join(process.cwd(), "public"));
+  console.log("✓ sitemap.xml → dist/ and public/");
 } else {
   console.error("✗ index.html not found in dist/");
 }

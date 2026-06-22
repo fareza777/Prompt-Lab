@@ -13,6 +13,7 @@
       h1: "landing",
       lang: "en",
       ogType: "website",
+      keywords: "how to create prompt, best prompt, AI prompt template, prompt builder, AI prompt tool, create prompts, prompt engineering, ChatGPT prompts, Claude prompts, prompt optimizer, prompt templates, AI workspace, prompt guide, prompt tutorial",
     },
     "/blog": {
       title: "PromptLab Blog — AI Prompt Engineering Tips, Guides & Best Prompts",
@@ -21,6 +22,7 @@
       h1: "blog",
       lang: "en",
       ogType: "website",
+      keywords: "prompt engineering blog, AI prompt guides, best prompt templates, ChatGPT tutorials, Claude prompts, prompt tips, AI writing guides",
     },
     "/blog/prompt-engineering-guide": {
       title: "The Complete Guide to Prompt Engineering in 2026 | PromptLab",
@@ -29,6 +31,10 @@
       h1: "article-guide",
       lang: "en",
       ogType: "article",
+      keywords: "prompt engineering, how to create prompt, best prompt, AI prompt structure, prompt guide, ChatGPT prompt, Claude prompt",
+      headline: "The Complete Guide to Prompt Engineering in 2026",
+      datePublished: "2026-05-28",
+      dateModified: "2026-05-28",
     },
     "/blog/chatgpt-vs-claude-prompts": {
       title: "ChatGPT vs Claude: How to Write Prompts for Each | PromptLab",
@@ -37,6 +43,10 @@
       h1: "article-chatgpt",
       lang: "en",
       ogType: "article",
+      keywords: "ChatGPT vs Claude, ChatGPT prompts, Claude prompts, prompt comparison, best AI prompts",
+      headline: "ChatGPT vs Claude: How to Write Prompts for Each",
+      datePublished: "2026-06-02",
+      dateModified: "2026-06-02",
     },
     "/blog/prompt-templates-marketing": {
       title: "10 Prompt Templates Every Marketer Needs | Best AI Prompts 2026 | PromptLab",
@@ -45,6 +55,10 @@
       h1: "article-marketing",
       lang: "en",
       ogType: "article",
+      keywords: "marketing prompts, AI marketing templates, prompt templates, ChatGPT marketing, AI copy",
+      headline: "10 Prompt Templates Every Marketer Needs",
+      datePublished: "2026-05-28",
+      dateModified: "2026-05-28",
     },
     "/blog/9-tips-claude-prompts": {
       title: "9 Tips to Write a Claude Prompt That Actually Works | Best Claude Prompts | PromptLab",
@@ -53,6 +67,10 @@
       h1: "article-9-tips",
       lang: "en",
       ogType: "article",
+      keywords: "Claude prompt, Anthropic prompts, best Claude prompt, how to create prompt, Claude prompt guide, Claude tips",
+      headline: "9 Tips to Write a Claude Prompt That Actually Works",
+      datePublished: "2026-06-07",
+      dateModified: "2026-06-07",
     },
     "/blog/how-to-create-prompt-for-chatgpt": {
       title: "How to Create a Prompt for ChatGPT That Gets 10x Better Results | PromptLab",
@@ -61,6 +79,10 @@
       h1: "article-how-to-create-prompt-for-chatgpt",
       lang: "en",
       ogType: "article",
+      keywords: "how to create a prompt for ChatGPT, best prompt for ChatGPT, ChatGPT prompt tips, ChatGPT prompt examples, CRISPE framework, OpenAI prompt engineering",
+      headline: "How to Create a Prompt for ChatGPT That Gets 10x Better Results",
+      datePublished: "2026-06-08",
+      dateModified: "2026-06-08",
     },
     "/blog/cara-buat-prompt-chatgpt": {
       title: "Cara Buat Prompt ChatGPT yang Bagus: Panduan Praktis Bahasa Indonesia (2026) | PromptLab",
@@ -69,6 +91,10 @@
       h1: "article-cara-buat-prompt-chatgpt",
       lang: "id",
       ogType: "article",
+      keywords: "cara buat prompt, prompt terbaik, cara buat prompt ChatGPT, tutorial AI Indonesia, prompt engineering Indonesia, CRISPE framework bahasa Indonesia",
+      headline: "Cara Buat Prompt ChatGPT yang Bagus: Panduan Praktis Bahasa Indonesia (2026)",
+      datePublished: "2026-06-08",
+      dateModified: "2026-06-08",
     },
     "/blog/best-prompt-for-marketing": {
       title: "Best Prompt for Marketing: 7 Templates That Convert in 2026 | PromptLab",
@@ -77,6 +103,10 @@
       h1: "article-best-prompt-for-marketing",
       lang: "en",
       ogType: "article",
+      keywords: "best prompt for marketing, marketing prompts, AI marketing templates, ChatGPT marketing, copywriting prompts, LinkedIn ad prompt, email subject line prompt, landing page prompt",
+      headline: "Best Prompt for Marketing: 7 Templates That Convert in 2026",
+      datePublished: "2026-06-09",
+      dateModified: "2026-06-09",
     },
     "/blog/claude-vs-gpt5-vs-gemini-prompting": {
       title: "Claude vs GPT-5 vs Gemini: Best Prompting Practices for Each | PromptLab",
@@ -85,6 +115,10 @@
       h1: "article-claude-vs-gpt5-vs-gemini-prompting",
       lang: "en",
       ogType: "article",
+      keywords: "Claude vs GPT-5, Claude vs Gemini, best prompt for Claude, GPT-5 prompting, Gemini 2.5 Pro prompting, LLM comparison, model-specific prompting, Claude 4.7, GPT-5 prompt guide",
+      headline: "Claude vs GPT-5 vs Gemini: Best Prompting Practices for Each",
+      datePublished: "2026-06-10",
+      dateModified: "2026-06-10",
     },
     "/blog/best-prompt-for-image-generation": {
       title: "How to Write a Prompt for Image Generation (Midjourney, DALL-E, Flux) | PromptLab",
@@ -93,6 +127,10 @@
       h1: "article-best-prompt-for-image-generation",
       lang: "en",
       ogType: "article",
+      keywords: "best prompt for image generation, Midjourney prompt, DALL-E prompt, Flux prompt, AI image prompt, image generation prompt formula, Midjourney v7, DALL-E 3, FLUX.2, AI art prompt, image prompt engineering, 6-part image prompt",
+      headline: "How to Write a Prompt for Image Generation (Midjourney, DALL-E, Flux)",
+      datePublished: "2026-06-11",
+      dateModified: "2026-06-11",
     },
     "/blog/best-prompt-for-email-writing": {
       title: "AI Prompt for Email Writing: 5 Templates That Get Replies | PromptLab",
@@ -101,6 +139,10 @@
       h1: "article-best-prompt-for-email-writing",
       lang: "en",
       ogType: "article",
+      keywords: "best prompt for email writing, AI email prompt, cold email prompt, email prompt template, ChatGPT email, Claude email, follow-up email prompt, customer support prompt, sales email prompt, internal update email",
+      headline: "AI Prompt for Email Writing: 5 Templates That Get Replies",
+      datePublished: "2026-06-12",
+      dateModified: "2026-06-12",
     },
     "/blog/how-to-create-system-prompt": {
       title: "How to Create a System Prompt for Custom GPTs (Complete Guide) | PromptLab",
@@ -109,6 +151,10 @@
       h1: "article-how-to-create-system-prompt",
       lang: "en",
       ogType: "article",
+      keywords: "how to create a system prompt, Custom GPT system prompt, GPT builder instructions, system prompt engineering, AI persona prompt, ChatGPT system prompt, Claude system prompt, GPT instructions, custom GPT best practices, system prompt anatomy",
+      headline: "How to Create a System Prompt for Custom GPTs (Complete Guide)",
+      datePublished: "2026-06-13",
+      dateModified: "2026-06-13",
     },
     "/blog/best-prompt-for-coding": {
       title: "Best Prompt for Coding: Debug Faster and Ship More with AI | PromptLab",
@@ -117,6 +163,10 @@
       h1: "article-best-prompt-for-coding",
       lang: "en",
       ogType: "article",
+      keywords: "best prompt for coding, coding prompt, AI coding, debug prompt, Claude Code prompt, Cursor prompt, GitHub Copilot prompt, programmer prompt, pair programming prompt, LLM coding",
+      headline: "Best Prompt for Coding: Debug Faster and Ship More with AI",
+      datePublished: "2026-06-14",
+      dateModified: "2026-06-14",
     },
     "/blog/best-prompt-for-data-analysis": {
       title: "How to Write a Prompt for Data Analysis (Step-by-Step)",
@@ -125,6 +175,10 @@
       h1: "article-best-prompt-for-data-analysis",
       lang: "en",
       ogType: "article",
+      keywords: "best prompt for data analysis, data analysis prompt, AI data prompt, CSV prompt, analytics prompt",
+      headline: "How to Write a Prompt for Data Analysis (Step-by-Step)",
+      datePublished: "2026-06-15",
+      dateModified: "2026-06-15",
     },
     "/blog/best-prompt-for-resume": {
       title: "Best Prompt for Resume Writing: Stand Out in 2026 ATS | PromptLab",
@@ -133,6 +187,10 @@
       h1: "article-best-prompt-for-resume",
       lang: "en",
       ogType: "article",
+      keywords: "best prompt for resume, resume prompt, CV prompt, ATS-friendly resume, ChatGPT resume, resume writing AI, AI resume prompt, ATS optimization, resume keywords, job application prompt",
+      headline: "Best Prompt for Resume Writing: Stand Out in 2026 ATS",
+      datePublished: "2026-06-16",
+      dateModified: "2026-06-16",
     },
     "/blog/best-prompt-for-social-media": {
       title: "Best Prompt for Social Media: 8 Templates That Drive Engagement | PromptLab",
@@ -141,6 +199,10 @@
       h1: "article-best-prompt-for-social-media",
       lang: "en",
       ogType: "article",
+      keywords: "best prompt for social media, social media prompt, Instagram prompt, LinkedIn prompt, Twitter prompt, TikTok script, AI content templates",
+      headline: "Best Prompt for Social Media: 8 Templates That Drive Engagement",
+      datePublished: "2026-06-15",
+      dateModified: "2026-06-15",
     },
     "/blog/best-prompt-for-storytelling": {
       title: "Best Prompt for Storytelling: 6 Frameworks That Hook Readers | PromptLab",
@@ -149,6 +211,10 @@
       h1: "article-best-prompt-for-storytelling",
       lang: "en",
       ogType: "article",
+      keywords: "best prompt for storytelling, story prompt, narrative prompt, fiction prompt, creative writing prompt, Save the Cat prompt, Hero's Journey prompt, In Medias Res prompt, Claude storytelling, ChatGPT story",
+      headline: "Best Prompt for Storytelling: 6 Frameworks That Hook Readers",
+      datePublished: "2026-06-17",
+      dateModified: "2026-06-17",
     },
     "/blog/best-prompt-for-translation": {
       title: "Best Prompt for Translation: Preserve Tone, Not Just Words | PromptLab",
@@ -157,6 +223,10 @@
       h1: "article-best-prompt-for-translation",
       lang: "en",
       ogType: "article",
+      keywords: "best prompt for translation, translation prompt, multilingual prompt, AI translation, Claude translation, localization prompt, glossary prompt, translation memory, idiom translation, LLM translation",
+      headline: "Best Prompt for Translation: Preserve Tone, Not Just Words",
+      datePublished: "2026-06-18",
+      dateModified: "2026-06-18",
     },
     "/blog/best-prompt-for-product-description": {
       title: "Best Prompt for Product Description: Convert Browsers to Buyers | PromptLab",
@@ -165,6 +235,10 @@
       h1: "article-best-prompt-for-product-description",
       lang: "en",
       ogType: "article",
+      keywords: "best prompt for product description, product copy prompt, ecommerce prompt, Shopify prompt, ChatGPT product, AIDA, PAS, FAB, product description template",
+      headline: "Best Prompt for Product Description: Convert Browsers to Buyers",
+      datePublished: "2026-06-19",
+      dateModified: "2026-06-19",
     },
     "/blog/best-prompt-for-business-plan": {
       title: "Best Prompt for Business Plan: From Idea to Investor-Ready | PromptLab",
@@ -173,6 +247,10 @@
       h1: "article-best-prompt-for-business-plan",
       lang: "en",
       ogType: "article",
+      keywords: "best prompt for business plan, business plan prompt, startup prompt, AI business plan, ChatGPT business plan, Claude business plan, investor-ready plan, TAM SAM SOM prompt, financial projection prompt, lean canvas prompt",
+      headline: "Best Prompt for Business Plan: From Idea to Investor-Ready",
+      datePublished: "2026-06-20",
+      dateModified: "2026-06-20",
     },
     "/blog/best-prompt-for-cover-letter": {
       title: "Best Prompt for Cover Letter: Get Past the ATS Robot | PromptLab",
@@ -181,6 +259,10 @@
       h1: "article-best-prompt-for-cover-letter",
       lang: "en",
       ogType: "article",
+      keywords: "best prompt for cover letter, cover letter prompt, job application prompt, ChatGPT cover letter, AI cover letter, ATS cover letter, cover letter template, recruiter letter prompt, ARCS framework, cover letter AI",
+      headline: "Best Prompt for Cover Letter: Get Past the ATS Robot",
+      datePublished: "2026-06-21",
+      dateModified: "2026-06-21",
     },
     "/blog/best-prompt-for-seo": {
       title: "Best Prompt for SEO: Rank on Page 1 in 2026 | PromptLab",
@@ -189,6 +271,10 @@
       h1: "article-best-prompt-for-seo",
       lang: "en",
       ogType: "article",
+      keywords: "best prompt for SEO, SEO prompt, AI content SEO, ranking prompt, Ahrefs prompt, ChatGPT SEO, AI Overview citation, E-E-A-T prompt, helpful content update, SEO content prompt",
+      headline: "Best Prompt for SEO: Rank on Page 1 in 2026",
+      datePublished: "2026-06-22",
+      dateModified: "2026-06-22",
     },
     "/blog/best-prompt-for-youtube-script": {
       title: "Best Prompt for YouTube Script: Hook + Payoff in 8 Minutes | PromptLab",
@@ -197,6 +283,10 @@
       h1: "article-best-prompt-for-youtube-script",
       lang: "en",
       ogType: "article",
+      keywords: "best prompt for YouTube script, YouTube prompt, video script prompt, ChatGPT video, creator prompt, YouTube script template, hook prompt, Shorts script, retention script, viral video prompt",
+      headline: "Best Prompt for YouTube Script: Hook + Payoff in 8 Minutes",
+      datePublished: "2026-06-23",
+      dateModified: "2026-06-23",
     }
   };
 
@@ -275,6 +365,41 @@
     if (defaultLink) defaultLink.href = canonical;
   }
 
+  function isoArticleTime(date) {
+    return date + "T00:00:00.000Z";
+  }
+
+  function toggleArticleMeta(meta) {
+    var published = document.getElementById("og-article-published");
+    var modified = document.getElementById("og-article-modified");
+    var isArticle = meta.ogType === "article" && meta.headline;
+
+    if (isArticle) {
+      if (!published) {
+        published = document.createElement("meta");
+        published.id = "og-article-published";
+        published.setAttribute("property", "article:published_time");
+        document.head.appendChild(published);
+      }
+      if (!modified) {
+        modified = document.createElement("meta");
+        modified.id = "og-article-modified";
+        modified.setAttribute("property", "article:modified_time");
+        document.head.appendChild(modified);
+      }
+      if (meta.datePublished) published.setAttribute("content", isoArticleTime(meta.datePublished));
+      if (meta.dateModified || meta.datePublished) {
+        modified.setAttribute("content", isoArticleTime(meta.dateModified || meta.datePublished));
+      }
+      if (meta.headline) setMetaContent("og-image-alt", meta.headline);
+      return;
+    }
+
+    if (published) published.remove();
+    if (modified) modified.remove();
+    setMetaContent("og-image-alt", "PromptLab — AI Prompt Workspace");
+  }
+
   function applySeoMeta(meta, path) {
     if (!meta) return;
     var title = document.getElementById("page-title");
@@ -285,12 +410,14 @@
     setMetaContent("og-url", meta.canonical);
     setMetaContent("twitter-title", meta.title);
     setMetaContent("twitter-description", meta.description);
+    if (meta.keywords) setMetaContent("meta-keywords", meta.keywords);
     var ogType = document.getElementById("og-type");
     if (ogType && meta.ogType) ogType.setAttribute("content", meta.ogType);
     var canonical = document.getElementById("canonical-link");
     if (canonical) canonical.setAttribute("href", meta.canonical);
     if (meta.lang) document.documentElement.lang = meta.lang;
     applyHreflang(path, meta.canonical);
+    toggleArticleMeta(meta);
   }
 
   function ensureRobotsNoindex() {

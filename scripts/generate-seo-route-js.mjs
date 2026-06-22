@@ -22,6 +22,10 @@ const seoEntries = Object.entries(SEO_ROUTES)
       `lang: ${jsString(meta.lang)}`,
       `ogType: ${jsString(meta.ogType || "website")}`,
     ];
+    if (meta.keywords) fields.push(`keywords: ${jsString(meta.keywords)}`);
+    if (meta.headline) fields.push(`headline: ${jsString(meta.headline)}`);
+    if (meta.datePublished) fields.push(`datePublished: ${jsString(meta.datePublished)}`);
+    if (meta.dateModified) fields.push(`dateModified: ${jsString(meta.dateModified)}`);
     return `    ${jsString(path)}: {\n      ${fields.join(",\n      ")},\n    }`;
   })
   .join(",\n");
@@ -95,6 +99,41 @@ ${hreflangEntries}
     if (defaultLink) defaultLink.href = canonical;
   }
 
+  function isoArticleTime(date) {
+    return date + "T00:00:00.000Z";
+  }
+
+  function toggleArticleMeta(meta) {
+    var published = document.getElementById("og-article-published");
+    var modified = document.getElementById("og-article-modified");
+    var isArticle = meta.ogType === "article" && meta.headline;
+
+    if (isArticle) {
+      if (!published) {
+        published = document.createElement("meta");
+        published.id = "og-article-published";
+        published.setAttribute("property", "article:published_time");
+        document.head.appendChild(published);
+      }
+      if (!modified) {
+        modified = document.createElement("meta");
+        modified.id = "og-article-modified";
+        modified.setAttribute("property", "article:modified_time");
+        document.head.appendChild(modified);
+      }
+      if (meta.datePublished) published.setAttribute("content", isoArticleTime(meta.datePublished));
+      if (meta.dateModified || meta.datePublished) {
+        modified.setAttribute("content", isoArticleTime(meta.dateModified || meta.datePublished));
+      }
+      if (meta.headline) setMetaContent("og-image-alt", meta.headline);
+      return;
+    }
+
+    if (published) published.remove();
+    if (modified) modified.remove();
+    setMetaContent("og-image-alt", "PromptLab — AI Prompt Workspace");
+  }
+
   function applySeoMeta(meta, path) {
     if (!meta) return;
     var title = document.getElementById("page-title");
@@ -105,12 +144,14 @@ ${hreflangEntries}
     setMetaContent("og-url", meta.canonical);
     setMetaContent("twitter-title", meta.title);
     setMetaContent("twitter-description", meta.description);
+    if (meta.keywords) setMetaContent("meta-keywords", meta.keywords);
     var ogType = document.getElementById("og-type");
     if (ogType && meta.ogType) ogType.setAttribute("content", meta.ogType);
     var canonical = document.getElementById("canonical-link");
     if (canonical) canonical.setAttribute("href", meta.canonical);
     if (meta.lang) document.documentElement.lang = meta.lang;
     applyHreflang(path, meta.canonical);
+    toggleArticleMeta(meta);
   }
 
   function ensureRobotsNoindex() {
