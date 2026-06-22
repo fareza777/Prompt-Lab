@@ -189,6 +189,14 @@
       h1: "article-best-prompt-for-seo",
       lang: "en",
       ogType: "article",
+    },
+    "/blog/best-prompt-for-youtube-script": {
+      title: "Best Prompt for YouTube Script: Hook + Payoff in 8 Minutes | PromptLab",
+      description: "The best prompt for YouTube script uses the Hook-Promise-Payoff framework to turn a topic into a 6-12 minute video that holds past the 41.9% average view duration. 4 copy-paste templates (tutorial, story, comparison, listicle), a separate 4-part Shorts prompt, and the 3 mistakes that make AI scripts sound generic.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-youtube-script",
+      h1: "article-best-prompt-for-youtube-script",
+      lang: "en",
+      ogType: "article",
     }
   };
 
@@ -216,7 +224,8 @@
     "/blog/best-prompt-for-product-description": "article-best-prompt-for-product-description",
     "/blog/best-prompt-for-business-plan": "article-best-prompt-for-business-plan",
     "/blog/best-prompt-for-cover-letter": "article-best-prompt-for-cover-letter",
-    "/blog/best-prompt-for-seo": "article-best-prompt-for-seo"
+    "/blog/best-prompt-for-seo": "article-best-prompt-for-seo",
+    "/blog/best-prompt-for-youtube-script": "article-best-prompt-for-youtube-script"
   };
 
   function normalizePath(pathname) {

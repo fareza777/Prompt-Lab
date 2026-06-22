@@ -330,6 +330,19 @@ export const SEO_ROUTES = {
     dateModified: "2026-06-22",
     keywords: "best prompt for SEO, SEO prompt, AI content SEO, ranking prompt, Ahrefs prompt, ChatGPT SEO, AI Overview citation, E-E-A-T prompt, helpful content update, SEO content prompt"
   },
+  "/blog/best-prompt-for-youtube-script": {
+    routeKey: "article-best-prompt-for-youtube-script",
+    h1: "article-best-prompt-for-youtube-script",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for YouTube Script: Hook + Payoff in 8 Minutes | PromptLab",
+    description: "The best prompt for YouTube script uses the Hook-Promise-Payoff framework to turn a topic into a 6-12 minute video that holds past the 41.9% average view duration. 4 copy-paste templates (tutorial, story, comparison, listicle), a separate 4-part Shorts prompt, and the 3 mistakes that make AI scripts sound generic.",
+    canonical: `${SITE}/blog/best-prompt-for-youtube-script`,
+    headline: "Best Prompt for YouTube Script: Hook + Payoff in 8 Minutes",
+    datePublished: "2026-06-23",
+    dateModified: "2026-06-23",
+    keywords: "best prompt for YouTube script, YouTube prompt, video script prompt, ChatGPT video, creator prompt, YouTube script template, hook prompt, Shorts script, retention script, viral video prompt"
+  },
 };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
