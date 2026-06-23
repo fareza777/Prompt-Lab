@@ -23,8 +23,6 @@ export const SEO_ROUTES = {
     description:
       "Learn how to create the best AI prompt for ChatGPT, Claude, Gemini & Grok. Free prompt builder with readiness scoring, optimizer, and 50+ templates. Best prompt tool 2026.",
     canonical: `${SITE}/`,
-    keywords:
-      "how to create prompt, best prompt, AI prompt template, prompt builder, AI prompt tool, create prompts, prompt engineering, ChatGPT prompts, Claude prompts, prompt optimizer, prompt templates, AI workspace, prompt guide, prompt tutorial",
   },
   "/blog": {
     routeKey: "blog",
@@ -35,8 +33,6 @@ export const SEO_ROUTES = {
     description:
       "How to create effective AI prompts. Best prompt templates for ChatGPT, Claude, Gemini, marketers, students, and developers. Tutorials, comparisons, and copy-paste templates.",
     canonical: `${SITE}/blog`,
-    keywords:
-      "prompt engineering blog, AI prompt guides, best prompt templates, ChatGPT tutorials, Claude prompts, prompt tips, AI writing guides",
   },
   "/blog/prompt-engineering-guide": {
     routeKey: "article",
@@ -346,6 +342,19 @@ export const SEO_ROUTES = {
     datePublished: "2026-06-23",
     dateModified: "2026-06-23",
     keywords: "best prompt for YouTube script, YouTube prompt, video script prompt, ChatGPT video, creator prompt, YouTube script template, hook prompt, Shorts script, retention script, viral video prompt"
+  },
+  "/blog/best-prompt-for-podcast": {
+    routeKey: "article-best-prompt-for-podcast",
+    h1: "article-best-prompt-for-podcast",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for Podcast: Prep, Prompts, and Shownotes | PromptLab",
+    description: "5 prompt templates for podcast prep, guest question research, and 200-word shownotes that boost discoverability — built on a 20-min weekly workflow that replaces 3 hours of work.",
+    canonical: `${SITE}/blog/best-prompt-for-podcast`,
+    headline: "Best Prompt for Podcast: Prep, Prompts, and Shownotes",
+    datePublished: "2026-06-24",
+    dateModified: "2026-06-24",
+    keywords: "best prompt for podcast, podcast prompt, interview prompt, shownotes prompt, AI podcast, guest research prompt, podcast prep, podcast content prompt, episode planning prompt, social clip prompt"
   },
 };
 
