@@ -356,6 +356,20 @@ export const SEO_ROUTES = {
     dateModified: "2026-06-24",
     keywords: "best prompt for podcast, podcast prompt, interview prompt, shownotes prompt, AI podcast, guest research prompt, podcast prep, podcast content prompt, episode planning prompt, social clip prompt"
   },
+  "/blog/best-prompt-for-blog-outline": {
+    routeKey: "article-best-prompt-for-blog-outline",
+    h1: "article-best-prompt-for-blog-outline",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for Blog Outline: 5-Minute Article Blueprint | PromptLab",
+    description:
+      "How to write the best prompt for blog outline: the 4-part master prompt that turns a 1-line topic into a 12-section blog outline with H2/H3 hierarchy, FAQ, and CTA placement. Includes skyscraper + repurposing variants.",
+    canonical: `${SITE}/blog/best-prompt-for-blog-outline`,
+    headline: "Best Prompt for Blog Outline: 5-Minute Article Blueprint",
+    datePublished: "2026-06-25",
+    dateModified: "2026-06-25",
+    keywords: "best prompt for blog outline, blog outline prompt, article structure prompt, AI writing prompt, content prompt, blog post outline, outline template, ChatGPT outline prompt, Claude outline, SEO outline"
+  },
 };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));

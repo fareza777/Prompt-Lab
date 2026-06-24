@@ -205,6 +205,14 @@
       h1: "article-best-prompt-for-podcast",
       lang: "en",
       ogType: "article",
+    },
+    "/blog/best-prompt-for-blog-outline": {
+      title: "Best Prompt for Blog Outline: 5-Minute Article Blueprint | PromptLab",
+      description: "How to write the best prompt for blog outline: the 4-part master prompt that turns a 1-line topic into a 12-section blog outline with H2/H3 hierarchy, FAQ, and CTA placement. Includes skyscraper + repurposing variants.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-blog-outline",
+      h1: "article-best-prompt-for-blog-outline",
+      lang: "en",
+      ogType: "article",
     }
   };
 
@@ -234,7 +242,8 @@
     "/blog/best-prompt-for-cover-letter": "article-best-prompt-for-cover-letter",
     "/blog/best-prompt-for-seo": "article-best-prompt-for-seo",
     "/blog/best-prompt-for-youtube-script": "article-best-prompt-for-youtube-script",
-    "/blog/best-prompt-for-podcast": "article-best-prompt-for-podcast"
+    "/blog/best-prompt-for-podcast": "article-best-prompt-for-podcast",
+    "/blog/best-prompt-for-blog-outline": "article-best-prompt-for-blog-outline"
   };
 
   function normalizePath(pathname) {
