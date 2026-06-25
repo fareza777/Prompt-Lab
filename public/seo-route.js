@@ -213,6 +213,14 @@
       h1: "article-best-prompt-for-blog-outline",
       lang: "en",
       ogType: "article",
+    },
+    "/blog/best-prompt-for-summarization": {
+      title: "Best Prompt for Summarization: Compress Without Losing Meaning | PromptLab",
+      description: "The best prompt for summarization: a 4-part framework (Role, Source, Compression target, Output format) that turns a 50-page document into a 150-word executive brief that preserves footnotes, hedges, and decision-relevant caveats. Includes Chain of Density.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-summarization",
+      h1: "article-best-prompt-for-summarization",
+      lang: "en",
+      ogType: "article",
     }
   };
 
@@ -243,7 +251,8 @@
     "/blog/best-prompt-for-seo": "article-best-prompt-for-seo",
     "/blog/best-prompt-for-youtube-script": "article-best-prompt-for-youtube-script",
     "/blog/best-prompt-for-podcast": "article-best-prompt-for-podcast",
-    "/blog/best-prompt-for-blog-outline": "article-best-prompt-for-blog-outline"
+    "/blog/best-prompt-for-blog-outline": "article-best-prompt-for-blog-outline",
+    "/blog/best-prompt-for-summarization": "article-best-prompt-for-summarization"
   };
 
   function normalizePath(pathname) {

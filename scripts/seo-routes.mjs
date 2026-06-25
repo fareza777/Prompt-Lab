@@ -370,6 +370,20 @@ export const SEO_ROUTES = {
     dateModified: "2026-06-25",
     keywords: "best prompt for blog outline, blog outline prompt, article structure prompt, AI writing prompt, content prompt, blog post outline, outline template, ChatGPT outline prompt, Claude outline, SEO outline"
   },
+  "/blog/best-prompt-for-summarization": {
+    routeKey: "article-best-prompt-for-summarization",
+    h1: "article-best-prompt-for-summarization",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for Summarization: Compress Without Losing Meaning | PromptLab",
+    description:
+      "The best prompt for summarization: a 4-part framework (Role, Source, Compression target, Output format) that turns a 50-page document into a 150-word executive brief that preserves footnotes, hedges, and decision-relevant caveats. Includes Chain of Density.",
+    canonical: `${SITE}/blog/best-prompt-for-summarization`,
+    headline: "Best Prompt for Summarization: Compress Without Losing Meaning",
+    datePublished: "2026-06-26",
+    dateModified: "2026-06-26",
+    keywords: "best prompt for summarization, summary prompt, tldr prompt, AI summary, Claude summary, document summarization, executive summary prompt, GPT-4 summarization, Gemini summary, chain of density"
+  },
 };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
