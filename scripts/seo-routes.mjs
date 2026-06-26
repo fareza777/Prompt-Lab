@@ -380,11 +380,26 @@ export const SEO_ROUTES = {
       "The best prompt for summarization: a 4-part framework (Role, Source, Compression target, Output format) that turns a 50-page document into a 150-word executive brief that preserves footnotes, hedges, and decision-relevant caveats. Includes Chain of Density.",
     canonical: `${SITE}/blog/best-prompt-for-summarization`,
     headline: "Best Prompt for Summarization: Compress Without Losing Meaning",
-    datePublished: "2026-06-26",
-    dateModified: "2026-06-26",
-    keywords: "best prompt for summarization, summary prompt, tldr prompt, AI summary, Claude summary, document summarization, executive summary prompt, GPT-4 summarization, Gemini summary, chain of density"
-  },
-};
+        datePublished: "2026-06-26",
+        dateModified: "2026-06-26",
+        keywords: "best prompt for summarization, summary prompt, tldr prompt, AI summary, Claude summary, document summarization, executive summary prompt, GPT-4 summarization, Gemini summary, chain of density"
+      },
+      "/blog/best-prompt-for-debugging-code": {
+        routeKey: "article-best-prompt-for-debugging-code",
+        h1: "article-best-prompt-for-debugging-code",
+        lang: "en",
+        ogType: "article",
+        title: "Best Prompt for Debugging Code: Find Bugs in 5 Minutes | PromptLab",
+        description:
+          "The best prompt for debugging code is the 5-part structure: Goal, Symptom, Reproduction, Context, Diagnosis. 4 copy-paste templates (stack trace triage, repro, cryptic-error translator, test-driven debugging) that turn a 50-line stack trace into a 3-step fix.",
+        canonical: `${SITE}/blog/best-prompt-for-debugging-code`,
+        headline: "Best Prompt for Debugging Code: Find Bugs in 5 Minutes",
+        datePublished: "2026-06-27",
+        dateModified: "2026-06-27",
+        keywords:
+          "best prompt for debugging code, debug prompt, code review prompt, stack trace prompt, AI debugging, Claude debugging, ChatGPT debugging, AI code review, bug fix prompt, debugging template"
+      },
+    };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
 

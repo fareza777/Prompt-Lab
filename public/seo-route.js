@@ -221,6 +221,14 @@
       h1: "article-best-prompt-for-summarization",
       lang: "en",
       ogType: "article",
+    },
+    "/blog/best-prompt-for-debugging-code": {
+      title: "Best Prompt for Debugging Code: Find Bugs in 5 Minutes | PromptLab",
+      description: "The best prompt for debugging code is the 5-part structure: Goal, Symptom, Reproduction, Context, Diagnosis. 4 copy-paste templates (stack trace triage, repro, cryptic-error translator, test-driven debugging) that turn a 50-line stack trace into a 3-step fix.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-debugging-code",
+      h1: "article-best-prompt-for-debugging-code",
+      lang: "en",
+      ogType: "article",
     }
   };
 
@@ -252,7 +260,8 @@
     "/blog/best-prompt-for-youtube-script": "article-best-prompt-for-youtube-script",
     "/blog/best-prompt-for-podcast": "article-best-prompt-for-podcast",
     "/blog/best-prompt-for-blog-outline": "article-best-prompt-for-blog-outline",
-    "/blog/best-prompt-for-summarization": "article-best-prompt-for-summarization"
+    "/blog/best-prompt-for-summarization": "article-best-prompt-for-summarization",
+    "/blog/best-prompt-for-debugging-code": "article-best-prompt-for-debugging-code"
   };
 
   function normalizePath(pathname) {
