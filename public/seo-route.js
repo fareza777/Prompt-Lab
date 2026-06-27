@@ -229,6 +229,14 @@
       h1: "article-best-prompt-for-debugging-code",
       lang: "en",
       ogType: "article",
+    },
+    "/blog/best-prompt-for-code-review": {
+      title: "Best Prompt for Code Review: Catch Bugs Before They Ship | PromptLab",
+      description: "The best prompt for code review is a 4-part structure: Context, Diff, Priority list, Output cap. 3 copy-paste diffs (SQL injection, N+1, tautology tests) and the 4 mistakes that make AI reviews worse than none.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-code-review",
+      h1: "article-best-prompt-for-code-review",
+      lang: "en",
+      ogType: "article",
     }
   };
 
@@ -261,7 +269,8 @@
     "/blog/best-prompt-for-podcast": "article-best-prompt-for-podcast",
     "/blog/best-prompt-for-blog-outline": "article-best-prompt-for-blog-outline",
     "/blog/best-prompt-for-summarization": "article-best-prompt-for-summarization",
-    "/blog/best-prompt-for-debugging-code": "article-best-prompt-for-debugging-code"
+    "/blog/best-prompt-for-debugging-code": "article-best-prompt-for-debugging-code",
+    "/blog/best-prompt-for-code-review": "article-best-prompt-for-code-review"
   };
 
   function normalizePath(pathname) {
