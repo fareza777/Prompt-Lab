@@ -399,6 +399,20 @@ export const SEO_ROUTES = {
         keywords:
           "best prompt for debugging code, debug prompt, code review prompt, stack trace prompt, AI debugging, Claude debugging, ChatGPT debugging, AI code review, bug fix prompt, debugging template"
       },
+      "/blog/best-prompt-for-code-review": {
+        routeKey: "article-best-prompt-for-code-review",
+        h1: "article-best-prompt-for-code-review",
+        lang: "en",
+        ogType: "article",
+        title: "Best Prompt for Code Review: Catch Bugs Before They Ship | PromptLab",
+        description:
+          "The best prompt for code review is a 4-part structure: Context, Diff, Priority list, Output cap. 3 copy-paste diffs (SQL injection, N+1, tautology tests) and the 4 mistakes that make AI reviews worse than none.",
+        canonical: `${SITE}/blog/best-prompt-for-code-review`,
+        headline: "Best Prompt for Code Review: Catch Bugs Before They Ship",
+        datePublished: "2026-06-28",
+        dateModified: "2026-06-28",
+        keywords: "best prompt for code review, code review prompt, PR review prompt, AI reviewer, Claude code review, AI code review, pull request review prompt, GPT-5 code review, automated code review prompt, code review template"
+      },
     };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
