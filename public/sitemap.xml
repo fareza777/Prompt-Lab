@@ -176,6 +176,12 @@
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
+  <url>
+    <loc>https://prompt-lab.xyz/blog/best-prompt-for-content-rewrite</loc>
+    <lastmod>2026-06-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
 <loc>https://prompt-lab.xyz/privacy</loc>
     <lastmod>2026-06-05</lastmod>
     <changefreq>monthly</changefreq>
