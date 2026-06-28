@@ -413,6 +413,20 @@ export const SEO_ROUTES = {
         dateModified: "2026-06-28",
         keywords: "best prompt for code review, code review prompt, PR review prompt, AI reviewer, Claude code review, AI code review, pull request review prompt, GPT-5 code review, automated code review prompt, code review template"
       },
+      "/blog/best-prompt-for-content-rewrite": {
+        routeKey: "article-best-prompt-for-content-rewrite",
+        h1: "article-best-prompt-for-content-rewrite",
+        lang: "en",
+        ogType: "article",
+        title: "Best Prompt for Content Rewrite: Refresh Without Losing Voice | PromptLab",
+        description:
+          "The best prompt for content rewrite is a 3-part structure (Original, Voice brief, Protected elements) that turns a stale 2023 article into a 2026-relevant version while keeping the original voice. Includes 4 variants (stat-swap, append, localize) and the 3 mistakes that make AI rewrites sound generic.",
+        canonical: `${SITE}/blog/best-prompt-for-content-rewrite`,
+        headline: "Best Prompt for Content Rewrite: Refresh Without Losing Voice",
+        datePublished: "2026-06-29",
+        dateModified: "2026-06-29",
+        keywords: "best prompt for content rewrite, rewrite prompt, content refresh prompt, AI rewriter, Claude rewrite, content update prompt, article rewrite, blog refresh, brand voice AI, content optimization prompt"
+      },
     };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
