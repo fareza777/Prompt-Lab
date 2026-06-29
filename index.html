@@ -50,6 +50,9 @@
       html[data-route="app"] #app-splash { display: grid !important; }
       html.boot-app #app-splash.is-exiting,
       html[data-route="app"] #app-splash.is-exiting { display: none !important; }
+      /* Defensive: even if React's #root mount slips past #app-root hiding,
+         kill the React landing render for any non-app route. */
+      html:not([data-route="app"]):not(.boot-app) #root { display: none !important; }
     </style>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon-192.png" />
