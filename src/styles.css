@@ -4812,3 +4812,41 @@ pre {
     text-overflow: ellipsis;
   }
 }
+
+.v2-dialect-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  background: rgba(56, 189, 248, 0.08);
+  color: #7dd3fc;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.v2-mini-step.is-active {
+  border-color: rgba(56, 189, 248, 0.45);
+  color: var(--fg);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.12);
+}
+
+.v2-diff-output .diff-add {
+  background: rgba(34, 197, 94, 0.18);
+  color: #bbf7d0;
+}
+
+.v2-diff-output .diff-del {
+  background: rgba(248, 113, 113, 0.16);
+  color: #fecaca;
+  text-decoration: line-through;
+}
+
+.v2-semantic-diff {
+  margin-top: 16px;
+}
+

@@ -16,7 +16,28 @@ export function mergeLibraryPayload(local = {}, remote = {}) {
     for (const item of b) {
       if (!item?.id) continue;
       const prev = map.get(item.id);
-      if (!prev || itemTimestamp(item) >= itemTimestamp(prev)) map.set(item.id, item);
+      if (!prev) {
+        map.set(item.id, item);
+        continue;
+      }
+      const prevTs = itemTimestamp(prev);
+      const nextTs = itemTimestamp(item);
+      if (nextTs >= prevTs) {
+        const mergedVersions = [
+          ...(Array.isArray(prev.versions) ? prev.versions : []),
+          ...(Array.isArray(item.versions) ? item.versions : []),
+        ];
+        const versionMap = new Map();
+        for (const v of mergedVersions) {
+          if (!v?.id) continue;
+          const old = versionMap.get(v.id);
+          if (!old || (v.createdAt || 0) >= (old.createdAt || 0)) versionMap.set(v.id, v);
+        }
+        map.set(item.id, {
+          ...item,
+          versions: [...versionMap.values()].sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0)).slice(0, 20),
+        });
+      }
     }
     return [...map.values()].sort((x, y) => itemTimestamp(y) - itemTimestamp(x));
   };

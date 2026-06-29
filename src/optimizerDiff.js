@@ -1,3 +1,5 @@
+import { diffWordsWithSpace } from "diff";
+
 const WEAK_PHRASES = [
   /\bmake (it |this )?stronger\b/gi,
   /\bsound friendly\b/gi,
@@ -91,4 +93,29 @@ export function inferOptimizerChanges(before = "", after = "", mode = "Clearer")
 
 export function countWords(text = "") {
   return String(text).trim().split(/\s+/).filter(Boolean).length;
+}
+
+/**
+ * Semantic word-level diff segments for optimizer UI.
+ * @returns {{ type: 'eq'|'add'|'del', text: string }[]}
+ */
+export function buildSemanticDiff(before = "", after = "") {
+  const left = String(before || "");
+  const right = String(after || "");
+  if (!left.trim() && !right.trim()) return [];
+  return diffWordsWithSpace(left, right).map((part) => ({
+    type: part.added ? "add" : part.removed ? "del" : "eq",
+    text: part.value,
+  }));
+}
+
+export function summarizeSemanticDiff(segments = []) {
+  let added = 0;
+  let removed = 0;
+  for (const seg of segments) {
+    const words = seg.text.trim().split(/\s+/).filter(Boolean).length;
+    if (seg.type === "add") added += words;
+    if (seg.type === "del") removed += words;
+  }
+  return { added, removed, net: added - removed };
 }

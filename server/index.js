@@ -78,8 +78,22 @@ import {
   buildProviderChatCompletionBody,
   resolveMinimaxBaseUrl,
 } from "./minimaxProvider.js";
+import { scorePromptForCompare, getLocalPromptRisks } from "../src/promptEngine/scoreCompare.js";
+import { createAiRateLimiter, markPriorityRequest } from "./rateLimit.js";
+import { initSse, sendSse, sendSsePhase, consumeOpenRouterStream } from "./sse.js";
 
 const app = express();
+
+const aiRateLimit = createAiRateLimiter({
+  getPlan: async (req) => {
+    try {
+      const membership = await getMembershipFromRequest(req);
+      return membership.plan;
+    } catch {
+      return "Free";
+    }
+  },
+});
 
 function enrichPayloadWithLanguage(payload, attachments = []) {
   const outputLanguage = resolveOutputLanguage(
@@ -571,7 +585,7 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
   }
 });
 
-app.post("/api/optimize-prompt", express.json({ limit: "256kb" }), async (req, res) => {
+app.post("/api/optimize-prompt", aiRateLimit, express.json({ limit: "256kb" }), async (req, res) => {
   try {
     const membership = await getMembershipFromRequest(req);
     if (!canUseFeature(membership.plan, "aiOptimize")) {
@@ -668,7 +682,7 @@ app.post("/api/optimize-prompt", express.json({ limit: "256kb" }), async (req, r
   }
 });
 
-app.post("/api/compare-prompts", express.json({ limit: "256kb" }), async (req, res) => {
+app.post("/api/compare-prompts", aiRateLimit, express.json({ limit: "256kb" }), async (req, res) => {
   try {
     const membership = await getMembershipFromRequest(req);
     if (!canUseFeature(membership.plan, "aiCompare")) {
@@ -816,13 +830,14 @@ function capProviderTimeouts(timing, { primaryReserveMs = 14000, fallbackReserve
   return capped;
 }
 
-app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res) => {
+app.post("/api/generate-prompt", aiRateLimit, upload.array("attachments", 8), async (req, res) => {
   const startedAt = Date.now();
   const remainingBudget = () => Math.max(0, VERCEL_FUNCTION_BUDGET_MS - (Date.now() - startedAt));
   let quotaSession = null;
   let quotaEstimate = 0;
   try {
     const membership = await getMembershipFromRequest(req);
+    markPriorityRequest(req, membership.plan);
     const entitlements = getEntitlements(membership.plan);
     const resolvedModelSettings = applyPriorityRouting(
       await resolveModelSettings(req, req.body),
@@ -845,6 +860,7 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
     );
     const runtime = getRuntimeProvider(payload.modelSettings);
     const leanProvider = runtime.provider === "minimax";
+    const wantsStream = String(req.body?.stream || "").toLowerCase() === "true";
     quotaEstimate = estimateGenerationTokens(payload, attachments, membership.plan);
     quotaSession = await getQuotaSession(req, quotaEstimate);
 
@@ -872,6 +888,21 @@ app.post("/api/generate-prompt", upload.array("attachments", 8), async (req, res
       }
 
       try {
+        if (wantsStream && !leanProvider) {
+          await runStreamedOpenRouterGenerate({
+            res,
+            quotaSession,
+            quotaEstimate,
+            payload,
+            attachments,
+            runtime,
+            membership,
+            startedAt,
+            remainingBudget,
+          });
+          return;
+        }
+
         let generation = await createOpenRouterCompletion(payload, attachments, runtime, membership.plan, startedAt);
         let completion = generation.completion;
         let rawPrompt = completion.choices?.[0]?.message?.content || "";
@@ -1879,6 +1910,164 @@ function resolveProviderTiming(payload, runtime, generationMode) {
   return { primaryTimeoutMs, fallbackTimeoutMs };
 }
 
+async function runStreamedOpenRouterGenerate({
+  res,
+  quotaSession,
+  quotaEstimate,
+  payload,
+  attachments,
+  runtime,
+  membership,
+  startedAt,
+  remainingBudget,
+}) {
+  initSse(res);
+  sendSsePhase(res, "drafting", "Drafting prompt...");
+
+  const maxTokens = resolveGenerateMaxTokens(membership.plan, payload);
+  const messages = [
+    { role: "system", content: buildIntentSystemPromptXml(payload) },
+    { role: "user", content: buildOpenRouterContent(payload, attachments) },
+  ];
+  const primaryModel = payload.modelSettings?.primaryModel || runtime.defaultModel;
+  const timing = resolveProviderTiming(payload, runtime, payload.generationMode);
+  const primaryTimeoutMs = Math.min(
+    timing.primaryTimeoutMs,
+    Math.max(12000, VERCEL_FUNCTION_BUDGET_MS - (Date.now() - startedAt) - 2000)
+  );
+
+  let completionModel = primaryModel;
+  let rawPrompt = "";
+  try {
+    const stream = await withTimeout(
+      runtime.client.chat.completions.create(
+        buildProviderChatCompletionBody(runtime, {
+          model: primaryModel,
+          messages,
+          max_tokens: maxTokens,
+          temperature: 0.4,
+          stream: true,
+        }),
+        { timeout: primaryTimeoutMs }
+      ),
+      primaryTimeoutMs,
+      primaryModel
+    );
+    const streamed = await consumeOpenRouterStream(stream, (delta) => {
+      sendSse(res, "chunk", { text: delta });
+    });
+    rawPrompt = streamed.content;
+    completionModel = streamed.model || primaryModel;
+  } catch (error) {
+    sendSse(res, "error", { message: formatProviderError(error) });
+    res.end();
+    return;
+  }
+
+  let prompt = sanitizePromptOutput(rawPrompt);
+  if (isPromptTooShort(prompt)) {
+    prompt = buildFallbackPrompt(payload, attachments);
+  }
+
+  sendSsePhase(res, "validating", "Validating structure...");
+  const structCheck = validatePromptStructure(prompt);
+  if (!structCheck.valid && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
+    try {
+      const retryMessages = [
+        { role: "system", content: buildIntentSystemPromptXml(payload) },
+        { role: "user", content: buildStructureRetryInstruction(prompt, structCheck.missing) },
+      ];
+      const retryTimeoutMs = Math.min(timing.primaryTimeoutMs, remainingBudget() - 2500);
+      if (retryTimeoutMs >= 8000) {
+        const retryRes = await withTimeout(
+          runtime.client.chat.completions.create(
+            buildProviderChatCompletionBody(runtime, {
+              model: primaryModel,
+              messages: retryMessages,
+              max_tokens: maxTokens,
+              temperature: 0.4,
+            }),
+            { timeout: retryTimeoutMs }
+          ),
+          retryTimeoutMs,
+          primaryModel
+        );
+        const retried = sanitizePromptOutput(retryRes.choices?.[0]?.message?.content || "");
+        if (retried && !isPromptTooShort(retried)) prompt = retried;
+      }
+    } catch (retryError) {
+      console.warn("stream structure retry failed", retryError.message);
+    }
+  }
+
+  let qualityNote = "";
+  if (payload.qualityMode === "premium" && !isPromptTooShort(prompt) && remainingBudget() > PREMIUM_PASS_RESERVE_MS) {
+    sendSsePhase(res, "critique", "Running critique pass...");
+    try {
+      const refined = await runCritiqueRefinePass({
+        runtime,
+        payload,
+        attachments,
+        basePrompt: prompt,
+        timing,
+        primaryModel,
+        fallbackModels: getOpenRouterFallbackModels(
+          primaryModel,
+          payload.generationMode,
+          payload.modelSettings?.fallbackModels,
+          runtime.provider
+        ),
+        plan: membership.plan,
+      });
+      if (refined && !isPromptTooShort(refined) && refined !== prompt) {
+        sendSsePhase(res, "refining", "Applying refinements...");
+        prompt = refined;
+        sendSse(res, "chunk", { text: refined, replace: true });
+        qualityNote = API_MSG.premiumQualityApplied;
+      }
+    } catch (refineError) {
+      console.warn("stream critique pass failed", refineError.message);
+    }
+  }
+
+  sendSsePhase(res, "dialect", "Applying model dialect...");
+  prompt = renderForModelDialect(prompt, payload.modelTarget, payload.outputLanguage);
+  const orEval = evalDelta(payload.narrative, prompt);
+
+  let quota = null;
+  if (quotaSession) {
+    try {
+      quota = await recordUsage(quotaSession, {
+        eventType: "generate_prompt",
+        metadata: {
+          engineVersion: PROMPT_ENGINE_VERSION,
+          stream: true,
+          modelTarget: payload.modelTarget,
+          provider: runtime.provider,
+        },
+        outputText: prompt,
+        tokenEstimate: quotaEstimate,
+      });
+    } catch (usageError) {
+      console.warn("stream recordUsage soft-failed", usageError.message);
+    }
+  }
+
+  sendSsePhase(res, "done", "Complete");
+  sendSse(res, "done", {
+    prompt,
+    source: runtime.provider,
+    model: completionModel,
+    modelStatus: "primary-model",
+    engineVersion: PROMPT_ENGINE_VERSION,
+    evalDelta: orEval,
+    piiFindings: payload.piiFindings || [],
+    warning: qualityNote,
+    quota,
+  });
+  res.end();
+}
+
 async function createOpenRouterCompletion(
   payload,
   attachments,
@@ -2507,11 +2696,11 @@ function normalizeStringList(value) {
 }
 
 function buildLocalCompareResult(payload) {
-  const scoreA = scorePromptText(payload.promptA);
-  const scoreB = scorePromptText(payload.promptB);
+  const scoreA = scorePromptForCompare(payload.promptA);
+  const scoreB = scorePromptForCompare(payload.promptB);
   const winner = scoreA.overall > scoreB.overall ? "A" : scoreB.overall > scoreA.overall ? "B" : "tie";
-  const missingA = getPromptRiskList(payload.promptA);
-  const missingB = getPromptRiskList(payload.promptB);
+  const missingA = getLocalPromptRisks(payload.promptA);
+  const missingB = getLocalPromptRisks(payload.promptB);
   return {
     winner,
     winner_label: winner === "A" ? "Prompt A" : winner === "B" ? "Prompt B" : "Tie",
@@ -2541,98 +2730,20 @@ function buildLocalCompareResult(payload) {
 }
 
 function scorePromptText(prompt) {
-  const text = String(prompt || "");
-  const countMatches = (patterns) => patterns.reduce((count, pattern) => count + (pattern.test(text) ? 1 : 0), 0);
-  const sectionCount = (text.match(/(?:^|\n)\s*(?:#{1,3}\s*)?(?:role|context|konteks|objective|tujuan|task|tugas|requirements|output|format|constraints|batasan|acceptance|criteria|quality|checklist)\b/gi) || []).length;
-  const numericControls = (text.match(/\b\d+\b|maks(?:imal)?|min(?:imal)?|at least|no more than|jumlah|kata|slide|section|bagian/gi) || []).length;
-  const genericPenalty = countMatches([
-    /\b(leverage|synergy|world-class|cutting-edge|next-level|game-changing|seamless|robust solution)\b/i,
-    /\b(kelas dunia|terdepan|revolusioner|solusi terbaik)\b/i,
-    /\[(?:your|insert|topik|isi|brand|context)[^\]]*\]/i,
-  ]);
-
-  const clarity = rubricScore([
-    /role|act as|bertindak/i,
-    /objective|goal|tujuan|hasil akhir/i,
-    /task|tugas|kerjakan|buat|susun|build|write/i,
-    /senior|strategist|engineer|analyst|copywriter|researcher|spesialis/i,
-    sectionCount >= 4,
-  ], text);
-  const context = rubricScore([
-    /context|konteks|latar belakang|berdasarkan|source|sumber/i,
-    /audience|target|persona|pengguna|pembaca|customer/i,
-    /lampiran|dokumen|data|file|screenshot|referensi/i,
-    /assumption|asumsi|jika tidak tersedia/i,
-    text.length >= 700,
-  ], text);
-  const format = rubricScore([
-    /format|output|struktur|section|bagian|table|tabel|json|markdown/i,
-    /urut|ordered|sequence|slide-by-slide|file-by-file/i,
-    numericControls >= 2,
-    /acceptance|criteria|checklist|quality gate|kriteria/i,
-    sectionCount >= 5,
-  ], text);
-  const constraints = rubricScore([
-    /constraint|batasan|jangan|must|wajib|harus|avoid|larang/i,
-    /maks(?:imal)?|min(?:imal)?|at most|at least|no more than/i,
-    /do not invent|jangan mengarang|state assumptions|tandai asumsi/i,
-    /clarifying questions|pertanyaan klarifikasi|only if blocked/i,
-    numericControls >= 3,
-  ], text);
-  const hallucinationResistance = rubricScore([
-    /jangan mengarang|do not invent|verify|source|citation|evidence|fakta/i,
-    /asumsi|assumption|unknown|tidak tersedia/i,
-    /clarifying questions|pertanyaan klarifikasi/i,
-    /acceptance|quality gate|validasi/i,
-    /lampiran|source|sumber|data/i,
-  ], text);
-  const actionability = rubricScore([
-    /acceptance|criteria|kriteria|test|uji|run|export|deliver/i,
-    /step|langkah|checklist|implementation|implementasi/i,
-    /file|screen|api|table|slide|section|CTA|output/i,
-    numericControls >= 2,
-    text.length >= 900,
-  ], text);
-
-  const rawOverall = Math.round((clarity + context + format + constraints + hallucinationResistance + actionability) / 6);
-  const penalty = genericPenalty * 6;
-  const overall = Math.max(5, Math.min(99, rawOverall - penalty));
-  const risk = Math.max(5, Math.min(95, 100 - overall + genericPenalty * 4));
-  const details = [
-    clarity < 70 ? "Role/objective masih kurang spesifik." : "Role dan tujuan cukup jelas.",
-    context < 70 ? "Konteks, audiens, atau asumsi perlu diperkuat." : "Konteks cukup terkunci.",
-    format < 70 ? "Format output belum cukup terkendali." : "Format output cukup terkendali.",
-    constraints < 70 ? "Constraints masih lemah atau kurang terukur." : "Constraints cukup konkret.",
-    hallucinationResistance < 70 ? "Perlu guardrail anti-hallucination yang lebih eksplisit." : "Guardrail fakta/asumsi cukup baik.",
-    actionability < 70 ? "Acceptance criteria atau langkah eksekusi perlu ditambah." : "Prompt cukup actionable.",
-  ];
-
+  const scored = scorePromptForCompare(prompt);
   return {
-    actionability,
-    clarity,
-    constraints,
-    context,
-    details,
-    format,
-    hallucinationResistance,
-    overall,
-    risk,
+    ...scored,
+    details: [
+      scored.clarity < 70 ? "Role/objective masih kurang spesifik." : "Role dan tujuan cukup jelas.",
+      scored.context < 70 ? "Konteks, audiens, atau asumsi perlu diperkuat." : "Konteks cukup terkunci.",
+      scored.format < 70 ? "Format output belum cukup terkendali." : "Format output cukup terkendali.",
+      scored.constraints < 70 ? "Constraints masih lemah atau kurang terukur." : "Constraints cukup konkret.",
+      scored.hallucinationResistance < 70
+        ? "Perlu guardrail anti-hallucination yang lebih eksplisit."
+        : "Guardrail fakta/asumsi cukup baik.",
+      scored.actionability < 70 ? "Acceptance criteria atau langkah eksekusi perlu ditambah." : "Prompt cukup actionable.",
+    ],
   };
-}
-
-function rubricScore(checks, text) {
-  const passed = checks.filter((check) => (check instanceof RegExp ? check.test(text) : Boolean(check))).length;
-  return Math.round((passed / checks.length) * 100);
-}
-
-function getPromptRiskList(prompt) {
-  const text = String(prompt || "");
-  const risks = [];
-  if (!/role|act as|bertindak/i.test(text)) risks.push("Role is not explicit.");
-  if (!/format|output|struktur|json|markdown/i.test(text)) risks.push("Output format is not locked.");
-  if (!/constraint|batasan|jangan|must|wajib/i.test(text)) risks.push("Constraints are weak.");
-  if (!/acceptance|criteria|checklist|kriteria/i.test(text)) risks.push("Success criteria are missing.");
-  return risks.length ? risks : ["No major local risks detected."];
 }
 
 function buildMergedPrompt(payload, basePrompt) {

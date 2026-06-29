@@ -42,8 +42,18 @@ import {
   Zap,
 } from "lucide-react";
 import "./styles.css";
-import { countWords, inferOptimizerChanges } from "./optimizerDiff";
+import { countWords, inferOptimizerChanges, buildSemanticDiff, summarizeSemanticDiff } from "./optimizerDiff";
 import { mergeLibraryPayload, pullUserLibrary, pushUserLibrary } from "./librarySync.js";
+import {
+  scorePromptForCompare,
+  getLocalPromptRisks,
+  getModelDialectMeta,
+  getGenerationPipelineSteps,
+  createLibraryItem,
+  appendPromptVersion,
+  getPromptVersions,
+} from "./promptEngine/index.js";
+import { consumeGenerateSse } from "./generateStreamClient.js";
 import { V2CommandPalette } from "./commandPalette.jsx";
 import { V2EmptyState } from "./v2EmptyState.jsx";
 import { getUserInitials } from "./userInitials.js";
@@ -1071,8 +1081,8 @@ ${buildImageVideoPromptAddon({ narrative: cleanNarrative, category, outputType, 
 }
 
 function buildLocalCompareResult(promptA, promptB) {
-  const scoreA = scorePrompt(promptA || "");
-  const scoreB = scorePrompt(promptB || "");
+  const scoreA = scorePromptForCompare(promptA || "");
+  const scoreB = scorePromptForCompare(promptB || "");
   const winner = scoreA.score > scoreB.score ? "A" : scoreB.score > scoreA.score ? "B" : "tie";
   return {
     winner,
@@ -1107,14 +1117,6 @@ function buildLocalCompareResult(promptA, promptB) {
     },
     merged_prompt: `${scoreA.score >= scoreB.score ? promptA : promptB}\n\nQuality gates:\n- Preserve the requested deliverable.\n- Follow the output format.\n- State assumptions.\n- Ask clarifying questions only if blocked.`,
   };
-}
-
-function getLocalPromptRisks(prompt = "") {
-  const risks = [];
-  if (!/role|act as|bertindak/i.test(prompt)) risks.push("Role is not explicit.");
-  if (!/format|output|struktur|json|markdown/i.test(prompt)) risks.push("Output format is not locked.");
-  if (!/constraint|batasan|jangan|must|wajib/i.test(prompt)) risks.push("Constraints are weak.");
-  return risks.length ? risks : ["No major issues detected."];
 }
 
 function buildLocalOptimizedPrompt(rawPrompt, mode, targetModel, tone) {
@@ -1245,6 +1247,7 @@ function App() {
   const [evalDelta, setEvalDelta] = useState(null);
   const [piiFindings, setPiiFindings] = useState([]);
   const [compareBiasMitigation, setCompareBiasMitigation] = useState("");
+  const [generationPhase, setGenerationPhase] = useState("idle");
   const [copied, setCopied] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [actionToast, setActionToast] = useState("");
@@ -1565,17 +1568,34 @@ function App() {
     return ok;
   }
 
-  function savePrompt(content = prompt, titleSeed = narrative) {
+  function savePrompt(content = prompt, titleSeed = narrative, meta = {}) {
     const title = titleSeed.trim().split(/\s+/).slice(0, 8).join(" ") || "Prompt baru";
-    const item = {
-      id: globalThis.crypto?.randomUUID?.() || `${Date.now()}`,
+    const existing = library.find((item) => item.id === selectedLibraryId);
+    if (existing && String(existing.content || "").trim() !== String(content || "").trim()) {
+      const updated = appendPromptVersion(existing, content, {
+        source: meta.source || generationSource || "manual",
+        score: scorePrompt(content).score,
+        mode: meta.mode || null,
+        note: meta.note || title,
+      });
+      updated.title = title;
+      setLibrary((items) => items.map((item) => (item.id === updated.id ? updated : item)));
+      setSelectedLibraryId(updated.id);
+      flashAction(`Saved v${getPromptVersions(updated).length}`);
+      return true;
+    }
+
+    const item = createLibraryItem({
       title,
       content,
       folder: outputType,
       tag: category,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
+      meta: {
+        source: meta.source || generationSource || "manual",
+        score: scorePrompt(content).score,
+        mode: meta.mode || null,
+      },
+    });
     setLibrary((items) => [item, ...items].slice(0, libraryLimit));
     setSelectedLibraryId(item.id);
     flashAction("Saved to library");
@@ -1867,6 +1887,8 @@ function App() {
     setIsGenerating(true);
     setErrorMessage("");
     setWarningMessage("");
+    setGenerationPhase("drafting");
+    setGeneratedPrompt("");
 
     try {
       const formData = new FormData();
@@ -1877,6 +1899,7 @@ function App() {
       formData.append("outputType", customOutputType);
       formData.append("generationMode", generationMode);
       formData.append("qualityMode", qualityMode);
+      formData.append("stream", "true");
       const uploadPlan = getAttachmentUploadPlan(attachments, apiBase);
       formData.append("attachmentManifest", JSON.stringify(buildAttachmentManifestForApi(attachments)));
       if (uploadPlan.sendRawFiles) {
@@ -1888,6 +1911,28 @@ function App() {
         headers: await getAuthHeaders(),
         body: formData,
       });
+
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("text/event-stream") && response.ok) {
+        const data = await consumeGenerateSse(response, {
+          onPhase: (phase) => setGenerationPhase(phase.step || "drafting"),
+          onChunk: (chunk) => {
+            if (chunk.replace) setGeneratedPrompt(chunk.text || "");
+            else setGeneratedPrompt((prev) => prev + (chunk.text || ""));
+          },
+        });
+        setGeneratedPrompt(data.prompt || localPrompt);
+        setGenerationSource(data.source || "server");
+        setGenerationModel(data.model || "");
+        setGenerationStatus(data.modelStatus || data.source || "server");
+        applyServerQuota(data.quota);
+        setWarningMessage([uploadPlan.warning, data.warning].filter(Boolean).join(" "));
+        setEngineVersion(data.engineVersion || "");
+        setEvalDelta(data.evalDelta || null);
+        setPiiFindings(Array.isArray(data.piiFindings) ? data.piiFindings : []);
+        setGenerationPhase("done");
+        return data.prompt || localPrompt;
+      }
 
       const data = await readApiJson(response);
       if (!response.ok) throw new Error(data.error || "Failed to generate prompt.");
@@ -1901,10 +1946,11 @@ function App() {
       setEngineVersion(data.engineVersion || "");
       setEvalDelta(data.evalDelta || null);
       setPiiFindings(Array.isArray(data.piiFindings) ? data.piiFindings : []);
+      setGenerationPhase("done");
       return data.prompt || localPrompt;
     } catch (error) {
       const message = error.message || API_MSG.backendUnavailableLocalPrompt;
-      const quotaOnly = /usage quota|quota exceeded|quota token|failed to record quota/i.test(message);
+      const quotaOnly = /usage quota|quota exceeded|quota token|failed to record quota|too many ai requests/i.test(message);
       setGeneratedPrompt(localPrompt);
       setGenerationSource("local");
       setGenerationModel("");
@@ -1915,6 +1961,7 @@ function App() {
       } else {
         setErrorMessage(message);
       }
+      setGenerationPhase("idle");
       return localPrompt;
     } finally {
       setIsGenerating(false);
@@ -2316,6 +2363,7 @@ function App() {
     generationSource,
     generationModel,
     generationStatus,
+    generationPhase,
     warningMessage,
     errorMessage,
     copied,
@@ -2944,11 +2992,21 @@ function describeAttachmentOcr(file, plan) {
   };
 }
 
+function V2DialectBadge({ model }) {
+  const dialect = getModelDialectMeta(model);
+  return (
+    <span className="v2-dialect-badge" title={dialect.hint}>
+      {dialect.label}
+    </span>
+  );
+}
+
 function V2Builder(props) {
   const {
     category, setCategory, tone, setTone, model, setModel, outputType, setOutputType,
     narrative, setNarrative, attachments, addAttachments, removeAttachment, prompt,
-    metrics, generationStatus, generationSource, generationModel, warningMessage, errorMessage, copied,
+    metrics, generationStatus, generationSource, generationModel, generationPhase, qualityMode,
+    warningMessage, errorMessage, copied,
     copyText, savePrompt, generatePrompt, isGenerating, exportStatus, exportFile,
     engineVersion, piiFindings, entitlements, accountState,
   } = props;
@@ -3001,6 +3059,7 @@ function V2Builder(props) {
             <V2ChipGroup label="Category" options={categories} value={category} onChange={setCategory} />
             <V2ChipGroup label="Tone" options={tones} value={tone} onChange={setTone} />
             <V2ChipGroup label="Target AI" options={models} value={model} onChange={setModel} />
+            <V2DialectBadge model={model} />
             <V2ChipGroup label="Output Type" options={outputTypes} value={outputType} onChange={setOutputType} />
           </div>
           <div className="v2-actions">
@@ -3014,7 +3073,17 @@ function V2Builder(props) {
               <Clipboard size={17} />Copy
             </V2ActionBtn>
           </div>
-          {isGenerating && <V2GenerateLoader attachments={attachments} model={model} outputType={outputType} />}
+          {isGenerating && (
+            <V2MiniPipeline
+              eyebrow="Engine pipeline"
+              title={qualityMode === "premium" ? "Critique + refine enabled" : "Generating prompt..."}
+              steps={getGenerationPipelineSteps(qualityMode)}
+              activePhase={generationPhase}
+            />
+          )}
+          {!isGenerating && generationPhase === "done" && qualityMode === "premium" && (
+            <p className="v2-note">Premium pass complete — critique and refine applied.</p>
+          )}
           <EngineMetaBadges engineVersion={engineVersion} piiFindings={piiFindings} />
           {warningMessage && <p className="v2-note warn">{warningMessage}</p>}
           {errorMessage && <p className="v2-note error">{errorMessage}</p>}
@@ -3080,7 +3149,9 @@ function V2GenerateLoader({ attachments, model, outputType }) {
   );
 }
 
-function V2MiniPipeline({ eyebrow = "Working", title, steps }) {
+function V2MiniPipeline({ eyebrow = "Working", title, steps, activePhase = "drafting" }) {
+  const phaseOrder = ["drafting", "validating", "critique", "refining", "dialect", "done"];
+  const activeIndex = Math.max(0, phaseOrder.indexOf(activePhase));
   return (
     <section className="v2-mini-pipeline" aria-live="polite">
       <div className="v2-mini-orb"><Sparkles size={16} /></div>
@@ -3091,7 +3162,13 @@ function V2MiniPipeline({ eyebrow = "Working", title, steps }) {
       </div>
       <div className="v2-mini-steps">
         {steps.map((step, index) => (
-          <div className="v2-mini-step" key={step} style={{ "--delay": `${index * 0.16}s` }}>{step}</div>
+          <div
+            className={`v2-mini-step${index <= activeIndex ? " is-active" : ""}`}
+            key={step}
+            style={{ "--delay": `${index * 0.16}s` }}
+          >
+            {step}
+          </div>
         ))}
       </div>
     </section>
@@ -3206,6 +3283,8 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
   const hasResult = Boolean(optimizerResult?.trim());
   const result = hasResult ? optimizerResult : "";
   const changes = hasResult ? inferOptimizerChanges(rawPrompt, result, mode) : [];
+  const semanticDiff = hasResult ? buildSemanticDiff(rawPrompt, result) : [];
+  const diffSummary = hasResult ? summarizeSemanticDiff(semanticDiff) : null;
   const beforeScore = scorePrompt(rawPrompt);
   const afterScore = hasResult
     ? scoreOptimizedPrompt(rawPrompt, result, { fromOptimizer: true, mode })
@@ -3321,6 +3400,25 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
               </article>
             ))}
           </div>
+        </section>
+      )}
+      {hasResult && semanticDiff.length > 0 && (
+        <section className="v2-card v2-semantic-diff">
+          <div className="v2-card-head">
+            <div>
+              <h2>Semantic diff</h2>
+              <p>
+                {diffSummary
+                  ? `+${diffSummary.added} / -${diffSummary.removed} words (${diffSummary.net >= 0 ? "+" : ""}${diffSummary.net} net)`
+                  : "Word-level changes between original and optimized prompt."}
+              </p>
+            </div>
+          </div>
+          <pre className="v2-prompt-output v2-diff-output">
+            {semanticDiff.map((seg, index) => (
+              <span key={`${seg.type}-${index}`} className={`diff-${seg.type}`}>{seg.text}</span>
+            ))}
+          </pre>
         </section>
       )}
       {hasResult && (
@@ -3508,7 +3606,13 @@ function V2Library(props) {
               />
             ) : rows.map((item) => (
               <button key={item.id} className={currentItem?.id === item.id ? "active" : ""} onClick={() => setSelectedLibraryId(item.id)}>
-                <span>{item.title}<small>{item.tag} · {formatDate(item.updatedAt || item.createdAt)}</small></span>
+                <span>
+                  {item.title}
+                  <small>
+                    {item.tag} · {formatDate(item.updatedAt || item.createdAt)}
+                    {getPromptVersions(item).length > 1 ? ` · v${getPromptVersions(item).length}` : ""}
+                  </small>
+                </span>
                 <em>{item.folder}</em>
               </button>
             ))}
