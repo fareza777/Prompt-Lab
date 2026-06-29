@@ -38,6 +38,10 @@
       #blog-page, [id^="article-page"], #app-root, #app-splash { display: none !important; }
       html:not([data-route]) #landing-page,
       html[data-route="landing"] #landing-page { display: block !important; }
+      html[data-route="blog"] #landing-page,
+      html[data-route="article"] #landing-page,
+      html[data-route^="article-"] #landing-page { display: none !important; }
+      html[data-route="blog"] #blog-page { display: block !important; }
       html.boot-app #landing-page,
       html[data-route="app"] #landing-page,
       html.boot-app #blog-page,
@@ -1591,9 +1595,9 @@
       html[data-route="article-best-prompt-for-summarization"] #article-page-best-prompt-for-summarization { display: block !important; }
       html.boot-app #article-page-best-prompt-for-summarization { display: none !important; }
       html.boot-app #article-page-best-prompt-for-code-review { display: none !important; }
-      html[data-route="app"] #app-root,
-      html.boot-app #article-page-best-prompt-for-content-rewrite { display: none !important; }
-      html.boot-app #app-root { display: block !important; }
+      html[data-route="article-best-prompt-for-code-review"] #landing-page { display: none !important; }
+      html[data-route="article-best-prompt-for-code-review"] #article-page-best-prompt-for-code-review { display: block !important; }
+      html.boot-app #article-page-best-prompt-for-code-review { display: none !important; }
 
       #app-splash {
         position: fixed;
@@ -7859,7 +7863,7 @@ TASK: Return the fully localized article.</code></pre>
     <script>
       (function () {
         if (window.PromptLabRoute) {
-          window.PromptLabRoute.applyH1Visibility();
+          window.PromptLabRoute.syncRouteUi();
         }
 
         var observer = new IntersectionObserver(function (entries) {

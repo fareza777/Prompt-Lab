@@ -237,6 +237,14 @@
       h1: "article-best-prompt-for-code-review",
       lang: "en",
       ogType: "article",
+    },
+    "/blog/best-prompt-for-content-rewrite": {
+      title: "Best Prompt for Content Rewrite: Refresh Without Losing Voice | PromptLab",
+      description: "The best prompt for content rewrite is a 3-part structure (Original, Voice brief, Protected elements) that turns a stale 2023 article into a 2026-relevant version while keeping the original voice. Includes 4 variants (stat-swap, append, localize) and the 3 mistakes that make AI rewrites sound generic.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-content-rewrite",
+      h1: "article-best-prompt-for-content-rewrite",
+      lang: "en",
+      ogType: "article",
     }
   };
 
@@ -270,7 +278,8 @@
     "/blog/best-prompt-for-blog-outline": "article-best-prompt-for-blog-outline",
     "/blog/best-prompt-for-summarization": "article-best-prompt-for-summarization",
     "/blog/best-prompt-for-debugging-code": "article-best-prompt-for-debugging-code",
-    "/blog/best-prompt-for-code-review": "article-best-prompt-for-code-review"
+    "/blog/best-prompt-for-code-review": "article-best-prompt-for-code-review",
+    "/blog/best-prompt-for-content-rewrite": "article-best-prompt-for-content-rewrite"
   };
 
   function normalizePath(pathname) {
@@ -357,6 +366,66 @@
     });
   }
 
+  function articlePageId(routeKey) {
+    if (routeKey === "article") return "article-page";
+    if (routeKey.indexOf("article-") === 0) return "article-page-" + routeKey.slice(8);
+    return null;
+  }
+
+  function setVisible(el, display) {
+    if (!el) return;
+    if (display) el.style.setProperty("display", display, "important");
+    else el.style.removeProperty("display");
+  }
+
+  function applyRouteVisibility(routeKey, isApp) {
+    var landing = document.getElementById("landing-page");
+    var blog = document.getElementById("blog-page");
+    var appRoot = document.getElementById("app-root");
+    var splash = document.getElementById("app-splash");
+    var articles = document.querySelectorAll('[id^="article-page"]');
+
+    setVisible(landing, null);
+    setVisible(blog, null);
+    setVisible(appRoot, null);
+    if (splash) setVisible(splash, null);
+    articles.forEach(function (el) {
+      setVisible(el, null);
+    });
+
+    if (isApp) {
+      setVisible(landing, "none");
+      setVisible(blog, "none");
+      articles.forEach(function (el) {
+        setVisible(el, "none");
+      });
+      setVisible(appRoot, "block");
+      if (splash && !splash.classList.contains("is-exiting")) setVisible(splash, "grid");
+      return;
+    }
+
+    setVisible(appRoot, "none");
+    if (splash) setVisible(splash, "none");
+
+    if (routeKey === "landing") {
+      setVisible(landing, "block");
+      return;
+    }
+
+    setVisible(landing, "none");
+
+    if (routeKey === "blog") {
+      setVisible(blog, "block");
+      return;
+    }
+
+    var pageId = articlePageId(routeKey);
+    if (pageId) {
+      var page = document.getElementById(pageId);
+      if (page) setVisible(page, "block");
+    }
+  }
+
   var path = normalizePath(window.location.pathname);
   var standalone =
     window.matchMedia("(display-mode: standalone)").matches ||
@@ -376,8 +445,14 @@
     document.documentElement.setAttribute("data-route", "app");
     ensureRobotsNoindex();
   } else {
+    document.documentElement.classList.remove("boot-app");
     document.documentElement.setAttribute("data-route", routeKey);
     applySeoMeta(meta, path);
+  }
+
+  function syncRouteUi() {
+    applyRouteVisibility(routeKey, isApp);
+    applyH1Visibility(isApp ? null : meta.h1);
   }
 
   window.PromptLabRoute = {
@@ -389,13 +464,17 @@
     applyH1Visibility: function () {
       applyH1Visibility(isApp ? null : meta.h1);
     },
+    applyRouteVisibility: function () {
+      applyRouteVisibility(routeKey, isApp);
+    },
+    syncRouteUi: syncRouteUi,
   };
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", function () {
-      window.PromptLabRoute.applyH1Visibility();
-    });
+    document.addEventListener("DOMContentLoaded", syncRouteUi);
   } else {
-    window.PromptLabRoute.applyH1Visibility();
+    syncRouteUi();
   }
+
+  window.addEventListener("pageshow", syncRouteUi);
 })();

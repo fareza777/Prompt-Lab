@@ -173,6 +173,66 @@ ${hreflangEntries}
     });
   }
 
+  function articlePageId(routeKey) {
+    if (routeKey === "article") return "article-page";
+    if (routeKey.indexOf("article-") === 0) return "article-page-" + routeKey.slice(8);
+    return null;
+  }
+
+  function setVisible(el, display) {
+    if (!el) return;
+    if (display) el.style.setProperty("display", display, "important");
+    else el.style.removeProperty("display");
+  }
+
+  function applyRouteVisibility(routeKey, isApp) {
+    var landing = document.getElementById("landing-page");
+    var blog = document.getElementById("blog-page");
+    var appRoot = document.getElementById("app-root");
+    var splash = document.getElementById("app-splash");
+    var articles = document.querySelectorAll('[id^="article-page"]');
+
+    setVisible(landing, null);
+    setVisible(blog, null);
+    setVisible(appRoot, null);
+    if (splash) setVisible(splash, null);
+    articles.forEach(function (el) {
+      setVisible(el, null);
+    });
+
+    if (isApp) {
+      setVisible(landing, "none");
+      setVisible(blog, "none");
+      articles.forEach(function (el) {
+        setVisible(el, "none");
+      });
+      setVisible(appRoot, "block");
+      if (splash && !splash.classList.contains("is-exiting")) setVisible(splash, "grid");
+      return;
+    }
+
+    setVisible(appRoot, "none");
+    if (splash) setVisible(splash, "none");
+
+    if (routeKey === "landing") {
+      setVisible(landing, "block");
+      return;
+    }
+
+    setVisible(landing, "none");
+
+    if (routeKey === "blog") {
+      setVisible(blog, "block");
+      return;
+    }
+
+    var pageId = articlePageId(routeKey);
+    if (pageId) {
+      var page = document.getElementById(pageId);
+      if (page) setVisible(page, "block");
+    }
+  }
+
   var path = normalizePath(window.location.pathname);
   var standalone =
     window.matchMedia("(display-mode: standalone)").matches ||
@@ -192,8 +252,14 @@ ${hreflangEntries}
     document.documentElement.setAttribute("data-route", "app");
     ensureRobotsNoindex();
   } else {
+    document.documentElement.classList.remove("boot-app");
     document.documentElement.setAttribute("data-route", routeKey);
     applySeoMeta(meta, path);
+  }
+
+  function syncRouteUi() {
+    applyRouteVisibility(routeKey, isApp);
+    applyH1Visibility(isApp ? null : meta.h1);
   }
 
   window.PromptLabRoute = {
@@ -205,15 +271,19 @@ ${hreflangEntries}
     applyH1Visibility: function () {
       applyH1Visibility(isApp ? null : meta.h1);
     },
+    applyRouteVisibility: function () {
+      applyRouteVisibility(routeKey, isApp);
+    },
+    syncRouteUi: syncRouteUi,
   };
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", function () {
-      window.PromptLabRoute.applyH1Visibility();
-    });
+    document.addEventListener("DOMContentLoaded", syncRouteUi);
   } else {
-    window.PromptLabRoute.applyH1Visibility();
+    syncRouteUi();
   }
+
+  window.addEventListener("pageshow", syncRouteUi);
 })();
 `;
 
