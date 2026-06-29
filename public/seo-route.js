@@ -357,6 +357,18 @@
       headline: "Best Prompt for Content Rewrite: Refresh Without Losing Voice",
       datePublished: "2026-06-29",
       dateModified: "2026-06-29",
+    },
+    "/blog/best-prompt-for-sop": {
+      title: "Best Prompt for SOP: Standard Operating Procedure in 30 Minutes | PromptLab",
+      description: "The best prompt for SOP uses the 5-part R.O.L.E.S. framework to turn a 90-minute process-owner interview into a working SOP. 4 copy-paste templates (blank-slate, rewrite, decision tree, exception pass) tested on Claude, ChatGPT, and Gemini, plus 3 mistakes that flatten AI-generated procedures into shelf documents.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-sop",
+      h1: "article-best-prompt-for-sop",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for SOP, SOP prompt, process documentation prompt, AI documentation, Claude SOP, operations prompt, SOP generation, standard operating procedure AI",
+      headline: "Best Prompt for SOP: Standard Operating Procedure in 30 Minutes",
+      datePublished: "2026-06-30",
+      dateModified: "2026-06-30",
     }
   };
 
@@ -391,7 +403,8 @@
     "/blog/best-prompt-for-summarization": "article-best-prompt-for-summarization",
     "/blog/best-prompt-for-debugging-code": "article-best-prompt-for-debugging-code",
     "/blog/best-prompt-for-code-review": "article-best-prompt-for-code-review",
-    "/blog/best-prompt-for-content-rewrite": "article-best-prompt-for-content-rewrite"
+    "/blog/best-prompt-for-content-rewrite": "article-best-prompt-for-content-rewrite",
+    "/blog/best-prompt-for-sop": "article-best-prompt-for-sop"
   };
 
   function normalizePath(pathname) {

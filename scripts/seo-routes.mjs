@@ -426,8 +426,22 @@ export const SEO_ROUTES = {
         datePublished: "2026-06-29",
         dateModified: "2026-06-29",
         keywords: "best prompt for content rewrite, rewrite prompt, content refresh prompt, AI rewriter, Claude rewrite, content update prompt, article rewrite, blog refresh, brand voice AI, content optimization prompt"
-      },
-    };
+          },
+        "/blog/best-prompt-for-sop": {
+        routeKey: "article-best-prompt-for-sop",
+        h1: "article-best-prompt-for-sop",
+        lang: "en",
+        ogType: "article",
+        title: "Best Prompt for SOP: Standard Operating Procedure in 30 Minutes | PromptLab",
+        description:
+          "The best prompt for SOP uses the 5-part R.O.L.E.S. framework to turn a 90-minute process-owner interview into a working SOP. 4 copy-paste templates (blank-slate, rewrite, decision tree, exception pass) tested on Claude, ChatGPT, and Gemini, plus 3 mistakes that flatten AI-generated procedures into shelf documents.",
+        canonical: `${SITE}/blog/best-prompt-for-sop`,
+        headline: "Best Prompt for SOP: Standard Operating Procedure in 30 Minutes",
+        datePublished: "2026-06-30",
+        dateModified: "2026-06-30",
+        keywords: "best prompt for SOP, SOP prompt, process documentation prompt, AI documentation, Claude SOP, operations prompt, SOP generation, standard operating procedure AI"
+          },
+        };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
 
