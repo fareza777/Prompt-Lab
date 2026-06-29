@@ -1,92 +1,98 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://prompt-lab.xyz</loc>
-    <lastmod>2026-06-13</lastmod>
+    <lastmod>2026-06-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog</loc>
-    <lastmod>2026-06-05</lastmod>
+    <lastmod>2026-06-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/prompt-engineering-guide</loc>
-    <lastmod>2026-06-10</lastmod>
+    <lastmod>2026-05-28</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/chatgpt-vs-claude-prompts</loc>
-    <lastmod>2026-06-12</lastmod>
+    <lastmod>2026-06-02</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/prompt-templates-marketing</loc>
-    <lastmod>2026-06-12</lastmod>
+    <lastmod>2026-05-28</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/9-tips-claude-prompts</loc>
-    <lastmod>2026-06-12</lastmod>
+    <lastmod>2026-06-07</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/how-to-create-prompt-for-chatgpt</loc>
     <lastmod>2026-06-08</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/cara-buat-prompt-chatgpt</loc>
     <lastmod>2026-06-08</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/best-prompt-for-marketing</loc>
-    <lastmod>2026-06-10</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <lastmod>2026-06-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/claude-vs-gpt5-vs-gemini-prompting</loc>
     <lastmod>2026-06-10</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/best-prompt-for-image-generation</loc>
     <lastmod>2026-06-11</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/best-prompt-for-email-writing</loc>
     <lastmod>2026-06-12</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/how-to-create-system-prompt</loc>
     <lastmod>2026-06-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/best-prompt-for-coding</loc>
     <lastmod>2026-06-14</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/best-prompt-for-data-analysis</loc>
-    <lastmod>2026-06-14</lastmod>
+    <lastmod>2026-06-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prompt-lab.xyz/blog/best-prompt-for-resume</loc>
+    <lastmod>2026-06-16</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -97,19 +103,12 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://prompt-lab.xyz/blog/best-prompt-for-resume</loc>
-    <lastmod>2026-06-16</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://prompt-lab.xyz/blog/best-prompt-for-storytelling</loc>
     <lastmod>2026-06-17</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
-    <url>
     <loc>https://prompt-lab.xyz/blog/best-prompt-for-translation</loc>
     <lastmod>2026-06-18</lastmod>
     <changefreq>monthly</changefreq>
@@ -140,58 +139,52 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://prompt-lab.xyz/blog/best-prompt-for-youtube-script</loc>
+    <lastmod>2026-06-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://prompt-lab.xyz/blog/best-prompt-for-podcast</loc>
     <lastmod>2026-06-24</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/best-prompt-for-blog-outline</loc>
     <lastmod>2026-06-25</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/best-prompt-for-summarization</loc>
     <lastmod>2026-06-26</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-      <url>
     <loc>https://prompt-lab.xyz/blog/best-prompt-for-debugging-code</loc>
     <lastmod>2026-06-27</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/best-prompt-for-code-review</loc>
     <lastmod>2026-06-28</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/blog/best-prompt-for-content-rewrite</loc>
     <lastmod>2026-06-29</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://prompt-lab.xyz/blog/best-prompt-for-content-rewrite</loc>
-    <lastmod>2026-06-29</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-<loc>https://prompt-lab.xyz/privacy</loc>
+    <loc>https://prompt-lab.xyz/privacy</loc>
     <lastmod>2026-06-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://prompt-lab.xyz/blog/best-prompt-for-youtube-script</loc>
-    <lastmod>2026-06-23</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prompt-lab.xyz/privacy/delete-account</loc>

@@ -94,7 +94,14 @@ import {
 import { purgeLegacyServiceWorkers, repairStuckLocalProfile } from "./bootRecovery.js";
 import { scorePrompt, scoreOptimizedPrompt } from "./promptScore.js";
 import { dismissStartupSplash, installSplashSafetyNet, markStartupSplashStarted } from "./startupSplash";
-import { isSupabaseConfigured, supabase } from "./supabaseClient";
+import {
+  clearAuthCallbackParams,
+  getAuthRedirectUrl,
+  isGoogleAuthEnabled,
+  isSupabaseConfigured,
+  readAuthCallbackError,
+  supabase,
+} from "./supabaseClient";
 
 markStartupSplashStarted();
 installSplashSafetyNet();
@@ -1377,6 +1384,13 @@ function App() {
     if (!supabase) return;
     let mounted = true;
 
+    const callbackError = readAuthCallbackError();
+    if (callbackError) {
+      setAuthError(callbackError);
+      setAuthStatus("Sign in failed");
+      clearAuthCallbackParams();
+    }
+
     async function bootstrapSession() {
       let data;
       let error;
@@ -1692,6 +1706,10 @@ function App() {
   }
 
   async function signInWithGoogle() {
+    if (!isGoogleAuthEnabled) {
+      setAuthError("Google sign-in is not enabled. Use email and password instead.");
+      return;
+    }
     if (!supabase) {
       setAuthError("Supabase is not configured.");
       return;
@@ -1699,10 +1717,9 @@ function App() {
     setIsAuthBusy(true);
     setAuthError("");
     setAuthStatus("Redirecting to Google...");
-    const redirectTo = `${window.location.origin}${window.location.pathname}`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo },
+      options: { redirectTo: getAuthRedirectUrl() },
     });
     setIsAuthBusy(false);
     if (error) {
@@ -2773,9 +2790,11 @@ function V2AuthGate({
           <button className="v2-btn primary" onClick={submitAuth} disabled={isAuthBusy || !canSubmit}>
             {isAuthBusy ? "Checking..." : isSignIn ? "Sign In" : "Create Account"}
           </button>
-          <button className="v2-btn" type="button" onClick={() => signInWithGoogle?.()} disabled={isAuthBusy || !isSupabaseConfigured}>
-            Continue with Google
-          </button>
+          {isGoogleAuthEnabled && (
+            <button className="v2-btn" type="button" onClick={() => signInWithGoogle?.()} disabled={isAuthBusy || !isSupabaseConfigured}>
+              Continue with Google
+            </button>
+          )}
           <button className="v2-btn" onClick={onGuest}>Continue as Guest</button>
         </div>
         <p className="v2-note">Want Pro or Business? Create an account first, then open Settings → Membership to upgrade. Guest mode is for local trial only.</p>
@@ -3987,9 +4006,11 @@ function V2PublicSettings(props) {
                   ) : (
                     <button className="v2-btn primary" onClick={submitSignUp} disabled={isAuthBusy || !authEmail || !authName || authPassword.length < 6}>Create Account</button>
                   )}
-                  <button className="v2-btn" type="button" onClick={() => signInWithGoogle?.()} disabled={isAuthBusy || !isSupabaseConfigured}>
-                    Continue with Google
-                  </button>
+                  {isGoogleAuthEnabled && (
+                    <button className="v2-btn" type="button" onClick={() => signInWithGoogle?.()} disabled={isAuthBusy || !isSupabaseConfigured}>
+                      Continue with Google
+                    </button>
+                  )}
                 </>
               )}
             </div>
