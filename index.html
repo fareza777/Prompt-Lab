@@ -48,6 +48,7 @@
       html[data-route="app"] #blog-page,
       html.boot-app [id^="article-page"],
       html[data-route="app"] [id^="article-page"] { display: none !important; }
+            html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !important; }
       html.boot-app #app-root,
       html[data-route="app"] #app-root { display: block !important; }
       html.boot-app #app-splash,
@@ -406,7 +407,21 @@
         "image": "https://prompt-lab.xyz/og-image.png",
         "inLanguage": "en",
         "keywords": "best prompt for podcast, podcast prompt, interview prompt, shownotes prompt, AI podcast, guest research prompt, podcast prep, podcast content prompt, episode planning prompt, social clip prompt"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Best Prompt for Meeting Notes: From Transcript to Action Items",
+        "description": "The best prompt for meeting notes is a 3-part structure (Role + Transcript + Schema) that turns a 1-hour transcript into a 1-page summary with owners, deadlines, and a parking lot. Includes 3 variants and 4 mistakes.",
+        "author": {"@type": "Organization", "name": "PromptLab"},
+        "publisher": {"@type": "Organization", "name": "PromptLab", "logo": {"@type": "ImageObject", "url": "https://prompt-lab.xyz/logo.png"}},
+        "datePublished": "2026-07-01",
+        "dateModified": "2026-07-01",
+        "mainEntityOfPage": "https://prompt-lab.xyz/blog/best-prompt-for-meeting-notes",
+        "url": "https://prompt-lab.xyz/blog/best-prompt-for-meeting-notes",
+        "keywords": "best prompt for meeting notes, meeting notes prompt, AI transcription prompt, action items prompt, Claude notes"
       }
+    
     ]
       ,{
         "@context": "https://schema.org",
@@ -2251,6 +2266,18 @@ Build a campaign prompt with:
               <span class="blog-read-more">Read guide →</span>
             </div>
           </a>
+          <a href="/blog/best-prompt-for-meeting-notes" class="blog-card fade-up">
+            <div class="blog-thumb">
+              <div class="blog-thumb-bg">📝</div>
+              <span class="blog-category">Templates</span>
+            </div>
+            <div class="blog-body">
+              <span class="blog-date">July 1, 2026</span>
+              <h3>Best Prompt for Meeting Notes: From Transcript to Action Items</h3>
+              <p>The 3-part prompt that turns a 1-hour meeting transcript into a 1-page summary with decisions, owners, and dates. 3 variants (1:1, sprint planning, client calls) and the 4 mistakes that flatten transcripts.</p>
+              <span class="blog-read-more">Read guide →</span>
+            </div>
+          </a>
           <a href="/blog/best-prompt-for-resume" class="blog-card fade-up" data-route="article-best-prompt-for-resume">
             <div class="blog-thumb">
               <div class="blog-thumb-bg">📄</div>
@@ -2569,6 +2596,14 @@ Build a campaign prompt with:
             <span class="blog-list-meta">June 30, 2026 · Templates · 7 min read</span>
             <h3>Best Prompt for SOP: Standard Operating Procedure in 30 Minutes</h3>
             <p>The 5-part prompt that turns a 2-hour process into a 5-page SOP with role, decision tree, and edge cases. 4 copy-paste templates + 3 mistakes.</p>
+          </div>
+        </a>
+        <a href="/blog/best-prompt-for-meeting-notes" class="blog-list-card">
+          <div class="blog-list-thumb">📝</div>
+          <div class="blog-list-content">
+            <span class="blog-list-meta">July 1, 2026 · Templates · 6 min read</span>
+            <h3>Best Prompt for Meeting Notes: From Transcript to Action Items</h3>
+            <p>The 3-part prompt that turns a 1-hour meeting transcript into a 1-page summary with decisions, owners, and dates. 3 variants + 4 mistakes.</p>
           </div>
         </a>
         <a href="/blog/best-prompt-for-coding" class="blog-list-card">
@@ -2917,6 +2952,9 @@ For each improvement:
 <div class="tip-box"><strong>Related:</strong> <a href="/blog/best-prompt-for-summarization" style="color:var(--accent)">Best Prompt for Summarization</a> — the 4-block summarization framework (Role, Source, Compression target, Output format) and how Claude, ChatGPT, and Gemini each handle footnote preservation differently.</div>
 <div class="tip-box"><strong>Related:</strong> <a href="/blog/best-prompt-for-content-rewrite" style="color:var(--accent)">Best Prompt for Content Rewrite: Refresh Without Losing Voice</a> — the 3-part rewrite prompt (Original, Voice brief, Protected elements) that turns stale articles into 2026-relevant versions without losing voice. The same ChatGPT-vs-Claude prompting principles, applied to refreshes and rewrites.</div>
 <p>The best way to learn is to experiment. <a href="/app" style="color:var(--accent)">Open PromptLab</a>, create a prompt, and compare the results. For platform-specific templates, see our <a href="/blog/best-prompt-for-social-media" style="color:var(--accent)">social media prompt guide</a>. When your code breaks, the <a href="/blog/best-prompt-for-debugging-code" style="color:var(--accent)">best prompt for debugging code</a> turns a 50-line stack trace into a 3-step fix. The readiness score will tell you if your prompt works well for both models — or if it needs adjustment.</p>
+        <div class="tip-box">
+          <strong>Related:</strong> <a href="/blog/best-prompt-for-meeting-notes" style="color:var(--accent)">Best Prompt for Meeting Notes: From Transcript to Action Items</a> — the 3-part prompt that turns a meeting transcript into a 1-page summary with decisions, owners, and dates. Same role-priming and structured-output thinking as the chatgpt-vs-claude patterns.
+        </div>
 
 <div class="tip-box">
   <strong>Related:</strong> <a href="/blog/best-prompt-for-sop" style="color:var(--accent)">Best Prompt for SOP: Standard Operating Procedure in 30 Minutes</a> — the R.O.L.E.S. framework turns the same structured-output thinking into auditable operational documents. Tested on Claude, ChatGPT, and Gemini, with 4 templates and the exception pass that separates shelf documents from working ones.
@@ -3211,7 +3249,7 @@ Now: [the actual task, starting with a verb]</code></pre>
         </div>
 <div class="tip-box">
           <strong>Related:</strong> <a href="/blog/best-prompt-for-image-generation" style="color:var(--accent)">How to Write a Prompt for Image Generation (Midjourney, DALL-E, Flux)</a> — the same structured-prompt thinking applied to image generation: the 6-part formula (subject, action, environment, lighting, style, composition) and model-specific tuning for Midjourney, DALL-E, and Flux.
-        </div>
+         · <a href="/blog/best-prompt-for-meeting-notes" style="color:var(--accent)">Best Prompt for Meeting Notes</a> — the same structured-output thinking applied to meeting transcripts: the 3-part role+transcript+schema prompt that turns a 1-hour call into decisions, owners, and dates.</div>
         <div class="tip-box">
           <strong>Related:</strong> <a href="/blog/best-prompt-for-content-rewrite" style="color:var(--accent)">Best Prompt for Content Rewrite: Refresh Without Losing Voice</a> — the 3-part rewrite prompt (Original, Voice brief, Protected elements) that turns a stale article into a 2026-relevant version without losing voice, with 4 variants and the 3 mistakes that make AI rewrites generic.
         </div>
@@ -7901,7 +7939,194 @@ TASK: Return the fully localized article.</code></pre>
 </article>
     </div>
 
-    <!-- ============================== ARTICLE: BEST PROMPT FOR SOP ============================== -->
+    <!-- ============================== ARTICLE: BEST PROMPT FOR SOP ============================== -->    <!-- ============================== ARTICLE: BEST PROMPT FOR MEETING NOTES ============================== -->
+    <div id="article-page-best-prompt-for-meeting-notes">
+      <nav class="navbar">
+        <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>
+        <div class="nav-links">
+          <a href="/">Home</a><a href="/#features">Features</a><a href="/blog">Blog</a>
+          <a href="/app" class="nav-cta">Open App →</a>
+        </div>
+      </nav>
+      <div class="article-header">
+        <span class="article-meta">July 1, 2026 · Templates · 6 min read</span>
+        <h1 data-page-h1="article-best-prompt-for-meeting-notes">Best Prompt for Meeting Notes: From Transcript to Action Items</h1>
+      </div>
+      <article class="article-body">
+<p>Most <strong>best prompt for meeting notes</strong> attempts fail for a single, fixable reason: they ask the model to "summarize this meeting" and stop there. The result is a polished paragraph that hides who owns what and when it's due. By the next morning, nobody remembers which decisions were final and which were "we should probably...". The fix is a three-part prompt that forces the model to extract structure, not just compress words. In this guide you'll get the exact prompt, three copy-paste variants for common meeting types, and a checklist of mistakes that turn transcripts into noise.</p>
+
+<h2>Why most meeting-notes prompts fall apart</h2>
+<p>Meeting transcripts have a particular shape. They are long, conversational, full of false starts, hedges, and side discussions. When you ask a language model to "summarize" a transcript, it does what summarization models are trained to do: it compresses prose. But what you need is not compression — you need <em>extraction</em>. You need a table of action items with owners and deadlines, a list of decisions separated from open questions, and a parking lot for topics that were raised but deferred.</p>
+<p>Three things go wrong with the bare "summarize" prompt. First, the model merges decided items with discussed items, so a tentative comment from one participant looks like a team commitment. Second, vague ownership like "the team will follow up" gets reproduced verbatim instead of being flagged as unassigned. Third, deadlines like "soon" or "before launch" get smoothed into prose rather than being marked as unresolved, which then propagates into your task manager and quietly rots.</p>
+
+<div class="tip-box">
+<strong>Key insight:</strong> Ambiguous ownership is the leading reason meeting decisions never get implemented. The prompt's job is to surface that ambiguity, not hide it.
+</div>
+
+<h2>The 3-part prompt structure</h2>
+<p>The <strong>best prompt for meeting notes</strong> follows a predictable anatomy: role + transcript + structured output schema. The role grounds the model's voice (executive assistant, project manager, or chief of staff). The transcript is the raw input. The schema is the most important part — it tells the model exactly which sections to produce and in what order. Without a schema, the model decides for you, and you'll spend more time reformatting the output than the meeting cost you.</p>
+<p>Here is the core prompt you'll reuse for 80% of meetings:</p>
+
+<pre><code>You are an executive assistant. Transform the meeting transcript below into structured
+meeting notes using exactly these sections. Use the actual names mentioned in the
+transcript. Do not invent owners or deadlines.
+
+## Meeting Summary
+(2-3 sentences: what the meeting was about and the key outcome)
+
+## Decisions Made
+- Bullet list of every decision that was finalized.
+- If something was discussed but not decided, it goes in Open Questions instead.
+
+## Action Items
+(Table with columns: Action | Owner | Deadline | Priority)
+- If no owner was mentioned, write "UNASSIGNED" and flag it.
+- If no deadline was mentioned, write "NEEDS DATE" and flag it.
+- Priority: High / Medium / Low based on context.
+
+## Open Questions
+(Anything raised but not resolved.)
+
+## Parking Lot
+(Topics mentioned but deferred to a future meeting.)
+
+## Notable Quotes
+(Statements that should be captured verbatim — commitments, objections, key insights.)
+
+Transcript:
+[PASTE TRANSCRIPT HERE]
+</code></pre>
+
+<p>The "flag" instructions matter more than they look. They are the difference between a prompt that politely hand-waves and one that returns a document you can paste into Linear without manual cleanup.</p>
+
+<h2>Variant 1: 1:1 manager meetings</h2>
+<p>One-on-ones produce a different kind of output. The action items are often about people, not tasks: feedback, growth topics, blockers that the manager can unblock. Use this template:</p>
+
+<pre><code>You are a chief of staff. Extract structured notes from this 1:1 transcript
+between [your name] and [their name, their role].
+
+## Status Updates
+(What they shared about their work and projects.)
+
+## Blockers
+(What is slowing them down, plus any solutions discussed.)
+
+## Feedback Given
+(Any feedback [your name] gave — for [your name]'s records.)
+
+## Feedback Received
+(Anything they flagged for [your name] to action.)
+
+## Career and Growth
+(Development topics, goals, growth opportunities discussed.)
+
+## Mood and Energy Check
+(How did they seem? Brief note on tone, energy, anything unspoken.)
+
+## Action Items
+(Table: Action | Owner | Deadline | Priority)
+- Same flagging rules as the core prompt.
+
+Transcript:
+[PASTE TRANSCRIPT HERE]
+</code></pre>
+
+<p>The Mood and Energy Check section is the part most people skip — and the part most useful three months later when you are calibrating performance or simply remembering what was on someone's mind.</p>
+
+<h2>Variant 2: sprint planning and project meetings</h2>
+<p>Project meetings usually revolve around scope, risk, and ownership of new work. The action item table needs an extra column for sprint or week, and you usually want a "scope changes" section so the diff from the previous meeting is explicit:</p>
+
+<pre><code>You are a project manager. Transform this project meeting transcript into
+structured notes for [project name].
+
+## Meeting Summary
+(2-3 sentences: goals of this meeting and the outcome.)
+
+## Key Decisions
+(Bulleted, with who made each decision.)
+
+## Scope Changes
+(Any additions, cuts, or modifications to project scope since last meeting.)
+
+## Risk Flags
+(New risks identified or existing risks escalated. Owner + mitigation if discussed.)
+
+## Action Items
+(Table: Action | Owner | Deadline | Sprint/Week | Priority)
+- If a decision implies work that wasn't explicitly assigned, list it as
+  "UNASSIGNED — derive from [decision]".
+
+## Next Meeting
+(Date, time, and any pre-work required.)
+
+Transcript:
+[PASTE TRANSCRIPT HERE]
+</code></pre>
+
+<p>The "derive from decision" line is a small but important escape hatch. Many project meetings make commitments in the form of decisions, and the model needs explicit permission to infer follow-up tasks from those decisions.</p>
+
+<h2>Variant 3: client and sales calls</h2>
+<p>External calls have a different constraint: you usually cannot share the transcript with the same AI in a way that includes proprietary customer data, and the output needs to land in a CRM, not a doc. For these, use a tighter prompt that produces a JSON-ish structure and explicitly excludes anything that could be a quote used out of context:</p>
+
+<pre><code>You are a sales operations analyst. Extract structured notes from this client call.
+
+Output exactly four sections, in this order. Use the speaker names from the transcript.
+
+## Summary
+(2-3 sentences, factual, no editorializing.)
+
+## Client Requirements
+(Bulleted list of what the client asked for, in their words.)
+
+## Objections and Concerns
+(Direct quotes preferred. Mark each with the speaker.)
+
+## Next Steps
+(Table: Action | Owner (us or them) | Deadline | Priority)
+
+Do not paraphrase objections into softer language. Verbatim is more useful than diplomatic.
+
+Transcript:
+[PASTE TRANSCRIPT HERE]
+</code></pre>
+
+<p>For client calls the <strong>best prompt for meeting notes</strong> is the one that preserves voice. A meeting summary that turns a sharp client objection into a polite hedge is worse than no summary at all, because it lets the team underestimate risk.</p>
+
+<h2>The follow-up email in one extra prompt</h2>
+<p>Once you have structured notes, the next highest-leverage use is a follow-up email. Most teams skip this because it adds ten minutes of writing. With the right prompt, it takes five seconds:</p>
+
+<pre><code>Convert the structured meeting notes above into a follow-up email.
+
+Format:
+- Subject: [Meeting name] — [Date] — Key Decisions & Action Items
+- Open with a 1-sentence summary.
+- List decisions as bullets.
+- List action items as a table with owners bolded.
+- Close with: "Reply to this email if any owners or deadlines need correction."
+- Total length: under 200 words.
+</code></pre>
+
+<p>The closing line is the most important part of the email. It gives people a specific, low-friction way to correct the record. Without it, a recipient who disagrees with their assigned deadline just stays silent — and three days later you discover the deadline was never real.</p>
+
+<div class="tip-box">
+Related: <a href="/blog/best-prompt-for-summarization" style="color:var(--accent)">Best Prompt for Summarization</a> — for non-meeting text like articles and reports. <a href="/blog/best-prompt-for-sop" style="color:var(--accent)">Best Prompt for SOP</a> — for turning the decisions above into a runnable procedure. <a href="/blog/9-tips-claude-prompts" style="color:var(--accent)">9 Tips for Better Claude Prompts</a> — the broader prompt-engineering habits that make all of this work.
+</div>
+
+<h2>Common mistakes to avoid</h2>
+<p>Even with a good prompt, three mistakes break the output. First, <strong>forgetting to paste the transcript</strong>. The model will happily hallucinate a meeting that never happened, with realistic-looking attendees and action items. Always check that the model is working from the actual transcript, not from its prior about "typical" meetings. Second, <strong>accepting "the team" as an owner</strong>. "The team will follow up" is not an action item. Require real names. Third, <strong>omitting the "do not invent" rule</strong>. Without it, the model will fill in plausible-but-fake deadlines for items where the meeting actually punted on a date. The flagging instructions work, but only if the model knows it is forbidden to invent.</p>
+<p>A fourth mistake worth flagging: <strong>not specifying the meeting type up front</strong>. A 1:1 prompt run on a board meeting transcript will produce a Mood and Energy Check for the CFO, which is the wrong artifact. Always tell the model which kind of meeting it is reading.</p>
+
+<h2>Putting it into a workflow</h2>
+<p>The prompt is the easy part. The hard part is making the habit stick. Three small operational changes make this a 60-second task instead of a 30-minute cleanup. First, save the prompt once in a notes app or a Claude Project called "Meeting Transcripts" so you do not rewrite it every time. Second, paste the transcript within ten minutes of the meeting ending — context is fresh, and the model catches nuance you would forget. Third, treat the model's output as a draft, not a final. Read the action items table specifically: every "UNASSIGNED" and "NEEDS DATE" is a follow-up you actually need to do in the meeting room, not later in your task manager.</p>
+<p>Used this way, the <strong>best prompt for meeting notes</strong> stops being a clever trick and becomes the default way your team operates. Decisions stop dying in Slack threads, action items stop being assigned to "the team", and the people who were not in the room can read two minutes of structured notes and know exactly what is happening. That is the whole point.</p>
+
+        <div class="tip-box">
+          <strong>Related:</strong> <a href="/blog/best-prompt-for-summarization" style="color:var(--accent)">Best Prompt for Summarization</a> — for non-meeting text like articles and reports. <a href="/blog/best-prompt-for-sop" style="color:var(--accent)">Best Prompt for SOP</a> — for turning the decisions above into a runnable procedure. <a href="/blog/9-tips-claude-prompts" style="color:var(--accent)">9 Tips for Better Claude Prompts</a> — the broader prompt-engineering habits that make all of this work.
+        </div>
+      </article>
+    </div>
+
+    
     <div id="article-page-best-prompt-for-sop">
       <nav class="navbar">
         <a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a>

@@ -369,6 +369,18 @@
       headline: "Best Prompt for SOP: Standard Operating Procedure in 30 Minutes",
       datePublished: "2026-06-30",
       dateModified: "2026-06-30",
+    },
+    "/blog/best-prompt-for-meeting-notes": {
+      title: "Best Prompt for Meeting Notes: From Transcript to Action Items | PromptLab",
+      description: "The best prompt for meeting notes is a 3-part structure (Role + Transcript + Schema) that turns a 1-hour transcript into a 1-page summary with owners, deadlines, and a parking lot. Includes 3 variants (1:1, sprint planning, client calls) and the 4 mistakes that turn transcripts into vague prose.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-meeting-notes",
+      h1: "article-best-prompt-for-meeting-notes",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for meeting notes, meeting notes prompt, AI transcription prompt, action items prompt, Claude notes, meeting summary prompt, AI meeting notes, transcript to action items, executive assistant prompt, meeting minutes AI",
+      headline: "Best Prompt for Meeting Notes: From Transcript to Action Items",
+      datePublished: "2026-07-01",
+      dateModified: "2026-07-01",
     }
   };
 
@@ -404,7 +416,8 @@
     "/blog/best-prompt-for-debugging-code": "article-best-prompt-for-debugging-code",
     "/blog/best-prompt-for-code-review": "article-best-prompt-for-code-review",
     "/blog/best-prompt-for-content-rewrite": "article-best-prompt-for-content-rewrite",
-    "/blog/best-prompt-for-sop": "article-best-prompt-for-sop"
+    "/blog/best-prompt-for-sop": "article-best-prompt-for-sop",
+    "/blog/best-prompt-for-meeting-notes": "article-best-prompt-for-meeting-notes"
   };
 
   function normalizePath(pathname) {

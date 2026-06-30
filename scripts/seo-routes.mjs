@@ -441,6 +441,20 @@ export const SEO_ROUTES = {
         dateModified: "2026-06-30",
         keywords: "best prompt for SOP, SOP prompt, process documentation prompt, AI documentation, Claude SOP, operations prompt, SOP generation, standard operating procedure AI"
           },
+      "/blog/best-prompt-for-meeting-notes": {
+        routeKey: "article-best-prompt-for-meeting-notes",
+        h1: "article-best-prompt-for-meeting-notes",
+        lang: "en",
+        ogType: "article",
+        title: "Best Prompt for Meeting Notes: From Transcript to Action Items | PromptLab",
+        description:
+          "The best prompt for meeting notes is a 3-part structure (Role + Transcript + Schema) that turns a 1-hour transcript into a 1-page summary with owners, deadlines, and a parking lot. Includes 3 variants (1:1, sprint planning, client calls) and the 4 mistakes that turn transcripts into vague prose.",
+        canonical: `${SITE}/blog/best-prompt-for-meeting-notes`,
+        headline: "Best Prompt for Meeting Notes: From Transcript to Action Items",
+        datePublished: "2026-07-01",
+        dateModified: "2026-07-01",
+        keywords: "best prompt for meeting notes, meeting notes prompt, AI transcription prompt, action items prompt, Claude notes, meeting summary prompt, AI meeting notes, transcript to action items, executive assistant prompt, meeting minutes AI"
+          },
         };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
