@@ -226,6 +226,19 @@ export const SEO_ROUTES = {
     dateModified: "2026-06-15",
     keywords: "best prompt for data analysis, data analysis prompt, AI data prompt, CSV prompt, analytics prompt"
   },
+  "/blog/best-prompt-for-sales": {
+    routeKey: "article-best-prompt-for-sales",
+    h1: "article-best-prompt-for-sales",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for Sales: Cold Outreach That Books Meetings",
+    description: "The best prompt for sales uses a 5-part framework (role, trigger, value, CTA, format) to write cold emails, follow-ups, and proposals that actually book meetings. 5 copy-paste templates + 3 mistakes.",
+    canonical: `${SITE}/blog/best-prompt-for-sales`,
+    headline: "Best Prompt for Sales: Cold Outreach That Books Meetings",
+    datePublished: "2026-07-02",
+    dateModified: "2026-07-02",
+    keywords: "best prompt for sales, sales prompt, cold email prompt, outreach prompt, B2B sales prompt, follow-up prompt, discovery call prompt, proposal prompt"
+  },
   "/blog/best-prompt-for-resume": {
     routeKey: "article-best-prompt-for-resume",
     h1: "article-best-prompt-for-resume",
