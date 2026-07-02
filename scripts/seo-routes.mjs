@@ -464,11 +464,25 @@ export const SEO_ROUTES = {
           "The best prompt for meeting notes is a 3-part structure (Role + Transcript + Schema) that turns a 1-hour transcript into a 1-page summary with owners, deadlines, and a parking lot. Includes 3 variants (1:1, sprint planning, client calls) and the 4 mistakes that turn transcripts into vague prose.",
         canonical: `${SITE}/blog/best-prompt-for-meeting-notes`,
         headline: "Best Prompt for Meeting Notes: From Transcript to Action Items",
-        datePublished: "2026-07-01",
-        dateModified: "2026-07-01",
-        keywords: "best prompt for meeting notes, meeting notes prompt, AI transcription prompt, action items prompt, Claude notes, meeting summary prompt, AI meeting notes, transcript to action items, executive assistant prompt, meeting minutes AI"
-          },
-        };
+            datePublished: "2026-07-01",
+            dateModified: "2026-07-01",
+            keywords: "best prompt for meeting notes, meeting notes prompt, AI transcription prompt, action items prompt, Claude notes, meeting summary prompt, AI meeting notes, transcript to action items, executive assistant prompt, meeting minutes AI"
+              },
+          "/blog/best-prompt-for-linkedin": {
+            routeKey: "article-best-prompt-for-linkedin",
+            h1: "article-best-prompt-for-linkedin",
+            lang: "en",
+            ogType: "article",
+            title: "Best Prompt for LinkedIn: Posts That Get 10K Impressions | PromptLab",
+            description:
+              "The best prompt for LinkedIn is a 5-part structure (Hook + POV + Story + Lesson + CTA) that turns a one-line idea into a post that gets 10K+ impressions. Includes 5 copy-paste templates (founders, B2B sales, job seekers, personal brand, carousel) and the 3 mistakes that get you scrolled past.",
+            canonical: `${SITE}/blog/best-prompt-for-linkedin`,
+            headline: "Best Prompt for LinkedIn: Posts That Get 10K Impressions",
+            datePublished: "2026-07-03",
+            dateModified: "2026-07-03",
+            keywords: "best prompt for LinkedIn, LinkedIn prompt, LinkedIn post prompt, B2B prompt, AI LinkedIn, LinkedIn carousel prompt, LinkedIn hook, viral LinkedIn post, Claude LinkedIn prompt, ChatGPT LinkedIn prompt, founder post prompt, personal brand prompt"
+              },
+            };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
 

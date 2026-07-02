@@ -393,6 +393,18 @@
       headline: "Best Prompt for Meeting Notes: From Transcript to Action Items",
       datePublished: "2026-07-01",
       dateModified: "2026-07-01",
+    },
+    "/blog/best-prompt-for-linkedin": {
+      title: "Best Prompt for LinkedIn: Posts That Get 10K Impressions | PromptLab",
+      description: "The best prompt for LinkedIn is a 5-part structure (Hook + POV + Story + Lesson + CTA) that turns a one-line idea into a post that gets 10K+ impressions. Includes 5 copy-paste templates (founders, B2B sales, job seekers, personal brand, carousel) and the 3 mistakes that get you scrolled past.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-linkedin",
+      h1: "article-best-prompt-for-linkedin",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for LinkedIn, LinkedIn prompt, LinkedIn post prompt, B2B prompt, AI LinkedIn, LinkedIn carousel prompt, LinkedIn hook, viral LinkedIn post, Claude LinkedIn prompt, ChatGPT LinkedIn prompt, founder post prompt, personal brand prompt",
+      headline: "Best Prompt for LinkedIn: Posts That Get 10K Impressions",
+      datePublished: "2026-07-03",
+      dateModified: "2026-07-03",
     }
   };
 
@@ -430,7 +442,8 @@
     "/blog/best-prompt-for-code-review": "article-best-prompt-for-code-review",
     "/blog/best-prompt-for-content-rewrite": "article-best-prompt-for-content-rewrite",
     "/blog/best-prompt-for-sop": "article-best-prompt-for-sop",
-    "/blog/best-prompt-for-meeting-notes": "article-best-prompt-for-meeting-notes"
+    "/blog/best-prompt-for-meeting-notes": "article-best-prompt-for-meeting-notes",
+    "/blog/best-prompt-for-linkedin": "article-best-prompt-for-linkedin"
   };
 
   function normalizePath(pathname) {
