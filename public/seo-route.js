@@ -405,6 +405,30 @@
       headline: "Best Prompt for LinkedIn: Posts That Get 10K Impressions",
       datePublished: "2026-07-03",
       dateModified: "2026-07-03",
+    },
+    "/blog/best-prompt-for-customer-support": {
+      title: "Best Prompt for Customer Support: Faster Replies, Happier Customers | PromptLab",
+      description: "The best prompt for customer support combines a tight base system prompt with 5 ticket-type templates (first reply, billing dispute, de-escalation, proactive outreach, handoff summary). Includes the 4 ingredients every support prompt needs and the 5 mistakes that ruin replies in production.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-customer-support",
+      h1: "article-best-prompt-for-customer-support",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for customer support, support prompt, AI customer service, Claude support, helpdesk prompt, customer service AI prompt, refund dispute prompt, escalation prompt, support ticket prompt, empathy prompt, customer reply template",
+      headline: "Best Prompt for Customer Support: Faster Replies, Happier Customers",
+      datePublished: "2026-07-04",
+      dateModified: "2026-07-04",
+    },
+    "/blog/best-prompt-for-productivity": {
+      title: "Best Prompt for Productivity: 10 Daily AI Workflows | PromptLab",
+      description: "The best prompt for productivity is a small library of structured templates, not one mega-prompt. Includes 10 copy-paste daily AI workflows (inbox triage, daily plan, meeting prep, research digest, shutdown), the Role + Raw Material + Output Shape recipe, and the 3 mistakes that derail productivity prompts.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-productivity",
+      h1: "article-best-prompt-for-productivity",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for productivity, productivity prompt, AI workflow, daily AI, ChatGPT workflow, Claude productivity, morning routine prompt, inbox triage prompt, meeting prep prompt, weekly review prompt, time blocking prompt",
+      headline: "Best Prompt for Productivity: 10 Daily AI Workflows",
+      datePublished: "2026-07-05",
+      dateModified: "2026-07-05",
     }
   };
 
@@ -443,7 +467,9 @@
     "/blog/best-prompt-for-content-rewrite": "article-best-prompt-for-content-rewrite",
     "/blog/best-prompt-for-sop": "article-best-prompt-for-sop",
     "/blog/best-prompt-for-meeting-notes": "article-best-prompt-for-meeting-notes",
-    "/blog/best-prompt-for-linkedin": "article-best-prompt-for-linkedin"
+    "/blog/best-prompt-for-linkedin": "article-best-prompt-for-linkedin",
+    "/blog/best-prompt-for-customer-support": "article-best-prompt-for-customer-support",
+    "/blog/best-prompt-for-productivity": "article-best-prompt-for-productivity"
   };
 
   function normalizePath(pathname) {
