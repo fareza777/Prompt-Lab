@@ -553,6 +553,22 @@
       }
       ,
       {
+      {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Best Prompt for Tutoring: Learn Anything in 30 Days",
+        "description": "The best prompt for tutoring is a 4-part structure (Role + Learner State + Pedagogical Method + Session Contract) that turns an LLM into a 30-day personal tutor for any subject. Includes a base tutor system prompt, daily session template, 30-day curriculum scaffold, Feynman teach-back prompt, and the 3 mistakes that flatten a tutor into a Google replacement.",
+        "author": { "@type": "Organization", "name": "PromptLab" },
+        "publisher": { "@type": "Organization", "name": "PromptLab", "url": "https://prompt-lab.xyz" },
+        "datePublished": "2026-07-06",
+        "dateModified": "2026-07-06",
+        "mainEntityOfPage": "https://prompt-lab.xyz/blog/best-prompt-for-tutoring",
+        "url": "https://prompt-lab.xyz/blog/best-prompt-for-tutoring",
+        "image": "https://prompt-lab.xyz/og-image.png",
+        "keywords": "best prompt for tutoring, tutoring prompt, learning prompt, AI tutor, study prompt, Feynman technique, spaced repetition, active recall, 30-day curriculum, Claude tutor, ChatGPT tutor"
+      }
+      ,
+      {
         "@context": "https://schema.org",
         "@type": "BlogPosting",
         "headline": "Best Prompt for Productivity: 10 Daily AI Workflows",
@@ -1623,6 +1639,8 @@
       html[data-route="article-how-to-create-system-prompt"] #article-page-how-to-create-system-prompt{ display: block !important; }
       html[data-route="article-best-prompt-for-customer-support"] #landing-page { display: none !important; }
       html[data-route="article-best-prompt-for-customer-support"] #article-page-best-prompt-for-customer-support { display: block !important; }
+      html[data-route="article-best-prompt-for-tutoring"] #article-page-best-prompt-for-tutoring { display: block !important; }
+      html[data-route="article-best-prompt-for-tutoring"] #landing-page { display: none !important; }
       html[data-route="article-best-prompt-for-productivity"] #landing-page { display: none !important; }
       html[data-route="article-best-prompt-for-productivity"] #article-page-best-prompt-for-productivity { display: block !important; }
       html[data-route="article-best-prompt-for-social-media"] #landing-page { display: none !important; }
@@ -1755,7 +1773,8 @@ html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !impor
       html[data-route="article-best-prompt-for-code-review"] #article-page-best-prompt-for-code-review { display: block !important; }
       html[data-route="article-best-prompt-for-meeting-notes"] #landing-page { display: none !important; }
       html[data-route="article-best-prompt-for-meeting-notes"] #article-page-best-prompt-for-meeting-notes { display: block !important; }
-      html.boot-app #article-page-best-prompt-for-sop { display: none !important; }
+      html.boot-app #article-page-best-prompt-for-sop { display: none !important; }      html.boot-app #article-page-best-prompt-for-tutoring { display: none !important; }
+
       html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !important; }
       html[data-route="article-best-prompt-for-sop"] #landing-page { display: none !important; }
       html[data-route="article-best-prompt-for-meeting-notes"] #landing-page { display: none !important; }
@@ -2482,6 +2501,18 @@ Build a campaign prompt with:
               <span class="blog-read-more">Read article →</span>
             </div>
           </a>
+          <a href="/blog/best-prompt-for-tutoring" class="blog-card fade-up" data-route="article-best-prompt-for-tutoring">
+            <div class="blog-thumb">
+              <div class="blog-thumb-bg">🎓</div>
+              <span class="blog-category">Tutorial</span>
+            </div>
+            <div class="blog-body">
+              <span class="blog-date">July 6, 2026</span>
+              <h3>Best Prompt for Tutoring: Learn Anything in 30 Days</h3>
+              <p>The 4-part prompt that turns an LLM into a 30-day personal tutor for any subject with spaced repetition, Feynman teach-back, and a recall quiz at the end of every session.</p>
+              <span class="blog-read-more">Read article →</span>
+            </div>
+          </a>
           <a href="/blog/best-prompt-for-storytelling" class="blog-card fade-up" data-route="article-best-prompt-for-storytelling">
             <div class="blog-thumb">
               <div class="blog-thumb-bg">📖</div>
@@ -2836,6 +2867,14 @@ Build a campaign prompt with:
             <span class="blog-list-meta">June 16, 2026 · Tutorial · 8 min read</span>
             <h3>Best Prompt for Resume Writing: Stand Out in 2026 ATS</h3>
             <p>The 5-part prompt framework that turns a thin job history into an ATS-optimized 1-pager. 4 copy-paste templates for ChatGPT, Claude, and Gemini.</p>
+          </div>
+        </a>
+        <a href="/blog/best-prompt-for-tutoring" class="blog-list-card">
+          <div class="blog-list-thumb">🎓</div>
+          <div class="blog-list-content">
+            <span class="blog-list-meta">July 6, 2026 · Tutorial · 9 min read</span>
+            <h3>Best Prompt for Tutoring: Learn Anything in 30 Days</h3>
+            <p>The 4-part prompt that turns an LLM into a 30-day personal tutor for any subject with spaced repetition and quizzes.</p>
           </div>
         </a>
         <a href="/blog/best-prompt-for-storytelling" class="blog-list-card">
@@ -3518,6 +3557,9 @@ Now: [the actual task, starting with a verb]</code></pre>
 
         <div class="tip-box">
           <strong>Related:</strong> <a href="/blog/best-prompt-for-code-review" style="color:var(--accent)">Best Prompt for Code Review</a> — once your prompt produces a 200-line diff, the 4-part code review prompt turns it into a 5-bullet review catching security bugs, N+1 queries, and tautology tests in 60 seconds.
+        </div>
+        <div class="tip-box">
+          <strong>Go deeper:</strong> pair these 9 Claude tips with the <a href="/blog/best-prompt-for-tutoring" style="color:var(--accent)">best prompt for tutoring</a> — the 4-part Role + Learner State + Method + Session Contract structure turns any tutor system prompt into a 30-day self-teaching curriculum with Feynman teach-back and spaced repetition.
         </div>
 </article>
     </div>
@@ -9372,6 +9414,224 @@ total length under 250 words.
 <div class="tip-box"><strong>Related:</strong> <a href="/blog/best-prompt-for-email-writing" style="color:var(--accent)">Best Prompt for Email Writing</a> — pair support replies with sharper outbound emails using the same role-and-context pattern.</div>
 <div class="tip-box"><strong>Related:</strong> <a href="/blog/best-prompt-for-product-description" style="color:var(--accent)">Best Prompt for Product Description</a> — same structure-and-tone principles, applied to product copy.</div>
 <div class="tip-box"><strong>Related:</strong> <a href="/blog/9-tips-claude-prompts" style="color:var(--accent)">9 Tips for Claude Prompts</a> — the broader Claude prompt-engineering playbook these support templates are built on.</div>
+
+      </article>
+    </div>
+
+
+      <div id="article-page-best-prompt-for-tutoring" class="article-page" data-page-h1="article-best-prompt-for-tutoring">
+      <nav class="navbar" id="navbar-article-best-prompt-for-tutoring">
+        <a href="/" class="nav-brand">
+          <span class="brand-mark">⚡</span>
+          <span class="brand-text">PromptLab</span>
+        </a>
+        <div class="nav-links">
+          <a href="/#builder">Builder</a>
+          <a href="/#compare">Compare</a>
+          <a href="/#templates">Templates</a>
+          <a href="/blog">Blog</a>
+          <a href="/#install" class="nav-cta">Install App</a>
+        </div>
+      </nav>
+      <div class="article-header">
+        <span class="article-category">Tutorial</span>
+        <h1 data-page-h1="article-best-prompt-for-tutoring">Best Prompt for Tutoring: Learn Anything in 30 Days</h1>
+        <p class="article-tagline">The 4-part prompt that turns an LLM into a 30-day personal tutor for any subject with spaced repetition and quizzes.</p>
+        <div class="article-meta">
+          <span class="article-date">📅 July 6, 2026</span>
+          <span class="article-category-meta">📂 Tutorial</span>
+          <span class="article-readtime">⏱️ 9 min read</span>
+        </div>
+        <div class="article-tags">
+          <span class="article-tag">#tutoring prompt</span>
+          <span class="article-tag">#AI tutor</span>
+          <span class="article-tag">#spaced repetition</span>
+          <span class="article-tag">#Feynman technique</span>
+          <span class="article-tag">#learning prompt</span>
+        </div>
+      </div>
+      <article class="article-body">
+<h2>Why most people get AI tutoring wrong (and what to do instead)</h2>
+
+<p>If you have ever opened a chat window, typed "explain X to me," and waited for the AI to dump a textbook summary, you have already experienced the most common failure of the <strong>best prompt for tutoring</strong>: treating the model like an answer machine instead of a coach. A Harvard randomized controlled trial published in June 2025 found that students using an AI tutor achieved <strong>2× greater learning gains</strong> than a traditional active-learning classroom, with effect sizes of 0.73 to 1.3 standard deviations — but those gains only show up when the AI is asked to teach, not to tell. A separate field experiment run by Wharton across ten Taipei high schools in March 2026 found that <em>adaptive</em> sequencing of practice problems added the equivalent of <strong>6–9 months of schooling</strong> on the final exam. The single biggest variable in both studies was not the model. It was the prompt.</p>
+
+<p>This article gives you the exact 4-part tutoring prompt structure that turns ChatGPT, Claude, or Gemini into a 30-day personal tutor for any subject. It includes spaced repetition, active recall, the Feynman Technique, and a self-test at the end of every session. You will leave with 4 copy-paste templates, an adaptation for kids vs adults vs technical learners, and the 3 mistakes that flatten a tutor into a Google replacement.</p>
+
+<div class="tip-box"><strong>What you'll get:</strong> a base tutor system prompt, a daily session template, a 30-day curriculum scaffold, a quiz generator, and an "explain-back" template that uses the Feynman Technique. Paste, edit the subject, start learning.</div>
+
+<h2>The 4-part structure of the best prompt for tutoring</h2>
+
+<p>Every effective tutoring prompt — whether you are learning calculus, Mandarin, or how a startup's cap table works — has the same four components in the same order:</p>
+
+<ol>
+  <li><strong>Role</strong> — Who the AI is acting as. Not "helpful assistant," but "expert tutor specializing in {subject} who has taught this exact material to {audience} for 10 years."</li>
+  <li><strong>The learner's state</strong> — Current level, prior knowledge, goal, deadline. A tutor who does not know where you are starting cannot pick the right next step.</li>
+  <li><strong>The pedagogical method</strong> — Active recall, spaced repetition, teach-back, worked examples, socratic questioning. Pick one or two. The method IS the prompt.</li>
+  <li><strong>The session contract</strong> — What each session looks like, how long it runs, and how it ends (always with a 3-question self-test, never with the AI dumping a summary).</li>
+</ol>
+
+<p>Most "study with ChatGPT" prompts online give you only #1 and #3. The two missing pieces — the learner's state and the session contract — are why most users feel like they are learning when they are actually skimming.</p>
+
+<h2>1. The base tutor system prompt (paste this first)</h2>
+
+<p>Set this as your system prompt for the entire tutoring project. Then each session uses one of the templates below as the user message.</p>
+
+<pre><code>You are a personal tutor specializing in {SUBJECT}. You have taught
+{SUBJECT} to {AUDIENCE} for over 10 years and you know the 5–8
+common misconceptions students hit at every level.
+
+Your job is to teach, not to answer. When the learner asks a
+question, you do NOT give the answer. You:
+  (a) ask what the learner already knows or assumes about the topic,
+  (b) surface the gap in their understanding with one Socratic
+      question,
+  (c) provide a worked example only after the learner has attempted
+      their own answer, and
+  (d) end every session with a 3-question recall quiz and a 1-line
+      preview of tomorrow's session.
+
+You never use the phrase "great question" or any other filler praise.
+You never dump bullet-point summaries. You always teach one idea per
+turn. You adapt vocabulary to the learner's stated level.
+
+Pedagogical methods you are allowed to use:
+  • Active recall (asking the learner to retrieve before re-reading)
+  • Spaced repetition (re-test prior material every 3 sessions)
+  • Feynman technique (learner explains in plain language, you grade)
+  • Interleaving (mix topics within a session, do not block-practice)
+  • Worked-example fading (full worked → partial worked → blank)
+
+Forbidden behaviors:
+  • Giving the answer before the learner has attempted
+  • Producing a full chapter summary on demand
+  • Praising the learner as a substitute for teaching
+  • Mirroring frustration or impatience back to the learner
+</code></pre>
+
+<p>Once this is in the system prompt slot, every session gets the same "DNA" — the AI will teach instead of answer, regardless of how the user phrases their follow-up. That is what the prompt is doing: codifying a teaching style, not generating answers.</p>
+
+<h2>2. The daily session template (the user prompt)</h2>
+
+<p>For each session, send this template as your message. Fill in the placeholders. The session will unfold as a back-and-forth, not as a single dump.</p>
+
+<pre><code>SUBJECT: {e.g. "Macroeconomics 101" or "Conversational Japanese"}
+CURRENT LEVEL: {e.g. "Complete beginner" or "B2, can read newspaper
+articles but struggles with native-speed podcasts"}
+WHAT I ALREADY KNOW: {2–4 sentences on your prior exposure}
+
+TODAY'S GOAL: {one sentence — e.g. "Understand how fractional
+reserve banking creates money"}
+
+TIME BUDGET: {e.g. "20 minutes"}
+
+Please run this session using these constraints:
+  1. Ask me one diagnostic question first to gauge my actual level
+     (do not trust the 'level' I self-reported).
+  2. Teach the goal in 2–3 micro-lessons, each ending with a
+     1-paragraph teach-back where I explain it back to you.
+  3. After each of my teach-backs, grade me out of 5 and tell me
+     exactly what I missed.
+  4. End the session with a 3-question recall quiz (no peeking
+     back) and tell me when I should re-test this material.
+</code></pre>
+
+<p>This template works because it forces the AI into a known structure. Without it, most sessions devolve into "tell me about X" → 8-paragraph answer → "tell me more" → loop. With it, the AI has a checklist to walk through, and you have a runnable script.</p>
+
+<div class="tip-box"><strong>Tip:</strong> keep a session log. After every tutorial session, paste the AI's final summary into a single document called "{subject}-sessions.md." Re-pasting the prior 2–3 sessions at the start of each new session is the cheapest possible spaced-repetition setup. See our <a href="/blog/best-prompt-for-productivity" style="color:var(--accent)">productivity workflow guide</a> for the wider pattern.</div>
+
+<h2>3. The 30-day curriculum scaffold (scaling up)</h2>
+
+<p>The single-session template scales to a multi-week course with one extra step: ask the AI to design the syllabus in <em>prerequisite order</em>, not in topic order, before day 1. This is the difference between "I learned a bunch of stuff" and "I can solve the problems I needed to solve."</p>
+
+<pre><code>Build me a 30-day curriculum for {SUBJECT} that takes a learner
+from {STARTING LEVEL} to {GOAL}. Constraints:
+
+  - Each daily session is 20 minutes.
+  - Every 3rd day is a "spaced repetition" review session — it
+    re-tests material from days 1, 4, 7, 10, 13, 16, 19, 22, 25, 28.
+  - Every 7th day is a full mock test (15 questions, mixed topics).
+  - On day 30, I will teach the entire subject back to you using
+    the Feynman technique. You will grade me.
+
+Output a table with columns: Day | Topic | Pre-reqs | New
+concepts | Review from. Then start Day 1 immediately using the
+session template.
+</code></pre>
+
+<p>That last line is critical: <code>Then start Day 1 immediately using the session template.</code> Without it, the AI will generate the table and stop. With it, the AI keeps moving.</p>
+
+<h2>4. The Feynman teach-back prompt (for when you get stuck)</h2>
+
+<p>When you feel like you "kind of understand" something but cannot explain it, paste this. It is the highest-leverage single prompt you can use.</p>
+
+<pre><code>I am going to teach you {CONCEPT} as if I were explaining it to a
+smart 12-year-old with no background in the subject.
+
+Do NOT interrupt. At the end of my explanation, do the following:
+  1. List every factual claim I made that is wrong or imprecise,
+     with the correct version.
+  2. List any concept I skipped that I clearly need to know.
+  3. Rewrite my explanation in simpler language than I used.
+  4. Give me a single concrete analogy you would use instead of
+     any I used.
+
+Begin by inviting me to teach.
+</code></pre>
+
+<p>Use this on every weekend of a 30-day course. Most learners are shocked the first time: they think they understand, try to teach, and discover they can only describe the surface. That gap is the actual learning.</p>
+
+<h2>5. Adapting the prompt: kids, adults, technical learners</h2>
+
+<p>The base system prompt works for adults. Two adjustments matter:</p>
+
+<ul>
+  <li><strong>For children (ages 8–14):</strong> replace "Socratic question" with "question with three concrete answer choices." Replace the 3-question recall quiz with "draw a picture of what you learned and describe it to me." Add a hard rule: "if the learner shows frustration, switch to a story-based example for 5 minutes before resuming."</li>
+  <li><strong>For technical learners (engineers, scientists):</strong> add: "For any quantitative claim, write out the equation or pseudocode before explaining. Use real datasets when available. When teaching an algorithm, include its complexity class and the failure case, not just the happy path."</li>
+</ul>
+
+<p>The adaptation you do NOT need: a different model. The same prompt works in ChatGPT, Claude, Gemini, and even local models. The pedagogy lives in the prompt, not in the model weight.</p>
+
+<h2>6. Mistakes that flatten a tutor prompt into a search engine</h2>
+
+<p>These are the 3 failures I see every week. All three are prompt bugs, not model bugs.</p>
+
+<h3>Mistake 1: "Teach me about X" with no session contract</h3>
+
+<p>Every prompt without an explicit end-of-session check is a Google replacement, not a tutor. The AI will happily produce 8 paragraphs and call it teaching. Add the 3-question recall quiz, always, even if you delete the rest of the contract.</p>
+
+<h3>Mistake 2: Asking the AI to "explain simply" without forbidding simplification</h3>
+
+<p>"Explain simply" is a license to drop nuance. A real tutor simplifies selectively, keeps the precise term on second mention, and never sacrifices accuracy for accessibility. Replace the line with: "Simplify selectively. Use plain language on first mention, then introduce the precise term on second mention. Never drop a definition that affects whether the learner can answer a follow-up question."</p>
+
+<h3>Mistake 3: Letting the learner (you) skip the teach-back</h3>
+
+<p>Most users close the chat after the AI's explanation. The whole learning gain lives in the teach-back step. If a session ends without you typing at least 3 sentences explaining the topic back, the session did not happen. Calendar-block yourself for the teach-back if you have to.</p>
+
+<h2>7. A worked example: learning "how transformers work" in 30 days</h2>
+
+<p>To make this concrete, here is a worked example of the prompt in action. Subject: "How transformers work (the deep-learning architecture, not the robots)." Starting level: "I have used ChatGPT for a year, I can read Python, I do not know what an attention mechanism is." Time budget: 20 minutes/day for 30 days.</p>
+
+<p>The AI's Day 1 response, trimmed for length:</p>
+
+<blockquote>Day 1: Tokens, not words.<br>
+Before we begin, tell me what you already know about how a sentence becomes input to a neural network. I will use that as a starting point. If you say "I have no idea," we start with "a sentence is a string of characters" and work up; if you say "I think it's word embeddings," we skip ahead.<br><br>
+[Then the AI walks you through tokens, embeddings, and the self-attention intuition in 3 micro-lessons, ending with the Feynman teach-back and 3-question recall quiz.]</blockquote>
+
+<p>By Day 7 you have learned positional encoding. By Day 15, multi-head attention. By Day 28, you are running a small transformer on Colab and walking through the code with the AI as tutor. By Day 30, you teach it back in plain language and grade yourself on what you missed.</p>
+
+<div class="tip-box"><strong>Try it tonight:</strong> pick one subject you have wanted to learn for 6+ months. Paste the base system prompt and the Day 1 session template. Spend 20 minutes. If you cannot describe the day's topic in 3 sentences at the end, the prompt is doing its job — you have found a real gap in your understanding.</div>
+
+<h2>8. Stacking this with your other learning workflows</h2>
+
+<p>The tutoring prompt slots next to three other PromptLab templates you may already use. Treat the 30-day curriculum as the spine and use these as the muscles:</p>
+
+<ul>
+  <li><a href="/blog/best-prompt-for-summarization" style="color:var(--accent)">Summarization prompts</a> — for the weekly mock test review. After each mock test, paste the questions you missed and ask the AI to write a 1-page targeted micro-lesson on exactly those gaps. This is the single biggest predictor of long-term retention.</li>
+  <li><a href="/blog/9-tips-claude-prompts" style="color:var(--accent)">9 tips to write a Claude prompt that actually works</a> — most of those rules (give role, give constraints, show examples, force a format) are baked into the tutor system prompt, but if you find the AI slipping into answer-dumper mode, the 9-tips post is the fastest reset.</li>
+  <li><a href="/blog/claude-vs-gpt5-vs-gemini-prompting" style="color:var(--accent)">Claude vs GPT-5 vs Gemini prompting</a> — model-specific tweaks. The base prompt works on all three, but the teach-back step is sharper on Claude 4 and the recall-quiz structure is best on GPT-5. The comparison post has the side-by-side output.</li>
+</ul>
+
+<div class="tip-box"><strong>Related:</strong> <a href="/blog/9-tips-claude-prompts" style="color:var(--accent)">9 Tips to Write a Claude Prompt That Actually Works</a> · <a href="/blog/best-prompt-for-summarization" style="color:var(--accent)">Best Prompt for Summarization: Get the Gist in 2 Sentences</a> · <a href="/blog/claude-vs-gpt5-vs-gemini-prompting" style="color:var(--accent)">Claude vs GPT-5 vs Gemini: Which Writes the Best Prompt?</a></div>
 
       </article>
     </div>

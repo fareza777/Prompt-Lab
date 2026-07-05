@@ -429,6 +429,18 @@
       headline: "Best Prompt for Productivity: 10 Daily AI Workflows",
       datePublished: "2026-07-05",
       dateModified: "2026-07-05",
+    },
+    "/blog/best-prompt-for-tutoring": {
+      title: "Best Prompt for Tutoring: Learn Anything in 30 Days | PromptLab",
+      description: "The best prompt for tutoring is a 4-part structure (Role + Learner State + Pedagogical Method + Session Contract) that turns an LLM into a 30-day personal tutor for any subject. Includes a base tutor system prompt, daily session template, 30-day curriculum scaffold, Feynman teach-back prompt, and the 3 mistakes that flatten a tutor into a Google replacement.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-tutoring",
+      h1: "article-best-prompt-for-tutoring",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for tutoring, tutoring prompt, learning prompt, AI tutor, study prompt, Feynman technique, spaced repetition, active recall, 30-day curriculum, Claude tutor, ChatGPT tutor",
+      headline: "Best Prompt for Tutoring: Learn Anything in 30 Days",
+      datePublished: "2026-07-06",
+      dateModified: "2026-07-06",
     }
   };
 
@@ -469,7 +481,8 @@
     "/blog/best-prompt-for-meeting-notes": "article-best-prompt-for-meeting-notes",
     "/blog/best-prompt-for-linkedin": "article-best-prompt-for-linkedin",
     "/blog/best-prompt-for-customer-support": "article-best-prompt-for-customer-support",
-    "/blog/best-prompt-for-productivity": "article-best-prompt-for-productivity"
+    "/blog/best-prompt-for-productivity": "article-best-prompt-for-productivity",
+    "/blog/best-prompt-for-tutoring": "article-best-prompt-for-tutoring"
   };
 
   function normalizePath(pathname) {

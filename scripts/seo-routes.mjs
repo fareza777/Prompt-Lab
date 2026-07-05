@@ -510,6 +510,20 @@ export const SEO_ROUTES = {
                             dateModified: "2026-07-05",
                             keywords: "best prompt for productivity, productivity prompt, AI workflow, daily AI, ChatGPT workflow, Claude productivity, morning routine prompt, inbox triage prompt, meeting prep prompt, weekly review prompt, time blocking prompt"
                               },
+                          "/blog/best-prompt-for-tutoring": {
+                            routeKey: "article-best-prompt-for-tutoring",
+                            h1: "article-best-prompt-for-tutoring",
+                            lang: "en",
+                            ogType: "article",
+                            title: "Best Prompt for Tutoring: Learn Anything in 30 Days | PromptLab",
+                            description:
+                              "The best prompt for tutoring is a 4-part structure (Role + Learner State + Pedagogical Method + Session Contract) that turns an LLM into a 30-day personal tutor for any subject. Includes a base tutor system prompt, daily session template, 30-day curriculum scaffold, Feynman teach-back prompt, and the 3 mistakes that flatten a tutor into a Google replacement.",
+                            canonical: `${SITE}/blog/best-prompt-for-tutoring`,
+                            headline: "Best Prompt for Tutoring: Learn Anything in 30 Days",
+                            datePublished: "2026-07-06",
+                            dateModified: "2026-07-06",
+                            keywords: "best prompt for tutoring, tutoring prompt, learning prompt, AI tutor, study prompt, Feynman technique, spaced repetition, active recall, 30-day curriculum, Claude tutor, ChatGPT tutor"
+                              }
                           };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
