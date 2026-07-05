@@ -85,7 +85,19 @@ PromptLab memakai Supabase Auth untuk login email/password. Setup tahap 1:
 3. Isi `VITE_SUPABASE_URL` dan `VITE_SUPABASE_ANON_KEY` di `.env` lokal dan Vercel Production.
 4. Redeploy Vercel setelah env ditambahkan.
 
-**Google Sign-In (opsional):** tombol Google disembunyikan secara default (`VITE_ENABLE_GOOGLE_AUTH=false`). Aktifkan hanya setelah provider Google di Supabase Dashboard → Authentication → Providers diisi Client ID/Secret dari Google Cloud, redirect URI `https://<project-ref>.supabase.co/auth/v1/callback`, dan URL Configuration mencakup `https://prompt-lab.xyz/app`. Lalu set `VITE_ENABLE_GOOGLE_AUTH=true` di Vercel dan redeploy.
+**Google Sign-In:** tombol Google aktif secara default. Setup server (sekali):
+
+1. Google Cloud Console → OAuth client (Web) → redirect URI:
+   `https://<project-ref>.supabase.co/auth/v1/callback`
+2. Isi env lalu jalankan:
+   ```bash
+   npm run setup:google-auth
+   ```
+   Butuh `SUPABASE_ACCESS_TOKEN`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
+3. Jalankan `supabase/phase-10-google-auth-profile.sql` di SQL Editor (nama profil dari Google).
+4. Redeploy Vercel. URL Configuration di Supabase: Site URL `https://prompt-lab.xyz`, redirect `https://prompt-lab.xyz/**`.
+
+Untuk menyembunyikan tombol Google: `VITE_ENABLE_GOOGLE_AUTH=false`.
 
 Admin Console di aplikasi hanya muncul untuk user dengan `profiles.role = 'admin'`. Setelah akun admin dibuat lewat app, jalankan SQL opsional di bagian bawah `supabase/phase-1-auth.sql` untuk menaikkan role akun tersebut.
 

@@ -1363,6 +1363,48 @@ button {
   box-shadow: 0 0 0 2px var(--ac-line);
 }
 
+.v2-btn.google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: oklch(0.98 0 0);
+  color: oklch(0.28 0.02 250);
+  border-color: oklch(0.82 0.01 250);
+}
+
+.v2-btn.google:hover:not(:disabled) {
+  background: oklch(1 0 0);
+  border-color: oklch(0.72 0.02 250);
+}
+
+.v2-google-mark {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.v2-auth-divider {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100%;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.v2-auth-divider::before,
+.v2-auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+  margin: 0 12px;
+}
+
 .v2-action-toast {
   position: fixed;
   left: 50%;

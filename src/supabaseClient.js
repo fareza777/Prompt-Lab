@@ -6,8 +6,9 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
-/** Google OAuth is off until provider is enabled in Supabase + VITE_ENABLE_GOOGLE_AUTH=true */
-export const isGoogleAuthEnabled = import.meta.env.VITE_ENABLE_GOOGLE_AUTH === "true";
+/** Google OAuth is on by default; set VITE_ENABLE_GOOGLE_AUTH=false to hide the button. */
+export const isGoogleAuthEnabled =
+  import.meta.env.VITE_ENABLE_GOOGLE_AUTH !== "false" && isSupabaseConfigured;
 
 export function getAuthRedirectUrl() {
   if (typeof window === "undefined") return "/app";

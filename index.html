@@ -48,13 +48,6 @@
       html[data-route="app"] #blog-page,
       html.boot-app [id^="article-page"],
       html[data-route="app"] [id^="article-page"] { display: none !important; }
-            html.boot-app #article-page-best-prompt-for-linkedin { display: none !important; }
-      html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !important; }
-html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !important; }
-      html.boot-app #article-page-best-prompt-for-customer-support,
-
-      html.boot-app #article-page-best-prompt-for-productivity { display: none !important; }
-      html.boot-app #article-page-best-prompt-for-productivity { display: none !important; }
       html.boot-app #app-root,
       html[data-route="app"] #app-root { display: block !important; }
       html.boot-app #app-splash,
@@ -1622,9 +1615,10 @@ html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !impor
       html[data-route="article-best-prompt-for-email-writing"] #article-page-best-prompt-for-email-writing { display: block !important; }
       html[data-route="article-how-to-create-system-prompt"] #landing-page { display: none !important; }
       html[data-route="article-how-to-create-system-prompt"] #article-page-how-to-create-system-prompt{ display: block !important; }
-      html[data-route="article-best-prompt-for-customer-support"] #article-page-best-prompt-for-customer-support,
-
-      html.boot-app #article-page-best-prompt-for-productivity { display: block !important; }
+      html[data-route="article-best-prompt-for-customer-support"] #landing-page { display: none !important; }
+      html[data-route="article-best-prompt-for-customer-support"] #article-page-best-prompt-for-customer-support { display: block !important; }
+      html[data-route="article-best-prompt-for-productivity"] #landing-page { display: none !important; }
+      html[data-route="article-best-prompt-for-productivity"] #article-page-best-prompt-for-productivity { display: block !important; }
       html[data-route="article-best-prompt-for-social-media"] #landing-page { display: none !important; }
       html[data-route="article-best-prompt-for-resume"] #landing-page { display: none !important; }
       html[data-route="article-best-prompt-for-resume"] #article-page-best-prompt-for-resume { display: block !important; }
@@ -1939,8 +1933,7 @@ html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !impor
       <!-- Navbar -->
       <nav class="navbar" id="navbar">
         <a href="/" class="nav-brand">
-          <div class="nav-logo">P
-          <br>• <a href="/blog/best-prompt-for-productivity" style="color:var(--accent)">Best Prompt for Productivity</a> — 10 copy-paste daily AI workflows (inbox triage, daily plan, meeting prep, research, shutdown) that turn a generic chatbot into a calm chief of staff.</div>
+          <div class="nav-logo">P</div>
           <span class="nav-brand-text">PromptLab</span>
         </a>
         <div class="nav-links">
