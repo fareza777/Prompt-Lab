@@ -47,7 +47,13 @@
       html.boot-app #blog-page,
       html[data-route="app"] #blog-page,
       html.boot-app [id^="article-page"],
-      html[data-route="app"] [id^="article-page"] { display: none !important; }
+      html[data-route="app"] [id^="article-page"] {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+      }
       html.boot-app #app-root,
       html[data-route="app"] #app-root { display: block !important; }
       html.boot-app #app-splash,
@@ -1758,6 +1764,13 @@ html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !impor
       html[data-route="article-best-prompt-for-meeting-notes"] #article-page-best-prompt-for-meeting-notes { display: block !important; }
       html.boot-app #article-page-best-prompt-for-code-review { display: none !important; }
       html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !important; }
+
+      html.boot-app #app-root,
+      html[data-route="app"] #app-root { display: block !important; }
+      html.boot-app #app-splash,
+      html[data-route="app"] #app-splash { display: grid !important; }
+      html.boot-app #app-splash.is-exiting,
+      html[data-route="app"] #app-splash.is-exiting { display: none !important; }
 
       #app-splash {
         position: fixed;

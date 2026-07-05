@@ -277,7 +277,9 @@ ${hreflangEntries}
     syncRouteUi: syncRouteUi,
   };
 
-  if (document.readyState === "loading") {
+  if (document.body) {
+    syncRouteUi();
+  } else if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", syncRouteUi);
   } else {
     syncRouteUi();

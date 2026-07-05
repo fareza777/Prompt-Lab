@@ -9,18 +9,67 @@ const indexHtml = join(dist, "index.html");
 const appHtml = join(dist, "app.html");
 
 const APP_NOINDEX = '<meta name="robots" content="noindex, nofollow" data-app-noindex="1" />';
+const APP_MARKER = "<!-- ============================== APP ============================== -->";
+const ROUTE_SWITCHER_MARKER = "<!-- ============================== ROUTE SWITCHER";
+
+/** Walk from `<div` at openIndex and return index after its matching `</div>`. */
+export function findClosingDiv(html, openIndex) {
+  let depth = 0;
+  let i = openIndex;
+  while (i < html.length) {
+    if (html.startsWith("<div", i)) {
+      const next = html[i + 4];
+      if (next === " " || next === ">" || next === "\n" || next === "\r" || next === "\t") {
+        depth += 1;
+        i += 4;
+        continue;
+      }
+    }
+    if (html.startsWith("</div>", i)) {
+      depth -= 1;
+      if (depth === 0) return i + "</div>".length;
+      i += "</div>".length;
+      continue;
+    }
+    i += 1;
+  }
+  return -1;
+}
+
+/** `/app` shell must not ship landing/blog/article DOM — prevents footer overlap with React auth gate. */
+export function stripMarketingForApp(html) {
+  const bodyTagMatch = html.match(/<body[^>]*>/i);
+  if (!bodyTagMatch) return html;
+
+  const bodyContentStart = html.indexOf(bodyTagMatch[0]) + bodyTagMatch[0].length;
+  const appStart = html.indexOf(APP_MARKER);
+  if (appStart === -1) return html;
+
+  const appRootOpen = html.indexOf('<div id="app-root">', appStart);
+  if (appRootOpen === -1) return html;
+
+  const appRootEnd = findClosingDiv(html, appRootOpen);
+  if (appRootEnd === -1) return html;
+
+  const routeStart = html.indexOf(ROUTE_SWITCHER_MARKER);
+  const tail =
+    routeStart !== -1
+      ? `\n\n    ${html.slice(routeStart)}`
+      : html.slice(html.lastIndexOf("</body>"));
+
+  return `${html.slice(0, bodyContentStart)}\n    ${html.slice(appStart, appRootEnd)}${tail}`;
+}
 
 function patchAppHtml(html) {
-  let out = html
-    .replace("<html lang=\"en\">", "<html lang=\"en\" class=\"boot-app\">")
-    .replace('<div id="app-root">', '<div id="app-root">');
+  let out = stripMarketingForApp(html)
+    .replace("<html lang=\"en\">", "<html lang=\"en\" class=\"boot-app\" data-route=\"app\">")
+    .replace('<html lang="en" class="boot-app">', '<html lang="en" class="boot-app" data-route="app">');
 
   if (!out.includes("data-app-noindex")) {
-    out = out.replace("</head>", `  ${APP_NOINDEX}\n  <script src="/seo-route.js"></script>\n</head>`);
+    out = out.replace("</head>", `  ${APP_NOINDEX}\n</head>`);
   }
 
-  return out
-    .replace("<html lang=\"en\" class=\"boot-app\">", "<html lang=\"en\" class=\"boot-app\" data-route=\"app\">");
+  return out;
 }
 
 function relocateModuleScriptsToBody(html) {
