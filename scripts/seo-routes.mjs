@@ -523,6 +523,20 @@ export const SEO_ROUTES = {
                             datePublished: "2026-07-06",
                             dateModified: "2026-07-06",
                             keywords: "best prompt for tutoring, tutoring prompt, learning prompt, AI tutor, study prompt, Feynman technique, spaced repetition, active recall, 30-day curriculum, Claude tutor, ChatGPT tutor"
+                              },
+                          "/blog/best-prompt-for-negotiation": {
+                            routeKey: "article-best-prompt-for-negotiation",
+                            h1: "article-best-prompt-for-negotiation",
+                            lang: "en",
+                            ogType: "article",
+                            title: "Best Prompt for Negotiation: Get the Deal Without the Back-and-Forth | PromptLab",
+                            description:
+                              "The best prompt for negotiation uses a 4-part framework (Context, Ask, Constraints, Output Format) to turn a counter-offer email, vendor renewal, scope-creep request, or partnership split into a 3-step script with walk-away anchors. 4 copy-paste templates + 3 mistakes that make AI sound recruiter-oblivious.",
+                            canonical: `${SITE}/blog/best-prompt-for-negotiation`,
+                            headline: "Best Prompt for Negotiation: Get the Deal Without the Back-and-Forth",
+                            datePublished: "2026-07-07",
+                            dateModified: "2026-07-07",
+                            keywords: "best prompt for negotiation, negotiation prompt, salary prompt, AI negotiation, Claude negotiation, counter-offer prompt, vendor renewal prompt, scope creep prompt, partnership prompt, BATNA prompt"
                               }
                           };
 

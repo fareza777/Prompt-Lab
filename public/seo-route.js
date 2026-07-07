@@ -441,6 +441,18 @@
       headline: "Best Prompt for Tutoring: Learn Anything in 30 Days",
       datePublished: "2026-07-06",
       dateModified: "2026-07-06",
+    },
+    "/blog/best-prompt-for-negotiation": {
+      title: "Best Prompt for Negotiation: Get the Deal Without the Back-and-Forth | PromptLab",
+      description: "The best prompt for negotiation uses a 4-part framework (Context, Ask, Constraints, Output Format) to turn a counter-offer email, vendor renewal, scope-creep request, or partnership split into a 3-step script with walk-away anchors. 4 copy-paste templates + 3 mistakes that make AI sound recruiter-oblivious.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-negotiation",
+      h1: "article-best-prompt-for-negotiation",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for negotiation, negotiation prompt, salary prompt, AI negotiation, Claude negotiation, counter-offer prompt, vendor renewal prompt, scope creep prompt, partnership prompt, BATNA prompt",
+      headline: "Best Prompt for Negotiation: Get the Deal Without the Back-and-Forth",
+      datePublished: "2026-07-07",
+      dateModified: "2026-07-07",
     }
   };
 
@@ -482,7 +494,8 @@
     "/blog/best-prompt-for-linkedin": "article-best-prompt-for-linkedin",
     "/blog/best-prompt-for-customer-support": "article-best-prompt-for-customer-support",
     "/blog/best-prompt-for-productivity": "article-best-prompt-for-productivity",
-    "/blog/best-prompt-for-tutoring": "article-best-prompt-for-tutoring"
+    "/blog/best-prompt-for-tutoring": "article-best-prompt-for-tutoring",
+    "/blog/best-prompt-for-negotiation": "article-best-prompt-for-negotiation"
   };
 
   function normalizePath(pathname) {
