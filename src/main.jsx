@@ -65,7 +65,11 @@ import {
 import {
   getPlayBillingHint,
   isPlayBillingAvailable,
+  isLikelyAndroidTwa,
+  listPlayPurchases,
+  normalizePlayPurchaseList,
   purchasePlayPlan,
+  restorePlayPurchasesOnServer,
   verifyPlayPurchaseOnServer,
 } from "./playBilling.js";
 import {
@@ -1310,6 +1314,7 @@ function App() {
   const [optimizerWarning, setOptimizerWarning] = useState("");
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingMessage, setBillingMessage] = useState("");
+  const [showAuthUpsell, setShowAuthUpsell] = useState(false);
   const [playBillingReady, setPlayBillingReady] = useState(() => isPlayBillingAvailable());
   const playBillingHint = useMemo(() => getPlayBillingHint(), [playBillingReady]);
   const [exportStatus, setExportStatus] = useState("");
@@ -1714,6 +1719,74 @@ function App() {
     await loadUserProfile(data.user);
   }
 
+  async function resetPasswordForEmail(email) {
+    if (!supabase) {
+      setAuthError("Supabase is not configured.");
+      return;
+    }
+    const target = String(email || "").trim();
+    if (!target) {
+      setAuthError("Enter your email to reset the password.");
+      return;
+    }
+    setIsAuthBusy(true);
+    setAuthError("");
+    setAuthStatus("Sending reset email...");
+    const { error } = await supabase.auth.resetPasswordForEmail(target, {
+      redirectTo: `${window.location.origin}/app`,
+    });
+    setIsAuthBusy(false);
+    if (error) {
+      setAuthError(error.message);
+      setAuthStatus("Reset failed");
+      return;
+    }
+    setAuthStatus("Password reset email sent. Check your inbox.");
+  }
+
+  async function deleteAccountPermanently() {
+    if (!supabase) {
+      setBillingMessage("Supabase is not configured.");
+      return;
+    }
+    const confirmed = window.confirm(
+      "Delete your PromptLab account permanently? This removes your profile, synced library, and membership. This cannot be undone."
+    );
+    if (!confirmed) return;
+    const typed = window.prompt('Type DELETE to confirm account deletion:', "");
+    if (String(typed || "").trim().toUpperCase() !== "DELETE") {
+      setBillingMessage("Account deletion canceled.");
+      return;
+    }
+    setBillingBusy(true);
+    setBillingMessage("");
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error("Session expired. Please sign in again.");
+      const response = await fetch(`${apiBase}/api/account/delete`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ confirm: "DELETE" }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Failed to delete account.");
+      await supabase.auth.signOut();
+      setHasAuthSession(false);
+      setAccountState(normalizeAccountState({}));
+      localStorage.removeItem("promptlab-installed-entry");
+      setBillingMessage("Account deleted. Sign in again or continue as guest.");
+      flashAction("Account deleted");
+      window.location.assign("/app");
+    } catch (error) {
+      setBillingMessage(error.message || "Delete failed.");
+    } finally {
+      setBillingBusy(false);
+    }
+  }
+
   async function signInWithGoogle() {
     if (!isGoogleAuthEnabled) {
       setAuthError("Google sign-in is disabled in this build.");
@@ -1800,6 +1873,12 @@ function App() {
       return;
     }
     if (!isPlayBillingAvailable()) {
+      if (isLikelyAndroidTwa()) {
+        setBillingMessage(
+          "Play Billing is not ready in this install. Reinstall PromptLab from Google Play, then try again. Web checkout is disabled inside the Android app."
+        );
+        return;
+      }
       upgradeViaWebMembership(planName);
       return;
     }
@@ -1828,7 +1907,46 @@ function App() {
     }
   }
 
+  async function restorePlayPurchases() {
+    if (!accountState.userId) {
+      setBillingMessage("Sign in to restore purchases.");
+      return;
+    }
+    if (!isPlayBillingAvailable()) {
+      setBillingMessage(
+        isLikelyAndroidTwa()
+          ? "Play Billing is not available in this session. Reinstall from Google Play."
+          : "Restore purchases is only available in the Android app from Google Play."
+      );
+      return;
+    }
+    setBillingBusy(true);
+    setBillingMessage("");
+    try {
+      const items = await listPlayPurchases();
+      const purchases = normalizePlayPurchaseList(items);
+      if (!purchases.length) throw new Error("No active Google Play purchases found on this device.");
+      const token = await getAccessToken();
+      if (!token) throw new Error("Session expired. Please sign in again.");
+      const data = await restorePlayPurchasesOnServer(apiBase, token, purchases);
+      if (data.quota) applyServerQuota(data.quota);
+      else await loadUserProfile({ id: accountState.userId, email: accountState.email });
+      setBillingMessage(data.message || "Purchases restored.");
+      flashAction("Purchases restored");
+    } catch (error) {
+      setBillingMessage(error.message || "Restore failed.");
+    } finally {
+      setBillingBusy(false);
+    }
+  }
+
   function upgradeViaWebMembership(planName) {
+    if (isLikelyAndroidTwa()) {
+      setBillingMessage(
+        "Android upgrades must use Google Play Billing. Open Membership and tap Pro or Business after installing from Play Store."
+      );
+      return;
+    }
     if (!accountState.userId) {
       setBillingMessage("Sign in to request a web membership upgrade.");
       return;
@@ -1864,6 +1982,10 @@ function App() {
   }
 
   function requestMembershipUpgrade(planName) {
+    if (isLikelyAndroidTwa()) {
+      upgradeViaPlayBilling(planName);
+      return;
+    }
     if (isPlayBillingAvailable()) {
       upgradeViaPlayBilling(planName);
       return;
@@ -1975,7 +2097,21 @@ function App() {
       return data.prompt || localPrompt;
     } catch (error) {
       const message = error.message || API_MSG.backendUnavailableLocalPrompt;
+      const needsSignIn = /sign in to use ai|invalid session|authentication required|401/i.test(message);
       const quotaOnly = /usage quota|quota exceeded|quota token|failed to record quota|too many ai requests/i.test(message);
+      if (needsSignIn) {
+        setGeneratedPrompt("");
+        setGenerationSource("blocked");
+        setGenerationModel("");
+        setGenerationStatus("needs-auth");
+        setErrorMessage("");
+        setWarningMessage(
+          "AI generation requires a free account. Sign in to unlock quota, sync, and exports. Guest mode only keeps drafts on this device."
+        );
+        setShowAuthUpsell(true);
+        setGenerationPhase("idle");
+        return "";
+      }
       setGeneratedPrompt(localPrompt);
       setGenerationSource("local");
       setGenerationModel("");
@@ -2492,7 +2628,12 @@ function App() {
     billingBusy,
     billingMessage,
     upgradeViaPlayBilling,
+    restorePlayPurchases,
     requestMembershipUpgrade,
+    resetPasswordForEmail,
+    deleteAccountPermanently,
+    showAuthUpsell,
+    setShowAuthUpsell,
     loadUserProfile,
     playBillingReady,
     playBillingHint,
@@ -2576,6 +2717,13 @@ function V2App(props) {
     hasAuthSession,
   } = props;
   const [guestMode, setGuestMode] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try {
+      return localStorage.getItem("promptlab-onboarded") !== "1";
+    } catch {
+      return true;
+    }
+  });
   const recentPrompts = useMemo(
     () =>
       [...(library || [])]
@@ -2602,14 +2750,31 @@ function V2App(props) {
   const continueGuest = () => {
     localStorage.removeItem("promptlab-guest");
     localStorage.removeItem("promptlab-auth-intent");
-    localStorage.removeItem("promptlab-onboarded");
+    try {
+      localStorage.setItem("promptlab-onboarded", "1");
+    } catch {
+      /* ignore */
+    }
     markInstalledAppEntered();
+    setShowOnboarding(false);
     setGuestMode(true);
+    props.setShowAuthUpsell?.(false);
     setActive("Builder");
   };
 
   const resumeInstalledSession = () => {
     markInstalledAppEntered();
+    setShowOnboarding(false);
+  };
+
+  const finishOnboarding = (mode) => {
+    try {
+      localStorage.setItem("promptlab-onboarded", "1");
+    } catch {
+      /* ignore */
+    }
+    setShowOnboarding(false);
+    if (mode === "guest") continueGuest();
   };
 
   const needsAuthGate =
@@ -2619,12 +2784,22 @@ function V2App(props) {
       !hasAuthSession ||
       !accountState.userId);
 
+  if (showOnboarding && !hasAuthSession && !guestMode) {
+    return (
+      <V2Onboarding
+        onAuth={() => finishOnboarding("auth")}
+        onGuest={() => finishOnboarding("guest")}
+      />
+    );
+  }
+
   if (needsAuthGate) {
     return (
       <V2AuthGate
         {...props}
         onGuest={continueGuest}
         onResumeSession={resumeInstalledSession}
+        resetPasswordForEmail={props.resetPasswordForEmail}
         showResumeSession={isInstalledApp() && hasAuthSession && Boolean(accountState.email)}
       />
     );
@@ -2695,7 +2870,7 @@ function V2App(props) {
           librarySyncStatus={props.librarySyncStatus}
           onOpenCommandPalette={() => props.setCommandPaletteOpen(true)}
         />
-        {active === "Builder" && <V2Builder {...props} />}
+        {active === "Builder" && <V2Builder {...props} setGuestMode={setGuestMode} guestMode={guestMode} />}
         {active === "Optimizer" && <V2Optimizer {...props} />}
         {active === "Templates" && <V2Templates {...props} />}
         {active === "Library" && <V2Library {...props} />}
@@ -2747,6 +2922,7 @@ function V2AuthGate({
   signInWithPassword,
   signInWithGoogle,
   signUpWithPassword,
+  resetPasswordForEmail,
   onGuest,
   onResumeSession,
   showResumeSession,
@@ -2812,6 +2988,16 @@ function V2AuthGate({
           <button className="v2-btn primary" onClick={submitAuth} disabled={isAuthBusy || !canSubmit}>
             {isAuthBusy ? "Checking..." : isSignIn ? "Sign In" : "Create Account"}
           </button>
+          {isSignIn && (
+            <button
+              className="v2-btn"
+              type="button"
+              disabled={isAuthBusy || !authEmail.trim()}
+              onClick={() => resetPasswordForEmail?.(authEmail.trim())}
+            >
+              Forgot password
+            </button>
+          )}
           {isGoogleAuthEnabled && (
             <>
               <span className="v2-auth-divider" aria-hidden="true">or</span>
@@ -2899,13 +3085,13 @@ function V2Header({ active, setActive, settingsStatus, isGenerating, generationS
   );
 }
 
-function V2PageIntro({ eyebrow, title, copy, children }) {
+function V2PageIntro({ eyebrow, title, copy, children, compact = false }) {
   return (
-    <section className="v2-hero">
+    <section className={`v2-hero${compact ? " is-compact" : ""}`}>
       <div className="v2-hero-copy">
         <span className="v2-eyebrow">{eyebrow}</span>
         <h1>{title}</h1>
-        <p>{copy}</p>
+        {copy ? <p>{copy}</p> : null}
       </div>
       {children}
     </section>
@@ -3054,6 +3240,7 @@ function V2Builder(props) {
     warningMessage, errorMessage, copied,
     copyText, savePrompt, generatePrompt, isGenerating, exportStatus, exportFile,
     engineVersion, piiFindings, entitlements, accountState,
+    showAuthUpsell, setShowAuthUpsell, setActive, setGuestMode,
   } = props;
   return (
     <div className="v2-screen">
@@ -3061,6 +3248,7 @@ function V2Builder(props) {
         eyebrow="Builder"
         title={<>The cleanest <em>prompt</em>, before you hit run.</>}
         copy="Turn raw ideas, files, and screenshots into precise instructions for Claude, ChatGPT, Gemini, and other creative models."
+        compact
       >
         <div className="v2-hero-status">
           <span>Readiness</span>
@@ -3068,6 +3256,39 @@ function V2Builder(props) {
           <GenerationStatusHint status={generationStatus} source={generationSource} isGenerating={isGenerating} />
         </div>
       </V2PageIntro>
+
+      {showAuthUpsell && (
+        <div className="v2-card v2-auth-upsell" role="status">
+          <div className="v2-card-head">
+            <div>
+              <h2>Sign in to generate with AI</h2>
+              <p>Guest mode keeps drafts local only. A free account unlocks AI quota, sync, and exports.</p>
+            </div>
+            <User size={20} />
+          </div>
+          <div className="v2-actions wrap">
+            <button
+              className="v2-btn primary"
+              type="button"
+              onClick={() => {
+                setShowAuthUpsell?.(false);
+                try {
+                  localStorage.removeItem("promptlab-onboarded");
+                } catch {
+                  /* ignore */
+                }
+                setGuestMode?.(false);
+                setActive?.("Settings");
+              }}
+            >
+              Sign in / Create account
+            </button>
+            <button className="v2-btn" type="button" onClick={() => setShowAuthUpsell?.(false)}>
+              Keep browsing
+            </button>
+          </div>
+        </div>
+      )}
 
       <section className="v2-studio-grid">
         <div className="v2-card v2-composer v2-glass-card">
@@ -3081,9 +3302,9 @@ function V2Builder(props) {
           <label className="v2-label">User request</label>
           <textarea className="v2-textarea large" value={narrative} onChange={(event) => setNarrative(event.target.value)} />
           <label className="v2-attach">
-            <input type="file" multiple onChange={(event) => addAttachments(event.target.files)} />
+            <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.csv,.xlsx" capture="environment" onChange={(event) => addAttachments(event.target.files)} />
             <Paperclip size={18} />
-            <span><strong>Attach image, screenshot, or file</strong><small>PDF, DOCX, PPTX, TXT, JPG, PNG. Images are read with OCR during generation.</small></span>
+            <span><strong>Attach image, screenshot, or file</strong><small>PDF, DOCX, PPTX, TXT, JPG, PNG. Camera capture supported on mobile. Images are read with OCR during generation.</small></span>
           </label>
           {attachments.length > 0 && (
             <div className="v2-file-list">
@@ -3614,7 +3835,7 @@ function V2Library(props) {
   const rows = filteredLibrary.slice(0, 8);
   const totalWords = filteredLibrary.reduce((sum, item) => sum + countWords(item.content), 0);
   const folderCount = new Set(filteredLibrary.map((item) => item.folder).filter(Boolean)).size;
-  const formatDate = (timestamp) => timestamp ? new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(timestamp) : "-";
+  const formatDate = (timestamp) => timestamp ? new Intl.DateTimeFormat("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(timestamp) : "-";
   const useInBuilder = (item) => {
     setNarrative(item.content);
     if (categories.includes(item.tag)) setCategory(item.tag);
@@ -3628,7 +3849,7 @@ function V2Library(props) {
       </V2PageIntro>
       <section className="v2-stats-strip">
         <div className="v2-stat"><span>Saved prompts</span><strong>{filteredLibrary.length}</strong><small>of {libraryLimit} slots</small></div>
-        <div className="v2-stat"><span>Total words</span><strong>{totalWords.toLocaleString("id-ID")}</strong><small>across filtered items</small></div>
+        <div className="v2-stat"><span>Total words</span><strong>{totalWords.toLocaleString("en-US")}</strong><small>across filtered items</small></div>
         <div className="v2-stat"><span>Folders</span><strong>{folderCount}</strong><small>unique output groups</small></div>
         <div className="v2-stat compact"><span>Last edit</span><strong>{currentItem ? formatDate(currentItem.updatedAt || currentItem.createdAt) : "—"}</strong><small>{currentItem?.tag || "No selection"}</small></div>
       </section>
@@ -3915,6 +4136,9 @@ function V2PublicSettings(props) {
     billingBusy,
     billingMessage,
     requestMembershipUpgrade,
+    restorePlayPurchases,
+    deleteAccountPermanently,
+    resetPasswordForEmail,
     loadUserProfile,
     playBillingReady,
     playBillingHint,
@@ -4131,6 +4355,14 @@ function V2PublicSettings(props) {
                 >
                   {refreshingMembership ? "Refreshing..." : "Refresh membership"}
                 </button>
+                <button
+                  className="v2-btn"
+                  type="button"
+                  disabled={billingBusy || !playBillingReady}
+                  onClick={() => restorePlayPurchases?.()}
+                >
+                  Restore Play purchases
+                </button>
               </div>
             )}
             <div className="v2-quota-meter">
@@ -4159,6 +4391,12 @@ function V2PublicSettings(props) {
             <V2ChipGroup label="Default tone" options={tones} value={tone} onChange={setTone} />
             <V2ChipGroup label="Preferred AI" options={models} value={model} onChange={setModel} />
             <V2ChipGroup label="Default output" options={outputTypes} value={outputType} onChange={setOutputType} />
+            <V2ChipGroup
+              label="Generation mode"
+              options={["Fast", "Balanced", "Patient Free"]}
+              value={props.generationMode || "Balanced"}
+              onChange={props.setGenerationMode}
+            />
           </div>
 
           <div className="v2-card v2-settings-card">
@@ -4229,11 +4467,21 @@ function V2PublicSettings(props) {
                 </button>
               )}
               <button className="v2-btn" onClick={clearProfile}><Trash2 size={16} />Clear Local Profile</button>
+              {accountState.userId && (
+                <button
+                  className="v2-btn danger"
+                  type="button"
+                  disabled={billingBusy}
+                  onClick={() => deleteAccountPermanently?.()}
+                >
+                  <Trash2 size={16} />Delete Account
+                </button>
+              )}
             </div>
             <p className="v2-small">
               {entitlements?.teamLibraryBundle
                 ? "Business: share the Team backup JSON file with teammates (manual import)."
-                : "Full account deletion should be handled by the auth/database backend once login is live."}
+                : "Signed-in users can permanently delete their account here. Guest data stays on this device only."}
             </p>
           </div>
 
@@ -4250,7 +4498,7 @@ function V2PublicSettings(props) {
             <div className="v2-runbook-row"><span>3</span><p>Read the full privacy policy before using production builds.</p></div>
             <div className="v2-actions wrap">
               <a className="v2-btn primary" href="/privacy" target="_blank" rel="noreferrer"><ShieldCheck size={16} />Privacy Policy</a>
-              <a className="v2-btn" href={`mailto:${import.meta.env.VITE_WEB_MEMBERSHIP_EMAIL || "support@prompt-lab.xyz"}`}><LifeBuoy size={16} />Request data deletion</a>
+              <a className="v2-btn" href="/privacy/delete-account" target="_blank" rel="noreferrer"><Trash2 size={16} />Delete account help</a>
             </div>
           </div>
         </section>
@@ -4729,7 +4977,6 @@ function navItems(isAdmin = false) {
     ["Templates", BookOpenText],
     ["Library", Library],
     ["Compare", ArrowRightLeft],
-    ["Settings", Settings],
   ];
   if (isAdmin) items.push(["Admin", KeyRound]);
   return items;
@@ -4749,7 +4996,8 @@ function Nav({ active, setActive, isAdmin = false }) {
 }
 
 function BottomNav({ active, setActive, isAdmin = false }) {
-  const items = navItems(isAdmin).filter(([name]) => name !== "Admin");
+  // Five primary tabs on phones; Settings stays in the header gear.
+  const items = navItems(isAdmin).filter(([name]) => name !== "Admin").slice(0, 5);
   return (
     <nav className="bottom-nav v2-bottom-nav">
       {items.map(([item, Icon]) => (
@@ -5242,7 +5490,7 @@ function LibraryView({
 
   function formatDate(timestamp) {
     if (!timestamp) return "-";
-    return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(timestamp);
+    return new Intl.DateTimeFormat("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(timestamp);
   }
 
   return (

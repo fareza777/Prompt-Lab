@@ -50,7 +50,10 @@ export function createAiRateLimiter({ getPlan = async () => "Free" } = {}) {
       return next();
     } catch (error) {
       console.warn("rate limit middleware error", error.message);
-      return next();
+      // Fail closed on limiter errors to avoid unbounded AI spend.
+      return res.status(503).json({
+        error: "Rate limiter unavailable. Please try again in a moment.",
+      });
     }
   };
 }

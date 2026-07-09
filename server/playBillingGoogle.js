@@ -96,6 +96,55 @@ export async function verifyPlaySubscriptionPurchase(params) {
     acknowledgementState,
     expiryTimeMillis,
     orderId: body.orderId || "",
+    packageName,
+    subscriptionId,
+    purchaseToken,
     raw: body,
   };
+}
+
+/**
+ * Acknowledge a subscription purchase so Google does not auto-refund.
+ * Safe to call when already acknowledged (acknowledgementState === 1).
+ */
+export async function acknowledgePlaySubscriptionPurchase(params) {
+  const packageName = params.packageName || process.env.GOOGLE_PLAY_PACKAGE_NAME || "app.promptlab.twa";
+  const { subscriptionId, purchaseToken } = params;
+  if (!subscriptionId || !purchaseToken) {
+    return { ok: false, error: "productId dan purchaseToken wajib." };
+  }
+
+  const tokenResult = await getAndroidPublisherAccessToken();
+  if (tokenResult.error) return { ok: false, error: tokenResult.error };
+
+  const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(packageName)}/purchases/subscriptions/${encodeURIComponent(subscriptionId)}/tokens/${encodeURIComponent(purchaseToken)}:acknowledge`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${tokenResult.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
+  });
+
+  if (response.status === 204 || response.ok) {
+    return { ok: true };
+  }
+
+  const body = await response.json().catch(() => ({}));
+  const message = body?.error?.message || `Google Play acknowledge ${response.status}`;
+  // Already acknowledged is fine.
+  if (/already.?acknowledged/i.test(message)) return { ok: true };
+  return { ok: false, error: message };
+}
+
+export function hashPurchaseToken(token) {
+  // Lightweight non-crypto fingerprint for dedup (avoid storing raw tokens).
+  const value = String(token || "");
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return `pt_${hash.toString(16)}_${value.length}`;
 }

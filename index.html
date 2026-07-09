@@ -1803,6 +1803,16 @@ html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !impor
         place-items: center;
         overflow: hidden;
         background: #061011;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .app-splash__backdrop,
+        .app-splash__orbits,
+        .app-splash__logo,
+        .app-splash__bar i {
+          animation: none !important;
+        }
       }
       #app-splash.is-exiting {
         opacity: 0;

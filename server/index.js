@@ -60,6 +60,8 @@ import { isSuperAccount, SUPER_QUOTA_LIMIT } from "../src/superAccounts.js";
 import {
   getPlanForProductId,
   verifyPlaySubscriptionPurchase,
+  acknowledgePlaySubscriptionPurchase,
+  hashPurchaseToken,
 } from "./playBillingGoogle.js";
 import {
   handleLemonSqueezyWebhook,
@@ -163,7 +165,30 @@ const defaultOpenRouterFallbackModels = [
   "qwen/qwen3-next-80b-a3b-instruct:free",
 ];
 
-app.use(cors({ origin: true }));
+const allowedCorsOrigins = [
+  process.env.APP_URL || "https://prompt-lab.xyz",
+  process.env.CORS_ORIGIN || "",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:4173",
+  "http://127.0.0.1:4173",
+]
+  .flatMap((value) => String(value).split(","))
+  .map((value) => value.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedCorsOrigins.includes(origin.replace(/\/$/, ""))) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+  })
+);
 
 app.post(
   "/api/billing/lemon-squeezy-webhook",
@@ -374,6 +399,7 @@ app.patch("/api/admin/users/:userId", express.json({ limit: "16kb" }), async (re
 
 app.post("/api/test-provider", express.json({ limit: "64kb" }), async (req, res) => {
   try {
+    await requireAdminMembership(req);
     const modelSettings = await resolveModelSettings(req, req.body);
     const runtime = getRuntimeProvider(modelSettings);
     const model = modelSettings.primaryModel || runtime.defaultModel;
@@ -535,6 +561,32 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
     }
 
     const userId = quotaSession.user.id;
+    const tokenHash = hashPurchaseToken(purchaseToken);
+
+    const { data: existingEvents } = await admin
+      .from("membership_events")
+      .select("id,user_id,plan")
+      .eq("purchase_token_hash", tokenHash)
+      .eq("provider", "google_play")
+      .limit(5);
+
+    const claimedByOther = (existingEvents || []).find((row) => row.user_id && row.user_id !== userId);
+    if (claimedByOther) {
+      res.status(409).json({ error: "This purchase is already linked to another account." });
+      return;
+    }
+
+    if (Number(verification.acknowledgementState) !== 1) {
+      const ack = await acknowledgePlaySubscriptionPurchase({
+        subscriptionId: productId,
+        purchaseToken,
+        packageName: verification.packageName,
+      });
+      if (!ack.ok) {
+        console.warn("play acknowledge failed", ack.error);
+      }
+    }
+
     const { error: profileError } = await admin
       .from("profiles")
       .update({
@@ -550,17 +602,22 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
       return;
     }
 
-    await admin.from("membership_events").insert({
-      user_id: userId,
-      event_type: "subscription_verified",
-      plan: planConfig.plan,
-      provider: "google_play",
-      metadata: {
-        productId,
-        orderId: verification.orderId || "",
-        expiryTimeMillis: verification.expiryTimeMillis || null,
-      },
-    });
+    const alreadyLogged = (existingEvents || []).some((row) => row.user_id === userId);
+    if (!alreadyLogged) {
+      await admin.from("membership_events").insert({
+        user_id: userId,
+        event_type: "subscription_verified",
+        plan: planConfig.plan,
+        provider: "google_play",
+        purchase_token_hash: tokenHash,
+        metadata: {
+          productId,
+          orderId: verification.orderId || "",
+          expiryTimeMillis: verification.expiryTimeMillis || null,
+          acknowledged: true,
+        },
+      });
+    }
 
     const { data: profile, error: readError } = await admin
       .from("profiles")
@@ -585,6 +642,126 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
   }
 });
 
+app.post("/api/billing/restore-play-purchases", express.json({ limit: "64kb" }), async (req, res) => {
+  try {
+    const purchases = Array.isArray(req.body?.purchases) ? req.body.purchases : [];
+    if (!purchases.length) {
+      res.status(400).json({ error: "purchases array is required." });
+      return;
+    }
+
+    const quotaSession = await getQuotaSession(req, 0);
+    let lastPlan = null;
+    let lastQuota = null;
+    const errors = [];
+
+    for (const item of purchases.slice(0, 6)) {
+      const productId = String(item.productId || item.itemId || "").trim();
+      const purchaseToken = String(item.purchaseToken || item.token || "").trim();
+      if (!productId || !purchaseToken) continue;
+      try {
+        const fakeReq = {
+          ...req,
+          body: { productId, purchaseToken },
+          headers: req.headers,
+        };
+        // Reuse verify logic inline for restore.
+        const planConfig = getPlanForProductId(productId);
+        if (!planConfig) {
+          errors.push(`${productId}: unknown product`);
+          continue;
+        }
+        const verification = await verifyPlaySubscriptionPurchase({ subscriptionId: productId, purchaseToken });
+        if (!verification.ok) {
+          errors.push(`${productId}: ${verification.error}`);
+          continue;
+        }
+        if (Number(verification.acknowledgementState) !== 1) {
+          await acknowledgePlaySubscriptionPurchase({ subscriptionId: productId, purchaseToken });
+        }
+        const admin = createServiceRoleSupabaseClient();
+        const userId = quotaSession.user.id;
+        const tokenHash = hashPurchaseToken(purchaseToken);
+        await admin.from("profiles").update({
+          plan: planConfig.plan,
+          quota_limit: planConfig.quotaLimit,
+          play_billing: "Google Play",
+          updated_at: new Date().toISOString(),
+        }).eq("id", userId);
+        await admin.from("membership_events").insert({
+          user_id: userId,
+          event_type: "subscription_restored",
+          plan: planConfig.plan,
+          provider: "google_play",
+          purchase_token_hash: tokenHash,
+          metadata: { productId, orderId: verification.orderId || "", expiryTimeMillis: verification.expiryTimeMillis || null },
+        });
+        lastPlan = planConfig.plan;
+        const { data: profile } = await admin
+          .from("profiles")
+          .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
+          .eq("id", userId)
+          .maybeSingle();
+        if (profile) lastQuota = publicQuota(profile);
+      } catch (error) {
+        errors.push(error.publicMessage || error.message || "restore failed");
+      }
+    }
+
+    if (!lastPlan) {
+      res.status(402).json({ error: errors[0] || "No active Play purchases found.", errors });
+      return;
+    }
+
+    res.json({
+      ok: true,
+      plan: lastPlan,
+      message: `Restored ${lastPlan} membership from Google Play.`,
+      quota: lastQuota,
+      errors: errors.length ? errors : undefined,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.publicMessage || error.message || "Restore failed." });
+  }
+});
+
+app.post("/api/account/delete", express.json({ limit: "8kb" }), async (req, res) => {
+  try {
+    const confirm = String(req.body?.confirm || "").trim().toUpperCase();
+    if (confirm !== "DELETE") {
+      res.status(400).json({ error: 'Type confirm: "DELETE" to permanently delete your account.' });
+      return;
+    }
+    const quotaSession = await getQuotaSession(req, 0);
+    const admin = createServiceRoleSupabaseClient();
+    if (!admin || !quotaSession?.user?.id) {
+      res.status(503).json({ error: "Account deletion is not available right now." });
+      return;
+    }
+    const userId = quotaSession.user.id;
+    await admin.from("membership_events").insert({
+      user_id: userId,
+      event_type: "account_delete_requested",
+      plan: quotaSession.profile?.plan || "Free",
+      provider: "app",
+      metadata: { at: new Date().toISOString() },
+    });
+    // Best-effort cleanup of user library before auth user delete.
+    await admin.from("user_library").delete().eq("user_id", userId);
+    await admin.from("profiles").delete().eq("id", userId);
+    const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
+    if (deleteError) {
+      res.status(503).json({ error: `Failed to delete auth user: ${deleteError.message}` });
+      return;
+    }
+    res.json({ ok: true, message: "Account deleted." });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.publicMessage || error.message || "Delete failed." });
+  }
+});
+
 app.post("/api/optimize-prompt", aiRateLimit, express.json({ limit: "256kb" }), async (req, res) => {
   try {
     const membership = await getMembershipFromRequest(req);
@@ -606,7 +783,26 @@ app.post("/api/optimize-prompt", aiRateLimit, express.json({ limit: "256kb" }), 
       try {
         const completion = await createOpenRouterOptimizeCompletion(payload, runtime);
         const optimizedRaw = completion.choices?.[0]?.message?.content || "";
-        const optimizedPrompt = sanitizePromptOutput(optimizedRaw) || buildLocalOptimizedPrompt(payload);
+        let optimizedPrompt = sanitizePromptOutput(optimizedRaw) || buildLocalOptimizedPrompt(payload);
+        const optCheck = validatePromptStructure(optimizedPrompt);
+        if (!optCheck.valid && runtime.client) {
+          try {
+            const retryCompletion = await createOpenRouterOptimizeCompletion(
+              {
+                ...payload,
+                prompt: `${payload.prompt}\n\nPrevious rewrite missed sections: ${optCheck.missing.join(", ")}. Rewrite again with all required sections.`,
+              },
+              runtime
+            );
+            const retryRaw = retryCompletion.choices?.[0]?.message?.content || "";
+            const retryPrompt = sanitizePromptOutput(retryRaw);
+            if (retryPrompt && !isPromptTooShort(retryPrompt)) {
+              optimizedPrompt = retryPrompt;
+            }
+          } catch (retryError) {
+            console.warn("optimize structure retry failed", retryError.message);
+          }
+        }
         body = {
           engineVersion: PROMPT_ENGINE_VERSION,
           piiFindings: payload.piiFindings || [],
@@ -859,7 +1055,9 @@ app.post("/api/generate-prompt", aiRateLimit, upload.array("attachments", 8), as
       attachments
     );
     const runtime = getRuntimeProvider(payload.modelSettings);
-    const leanProvider = runtime.provider === "minimax";
+    // Quality parity: MiniMax no longer skips structure retry / critique-refine.
+    // Streaming stays off for MiniMax to avoid serverless timeout risk.
+    const streamDisabled = runtime.provider === "minimax";
     const wantsStream = String(req.body?.stream || "").toLowerCase() === "true";
     quotaEstimate = estimateGenerationTokens(payload, attachments, membership.plan);
     quotaSession = await getQuotaSession(req, quotaEstimate);
@@ -888,7 +1086,7 @@ app.post("/api/generate-prompt", aiRateLimit, upload.array("attachments", 8), as
       }
 
       try {
-        if (wantsStream && !leanProvider) {
+        if (wantsStream && !streamDisabled) {
           await runStreamedOpenRouterGenerate({
             res,
             quotaSession,
@@ -910,7 +1108,7 @@ app.post("/api/generate-prompt", aiRateLimit, upload.array("attachments", 8), as
         let retried = false;
         let truncatedOutput = isCompletionTruncated(completion);
 
-        if (!leanProvider && isPromptTooShort(prompt) && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
+        if (isPromptTooShort(prompt) && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
           retried = true;
           try {
             generation = await createOpenRouterCompletion(payload, attachments, runtime, membership.plan, startedAt);
@@ -926,10 +1124,10 @@ app.post("/api/generate-prompt", aiRateLimit, upload.array("attachments", 8), as
           prompt = buildFallbackPrompt(payload, attachments);
         }
 
-        // v2: structure validator + retry untuk OpenRouter path.
+        // v2: structure validator + retry (all non-OpenAI providers).
         const orStructCheck = validatePromptStructure(prompt);
         const structRetryBudget = remainingBudget();
-        if (!leanProvider && !orStructCheck.valid && structRetryBudget > RETRY_ON_EMPTY_RESERVE_MS) {
+        if (!orStructCheck.valid && structRetryBudget > RETRY_ON_EMPTY_RESERVE_MS) {
           try {
             const retryMessages = [
               { role: "system", content: buildIntentSystemPromptXml(payload) },
@@ -1413,13 +1611,17 @@ function normalizeOptimizePayload(body, resolvedModelSettings) {
 }
 
 function normalizeComparePayload(body, resolvedModelSettings) {
+  const scrubbedA = scrubPII(String(body.promptA || "").slice(0, 12000), { mode: "redact" });
+  const scrubbedB = scrubPII(String(body.promptB || "").slice(0, 12000), { mode: "redact" });
+  const scrubbedUseCase = scrubPII(String(body.useCase || "").slice(0, 1200), { mode: "redact" });
   return {
     generationMode: normalizeGenerationMode(body.generationMode),
     modelSettings: resolvedModelSettings || normalizeModelSettings(body),
-    promptA: String(body.promptA || "").slice(0, 12000),
-    promptB: String(body.promptB || "").slice(0, 12000),
+    promptA: scrubbedA.sanitized,
+    promptB: scrubbedB.sanitized,
     targetModel: String(body.targetModel || "General").slice(0, 80),
-    useCase: String(body.useCase || "").slice(0, 1200),
+    useCase: scrubbedUseCase.sanitized,
+    piiFindings: [...(scrubbedA.findings || []), ...(scrubbedB.findings || []), ...(scrubbedUseCase.findings || [])],
   };
 }
 
@@ -1428,14 +1630,21 @@ function normalizeAttachmentManifest(value) {
   try {
     const parsed = typeof value === "string" ? JSON.parse(value) : value;
     if (!Array.isArray(parsed)) return [];
-    return parsed.slice(0, 8).map((item) => ({
-      dataUrl: "",
-      excerpt: String(item.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 4000),
-      filename: String(item.filename || item.name || "attachment").slice(0, 180),
-      kind: String(item.kind || "file").slice(0, 60),
-      mime: String(item.mime || item.type || "application/octet-stream").slice(0, 120),
-      size: Number(item.size || 0),
-    }));
+    let remainingChars = 8000;
+    return parsed.slice(0, 8).map((item) => {
+      const rawExcerpt = String(item.excerpt || "").replace(/\s+/g, " ").trim();
+      const capped = rawExcerpt.slice(0, Math.min(2000, Math.max(0, remainingChars)));
+      remainingChars -= capped.length;
+      const scrubbed = scrubPII(capped, { mode: "redact" });
+      return {
+        dataUrl: "",
+        excerpt: scrubbed.sanitized,
+        filename: String(item.filename || item.name || "attachment").slice(0, 180),
+        kind: String(item.kind || "file").slice(0, 60),
+        mime: String(item.mime || item.type || "application/octet-stream").slice(0, 120),
+        size: Number(item.size || 0),
+      };
+    });
   } catch {
     return [];
   }
@@ -1544,8 +1753,9 @@ function publicApiError(message, statusCode = 400) {
 }
 
 async function getMembershipFromRequest(req) {
+  // Fail closed: never grant paid entitlements when auth is misconfigured.
   if (!quotaAuthEnabled) {
-    return { plan: "Business", profile: null, user: null, client: null };
+    return { plan: "Free", profile: null, user: null, client: null, authMisconfigured: true };
   }
   const token = extractBearerToken(req);
   if (!token) {
@@ -1570,7 +1780,9 @@ async function getMembershipFromRequest(req) {
 }
 
 async function getQuotaSession(req, estimatedTokens = 0) {
-  if (!quotaAuthEnabled) return null;
+  if (!quotaAuthEnabled) {
+    throw publicApiError("Auth is not configured. AI features are unavailable.", 503);
+  }
   const token = extractBearerToken(req);
   if (!token) throw publicApiError("Sign in to use AI features and your token quota.", 401);
 
@@ -1698,7 +1910,8 @@ async function recordUsage(quotaSession, { eventType, metadata, outputText, toke
 }
 
 async function finishGenerateResponse(res, quotaSession, usagePayload, body) {
-  const softFail = process.env.QUOTA_RECORD_SOFT_FAIL !== "false";
+  // Production default: hard-fail quota writes. Set QUOTA_RECORD_SOFT_FAIL=true only for emergency.
+  const softFail = process.env.QUOTA_RECORD_SOFT_FAIL === "true";
   let quota = null;
   let warning = body.warning || "";
 

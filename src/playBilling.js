@@ -151,3 +151,29 @@ export async function verifyPlayPurchaseOnServer(apiBase, accessToken, payload) 
   }
   return data;
 }
+
+export async function restorePlayPurchasesOnServer(apiBase, accessToken, purchases) {
+  const response = await fetch(`${apiBase}/api/billing/restore-play-purchases`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ purchases }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || "Restore purchases failed.");
+  }
+  return data;
+}
+
+/** Map Digital Goods listPurchases() items into verify/restore payload shape. */
+export function normalizePlayPurchaseList(items = []) {
+  return (items || [])
+    .map((item) => ({
+      productId: item.itemId || item.productId || item.sku || "",
+      purchaseToken: item.purchaseToken || item.token || "",
+    }))
+    .filter((item) => item.productId && item.purchaseToken);
+}

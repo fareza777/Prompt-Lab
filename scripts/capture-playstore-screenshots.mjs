@@ -9,48 +9,32 @@ const outDir = join(root, "playstore", "assets");
 const port = 4173;
 const baseUrl = `http://127.0.0.1:${port}`;
 
-const screens = ["Builder", "Optimizer", "Templates", "Library", "Settings"];
+const screens = ["Builder", "Optimizer", "Templates", "Library", "Compare", "Settings"];
 const PHONE_WIDTH = 1080;
 const PHONE_HEIGHT = 1920;
 
 const mobileChromeCss = `
   .v2-shell { grid-template-columns: 1fr !important; min-height: 100vh !important; }
-  .v2-sidebar {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: center !important;
+  .v2-sidebar { display: none !important; }
+  .v2-bottom-nav {
+    display: grid !important;
     position: fixed !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    top: auto !important;
-    height: 84px !important;
-    width: 100% !important;
-    padding: 10px 6px calc(10px + env(safe-area-inset-bottom)) !important;
-    border-top: 1px solid rgba(125, 211, 252, 0.2) !important;
-    background: rgba(6, 16, 17, 0.96) !important;
-    backdrop-filter: blur(16px) !important;
+    left: 12px !important;
+    right: 12px !important;
+    bottom: max(12px, env(safe-area-inset-bottom)) !important;
     z-index: 1000 !important;
-  }
-  .v2-brand, .v2-recent-list, .v2-quota-card, .v2-side-card { display: none !important; }
-  .v2-nav {
-    display: flex !important;
-    flex-direction: row !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
     gap: 4px !important;
-    width: 100% !important;
-    justify-content: space-between !important;
+    padding: 5px !important;
+    background: rgba(12, 20, 26, 0.96) !important;
+    border: 1px solid rgba(148, 163, 184, 0.22) !important;
+    border-radius: 16px !important;
   }
-  .v2-nav button {
-    flex: 1 !important;
-    min-height: 56px !important;
-    padding: 6px 4px !important;
-    flex-direction: column !important;
-    gap: 4px !important;
+  .v2-bottom-nav button {
+    min-height: 48px !important;
     font-size: 10px !important;
   }
-  .v2-nav button span { display: block !important; font-size: 10px !important; line-height: 1.1 !important; }
-  .v2-main { padding: 12px 12px 100px !important; }
+  .v2-main { padding: 12px 12px 110px !important; }
   .v2-headerbar { flex-wrap: wrap !important; gap: 8px !important; }
   .v2-studio-grid, .v2-diff-grid, .v2-library-grid { grid-template-columns: 1fr !important; }
   .v2-hero h1 { font-size: clamp(28px, 7vw, 40px) !important; }
@@ -107,12 +91,12 @@ try {
   });
 
   await page.addInitScript(() => {
-    localStorage.setItem("promptlab-onboarded", "true");
+    localStorage.setItem("promptlab-onboarded", "1");
     localStorage.removeItem("promptlab-guest");
     localStorage.removeItem("promptlab-auth-intent");
   });
 
-  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}/app`, { waitUntil: "networkidle" });
   if (await page.getByRole("button", { name: /Continue as Guest/i }).count()) {
     await page.getByRole("button", { name: /Continue as Guest/i }).click();
   }
@@ -121,8 +105,16 @@ try {
   await page.waitForTimeout(1500);
 
   for (const name of screens) {
-    const nav = page.locator(".v2-nav button").filter({ hasText: name });
-    await nav.first().click({ timeout: 15000 });
+    const bottom = page.locator(".v2-bottom-nav button").filter({ hasText: name });
+    const header = page.locator(".v2-icon-btn[title='Settings']");
+    if (name === "Settings" && (await header.count())) {
+      await header.first().click({ timeout: 15000 });
+    } else if (await bottom.count()) {
+      await bottom.first().click({ timeout: 15000 });
+    } else {
+      const side = page.locator(".v2-nav button").filter({ hasText: name });
+      await side.first().click({ timeout: 15000 });
+    }
     await page.waitForTimeout(1200);
     const file = join(outDir, `screenshot-phone-${name.toLowerCase()}.png`);
     const raw = await page.screenshot({ type: "png", fullPage: false });
