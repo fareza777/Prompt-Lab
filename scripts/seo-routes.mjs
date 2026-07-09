@@ -537,6 +537,20 @@ export const SEO_ROUTES = {
                             datePublished: "2026-07-07",
                             dateModified: "2026-07-07",
                             keywords: "best prompt for negotiation, negotiation prompt, salary prompt, AI negotiation, Claude negotiation, counter-offer prompt, vendor renewal prompt, scope creep prompt, partnership prompt, BATNA prompt"
+                              },
+                            "/blog/best-prompt-for-research": {
+                            routeKey: "article-best-prompt-for-research",
+                            h1: "article-best-prompt-for-research",
+                            lang: "en",
+                            ogType: "article",
+                            title: "Best Prompt for Research: Turn AI Into a Literature Scout | PromptLab",
+                            description:
+                              "The best prompt for research is a 4-part structure (Role + Scope + Sources + Output) that turns vague questions into a sourced literature note with gaps, counterpoints, and follow-up queries. 3 worked examples (academic, market, policy) + 3 mistakes that make AI invent citations.",
+                            canonical: `${SITE}/blog/best-prompt-for-research`,
+                            headline: "Best Prompt for Research: Turn AI Into a Literature Scout",
+                            datePublished: "2026-07-10",
+                            dateModified: "2026-07-10",
+                            keywords: "best prompt for research, research prompt, AI research assistant, literature review prompt, deep research prompt, Claude research, ChatGPT research, Gemini research, source-grounded prompt, citation prompt"
                               }
                           };
 
