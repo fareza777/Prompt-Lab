@@ -453,6 +453,30 @@
       headline: "Best Prompt for Negotiation: Get the Deal Without the Back-and-Forth",
       datePublished: "2026-07-07",
       dateModified: "2026-07-07",
+    },
+    "/blog/best-prompt-for-research": {
+      title: "Best Prompt for Research: Turn AI Into a Literature Scout | PromptLab",
+      description: "The best prompt for research is a 4-part structure (Role + Scope + Sources + Output) that turns vague questions into a sourced literature note with gaps, counterpoints, and follow-up queries. 3 worked examples (academic, market, policy) + 3 mistakes that make AI invent citations.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-research",
+      h1: "article-best-prompt-for-research",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for research, research prompt, AI research assistant, literature review prompt, deep research prompt, Claude research, ChatGPT research, Gemini research, source-grounded prompt, citation prompt",
+      headline: "Best Prompt for Research: Turn AI Into a Literature Scout",
+      datePublished: "2026-07-10",
+      dateModified: "2026-07-10",
+    },
+    "/blog/best-prompt-for-interview-prep": {
+      title: "Best Prompt for Interview Prep: Practice Answers That Sound Like You | PromptLab",
+      description: "The best prompt for interview prep uses a 4-part framework (Role, Context, Task, Output) to turn AI into a mock interviewer, STAR story builder, and weak-answer stress test. 5 copy-paste templates + 3 mistakes that keep your prep generic.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-interview-prep",
+      h1: "article-best-prompt-for-interview-prep",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for interview prep, interview prompt, job interview AI, STAR method prompt, mock interview prompt, behavioral interview AI, Claude interview, ChatGPT interview, interview practice prompt, job prep AI",
+      headline: "Best Prompt for Interview Prep: Practice Answers That Sound Like You",
+      datePublished: "2026-07-11",
+      dateModified: "2026-07-11",
     }
   };
 
@@ -495,7 +519,9 @@
     "/blog/best-prompt-for-customer-support": "article-best-prompt-for-customer-support",
     "/blog/best-prompt-for-productivity": "article-best-prompt-for-productivity",
     "/blog/best-prompt-for-tutoring": "article-best-prompt-for-tutoring",
-    "/blog/best-prompt-for-negotiation": "article-best-prompt-for-negotiation"
+    "/blog/best-prompt-for-negotiation": "article-best-prompt-for-negotiation",
+    "/blog/best-prompt-for-research": "article-best-prompt-for-research",
+    "/blog/best-prompt-for-interview-prep": "article-best-prompt-for-interview-prep"
   };
 
   function normalizePath(pathname) {
