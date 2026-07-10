@@ -48,7 +48,7 @@ export function getPlayBillingHint() {
   return {
     ready: false,
     message:
-      "Play Billing is not active in this app yet. Reinstall from the Play Store link (not a Chrome bookmark), fully close the app, then open it again. Make sure the latest AAB is uploaded to internal testing.",
+      "Play Billing is warming up. Fully close the app, reopen from Play Store, then try again.",
   };
 }
 

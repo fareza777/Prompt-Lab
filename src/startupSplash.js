@@ -1,4 +1,4 @@
-const MIN_VISIBLE_MS = 1650;
+const MIN_VISIBLE_MS = 900;
 
 function splashElement() {
   return document.getElementById("app-splash");

@@ -1433,7 +1433,7 @@ function App() {
         setHasAuthSession(true);
         setAuthStatus("Signed in");
         setAuthSessionReady(true);
-        void loadUserProfile(user);
+        void loadUserProfile(user, { autoRestorePlay: isLikelyAndroidTwa() });
       } else {
         setHasAuthSession(false);
         setAccountState(createDefaultAccountState());
@@ -1451,8 +1451,10 @@ function App() {
         if (event === "SIGNED_IN") {
           markInstalledAppEntered();
           setAuthError("");
+          loadUserProfile(user, { autoRestorePlay: isLikelyAndroidTwa() });
+        } else {
+          loadUserProfile(user);
         }
-        loadUserProfile(user);
       } else {
         setHasAuthSession(false);
         setAuthSessionReady(true);
@@ -1597,7 +1599,7 @@ function App() {
   }
 
   function savePrompt(content = prompt, titleSeed = narrative, meta = {}) {
-    const title = titleSeed.trim().split(/\s+/).slice(0, 8).join(" ") || "Prompt baru";
+    const title = titleSeed.trim().split(/\s+/).slice(0, 8).join(" ") || "New prompt";
     const existing = library.find((item) => item.id === selectedLibraryId);
     if (existing && String(existing.content || "").trim() !== String(content || "").trim()) {
       const updated = appendPromptVersion(existing, content, {
@@ -1652,7 +1654,7 @@ function App() {
     setCustomTemplates((items) => items.filter((item) => item.id !== id));
   }
 
-  async function loadUserProfile(user) {
+  async function loadUserProfile(user, { autoRestorePlay = false } = {}) {
     if (!supabase || !user?.id) return;
     setAuthError("");
     const { data, error } = await supabase
@@ -1662,7 +1664,7 @@ function App() {
       .maybeSingle();
 
     if (error) {
-      setAuthError(`Profile error: ${error.message}`);
+      setAuthError("Could not load your profile. Please try again.");
       setAccountState((account) => ({
         ...account,
         userId: user.id,
@@ -1674,6 +1676,10 @@ function App() {
 
     if (data) {
       setAccountState(profileToAccount(data, user));
+      if (autoRestorePlay && isPlayBillingAvailable()) {
+        void restorePlayPurchases({ silent: true, userId: user.id });
+        void syncPlayMembership({ silent: true, userId: user.id });
+      }
       return;
     }
 
@@ -1689,12 +1695,16 @@ function App() {
       .maybeSingle();
 
     if (insertError) {
-      setAuthError(`Profile create error: ${insertError.message}`);
+      setAuthError("Could not create your profile. Please try again.");
       setAccountState(profileToAccount(draftProfile, user));
       return;
     }
 
     setAccountState(profileToAccount(inserted || draftProfile, user));
+    if (autoRestorePlay && isPlayBillingAvailable()) {
+      void restorePlayPurchases({ silent: true, userId: user.id });
+      void syncPlayMembership({ silent: true, userId: user.id });
+    }
   }
 
   async function signInWithPassword(email, password) {
@@ -1747,15 +1757,17 @@ function App() {
   async function deleteAccountPermanently() {
     if (!supabase) {
       setBillingMessage("Supabase is not configured.");
+      flashAction("Account deletion unavailable");
       return;
     }
     const confirmed = window.confirm(
-      "Delete your PromptLab account permanently? This removes your profile, synced library, and membership. This cannot be undone."
+      "Delete your PromptLab account permanently? This removes your profile, synced library, and membership data.\n\nImportant: This does NOT cancel a Google Play subscription. Manage billing in Google Play → Payments & subscriptions."
     );
     if (!confirmed) return;
     const typed = window.prompt('Type DELETE to confirm account deletion:', "");
     if (String(typed || "").trim().toUpperCase() !== "DELETE") {
       setBillingMessage("Account deletion canceled.");
+      flashAction("Deletion canceled");
       return;
     }
     setBillingBusy(true);
@@ -1858,7 +1870,12 @@ function App() {
     if (!supabase) return {};
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    const userId = data.session?.user?.id || accountState.userId || "";
+    if (!token) return {};
+    return {
+      Authorization: `Bearer ${token}`,
+      ...(userId ? { "x-user-id": userId } : {}),
+    };
   }
 
   async function getAccessToken() {
@@ -1907,36 +1924,89 @@ function App() {
     }
   }
 
-  async function restorePlayPurchases() {
-    if (!accountState.userId) {
-      setBillingMessage("Sign in to restore purchases.");
+  async function restorePlayPurchases({ silent = false, userId = "" } = {}) {
+    const effectiveUserId = userId || accountState.userId;
+    if (!effectiveUserId) {
+      if (!silent) {
+        setBillingMessage("Sign in to restore purchases.");
+        flashAction("Sign in required");
+      }
       return;
     }
     if (!isPlayBillingAvailable()) {
-      setBillingMessage(
-        isLikelyAndroidTwa()
-          ? "Play Billing is not available in this session. Reinstall from Google Play."
-          : "Restore purchases is only available in the Android app from Google Play."
-      );
+      if (!silent) {
+        setBillingMessage(
+          isLikelyAndroidTwa()
+            ? "Play Billing is not available in this session. Reinstall from Google Play."
+            : "Restore purchases is only available in the Android app from Google Play."
+        );
+      }
       return;
     }
-    setBillingBusy(true);
-    setBillingMessage("");
+    if (!silent) {
+      setBillingBusy(true);
+      setBillingMessage("");
+    }
     try {
       const items = await listPlayPurchases();
       const purchases = normalizePlayPurchaseList(items);
-      if (!purchases.length) throw new Error("No active Google Play purchases found on this device.");
+      if (!purchases.length) {
+        if (!silent) throw new Error("No active Google Play purchases found on this device.");
+        await syncPlayMembership({ silent: true, purchases: [], userId: effectiveUserId });
+        return;
+      }
       const token = await getAccessToken();
       if (!token) throw new Error("Session expired. Please sign in again.");
       const data = await restorePlayPurchasesOnServer(apiBase, token, purchases);
       if (data.quota) applyServerQuota(data.quota);
-      else await loadUserProfile({ id: accountState.userId, email: accountState.email });
-      setBillingMessage(data.message || "Purchases restored.");
-      flashAction("Purchases restored");
+      else await loadUserProfile({ id: effectiveUserId, email: accountState.email });
+      if (!silent) {
+        setBillingMessage(data.message || "Purchases restored.");
+        flashAction("Purchases restored");
+      } else if (data.plan && data.plan !== "Free") {
+        flashAction(`${data.plan} restored`);
+      }
     } catch (error) {
-      setBillingMessage(error.message || "Restore failed.");
+      if (!silent) {
+        setBillingMessage(error.message || "Restore failed.");
+        flashAction("Restore failed");
+      }
     } finally {
-      setBillingBusy(false);
+      if (!silent) setBillingBusy(false);
+    }
+  }
+
+  async function syncPlayMembership({ silent = true, purchases, userId = "" } = {}) {
+    const effectiveUserId = userId || accountState.userId;
+    if (!effectiveUserId) return;
+    try {
+      const token = await getAccessToken();
+      if (!token) return;
+      let payloadPurchases = purchases;
+      if (payloadPurchases == null && isPlayBillingAvailable()) {
+        try {
+          payloadPurchases = normalizePlayPurchaseList(await listPlayPurchases());
+        } catch {
+          payloadPurchases = [];
+        }
+      }
+      const response = await fetch(`${apiBase}/api/billing/sync-play-membership`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ purchases: payloadPurchases || [] }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) return;
+      if (data.quota) applyServerQuota(data.quota);
+      if (data.changed && data.plan === "Free") {
+        flashAction("Membership updated to Free");
+        if (!silent) setBillingMessage(data.message || "Membership updated to Free.");
+      }
+    } catch {
+      /* silent sync */
     }
   }
 
@@ -2053,11 +2123,33 @@ function App() {
         attachments.forEach((item) => formData.append("attachments", item.file));
       }
 
-      const response = await fetch(`${apiBase}/api/generate-prompt`, {
-        method: "POST",
-        headers: await getAuthHeaders(),
-        body: formData,
-      });
+      const authHeaders = await getAuthHeaders();
+      let response = null;
+      let lastNetworkError = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          response = await fetch(`${apiBase}/api/generate-prompt`, {
+            method: "POST",
+            headers: authHeaders,
+            body: formData,
+          });
+          if (response.status === 502 || response.status === 503 || response.status === 504) {
+            lastNetworkError = new Error("AI service is temporarily unavailable.");
+            if (attempt < 2) {
+              await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+              continue;
+            }
+          }
+          break;
+        } catch (networkError) {
+          lastNetworkError = networkError;
+          if (attempt < 2) {
+            await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+            continue;
+          }
+        }
+      }
+      if (!response) throw lastNetworkError || new Error(API_MSG.backendUnavailableLocalPrompt);
 
       const contentType = response.headers.get("content-type") || "";
       if (contentType.includes("text/event-stream") && response.ok) {
@@ -2098,7 +2190,7 @@ function App() {
     } catch (error) {
       const message = error.message || API_MSG.backendUnavailableLocalPrompt;
       const needsSignIn = /sign in to use ai|invalid session|authentication required|401/i.test(message);
-      const quotaOnly = /usage quota|quota exceeded|quota token|failed to record quota|too many ai requests/i.test(message);
+      const quotaOnly = /usage quota|quota exceeded|quota token|failed to record quota|too many ai requests|too many requests/i.test(message);
       if (needsSignIn) {
         setGeneratedPrompt("");
         setGenerationSource("blocked");
@@ -2110,6 +2202,7 @@ function App() {
         );
         setShowAuthUpsell(true);
         setGenerationPhase("idle");
+        flashAction("Sign in to generate");
         return "";
       }
       setGeneratedPrompt(localPrompt);
@@ -2119,8 +2212,10 @@ function App() {
       if (quotaOnly) {
         setErrorMessage("");
         setWarningMessage(message);
+        flashAction("Quota or rate limit");
       } else {
         setErrorMessage(message);
+        flashAction("Showing preview");
       }
       setGenerationPhase("idle");
       return localPrompt;
@@ -2464,6 +2559,8 @@ function App() {
       const message = upgradeMessageForFeature(feature);
       setBillingMessage(message);
       setExportStatus("");
+      flashAction("Upgrade to export");
+      setWarningMessage(message);
       return;
     }
     try {
@@ -2629,6 +2726,7 @@ function App() {
     billingMessage,
     upgradeViaPlayBilling,
     restorePlayPurchases,
+    syncPlayMembership,
     requestMembershipUpgrade,
     resetPasswordForEmail,
     deleteAccountPermanently,
@@ -2716,7 +2814,13 @@ function V2App(props) {
     authSessionReady,
     hasAuthSession,
   } = props;
-  const [guestMode, setGuestMode] = useState(false);
+  const [guestMode, setGuestMode] = useState(() => {
+    try {
+      return localStorage.getItem("promptlab-guest") === "1";
+    } catch {
+      return false;
+    }
+  });
   const [showOnboarding, setShowOnboarding] = useState(() => {
     try {
       return localStorage.getItem("promptlab-onboarded") !== "1";
@@ -2724,6 +2828,7 @@ function V2App(props) {
       return true;
     }
   });
+  const [authGateIntent, setAuthGateIntent] = useState(false);
   const recentPrompts = useMemo(
     () =>
       [...(library || [])]
@@ -2742,21 +2847,33 @@ function V2App(props) {
   }, [active, isAdmin, setActive]);
 
   useEffect(() => {
-    localStorage.removeItem("promptlab-guest");
     if (!hasAuthSession) return;
+    localStorage.removeItem("promptlab-guest");
     setGuestMode(false);
+    setAuthGateIntent(false);
   }, [hasAuthSession]);
 
+  useEffect(() => {
+    if (!hasAuthSession || !accountState.userId) return;
+    if (!isLikelyAndroidTwa()) return;
+    const onFocus = () => {
+      if (document.visibilityState === "visible") void props.syncPlayMembership?.({ silent: true });
+    };
+    document.addEventListener("visibilitychange", onFocus);
+    return () => document.removeEventListener("visibilitychange", onFocus);
+  }, [hasAuthSession, accountState.userId, props.syncPlayMembership]);
+
   const continueGuest = () => {
-    localStorage.removeItem("promptlab-guest");
-    localStorage.removeItem("promptlab-auth-intent");
     try {
+      localStorage.setItem("promptlab-guest", "1");
       localStorage.setItem("promptlab-onboarded", "1");
     } catch {
       /* ignore */
     }
+    localStorage.removeItem("promptlab-auth-intent");
     markInstalledAppEntered();
     setShowOnboarding(false);
+    setAuthGateIntent(false);
     setGuestMode(true);
     props.setShowAuthUpsell?.(false);
     setActive("Builder");
@@ -2765,6 +2882,7 @@ function V2App(props) {
   const resumeInstalledSession = () => {
     markInstalledAppEntered();
     setShowOnboarding(false);
+    setAuthGateIntent(false);
   };
 
   const finishOnboarding = (mode) => {
@@ -2775,11 +2893,17 @@ function V2App(props) {
     }
     setShowOnboarding(false);
     if (mode === "guest") continueGuest();
+    else {
+      setAuthGateIntent(true);
+      setGuestMode(false);
+      localStorage.removeItem("promptlab-guest");
+    }
   };
 
   const needsAuthGate =
     !guestMode &&
-    (!hasInstalledAppEntry() ||
+    (authGateIntent ||
+      !hasInstalledAppEntry() ||
       !authSessionReady ||
       !hasAuthSession ||
       !accountState.userId);
@@ -2878,7 +3002,7 @@ function V2App(props) {
         {active === "Settings" && <V2Settings {...props} />}
         {active === "Admin" && isAdmin && <V2AdminDashboard {...props} />}
       </main>
-      <BottomNav active={active} setActive={setActive} isAdmin={isAdmin} />
+      <BottomNav active={active} setActive={setActive} isAdmin={isAdmin} entitlements={props.entitlements} />
       <V2CommandPalette
         open={props.commandPaletteOpen}
         onClose={() => props.setCommandPaletteOpen(false)}
@@ -3009,7 +3133,7 @@ function V2AuthGate({
           )}
           <button className="v2-btn" onClick={onGuest}>Continue as Guest</button>
         </div>
-        <p className="v2-note">Want Pro or Business? Create an account first, then open Settings → Membership to upgrade. Guest mode is for local trial only.</p>
+        <p className="v2-note">Want Pro or Business? Create an account, then open Membership to upgrade. Or continue exploring as guest.</p>
       </section>
     </main>
   );
@@ -3031,7 +3155,7 @@ function V2Onboarding({ onAuth, onGuest }) {
           <button className="v2-btn primary" onClick={onAuth}>Sign In / Create Account</button>
           <button className="v2-btn" onClick={onGuest}>Continue as Guest</button>
         </div>
-        <p className="v2-note">Membership upgrades are available after sign in from Settings → Membership.</p>
+        <p className="v2-note">AI generation needs a free account. Guest mode keeps drafts on this device only.</p>
       </section>
     </main>
   );
@@ -3051,8 +3175,18 @@ function V2Header({ active, setActive, settingsStatus, isGenerating, generationS
     ? "Generating..."
     : librarySyncStatus || (isGuestMode || !accountState?.userId ? "On this device" : "Synced");
   const syncClass = isGenerating ? "busy" : isGuestMode || !accountState?.userId ? "local" : "";
-  const engineLabel = settingsStatus == null ? "" : settingsStatus.ok ? "AI online" : "Preview mode";
+  const engineLabel =
+    settingsStatus == null
+      ? ""
+      : settingsStatus.ok && settingsStatus.ai
+        ? "AI online"
+        : settingsStatus.ok === false
+          ? "AI offline"
+          : "AI degraded";
   const initials = getUserInitials(accountState);
+  const quotaUsed = accountState?.quotaUsed || 0;
+  const quotaLimit = Math.max(1, accountState?.quotaLimit || 1);
+  const quotaLow = !accountState?.quotaUnlimited && quotaUsed / quotaLimit >= 0.8;
   return (
     <header className="v2-headerbar">
       <div>
@@ -3061,13 +3195,23 @@ function V2Header({ active, setActive, settingsStatus, isGenerating, generationS
       </div>
       <div className="v2-header-actions">
         <span className={`v2-sync v2-header-pill ${syncClass}`}><i /> {syncLabel}</span>
+        {accountState?.userId && (
+          <button
+            type="button"
+            className={`v2-quota-chip v2-header-pill ${quotaLow ? "warn" : ""}`}
+            onClick={() => setActive("Settings")}
+            title="Open Membership"
+          >
+            {accountState.quotaUnlimited ? "Unlimited" : `${Math.round((quotaUsed / quotaLimit) * 100)}% quota`}
+          </button>
+        )}
         <button className="v2-search" type="button" onClick={() => onOpenCommandPalette?.()}>
           <Search size={15} />
           <span>Search</span>
           <kbd>⌘K</kbd>
         </button>
         {engineLabel && (
-          <span className={`v2-health v2-header-pill ${settingsStatus?.ok ? "ready" : ""}`}>
+          <span className={`v2-health v2-header-pill ${settingsStatus?.ok && settingsStatus?.ai ? "ready" : ""}`}>
             {engineLabel}
           </span>
         )}
@@ -3130,7 +3274,7 @@ function EngineMetaBadges({ engineVersion, piiFindings }) {
               color: "#4f46e5",
               border: "1px solid rgba(99, 102, 241, 0.3)",
             }}
-            title="Versi PromptLab Engine yang memproses request ini"
+            title="PromptLab Engine version for this request"
           >
             ENGINE {engineVersion}
           </span>
@@ -3242,12 +3386,13 @@ function V2Builder(props) {
     engineVersion, piiFindings, entitlements, accountState,
     showAuthUpsell, setShowAuthUpsell, setActive, setGuestMode,
   } = props;
+  const hasDraft = Boolean(String(narrative || "").trim() || attachments.length);
   return (
     <div className="v2-screen">
       <V2PageIntro
         eyebrow="Builder"
-        title={<>The cleanest <em>prompt</em>, before you hit run.</>}
-        copy="Turn raw ideas, files, and screenshots into precise instructions for Claude, ChatGPT, Gemini, and other creative models."
+        title={hasDraft ? <>Keep shaping your <em>prompt</em>.</> : <>Write your idea, then <em>Generate</em>.</>}
+        copy={hasDraft ? "" : "One clear request is enough. Attach a file only if it adds context."}
         compact
       >
         <div className="v2-hero-status">
@@ -3274,6 +3419,7 @@ function V2Builder(props) {
                 setShowAuthUpsell?.(false);
                 try {
                   localStorage.removeItem("promptlab-onboarded");
+                  localStorage.removeItem("promptlab-guest");
                 } catch {
                   /* ignore */
                 }
@@ -3290,7 +3436,7 @@ function V2Builder(props) {
         </div>
       )}
 
-      <section className="v2-studio-grid">
+      <section className={`v2-studio-grid ${hasDraft ? "has-draft" : "is-focus"}`}>
         <div className="v2-card v2-composer v2-glass-card">
           <div className="v2-card-head">
             <div>
@@ -3300,11 +3446,11 @@ function V2Builder(props) {
             <Bot size={22} />
           </div>
           <label className="v2-label">User request</label>
-          <textarea className="v2-textarea large" value={narrative} onChange={(event) => setNarrative(event.target.value)} />
+          <textarea className="v2-textarea large" value={narrative} onChange={(event) => setNarrative(event.target.value)} placeholder="Describe what you want the AI to do..." />
           <label className="v2-attach">
             <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.csv,.xlsx" capture="environment" onChange={(event) => addAttachments(event.target.files)} />
             <Paperclip size={18} />
-            <span><strong>Attach image, screenshot, or file</strong><small>PDF, DOCX, PPTX, TXT, JPG, PNG. Camera capture supported on mobile. Images are read with OCR during generation.</small></span>
+            <span><strong>Attach image, screenshot, or file</strong><small>PDF, DOCX, PPTX, TXT, JPG, PNG. Camera capture supported on mobile.</small></span>
           </label>
           {attachments.length > 0 && (
             <div className="v2-file-list">
@@ -3338,6 +3484,16 @@ function V2Builder(props) {
             <V2ActionBtn className="v2-btn" onAction={() => copyText(prompt)} successLabel={<><Check size={17} />Copied</>}>
               <Clipboard size={17} />Copy
             </V2ActionBtn>
+            {!accountState?.userId && (
+              <button className="v2-btn" type="button" onClick={() => setActive?.("Settings")}>
+                Unlock AI
+              </button>
+            )}
+            {accountState?.userId && accountState?.plan === "Free" && (
+              <button className="v2-btn" type="button" onClick={() => setActive?.("Settings")}>
+                Get Pro
+              </button>
+            )}
           </div>
           {isGenerating && (
             <V2MiniPipeline
@@ -3567,7 +3723,11 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
     : [];
   return (
     <div className="v2-screen">
-      <V2PageIntro eyebrow="Optimizer" title="Old prompts, refined into winning instructions." copy="Paste a weak prompt, pick a mode, and get a stronger version in one pass." />
+      <V2PageIntro eyebrow="Optimizer" title="Old prompts, refined into winning instructions." copy="Paste a weak prompt, pick a mode, and get a stronger version in one pass.">
+        {!entitlements?.aiOptimize && (
+          <div className="v2-hero-status"><span>Plan</span><strong>Pro</strong><small>AI Optimizer uses quota on Pro/Business</small></div>
+        )}
+      </V2PageIntro>
       <section className="v2-diff-grid">
         <div className="v2-card v2-glass-card">
           <div className="v2-card-head"><h2>Input</h2><span className="v2-score-badge">{beforeScore.score}</span></div>
@@ -3832,7 +3992,8 @@ function V2Library(props) {
   } = props;
   const canDocx = entitlements?.docxExport;
   const currentItem = filteredLibrary.find((item) => item.id === selectedLibraryId) || filteredLibrary[0] || selectedLibrary;
-  const rows = filteredLibrary.slice(0, 8);
+  const [showAllLibrary, setShowAllLibrary] = useState(false);
+  const rows = showAllLibrary ? filteredLibrary : filteredLibrary.slice(0, 8);
   const totalWords = filteredLibrary.reduce((sum, item) => sum + countWords(item.content), 0);
   const folderCount = new Set(filteredLibrary.map((item) => item.folder).filter(Boolean)).size;
   const formatDate = (timestamp) => timestamp ? new Intl.DateTimeFormat("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(timestamp) : "-";
@@ -3883,6 +4044,13 @@ function V2Library(props) {
               </button>
             ))}
           </div>
+          {filteredLibrary.length > 8 && (
+            <div className="v2-actions">
+              <button className="v2-btn" type="button" onClick={() => setShowAllLibrary((value) => !value)}>
+                {showAllLibrary ? "Show less" : `Show all ${filteredLibrary.length}`}
+              </button>
+            </div>
+          )}
         </div>
         <div className="v2-card v2-editor v2-glass-card">
           {currentItem ? (
@@ -3941,6 +4109,7 @@ function V2Compare({
   isComparing,
   comparePrompts,
   compareBiasMitigation,
+  entitlements,
 }) {
   const prompts = [compareA, compareB].filter(Boolean);
   const basePrompt = prompts[0] || "Paste prompts into panels A/B to compare instruction quality.";
@@ -3976,7 +4145,22 @@ function V2Compare({
   ];
   return (
     <div className="v2-screen">
-      <V2PageIntro eyebrow="Compare" title="Compare two prompts before sending." copy="Paste two versions, run the judge, then use the stronger prompt in Builder." />
+      <V2PageIntro eyebrow="Compare" title="Compare two prompts before sending." copy="Paste two versions, run the judge, then use the stronger prompt in Builder.">
+        <div className="v2-hero-status">
+          <span>Judge</span>
+          <strong>{compareResult ? winnerKey : "—"}</strong>
+          <small>{entitlements?.aiCompare === false ? "Pro feature" : "AI or score-based"}</small>
+        </div>
+      </V2PageIntro>
+      {!compareA.trim() && !compareB.trim() && (
+        <V2EmptyState
+          icon={ArrowRightLeft}
+          title="Paste two prompts to compare"
+          copy="Start from Builder or Library, then send a prompt here."
+          actionLabel="Go to Builder"
+          onAction={() => setActive("Builder")}
+        />
+      )}
       <section className="v2-diff-grid">
         <div className="v2-card">
           <div className="v2-card-head"><h2>Prompt A</h2><span className="v2-score-badge">{scoreA.score}</span></div>
@@ -3987,41 +4171,59 @@ function V2Compare({
           <textarea className="v2-textarea" value={compareB} onChange={(event) => setCompareB(event.target.value)} placeholder="Paste prompt B..." />
         </div>
       </section>
-      <section className="v2-compare-grid compact">
-        {compareCards.map((card) => (
-          <div className={`v2-card v2-model-card ${winnerKey === card.key ? "winner" : ""}`} key={card.key}>
-            <div className="v2-card-head">
-              <h2>{card.title}</h2>
-              <span className={`v2-score-badge ${winnerKey === card.key ? "hot" : ""}`}>{card.score}</span>
-            </div>
-            <p>{card.bestFor}</p>
-            <ul className="v2-risk-list">
-              {(card.risks || []).slice(0, 2).map((risk) => <li key={risk}>{risk}</li>)}
-            </ul>
+      <section className="v2-compare-summary-mobile">
+        <div className={`v2-card v2-model-card ${winnerKey ? "winner" : ""}`}>
+          <div className="v2-card-head">
+            <h2>Winner snapshot</h2>
+            <span className="v2-score-badge hot">{winnerKey || "—"}</span>
           </div>
-        ))}
+          <p>{compareResult?.summary || compareCards.find((card) => card.key === winnerKey)?.bestFor || "Run AI Compare for a judged winner."}</p>
+          <ul className="v2-risk-list">
+            {(compareResult?.recommendations || compareCards.find((card) => card.key === "J")?.risks || []).slice(0, 3).map((risk) => (
+              <li key={risk}>{risk}</li>
+            ))}
+          </ul>
+        </div>
       </section>
-      <div className="v2-card v2-score-matrix">
-        <div><strong>AI Judge Matrix</strong><span>A</span><span>B</span></div>
-        {[
-          ["Clarity", "clarity"],
-          ["Context", "context"],
-          ["Output format", "format"],
-          ["Constraints", "constraints"],
-          ["Risk", "risk"],
-          ["Overall", "overall"],
-        ].map(([row, key]) => {
-          const scoreAValue = aiScores?.A?.[key] ?? (key === "overall" ? scoreA.score : scoreA[key] || Math.max(40, scoreA.score - 4));
-          const scoreBValue = aiScores?.B?.[key] ?? (key === "overall" ? scoreB.score : scoreB[key] || Math.max(40, scoreB.score - 4));
-          return (
-            <div key={row}>
-              <strong>{row}</strong>
-              <span className={scoreAValue >= scoreBValue ? "winner" : ""}>{scoreAValue}%</span>
-              <span className={scoreBValue > scoreAValue ? "winner" : ""}>{scoreBValue}%</span>
+      <details className="v2-compare-details">
+        <summary>Full score matrix</summary>
+        <section className="v2-compare-grid compact">
+          {compareCards.map((card) => (
+            <div className={`v2-card v2-model-card ${winnerKey === card.key ? "winner" : ""}`} key={card.key}>
+              <div className="v2-card-head">
+                <h2>{card.title}</h2>
+                <span className={`v2-score-badge ${winnerKey === card.key ? "hot" : ""}`}>{card.score}</span>
+              </div>
+              <p>{card.bestFor}</p>
+              <ul className="v2-risk-list">
+                {(card.risks || []).slice(0, 2).map((risk) => <li key={risk}>{risk}</li>)}
+              </ul>
             </div>
-          );
-        })}
-        {compareResult?.summary && <p className="v2-judge-summary">{compareResult.summary}</p>}
+          ))}
+        </section>
+        <div className="v2-card v2-score-matrix">
+          <div><strong>AI Judge Matrix</strong><span>A</span><span>B</span></div>
+          {[
+            ["Clarity", "clarity"],
+            ["Context", "context"],
+            ["Output format", "format"],
+            ["Constraints", "constraints"],
+            ["Risk", "risk"],
+            ["Overall", "overall"],
+          ].map(([row, key]) => {
+            const scoreAValue = aiScores?.A?.[key] ?? (key === "overall" ? scoreA.score : scoreA[key] || Math.max(40, scoreA.score - 4));
+            const scoreBValue = aiScores?.B?.[key] ?? (key === "overall" ? scoreB.score : scoreB[key] || Math.max(40, scoreB.score - 4));
+            return (
+              <div key={row}>
+                <strong>{row}</strong>
+                <span className={scoreAValue >= scoreBValue ? "winner" : ""}>{scoreAValue}%</span>
+                <span className={scoreBValue > scoreAValue ? "winner" : ""}>{scoreBValue}%</span>
+              </div>
+            );
+          })}
+        </div>
+      </details>
+      <div className="v2-card v2-compare-actions-card">
         <CompareBiasNote biasMitigation={compareBiasMitigation} />
         {compareWarning && <p className="v2-note warn">{compareWarning}</p>}
         {compareError && <p className="v2-note error">{compareError}</p>}
@@ -4137,6 +4339,7 @@ function V2PublicSettings(props) {
     billingMessage,
     requestMembershipUpgrade,
     restorePlayPurchases,
+    syncPlayMembership,
     deleteAccountPermanently,
     resetPasswordForEmail,
     loadUserProfile,
@@ -4188,10 +4391,18 @@ function V2PublicSettings(props) {
         </div>
       </V2PageIntro>
 
-      <div className="v2-settings-tabs" role="tablist" aria-label="Settings sections">
+      <div className="v2-settings-tabs v2-settings-tabs-desktop" role="tablist" aria-label="Settings sections">
         {sections.map(([name, Icon]) => (
           <button key={name} className={section === name ? "active" : ""} onClick={() => setSection(name)}>
             <Icon size={16} />
+            <span>{name}</span>
+          </button>
+        ))}
+      </div>
+      <div className="v2-settings-list-mobile" role="tablist" aria-label="Settings sections">
+        {sections.map(([name, Icon]) => (
+          <button key={name} className={section === name ? "active" : ""} onClick={() => setSection(name)}>
+            <Icon size={18} />
             <span>{name}</span>
           </button>
         ))}
@@ -4285,28 +4496,39 @@ function V2PublicSettings(props) {
       )}
 
       {section === "Membership" && (
-        <section className="v2-settings-grid public">
-          <div className="v2-card v2-settings-card v2-account-card">
+        <section className="v2-settings-grid public membership-calm">
+          <div className="v2-card v2-settings-card v2-account-card v2-membership-hero">
             <div className="v2-card-head">
               <div>
-                <h2>Membership</h2>
-                <p>Plans, usage, and upgrade path. Model provider controls stay admin-only.</p>
+                <h2>Your plan</h2>
+                <p>Upgrade unlocks higher quota, exports, and AI Compare / Optimizer.</p>
               </div>
               <span className="v2-score-badge">{accountState.plan}</span>
+            </div>
+            <div className="v2-quota-meter">
+              <div><span>Quota</span><strong>{formatQuotaSummary(accountState)} tokens</strong></div>
+              <i><b style={{ width: `${quotaPercent}%` }} /></i>
+              <small>Resets {accountState.quotaReset}. Usage updates after Builder, Compare, and Optimizer runs.</small>
             </div>
             {membershipHint?.message && (
               <p className="v2-note">{membershipHint.message}</p>
             )}
-            <div className="v2-plan-grid premium">
-              {Object.entries(membershipPlans).map(([plan, info]) => {
+            {billingMessage && <p className="v2-note warn">{billingMessage}</p>}
+            {billingBusy && <p className="v2-note">Processing membership upgrade...</p>}
+          </div>
+
+          <div className="v2-plan-grid premium v2-plan-grid-calm">
+            {Object.entries(membershipPlans)
+              .filter(([plan]) => plan !== "Free")
+              .map(([plan, info]) => {
                 const isCurrent = accountState.plan === plan;
-                const canUpgrade = plan !== "Free" && !isCurrent;
+                const canUpgrade = !isCurrent;
                 return (
                   <button
                     key={plan}
                     className={`v2-plan-card ${isCurrent ? "active" : ""} ${plan === "Business" && !isCurrent ? "recommended" : ""} ${canUpgrade ? "upgrade" : ""}`}
                     type="button"
-                    disabled={isCurrent || billingBusy || plan === "Free"}
+                    disabled={isCurrent || billingBusy}
                     onClick={() => {
                       if (canUpgrade) requestMembershipUpgrade(plan);
                     }}
@@ -4324,56 +4546,59 @@ function V2PublicSettings(props) {
                     <em>
                       {isCurrent
                         ? "Current plan"
-                          : plan === "Free"
-                          ? "Default tier"
-                          : playBillingReady
-                            ? "Tap to buy on Play"
-                            : webCheckoutReady
-                              ? "Open Lemon Squeezy checkout"
-                              : "Request web upgrade"}
+                        : playBillingReady
+                          ? "Tap to buy on Play"
+                          : webCheckoutReady
+                            ? "Open checkout"
+                            : "Request upgrade"}
                     </em>
                   </button>
                 );
               })}
-            </div>
-            {billingMessage && <p className="v2-note warn">{billingMessage}</p>}
-            {billingBusy && <p className="v2-note">Processing membership upgrade...</p>}
-            {accountState.userId && (
-              <div className="v2-actions wrap">
-                <button
+          </div>
+
+          {accountState.plan === "Free" && (
+            <p className="v2-note">You are on the Free plan — generate with AI, then upgrade when you need more quota or exports.</p>
+          )}
+
+          {accountState.userId && (
+            <div className="v2-actions wrap membership-secondary">
+              <button
+                className="v2-btn"
+                type="button"
+                disabled={refreshingMembership || billingBusy}
+                onClick={async () => {
+                  setRefreshingMembership(true);
+                  try {
+                    await loadUserProfile({ id: accountState.userId, email: accountState.email });
+                    await syncPlayMembership?.({ silent: false });
+                  } finally {
+                    setRefreshingMembership(false);
+                  }
+                }}
+              >
+                {refreshingMembership ? "Refreshing..." : "Refresh status"}
+              </button>
+              <button
+                className="v2-btn"
+                type="button"
+                disabled={billingBusy || !playBillingReady}
+                onClick={() => restorePlayPurchases?.()}
+              >
+                Restore Play purchases
+              </button>
+              {playBillingReady && (
+                <a
                   className="v2-btn"
-                  type="button"
-                  disabled={refreshingMembership || billingBusy}
-                  onClick={async () => {
-                    setRefreshingMembership(true);
-                    try {
-                      await loadUserProfile({ id: accountState.userId, email: accountState.email });
-                    } finally {
-                      setRefreshingMembership(false);
-                    }
-                  }}
+                  href="https://play.google.com/store/account/subscriptions"
+                  target="_blank"
+                  rel="noreferrer"
                 >
-                  {refreshingMembership ? "Refreshing..." : "Refresh membership"}
-                </button>
-                <button
-                  className="v2-btn"
-                  type="button"
-                  disabled={billingBusy || !playBillingReady}
-                  onClick={() => restorePlayPurchases?.()}
-                >
-                  Restore Play purchases
-                </button>
-              </div>
-            )}
-            <div className="v2-quota-meter">
-              <div><span>Quota</span><strong>{formatQuotaSummary(accountState)} tokens</strong></div>
-              <i><b style={{ width: `${quotaPercent}%` }} /></i>
-              <small>Resets {accountState.quotaReset}. Usage updates after Builder, Compare, and Optimizer runs.</small>
-              {import.meta.env.VITE_APP_BUILD && (
-                <small className="v2-build-id">Build {import.meta.env.VITE_APP_BUILD}</small>
+                  Manage in Google Play
+                </a>
               )}
             </div>
-          </div>
+          )}
         </section>
       )}
 
@@ -4497,8 +4722,9 @@ function V2PublicSettings(props) {
             <div className="v2-runbook-row"><span>2</span><p>Account quota and membership sync when you are signed in.</p></div>
             <div className="v2-runbook-row"><span>3</span><p>Read the full privacy policy before using production builds.</p></div>
             <div className="v2-actions wrap">
-              <a className="v2-btn primary" href="/privacy" target="_blank" rel="noreferrer"><ShieldCheck size={16} />Privacy Policy</a>
-              <a className="v2-btn" href="/privacy/delete-account" target="_blank" rel="noreferrer"><Trash2 size={16} />Delete account help</a>
+              <a className="v2-btn primary" href="/privacy"><ShieldCheck size={16} />Privacy Policy</a>
+              <a className="v2-btn" href="/privacy/delete-account"><Trash2 size={16} />Delete account help</a>
+              <a className="v2-btn" href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noreferrer">Manage Play subscription</a>
             </div>
           </div>
         </section>
@@ -4995,17 +5221,21 @@ function Nav({ active, setActive, isAdmin = false }) {
   );
 }
 
-function BottomNav({ active, setActive, isAdmin = false }) {
+function BottomNav({ active, setActive, isAdmin = false, entitlements }) {
   // Five primary tabs on phones; Settings stays in the header gear.
   const items = navItems(isAdmin).filter(([name]) => name !== "Admin").slice(0, 5);
   return (
     <nav className="bottom-nav v2-bottom-nav">
-      {items.map(([item, Icon]) => (
-        <button key={item} className={active === item ? "active" : ""} onClick={() => setActive(item)}>
-          <Icon size={18} />
-          <span>{item}</span>
-        </button>
-      ))}
+      {items.map(([item, Icon]) => {
+        const needsPro = (item === "Optimizer" && !entitlements?.aiOptimize) || (item === "Compare" && !entitlements?.aiCompare);
+        return (
+          <button key={item} className={active === item ? "active" : ""} onClick={() => setActive(item)}>
+            <Icon size={18} />
+            <span>{item}</span>
+            {needsPro ? <em className="v2-nav-pro">Pro</em> : null}
+          </button>
+        );
+      })}
     </nav>
   );
 }
@@ -5176,8 +5406,9 @@ function formatFeatureSourceLabel(source) {
 
 function userGenerationLabel(status, source, isGenerating = false) {
   if (isGenerating) return "Generating...";
-  if (status === "local-quota-warning") return "";
-  if (status === "local-fallback" || status === "local-error" || source === "fallback") {
+  if (status === "needs-auth") return "Needs sign-in";
+  if (status === "local-quota-warning") return "Quota low";
+  if (status === "local-fallback" || status === "local-error" || source === "fallback" || source === "local") {
     return "Preview";
   }
   if (
@@ -5188,7 +5419,7 @@ function userGenerationLabel(status, source, isGenerating = false) {
     source === "openai" ||
     source === "server"
   ) {
-    return "AI generated";
+    return "Live AI";
   }
   return "";
 }

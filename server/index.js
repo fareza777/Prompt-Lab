@@ -62,6 +62,7 @@ import {
   verifyPlaySubscriptionPurchase,
   acknowledgePlaySubscriptionPurchase,
   hashPurchaseToken,
+  FREE_PLAN_DEFAULTS,
 } from "./playBillingGoogle.js";
 import {
   handleLemonSqueezyWebhook,
@@ -90,6 +91,7 @@ const aiRateLimit = createAiRateLimiter({
   getPlan: async (req) => {
     try {
       const membership = await getMembershipFromRequest(req);
+      if (membership?.user?.id) req.authUserId = membership.user.id;
       return membership.plan;
     } catch {
       return "Free";
@@ -245,9 +247,12 @@ app.get("/api/health", async (req, res) => {
     const modelSettings = await resolveModelSettings(req, req.query);
     const runtime = getRuntimeProvider(modelSettings);
     const { meta } = await getCachedPublishedModelSettings(createServiceRoleSupabaseClient());
+    const aiReady = Boolean(runtime.client);
+    const status = aiReady ? "online" : "degraded";
     res.json({
-      ok: true,
-      ai: Boolean(runtime.client),
+      ok: aiReady,
+      status,
+      ai: aiReady,
       endpoint: runtime.baseURL || "OpenAI default",
       provider: runtime.provider,
       model: modelSettings.primaryModel || runtime.defaultModel,
@@ -272,9 +277,15 @@ app.get("/api/health", async (req, res) => {
       ocrModel: modelSettings.ocrModel || getDefaultOcrModel(),
       configSource: meta?.updatedAt ? "published" : "env",
       configUpdatedAt: meta?.updatedAt || null,
+      warning: aiReady ? "" : "AI provider is not configured. Generations may use a local preview.",
     });
   } catch (error) {
-    res.status(500).json({ ok: false, error: error.message || "Health check failed." });
+    res.status(500).json({
+      ok: false,
+      status: "offline",
+      ai: false,
+      error: error.message || "Health check failed.",
+    });
   }
 });
 
@@ -550,7 +561,13 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
     });
 
     if (!verification.ok) {
-      res.status(402).json({ error: verification.error || "Google Play verification failed." });
+      if (verification.expired) {
+        await downgradePlayMembershipIfNeeded(quotaSession.user.id, {
+          reason: "expired_on_verify",
+          productId,
+        });
+      }
+      res.status(400).json({ error: verification.error || "Google Play verification failed." });
       return;
     }
 
@@ -576,7 +593,8 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
       return;
     }
 
-    if (Number(verification.acknowledgementState) !== 1) {
+    let acknowledged = Number(verification.acknowledgementState) === 1;
+    if (!acknowledged) {
       const ack = await acknowledgePlaySubscriptionPurchase({
         subscriptionId: productId,
         purchaseToken,
@@ -584,21 +602,37 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
       });
       if (!ack.ok) {
         console.warn("play acknowledge failed", ack.error);
+        res.status(502).json({
+          error: ack.error || "Purchase verified but could not be acknowledged. Please try again.",
+        });
+        return;
       }
+      acknowledged = true;
+    }
+
+    const previousPlan = normalizePlanName(quotaSession.profile?.plan);
+    const upgrading = previousPlan !== planConfig.plan;
+    const profileUpdate = {
+      plan: planConfig.plan,
+      quota_limit: planConfig.quotaLimit,
+      play_billing: "Google Play",
+      updated_at: new Date().toISOString(),
+    };
+    // Fresh paid period: reset usage so upgrade feels immediate.
+    if (upgrading && previousPlan === "Free") {
+      profileUpdate.quota_used = 0;
+      const resetDate = new Date();
+      resetDate.setDate(resetDate.getDate() + 30);
+      profileUpdate.quota_reset_at = resetDate.toISOString().slice(0, 10);
     }
 
     const { error: profileError } = await admin
       .from("profiles")
-      .update({
-        plan: planConfig.plan,
-        quota_limit: planConfig.quotaLimit,
-        play_billing: "Google Play",
-        updated_at: new Date().toISOString(),
-      })
+      .update(profileUpdate)
       .eq("id", userId);
 
     if (profileError) {
-      res.status(503).json({ error: `Failed to update plan: ${profileError.message}` });
+      res.status(503).json({ error: "Could not update your membership. Please try again." });
       return;
     }
 
@@ -614,7 +648,7 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
           productId,
           orderId: verification.orderId || "",
           expiryTimeMillis: verification.expiryTimeMillis || null,
-          acknowledged: true,
+          acknowledged,
         },
       });
     }
@@ -646,13 +680,21 @@ app.post("/api/billing/restore-play-purchases", express.json({ limit: "64kb" }),
   try {
     const purchases = Array.isArray(req.body?.purchases) ? req.body.purchases : [];
     if (!purchases.length) {
-      res.status(400).json({ error: "purchases array is required." });
+      res.status(400).json({ error: "No Google Play purchases were provided." });
       return;
     }
 
     const quotaSession = await getQuotaSession(req, 0);
+    const admin = createServiceRoleSupabaseClient();
+    if (!admin || !quotaSession?.user?.id) {
+      res.status(503).json({ error: "Membership server is not ready." });
+      return;
+    }
+
+    const userId = quotaSession.user.id;
     let lastPlan = null;
     let lastQuota = null;
+    let sawExpired = false;
     const errors = [];
 
     for (const item of purchases.slice(0, 6)) {
@@ -660,12 +702,6 @@ app.post("/api/billing/restore-play-purchases", express.json({ limit: "64kb" }),
       const purchaseToken = String(item.purchaseToken || item.token || "").trim();
       if (!productId || !purchaseToken) continue;
       try {
-        const fakeReq = {
-          ...req,
-          body: { productId, purchaseToken },
-          headers: req.headers,
-        };
-        // Reuse verify logic inline for restore.
         const planConfig = getPlanForProductId(productId);
         if (!planConfig) {
           errors.push(`${productId}: unknown product`);
@@ -673,29 +709,62 @@ app.post("/api/billing/restore-play-purchases", express.json({ limit: "64kb" }),
         }
         const verification = await verifyPlaySubscriptionPurchase({ subscriptionId: productId, purchaseToken });
         if (!verification.ok) {
+          if (verification.expired) sawExpired = true;
           errors.push(`${productId}: ${verification.error}`);
           continue;
         }
-        if (Number(verification.acknowledgementState) !== 1) {
-          await acknowledgePlaySubscriptionPurchase({ subscriptionId: productId, purchaseToken });
-        }
-        const admin = createServiceRoleSupabaseClient();
-        const userId = quotaSession.user.id;
+
         const tokenHash = hashPurchaseToken(purchaseToken);
-        await admin.from("profiles").update({
+        const { data: existingEvents } = await admin
+          .from("membership_events")
+          .select("id,user_id,plan")
+          .eq("purchase_token_hash", tokenHash)
+          .eq("provider", "google_play")
+          .limit(5);
+        const claimedByOther = (existingEvents || []).find((row) => row.user_id && row.user_id !== userId);
+        if (claimedByOther) {
+          errors.push(`${productId}: already linked to another account`);
+          continue;
+        }
+
+        if (Number(verification.acknowledgementState) !== 1) {
+          const ack = await acknowledgePlaySubscriptionPurchase({ subscriptionId: productId, purchaseToken });
+          if (!ack.ok) {
+            errors.push(`${productId}: ${ack.error || "acknowledge failed"}`);
+            continue;
+          }
+        }
+
+        const previousPlan = normalizePlanName(quotaSession.profile?.plan);
+        const profileUpdate = {
           plan: planConfig.plan,
           quota_limit: planConfig.quotaLimit,
           play_billing: "Google Play",
           updated_at: new Date().toISOString(),
-        }).eq("id", userId);
-        await admin.from("membership_events").insert({
-          user_id: userId,
-          event_type: "subscription_restored",
-          plan: planConfig.plan,
-          provider: "google_play",
-          purchase_token_hash: tokenHash,
-          metadata: { productId, orderId: verification.orderId || "", expiryTimeMillis: verification.expiryTimeMillis || null },
-        });
+        };
+        if (previousPlan === "Free" && planConfig.plan !== "Free") {
+          profileUpdate.quota_used = 0;
+          const resetDate = new Date();
+          resetDate.setDate(resetDate.getDate() + 30);
+          profileUpdate.quota_reset_at = resetDate.toISOString().slice(0, 10);
+        }
+
+        await admin.from("profiles").update(profileUpdate).eq("id", userId);
+        const alreadyLogged = (existingEvents || []).some((row) => row.user_id === userId);
+        if (!alreadyLogged) {
+          await admin.from("membership_events").insert({
+            user_id: userId,
+            event_type: "subscription_restored",
+            plan: planConfig.plan,
+            provider: "google_play",
+            purchase_token_hash: tokenHash,
+            metadata: {
+              productId,
+              orderId: verification.orderId || "",
+              expiryTimeMillis: verification.expiryTimeMillis || null,
+            },
+          });
+        }
         lastPlan = planConfig.plan;
         const { data: profile } = await admin
           .from("profiles")
@@ -709,7 +778,13 @@ app.post("/api/billing/restore-play-purchases", express.json({ limit: "64kb" }),
     }
 
     if (!lastPlan) {
-      res.status(402).json({ error: errors[0] || "No active Play purchases found.", errors });
+      if (sawExpired) {
+        await downgradePlayMembershipIfNeeded(userId, { reason: "expired_on_restore" });
+      }
+      res.status(400).json({
+        error: errors[0] || "No active Play purchases found.",
+        errors,
+      });
       return;
     }
 
@@ -726,6 +801,134 @@ app.post("/api/billing/restore-play-purchases", express.json({ limit: "64kb" }),
   }
 });
 
+app.post("/api/billing/sync-play-membership", express.json({ limit: "32kb" }), async (req, res) => {
+  try {
+    const quotaSession = await getQuotaSession(req, 0);
+    const admin = createServiceRoleSupabaseClient();
+    if (!admin || !quotaSession?.user?.id) {
+      res.status(503).json({ error: "Membership server is not ready." });
+      return;
+    }
+
+    const userId = quotaSession.user.id;
+    const currentPlan = normalizePlanName(quotaSession.profile?.plan);
+    if (currentPlan === "Free") {
+      res.json({ ok: true, plan: "Free", changed: false, quota: publicQuota(quotaSession.profile) });
+      return;
+    }
+
+    const { data: events } = await admin
+      .from("membership_events")
+      .select("plan,purchase_token_hash,metadata,created_at")
+      .eq("user_id", userId)
+      .eq("provider", "google_play")
+      .order("created_at", { ascending: false })
+      .limit(8);
+
+    const purchases = Array.isArray(req.body?.purchases) ? req.body.purchases : [];
+    let stillActive = false;
+    let activePlan = null;
+    let activeQuota = null;
+
+    for (const item of purchases.slice(0, 6)) {
+      const productId = String(item.productId || item.itemId || "").trim();
+      const purchaseToken = String(item.purchaseToken || item.token || "").trim();
+      if (!productId || !purchaseToken) continue;
+      const planConfig = getPlanForProductId(productId);
+      if (!planConfig) continue;
+      const verification = await verifyPlaySubscriptionPurchase({ subscriptionId: productId, purchaseToken });
+      if (!verification.ok) continue;
+      stillActive = true;
+      activePlan = planConfig.plan;
+      await admin
+        .from("profiles")
+        .update({
+          plan: planConfig.plan,
+          quota_limit: planConfig.quotaLimit,
+          play_billing: "Google Play",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", userId);
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
+        .eq("id", userId)
+        .maybeSingle();
+      if (profile) activeQuota = publicQuota(profile);
+      break;
+    }
+
+    // If client sent no purchases but profile is paid via Play, check stored expiry metadata.
+    if (!stillActive && !purchases.length) {
+      const latest = (events || []).find((row) => row.metadata?.expiryTimeMillis);
+      const expiry = Number(latest?.metadata?.expiryTimeMillis || 0);
+      if (expiry && expiry > Date.now()) {
+        stillActive = true;
+        activePlan = currentPlan;
+        activeQuota = publicQuota(quotaSession.profile);
+      }
+    }
+
+    if (!stillActive) {
+      const downgraded = await downgradePlayMembershipIfNeeded(userId, { reason: "sync_inactive" });
+      res.json({
+        ok: true,
+        plan: "Free",
+        changed: Boolean(downgraded),
+        message: downgraded ? "Membership updated to Free because no active Play subscription was found." : "Already on Free.",
+        quota: downgraded || publicQuota({ ...quotaSession.profile, plan: "Free", quota_limit: FREE_PLAN_DEFAULTS.quotaLimit }),
+      });
+      return;
+    }
+
+    res.json({
+      ok: true,
+      plan: activePlan || currentPlan,
+      changed: false,
+      quota: activeQuota || publicQuota(quotaSession.profile),
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.publicMessage || error.message || "Sync failed." });
+  }
+});
+
+async function downgradePlayMembershipIfNeeded(userId, { reason = "expired", productId = "" } = {}) {
+  const admin = createServiceRoleSupabaseClient();
+  if (!admin || !userId) return null;
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!profile) return null;
+  if (normalizePlanName(profile.plan) === "Free") return publicQuota(profile);
+  if (!/google play/i.test(String(profile.play_billing || ""))) return publicQuota(profile);
+
+  const { data: updated, error } = await admin
+    .from("profiles")
+    .update({
+      plan: FREE_PLAN_DEFAULTS.plan,
+      quota_limit: FREE_PLAN_DEFAULTS.quotaLimit,
+      play_billing: "Expired",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", userId)
+    .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
+    .maybeSingle();
+  if (error) {
+    console.warn("play downgrade failed", error.message);
+    return null;
+  }
+  await admin.from("membership_events").insert({
+    user_id: userId,
+    event_type: "subscription_expired",
+    plan: "Free",
+    provider: "google_play",
+    metadata: { reason, productId },
+  });
+  return publicQuota(updated || { ...profile, plan: "Free", quota_limit: FREE_PLAN_DEFAULTS.quotaLimit, play_billing: "Expired" });
+}
 app.post("/api/account/delete", express.json({ limit: "8kb" }), async (req, res) => {
   try {
     const confirm = String(req.body?.confirm || "").trim().toUpperCase();
@@ -1791,7 +1994,7 @@ async function getQuotaSession(req, estimatedTokens = 0) {
   if (userError || !userData?.user) throw publicApiError("Invalid session. Please sign in again.", 401);
 
   const { data, error } = await client.rpc("get_my_entitlement");
-  if (error) throw publicApiError("Membership is not ready. Run the latest Supabase quota SQL.", 503);
+  if (error) throw publicApiError("Membership is not ready. Sign out and sign in again.", 503);
   const profile = Array.isArray(data) ? data[0] : data;
   if (!profile) throw publicApiError("Membership profile not found. Sign out and sign in again.", 403);
 
@@ -1811,14 +2014,14 @@ function mapQuotaRecordError(error) {
     return { message: "Token quota exceeded. Upgrade your plan or wait for quota reset.", statusCode: 402 };
   }
   if (/profile not found/i.test(message)) {
-    return { message: "Account profile is not ready. Sign out and sign in again, or run Supabase phase-3 SQL.", statusCode: 403 };
+    return { message: "Account profile is not ready. Sign out and sign in again.", statusCode: 403 };
   }
   if (/authentication required/i.test(message)) {
     return { message: "Invalid session. Please sign in again.", statusCode: 401 };
   }
   if (/permission denied|row-level security|policy/i.test(message)) {
     return {
-      message: "Database quota is not ready. Run supabase/phase-3-production-fix.sql in the Supabase SQL Editor.",
+      message: "Membership database is temporarily unavailable. Please try again shortly.",
       statusCode: 503,
     };
   }
@@ -1914,17 +2117,27 @@ async function finishGenerateResponse(res, quotaSession, usagePayload, body) {
   const softFail = process.env.QUOTA_RECORD_SOFT_FAIL === "true";
   let quota = null;
   let warning = body.warning || "";
+  const isFallback =
+    body?.source === "fallback" ||
+    body?.modelStatus === "local-fallback" ||
+    usagePayload?.metadata?.source === "fallback";
 
   if (quotaSession) {
-    try {
-      quota = await recordUsage(quotaSession, usagePayload);
-    } catch (usageError) {
-      const note = usageError.publicMessage || usageError.message || "Failed to record quota usage.";
-      if (softFail) {
-        warning = [warning, note].filter(Boolean).join(" ");
-        console.warn("recordUsage soft-failed", note);
-      } else {
-        throw usageError;
+    if (isFallback) {
+      // Do not charge full estimated tokens for local/template previews.
+      quota = publicQuota(quotaSession.profile);
+      warning = [warning, "Preview only — quota was not charged."].filter(Boolean).join(" ");
+    } else {
+      try {
+        quota = await recordUsage(quotaSession, usagePayload);
+      } catch (usageError) {
+        const note = usageError.publicMessage || usageError.message || "Failed to record quota usage.";
+        if (softFail) {
+          warning = [warning, note].filter(Boolean).join(" ");
+          console.warn("recordUsage soft-failed", note);
+        } else {
+          throw usageError;
+        }
       }
     }
   }

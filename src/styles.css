@@ -2008,6 +2008,10 @@ button {
   background: oklch(0.13 0.012 220 / 0.72);
 }
 
+.v2-settings-list-mobile {
+  display: none;
+}
+
 .v2-settings-tabs button {
   min-height: 38px;
   display: inline-flex;
@@ -2549,8 +2553,100 @@ button {
   }
 
   .v2-bottom-nav button {
-    min-height: 44px;
-    font-size: 10px;
+    position: relative;
+    min-height: 48px;
+    font-size: 11px;
+    font-weight: 700;
+    gap: 4px;
+  }
+
+  .v2-bottom-nav button.active {
+    color: var(--fg);
+    background: var(--ac-soft);
+  }
+
+  .v2-nav-pro {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    font-size: 8px;
+    font-style: normal;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ac);
+    opacity: 0.9;
+  }
+
+  .v2-quota-chip.warn {
+    color: #fbbf24;
+    border-color: rgba(251, 191, 36, 0.35);
+  }
+
+  .v2-settings-tabs-desktop {
+    display: none;
+  }
+
+  .v2-settings-list-mobile {
+    display: grid;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .v2-settings-list-mobile button {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 14px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-md);
+    background: oklch(0.13 0.012 220 / 0.72);
+    color: var(--fg-2);
+    font-weight: 700;
+    text-align: left;
+  }
+
+  .v2-settings-list-mobile button.active {
+    color: var(--fg);
+    border-color: var(--ac-line);
+    background: var(--ac-soft);
+  }
+
+  .v2-studio-grid.is-focus .v2-field-grid {
+    display: none;
+  }
+
+  .v2-compare-summary-mobile {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .v2-compare-details {
+    margin-top: 12px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-md);
+    padding: 12px 14px;
+    background: oklch(0.13 0.012 220 / 0.5);
+  }
+
+  .v2-compare-details summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--fg-2);
+  }
+
+  .v2-compare-details[open] summary {
+    margin-bottom: 12px;
+    color: var(--fg);
+  }
+
+  .v2-plan-grid-calm {
+    grid-template-columns: 1fr;
+  }
+
+  .membership-secondary {
+    margin-top: 8px;
   }
 
   .v2-studio-grid,
@@ -4279,14 +4375,14 @@ pre {
   }
 
   .v2-bottom-nav button {
-    min-height: 42px;
+    min-height: 48px;
     gap: 3px;
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .v2-bottom-nav svg {
-    width: 15px;
-    height: 15px;
+    width: 17px;
+    height: 17px;
   }
 }
 
@@ -4952,5 +5048,12 @@ pre {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  .v2-stream-preview,
+  .v2-action-toast,
+  .app-splash,
+  .v2-prompt-output.is-streaming {
+    animation: none !important;
   }
 }
