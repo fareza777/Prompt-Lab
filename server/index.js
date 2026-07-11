@@ -3055,10 +3055,26 @@ function parseCompareResult(raw) {
   const end = cleaned.lastIndexOf("}");
   if (start < 0 || end <= start) return null;
   try {
-    return normalizeCompareResult(JSON.parse(cleaned.slice(start, end + 1)));
+    const parsed = JSON.parse(cleaned.slice(start, end + 1));
+    if (!isStructurallyValidCompareResult(parsed)) return null;
+    return normalizeCompareResult(parsed);
   } catch {
     return null;
   }
+}
+
+function isStructurallyValidCompareResult(result) {
+  const requiredDimensions = ["clarity", "context", "format", "constraints", "risk", "overall"];
+  if (!result || typeof result !== "object" || !["A", "B", "tie"].includes(result.winner)) return false;
+  return [result.scores?.A, result.scores?.B].every(
+    (scores) =>
+      scores &&
+      typeof scores === "object" &&
+      requiredDimensions.every((dimension) => {
+        const value = scores[dimension];
+        return value !== null && value !== "" && Number.isFinite(Number(value));
+      })
+  );
 }
 
 function normalizeCompareResult(result) {

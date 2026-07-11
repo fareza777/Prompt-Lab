@@ -26,6 +26,29 @@ test("server compare provenance distinguishes provider results from local substi
   assert.equal(serverModule.resolveCompareEvaluation("not valid compare JSON", payload).evaluationMethod, "heuristic");
 });
 
+test("empty provider JSON falls back to heuristic evaluation", () => {
+  assert.equal(serverModule.resolveCompareEvaluation("{}", payload).evaluationMethod, "heuristic");
+});
+
+test("message-only provider JSON falls back to heuristic evaluation", () => {
+  assert.equal(
+    serverModule.resolveCompareEvaluation('{"message":"comparison completed"}', payload).evaluationMethod,
+    "heuristic"
+  );
+});
+
+test("partial or non-numeric provider scores fall back to heuristic evaluation", () => {
+  const partial = JSON.stringify({
+    winner: "A",
+    scores: {
+      A: { clarity: 90, context: 80, format: 85, constraints: 75, risk: 10, overall: 84 },
+      B: { clarity: 50, context: 40, format: 45, constraints: "NaN", risk: 50 },
+    },
+  });
+
+  assert.equal(serverModule.resolveCompareEvaluation(partial, payload).evaluationMethod, "heuristic");
+});
+
 test("server response provenance remains heuristic even with a provider-looking source", () => {
   assert.equal(typeof serverModule.withCompareEvaluationMethod, "function");
   if (!serverModule.withCompareEvaluationMethod) return;
