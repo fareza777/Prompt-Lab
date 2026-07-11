@@ -87,16 +87,20 @@ import { initSse, sendSse, sendSsePhase, consumeOpenRouterStream } from "./sse.j
 
 const app = express();
 
+async function attachAiRateLimitIdentity(req, _res, next) {
+  try {
+    const membership = await getMembershipFromRequest(req);
+    req.authUserId = membership?.user?.id || "";
+    req.aiRateLimitPlan = membership?.plan || "Free";
+  } catch {
+    req.authUserId = "";
+    req.aiRateLimitPlan = "Free";
+  }
+  next();
+}
+
 const aiRateLimit = createAiRateLimiter({
-  getPlan: async (req) => {
-    try {
-      const membership = await getMembershipFromRequest(req);
-      if (membership?.user?.id) req.authUserId = membership.user.id;
-      return membership.plan;
-    } catch {
-      return "Free";
-    }
-  },
+  getPlan: (req) => req.aiRateLimitPlan || "Free",
 });
 
 function enrichPayloadWithLanguage(payload, attachments = []) {
@@ -965,7 +969,7 @@ app.post("/api/account/delete", express.json({ limit: "8kb" }), async (req, res)
   }
 });
 
-app.post("/api/optimize-prompt", aiRateLimit, express.json({ limit: "256kb" }), async (req, res) => {
+app.post("/api/optimize-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json({ limit: "256kb" }), async (req, res) => {
   try {
     const membership = await getMembershipFromRequest(req);
     if (!canUseFeature(membership.plan, "aiOptimize")) {
@@ -1081,7 +1085,7 @@ app.post("/api/optimize-prompt", aiRateLimit, express.json({ limit: "256kb" }), 
   }
 });
 
-app.post("/api/compare-prompts", aiRateLimit, express.json({ limit: "256kb" }), async (req, res) => {
+app.post("/api/compare-prompts", attachAiRateLimitIdentity, aiRateLimit, express.json({ limit: "256kb" }), async (req, res) => {
   try {
     const membership = await getMembershipFromRequest(req);
     if (!canUseFeature(membership.plan, "aiCompare")) {
@@ -1229,7 +1233,7 @@ function capProviderTimeouts(timing, { primaryReserveMs = 14000, fallbackReserve
   return capped;
 }
 
-app.post("/api/generate-prompt", aiRateLimit, upload.array("attachments", 8), async (req, res) => {
+app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.array("attachments", 8), async (req, res) => {
   const startedAt = Date.now();
   const remainingBudget = () => Math.max(0, VERCEL_FUNCTION_BUDGET_MS - (Date.now() - startedAt));
   let quotaSession = null;
