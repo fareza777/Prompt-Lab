@@ -9,7 +9,8 @@ const outDir = join(root, "playstore", "assets");
 const port = 4173;
 const baseUrl = `http://127.0.0.1:${port}`;
 
-const screens = ["Builder", "Optimizer", "Templates", "Library", "Compare", "Settings"];
+const MOBILE_TABS = ["Builder", "Optimizer", "Templates", "Library", "Compare"];
+const screens = [...MOBILE_TABS, "Settings"];
 const PHONE_WIDTH = 1080;
 const PHONE_HEIGHT = 1920;
 
@@ -82,7 +83,7 @@ const preview = startPreview();
 try {
   await waitForServer(baseUrl);
 
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ channel: "chrome" });
   const page = await browser.newPage({
     viewport: { width: PHONE_WIDTH, height: PHONE_HEIGHT },
     deviceScaleFactor: 1,

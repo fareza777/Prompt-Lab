@@ -5,6 +5,14 @@ import sharp from "sharp";
 const root = process.cwd();
 const outDir = join(root, "playstore", "assets");
 const playIconSvg = join(root, "public", "playstore-icon.svg");
+const FEATURE_TEXT_RIGHT = 960;
+
+function wrapSvgText(lines, { x, y, lineHeight, fontSize, fill }) {
+  const maxWidth = FEATURE_TEXT_RIGHT - x;
+  return `<text x="${x}" y="${y}" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="${fontSize}" fill="${fill}">
+    ${lines.map((line, index) => `<tspan x="${x}" dy="${index ? lineHeight : 0}" textLength="${Math.min(maxWidth, Math.ceil(line.length * fontSize * 0.56))}" lengthAdjust="spacingAndGlyphs">${line}</tspan>`).join("\n    ")}
+  </text>`;
+}
 
 await mkdir(outDir, { recursive: true });
 
@@ -41,7 +49,7 @@ const featureSvg = `<?xml version="1.0" encoding="UTF-8"?>
   <text x="500" y="210" font-family="Georgia, 'Times New Roman', serif" font-size="72" fill="#e8f4f6">PromptLab</text>
   <text x="500" y="262" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="22" fill="#5eb8ff" letter-spacing="4">AI PROMPT WORKSPACE</text>
   <text x="500" y="310" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="20" fill="#b8c5d9">Builder · Optimizer · Templates · Library · Compare</text>
-  <text x="500" y="360" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="17" fill="#7a8aa3">Turn ideas and files into structured prompts for ChatGPT, Claude, Gemini, and more.</text>
+  ${wrapSvgText(["Turn ideas and files into structured prompts", "for your favorite AI models."], { x: 500, y: 354, lineHeight: 26, fontSize: 17, fill: "#7a8aa3", right: FEATURE_TEXT_RIGHT })}
 </svg>`;
 
 const logoSize = 280;
