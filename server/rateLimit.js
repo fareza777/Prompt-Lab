@@ -4,11 +4,18 @@
 
 import { getRequestIdentity } from "./requestIdentity.js";
 
+/** Finite fallback capacity when maxBuckets is omitted or invalid. */
 const DEFAULT_MAX_BUCKETS = 10_000;
+
+function normalizeMaxBuckets(maxBuckets) {
+  const numericValue = Number(maxBuckets);
+  if (!Number.isFinite(numericValue)) return DEFAULT_MAX_BUCKETS;
+  return Math.max(1, Math.floor(numericValue));
+}
 
 function createInMemoryStore({ maxBuckets = DEFAULT_MAX_BUCKETS } = {}) {
   const buckets = new Map();
-  const bucketLimit = Math.max(1, Math.floor(Number(maxBuckets) || DEFAULT_MAX_BUCKETS));
+  const bucketLimit = normalizeMaxBuckets(maxBuckets);
 
   function pruneExpired(now) {
     for (const [key, entry] of buckets) {

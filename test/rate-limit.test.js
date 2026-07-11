@@ -106,3 +106,28 @@ test("in-memory rate limiter keeps its identity buckets bounded", async () => {
   assert.equal(reintroduced.statusCode, 200);
   assert.equal(reintroduced.headers.get("X-RateLimit-Remaining"), "23");
 });
+
+test("in-memory rate limiter bounds an Infinity bucket cap", async () => {
+  const limiter = createAiRateLimiter({
+    getPlan: async () => "Free",
+    now: () => 1_000,
+    maxBuckets: Infinity,
+  });
+
+  async function requestFrom(ip) {
+    const res = createResponse();
+    await limiter({ headers: {}, ip }, res, () => {});
+    return res;
+  }
+
+  for (let index = 0; index < 24; index += 1) {
+    await requestFrom("203.0.113.1");
+  }
+  for (let index = 2; index <= 10_001; index += 1) {
+    await requestFrom(`203.0.113.${index}`);
+  }
+
+  const reintroduced = await requestFrom("203.0.113.1");
+  assert.equal(reintroduced.statusCode, 200);
+  assert.equal(reintroduced.headers.get("X-RateLimit-Remaining"), "23");
+});
