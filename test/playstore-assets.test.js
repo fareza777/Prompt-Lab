@@ -59,7 +59,9 @@ test("capture validates every surface and bottom navigation before writing PNGs"
 test("capture uses natural responsive CSS at a 1080x1920 device viewport", async () => {
   const source = await readFile(join(root, "scripts", "capture-playstore-screenshots.mjs"), "utf8");
   assert.match(source, /viewport: \{ width: 360, height: 640 \}/);
-  assert.match(source, /deviceScaleFactor: 3/);
+  assert.match(source, /deviceScaleFactor: 1/);
+  assert.match(source, /kernel: sharp\.kernel\.lanczos3/);
+  assert.match(source, /resize\(PHONE_WIDTH, PHONE_HEIGHT, \{ fit: "fill"/);
   assert.doesNotMatch(source, /\.v2-shell \{/);
   assert.doesNotMatch(source, /grid-template-columns: repeat\(5/);
 });

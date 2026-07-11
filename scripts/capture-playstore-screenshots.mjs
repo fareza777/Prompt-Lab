@@ -159,7 +159,7 @@ function startPreview() {
 
 async function exportPhoneScreenshot(rawBuffer, file) {
   const optimized = await sharp(rawBuffer)
-    .resize(PHONE_WIDTH, PHONE_HEIGHT, { fit: "cover", position: "top" })
+    .resize(PHONE_WIDTH, PHONE_HEIGHT, { fit: "fill", kernel: sharp.kernel.lanczos3 })
     .png({ compressionLevel: 9 })
     .toBuffer();
   await writeFile(file, optimized);
@@ -176,7 +176,7 @@ try {
   const browser = await chromium.launch({ channel: "chrome" });
   const page = await browser.newPage({
     viewport: { width: 360, height: 640 },
-    deviceScaleFactor: 3,
+    deviceScaleFactor: 1,
     isMobile: true,
     hasTouch: true,
   });
