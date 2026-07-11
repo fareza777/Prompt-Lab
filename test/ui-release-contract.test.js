@@ -13,6 +13,10 @@ test("local score displays identify heuristic scoring", () => {
 test("local compare fallback keeps measured dimensions and is not labelled as provider scoring", () => {
   assert.match(mainSource, /constraints: scoreA\.constraints/);
   assert.match(mainSource, /risk: scoreA\.risk/);
-  assert.match(mainSource, /compareSource !== "score-based"/);
   assert.doesNotMatch(mainSource, /constraints: Math\.max\(40/);
+});
+
+test("winner snapshot renders the authoritative compare evaluation label", () => {
+  assert.match(mainSource, /getCompareEvaluationMeta/);
+  assert.match(mainSource, /Winner snapshot[\s\S]*compareEvaluation\.label/);
 });

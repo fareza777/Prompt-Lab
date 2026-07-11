@@ -97,6 +97,7 @@ import {
 } from "./installedApp.js";
 import { purgeLegacyServiceWorkers, repairStuckLocalProfile } from "./bootRecovery.js";
 import { scorePrompt, scoreOptimizedPrompt } from "./promptScore.js";
+import { getCompareEvaluationMeta } from "./compareProvenance.js";
 import { dismissStartupSplash, installSplashSafetyNet, markStartupSplashStarted } from "./startupSplash";
 import {
   buildGoogleOAuthOptions,
@@ -1101,6 +1102,7 @@ function buildLocalCompareResult(promptA, promptB) {
   const scoreB = scorePromptForCompare(promptB || "");
   const winner = scoreA.score > scoreB.score ? "A" : scoreB.score > scoreA.score ? "B" : "tie";
   return {
+    evaluationMethod: "heuristic",
     winner,
     winner_label: winner === "A" ? "Prompt A" : winner === "B" ? "Prompt B" : "Tie",
     summary: winner === "tie" ? "Both prompts score similarly on structure and clarity." : `Prompt ${winner} reads stronger on structure and clarity.`,
@@ -2312,7 +2314,7 @@ function App() {
       });
       const data = await readApiJson(response);
       if (!response.ok) throw new Error(data.error || "Failed to compare prompts.");
-      setCompareResult(data.result || null);
+      setCompareResult(data.result ? { ...data.result, evaluationMethod: data.evaluationMethod } : null);
       setCompareSource(data.model || data.source || "AI judge");
       setCompareWarning(data.warning || "");
       applyServerQuota(data.quota);
@@ -4122,13 +4124,13 @@ function V2Compare({
   const winnerPrompt = winnerKey === "A" ? compareA : compareB;
   const mergedPrompt = compareResult?.merged_prompt || winnerPrompt;
   const aiScores = compareResult?.scores;
-  const isProviderCompare = Boolean(compareResult && compareSource !== "score-based");
+  const compareEvaluation = getCompareEvaluationMeta(compareResult);
   const compareCards = [
     {
       key: "A",
       title: "Prompt A",
       score: aiScores?.A?.overall ?? scoreA.score,
-      scoreMethod: isProviderCompare ? "provider" : scoreA.scoreMethod,
+      scoreMethod: compareEvaluation.method,
       bestFor: compareResult?.best_for?.A || scoreA.scoreNote,
       risks: compareResult?.risks?.A || getLocalPromptRisks(compareA),
     },
@@ -4136,7 +4138,7 @@ function V2Compare({
       key: "B",
       title: "Prompt B",
       score: aiScores?.B?.overall ?? scoreB.score,
-      scoreMethod: isProviderCompare ? "provider" : scoreB.scoreMethod,
+      scoreMethod: compareEvaluation.method,
       bestFor: compareResult?.best_for?.B || scoreB.scoreNote,
       risks: compareResult?.risks?.B || getLocalPromptRisks(compareB),
     },
@@ -4144,7 +4146,7 @@ function V2Compare({
       key: "J",
       title: "AI Judge",
       score: compareResult ? Math.max(aiScores?.A?.overall || 0, aiScores?.B?.overall || 0) : localJudgeScore.score,
-      scoreMethod: isProviderCompare ? "provider" : localJudgeScore.scoreMethod,
+      scoreMethod: compareEvaluation.method,
       bestFor: compareResult?.summary || `${localJudgeScore.scoreNote} Run AI Compare for a provider evaluation.`,
       risks: compareResult?.recommendations || ["Waiting for AI judge."],
     },
@@ -4183,6 +4185,7 @@ function V2Compare({
             <h2>Winner snapshot</h2>
             <span className="v2-score-badge hot">{winnerKey || "—"}</span>
           </div>
+          <strong className="status-pill">{compareEvaluation.label}</strong>
           <p>{compareResult?.summary || compareCards.find((card) => card.key === winnerKey)?.bestFor || "Run AI Compare for a judged winner."}</p>
           <ul className="v2-risk-list">
             {(compareResult?.recommendations || compareCards.find((card) => card.key === "J")?.risks || []).slice(0, 3).map((risk) => (

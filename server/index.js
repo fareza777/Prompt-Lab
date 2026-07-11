@@ -1153,7 +1153,8 @@ app.post("/api/compare-prompts", attachAiRateLimitIdentity, aiRateLimit, express
       try {
         const generation = await createOpenRouterCompareCompletion(payload, runtime);
         const raw = generation.completion.choices?.[0]?.message?.content || "";
-        let result = parseCompareResult(raw) || buildLocalCompareResult(payload);
+        const evaluation = resolveCompareEvaluation(raw, payload);
+        let result = evaluation.result;
         try {
           const swappedPayload = buildSwappedComparePayload(payload);
           const swappedGen = await createOpenRouterCompareCompletion(swappedPayload, runtime);
@@ -1170,6 +1171,7 @@ app.post("/api/compare-prompts", attachAiRateLimitIdentity, aiRateLimit, express
           warning: generation.usedFallbackModel
             ? API_MSG.primaryFallback(generation.primaryError)
             : "",
+          evaluationMethod: evaluation.evaluationMethod,
           result,
         };
       } catch (error) {
@@ -1206,7 +1208,8 @@ app.post("/api/compare-prompts", attachAiRateLimitIdentity, aiRateLimit, express
           },
         ],
       });
-      let result = parseCompareResult(response.output_text || "") || buildLocalCompareResult(payload);
+      const evaluation = resolveCompareEvaluation(response.output_text || "", payload);
+      let result = evaluation.result;
       try {
         const swappedPayload = buildSwappedComparePayload(payload);
         const swappedResp = await runtime.client.responses.create({
@@ -1225,6 +1228,7 @@ app.post("/api/compare-prompts", attachAiRateLimitIdentity, aiRateLimit, express
         source: "openai",
         model: payload.modelSettings.primaryModel || runtime.defaultModel,
         modelStatus: "primary-model",
+        evaluationMethod: evaluation.evaluationMethod,
         result,
       };
     } else {
@@ -1237,6 +1241,7 @@ app.post("/api/compare-prompts", attachAiRateLimitIdentity, aiRateLimit, express
       };
     }
 
+    body = withCompareEvaluationMethod(body, body.evaluationMethod);
     const resultText = JSON.stringify(body.result || {});
     await finishGenerateResponse(
       res,
@@ -1697,7 +1702,9 @@ export {
   buildPromptSpecInstruction,
   downgradePlayMembershipIfNeeded,
   getDomainPromptPack,
+  resolveCompareEvaluation,
   scorePromptText,
+  withCompareEvaluationMethod,
 };
 
 function normalizePayload(body, resolvedModelSettings) {
@@ -3076,6 +3083,20 @@ function normalizeCompareResult(result) {
     merged_prompt: String(result?.merged_prompt || "").slice(0, 12000),
   };
   return normalized;
+}
+
+function resolveCompareEvaluation(raw, payload) {
+  const providerResult = parseCompareResult(raw);
+  return providerResult
+    ? { evaluationMethod: "provider", result: providerResult }
+    : { evaluationMethod: "heuristic", result: buildLocalCompareResult(payload) };
+}
+
+function withCompareEvaluationMethod(body, evaluationMethod) {
+  return {
+    ...body,
+    evaluationMethod: evaluationMethod === "provider" ? "provider" : "heuristic",
+  };
 }
 
 function normalizeCompareScores(raw = {}) {
