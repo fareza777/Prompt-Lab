@@ -899,14 +899,21 @@ app.post("/api/billing/sync-play-membership", express.json({ limit: "32kb" }), a
   }
 });
 
-async function downgradePlayMembershipIfNeeded(userId, { reason = "expired", productId = "" } = {}) {
-  const admin = createServiceRoleSupabaseClient();
+async function downgradePlayMembershipIfNeeded(
+  userId,
+  { reason = "expired", productId = "" } = {},
+  adminOverride = null
+) {
+  const admin = adminOverride || createServiceRoleSupabaseClient();
   if (!admin || !userId) return null;
-  const { data: profile } = await admin
+  const { data: profile, error: profileError } = await admin
     .from("profiles")
     .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
     .eq("id", userId)
     .maybeSingle();
+  if (profileError) {
+    throw publicApiError("Could not verify your membership. Please try again.", 503);
+  }
   if (!profile) return null;
   if (normalizePlanName(profile.plan) === "Free") return publicQuota(profile);
   if (!/google play/i.test(String(profile.play_billing || ""))) return publicQuota(profile);
@@ -1658,6 +1665,7 @@ export {
   buildOpenAIContent,
   buildOpenRouterContent,
   buildPromptSpecInstruction,
+  downgradePlayMembershipIfNeeded,
   getDomainPromptPack,
   scorePromptText,
 };

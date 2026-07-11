@@ -6,6 +6,7 @@ import * as lemonBilling from "../server/lemonSqueezyBilling.js";
 const { applyLemonSqueezyMembership, downgradeToFree } = lemonBilling;
 
 const PHASE_12_MIGRATION = new URL("../supabase/phase-12-billing-idempotency.sql", import.meta.url);
+const serverModule = await import("../server/index.js");
 
 function fakeAdmin({ profileError = null, eventError = null } = {}) {
   const writes = [];
@@ -213,4 +214,35 @@ test("billing migration enforces provider replay and Play token ownership", asyn
   assert.match(sql, /create table[^;]+billing_purchase_claims[^;]+purchase_token_hash\s+text\s+primary key/is);
   assert.match(sql, /create or replace function public\.claim_google_play_membership/i);
   assert.match(sql, /on conflict[^;]+do nothing/is);
+});
+
+test("Play downgrade fails closed when the profile lookup errors", async () => {
+  let profileWrites = 0;
+  const admin = {
+    from(table) {
+      assert.equal(table, "profiles");
+      return {
+        select() {
+          return {
+            eq() { return this; },
+            maybeSingle: async () => ({ data: null, error: new Error("secret database topology") }),
+          };
+        },
+        update() {
+          profileWrites += 1;
+          return { eq: async () => ({ error: null }) };
+        },
+      };
+    },
+  };
+
+  await assert.rejects(
+    serverModule.downgradePlayMembershipIfNeeded("user-1", { reason: "sync_inactive" }, admin),
+    (error) => {
+      assert.equal(error.statusCode, 503);
+      assert.equal(error.publicMessage.includes("secret database topology"), false);
+      return true;
+    }
+  );
+  assert.equal(profileWrites, 0);
 });
