@@ -83,6 +83,7 @@ import {
 } from "./minimaxProvider.js";
 import { scorePromptForCompare, getLocalPromptRisks } from "../src/promptEngine/scoreCompare.js";
 import { createAiRateLimiter, markPriorityRequest } from "./rateLimit.js";
+import { prepareUntrustedAttachment } from "./safeAttachment.js";
 import { initSse, sendSse, sendSsePhase, consumeOpenRouterStream } from "./sse.js";
 
 const app = express();
@@ -1650,6 +1651,10 @@ if (isDirectRun) {
 
 export default app;
 export {
+  buildAttachmentManifest,
+  buildFallbackPrompt,
+  buildOpenAIContent,
+  buildOpenRouterContent,
   buildPromptSpecInstruction,
   getDomainPromptPack,
   scorePromptText,
@@ -3388,7 +3393,7 @@ function buildAttachmentManifest(attachments = []) {
     .slice(0, 8)
     .map((file, index) => {
       const source = file.excerpt
-        ? `extracted context: ${file.excerpt.slice(0, 2000)}`
+        ? `extracted context: ${prepareUntrustedAttachment(file.excerpt, { maxChars: 2000 }).content}`
         : "extracted context: not available yet; use file metadata and ask only if blocked";
       return `  ${index + 1}. ${file.filename} (${file.kind}, ${file.mime}, ${formatBytes(file.size)}) - ${source}`;
     })
@@ -3610,7 +3615,7 @@ ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(pay
     content.push({
       type: "input_text",
       text: file.excerpt
-        ? `Lampiran ${file.filename}: ${file.excerpt}`
+        ? `Lampiran ${file.filename}:\n${prepareUntrustedAttachment(file.excerpt).content}`
         : `Lampiran ${file.filename} (${file.mime}, ${formatBytes(file.size)}). Gunakan metadata ini sebagai konteks bila isi file tidak tersedia.`,
     });
   }
@@ -3644,7 +3649,7 @@ ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(pay
     const attachmentText = attachments
       .map((file) =>
         file.excerpt
-          ? `\n\nLampiran ${file.filename}: ${file.excerpt}`
+          ? `\n\nLampiran ${file.filename}:\n${prepareUntrustedAttachment(file.excerpt).content}`
           : `\n\nLampiran ${file.filename} (${file.mime}, ${formatBytes(file.size)}).`
       )
       .join("");
@@ -3690,7 +3695,7 @@ ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(pay
     const attachmentText = attachments
       .map((file) =>
         file.excerpt
-          ? `\n\nLampiran ${file.filename}: ${file.excerpt}`
+          ? `\n\nLampiran ${file.filename}:\n${prepareUntrustedAttachment(file.excerpt).content}`
           : `\n\nLampiran ${file.filename} (${file.mime}, ${formatBytes(file.size)}). Isi file belum diekstrak lokal, gunakan metadata ini sebagai konteks dan minta user menyalin isi penting bila perlu.`
       )
       .join("");
@@ -3718,7 +3723,7 @@ ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(pay
     content.push({
       type: "text",
       text: file.excerpt
-        ? `Lampiran ${file.filename}: ${file.excerpt}`
+        ? `Lampiran ${file.filename}:\n${prepareUntrustedAttachment(file.excerpt).content}`
         : `Lampiran ${file.filename} (${file.mime}, ${formatBytes(file.size)}). Isi file belum diekstrak lokal, gunakan metadata ini sebagai konteks dan minta user menyalin isi penting bila perlu.`,
     });
   }
@@ -3741,7 +3746,7 @@ ${attachments
   .map(
     (file, index) =>
       `- Lampiran ${index + 1}: ${file.filename} (${file.kind}, ${formatBytes(file.size)})${
-        file.excerpt ? `\n  Cuplikan: ${file.excerpt}` : ""
+        file.excerpt ? `\n  Cuplikan:\n${prepareUntrustedAttachment(file.excerpt).content}` : ""
       }`
   )
   .join("\n")}`
