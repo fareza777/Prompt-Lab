@@ -2682,6 +2682,11 @@ button {
 }
 
 @media (max-width: 760px) {
+  .v2-card,
+  .v2-diff-grid > * {
+    min-width: 0;
+  }
+
   .v2-main {
     padding: 12px 12px 126px;
   }
@@ -2754,10 +2759,8 @@ button {
   }
 
   .v2-chip-row {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x proximity;
+    flex-wrap: wrap;
+    overflow-x: visible;
     padding-bottom: 4px;
   }
 

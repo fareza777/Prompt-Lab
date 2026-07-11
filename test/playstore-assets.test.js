@@ -49,6 +49,11 @@ test("capture validates every surface and bottom navigation before writing PNGs"
   assert.match(source, /insideViewport/);
   assert.match(source, /receivesPointer/);
   assert.match(source, /labelInsideButton/);
+  assert.match(source, /document\.documentElement\.scrollWidth/);
+  assert.match(source, /async function captureStableScreenshot/);
+  assert.match(source, /createHash\("sha256"\)/);
+  assert.match(source, /backdrop-filter: none !important/);
+  assert.match(source, /\.v2-shell::before \{ display: none !important; \}/);
 });
 
 test("capture uses natural responsive CSS at a 1080x1920 device viewport", async () => {
@@ -65,6 +70,8 @@ test("production CSS gives bottom navigation buttons explicit V2 styling", async
   assert.match(css, /\.v2-nav button,\s*\.v2-bottom-nav button \{[\s\S]*display: flex;/);
   assert.match(css, /@media \(max-width: 1180px\) \{[\s\S]*?\.v2-shell > \.v2-main \{[\s\S]*?z-index: auto;[\s\S]*?\.v2-bottom-nav \{[\s\S]*?z-index: 1000;/);
   assert.match(css, /\.v2-bottom-nav button \{[\s\S]*?flex-direction: column;[\s\S]*?font-size: 10px;/);
+  assert.match(css, /@media \(max-width: 760px\) \{[\s\S]*?\.v2-card,[\s\S]*?\.v2-diff-grid > \* \{[\s\S]*?min-width: 0;/);
+  assert.match(css, /\.v2-chip-row \{[\s\S]*?flex-wrap: wrap;[\s\S]*?overflow-x: visible;/);
 });
 
 test("production entry graph stays within the documented initial JS and CSS budget", async () => {

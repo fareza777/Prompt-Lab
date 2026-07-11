@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { chromium } from "playwright";
@@ -17,6 +18,8 @@ const PHONE_HEIGHT = 1920;
 
 const mobileChromeCss = `
   *, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }
+  * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  .v2-shell::before { display: none !important; }
   #app-splash { display: none !important; }
 `;
 
@@ -26,6 +29,19 @@ async function waitForStableRender(page) {
     await document.fonts.ready;
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   });
+  await page.waitForTimeout(250);
+}
+
+async function captureStableScreenshot(page, name) {
+  let previousHash = "";
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    const buffer = await page.screenshot({ type: "png", fullPage: false, animations: "disabled" });
+    const hash = createHash("sha256").update(buffer).digest("hex");
+    if (hash === previousHash) return buffer;
+    previousHash = hash;
+    await page.waitForTimeout(250);
+  }
+  throw new Error(`${name}: raster output did not stabilize after five captures`);
 }
 
 async function assertSurfaceReady(page, name) {
@@ -35,6 +51,15 @@ async function assertSurfaceReady(page, name) {
   const heading = page.locator(".v2-main h1").first();
   if (!(await heading.isVisible()) || !(await heading.innerText()).trim()) {
     throw new Error(`${name}: page heading is missing or empty`);
+  }
+
+  const layout = await page.evaluate(() => ({
+    viewportWidth: innerWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    mainRight: document.querySelector(".v2-main")?.getBoundingClientRect().right,
+  }));
+  if (layout.documentWidth > layout.viewportWidth || layout.mainRight > layout.viewportWidth + 0.5) {
+    throw new Error(`${name}: horizontal overflow detected: ${JSON.stringify(layout)}`);
   }
 
   const navState = await page.locator(".v2-bottom-nav button").evaluateAll((buttons) => {
@@ -171,6 +196,15 @@ try {
   await waitForStableRender(page);
 
   for (const name of screens) {
+    // Start every surface from a fresh compositor frame. Reusing a long-lived
+    // backdrop-heavy page can leave stale raster tiles in headless Chrome.
+    await page.reload({ waitUntil: "networkidle" });
+    if (await page.getByRole("button", { name: /Continue as Guest/i }).count()) {
+      await page.getByRole("button", { name: /Continue as Guest/i }).click();
+    }
+    await page.waitForSelector(".v2-shell", { timeout: 30000 });
+    await page.addStyleTag({ content: mobileChromeCss });
+    await waitForStableRender(page);
     const bottom = page.locator(".v2-bottom-nav button").filter({ hasText: name });
     const header = page.locator(".v2-icon-btn[title='Settings']");
     if (name === "Settings" && (await header.count())) {
@@ -184,10 +218,11 @@ try {
       const side = page.locator(".v2-nav button").filter({ hasText: name });
       await side.first().click({ timeout: 15000 });
     }
+    await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
     await waitForStableRender(page);
     await assertSurfaceReady(page, name);
     const file = join(outDir, `screenshot-phone-${name.toLowerCase()}.png`);
-    const raw = await page.screenshot({ type: "png", fullPage: false });
+    const raw = await captureStableScreenshot(page, name);
     await exportPhoneScreenshot(raw, file);
   }
 
