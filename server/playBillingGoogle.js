@@ -172,6 +172,49 @@ export function hashPurchaseToken(token) {
   return crypto.createHash("sha256").update(String(token || ""), "utf8").digest("hex");
 }
 
+export async function loadPlayMembershipEvents(admin, userId) {
+  if (!admin || !userId) return { ok: false, events: [] };
+  try {
+    const { data, error } = await admin
+      .from("membership_events")
+      .select("plan,purchase_token_hash,metadata,created_at")
+      .eq("user_id", userId)
+      .eq("provider", "google_play")
+      .order("created_at", { ascending: false })
+      .limit(8);
+    if (error) return { ok: false, events: [] };
+    return { ok: true, events: Array.isArray(data) ? data : [] };
+  } catch {
+    return { ok: false, events: [] };
+  }
+}
+
+export async function claimPlayMembership(admin, { userId, tokenHash, profileUpdate, event }) {
+  if (!admin || !userId || !/^[a-f0-9]{64}$/.test(String(tokenHash || "")) || !profileUpdate || !event) {
+    return { ok: false, conflict: false };
+  }
+  try {
+    const { data, error } = await admin.rpc("claim_google_play_membership", {
+      p_user_id: userId,
+      p_purchase_token_hash: tokenHash,
+      p_event_type: event.event_type,
+      p_plan: event.plan || profileUpdate.plan,
+      p_quota_limit: profileUpdate.quota_limit,
+      p_play_billing: profileUpdate.play_billing || "Google Play",
+      p_reset_usage: profileUpdate.quota_used === 0,
+      p_quota_reset_at: profileUpdate.quota_reset_at || null,
+      p_metadata: event.metadata || {},
+    });
+    if (error) return { ok: false, conflict: false };
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row?.conflict === true) return { ok: false, conflict: true };
+    if (row?.ok !== true) return { ok: false, conflict: false };
+    return { ok: true, applied: row.applied === true, conflict: false };
+  } catch {
+    return { ok: false, conflict: false };
+  }
+}
+
 export async function persistPlayMembership(admin, { userId, profileUpdate, event = null }) {
   if (!admin || !userId || !profileUpdate) {
     return { ok: false, error: "Membership persistence is unavailable." };

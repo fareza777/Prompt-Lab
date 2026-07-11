@@ -63,6 +63,8 @@ import {
   verifyPlaySubscriptionPurchase,
   acknowledgePlaySubscriptionPurchase,
   hashPurchaseToken,
+  claimPlayMembership,
+  loadPlayMembershipEvents,
   persistPlayMembership,
   FREE_PLAN_DEFAULTS,
 } from "./playBillingGoogle.js";
@@ -588,23 +590,6 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
     const userId = quotaSession.user.id;
     const tokenHash = hashPurchaseToken(purchaseToken);
 
-    const { data: existingEvents, error: existingEventsError } = await admin
-      .from("membership_events")
-      .select("id,user_id,plan")
-      .eq("purchase_token_hash", tokenHash)
-      .eq("provider", "google_play")
-      .limit(5);
-    if (existingEventsError) {
-      res.status(503).json({ error: "Could not verify membership ownership. Please try again." });
-      return;
-    }
-
-    const claimedByOther = (existingEvents || []).find((row) => row.user_id && row.user_id !== userId);
-    if (claimedByOther) {
-      res.status(409).json({ error: "This purchase is already linked to another account." });
-      return;
-    }
-
     let acknowledged = Number(verification.acknowledgementState) === 1;
     if (!acknowledged) {
       const ack = await acknowledgePlaySubscriptionPurchase({
@@ -638,14 +623,13 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
       profileUpdate.quota_reset_at = resetDate.toISOString().slice(0, 10);
     }
 
-    const alreadyLogged = (existingEvents || []).some((row) => row.user_id === userId);
-    const persisted = await persistPlayMembership(admin, {
+    const persisted = await claimPlayMembership(admin, {
       userId,
+      tokenHash,
       profileUpdate,
-      event: alreadyLogged ? null : {
+      event: {
         event_type: "subscription_verified",
         plan: planConfig.plan,
-        purchase_token_hash: tokenHash,
         metadata: {
           productId,
           orderId: verification.orderId || "",
@@ -654,6 +638,10 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
         },
       },
     });
+    if (persisted.conflict) {
+      res.status(409).json({ error: "This purchase is already linked to another account." });
+      return;
+    }
     if (!persisted.ok) {
       res.status(503).json({ error: "Could not update your membership. Please try again." });
       return;
@@ -701,6 +689,7 @@ app.post("/api/billing/restore-play-purchases", express.json({ limit: "64kb" }),
     let lastPlan = null;
     let lastQuota = null;
     let sawExpired = false;
+    let sawClaimConflict = false;
     const errors = [];
 
     for (const item of purchases.slice(0, 6)) {
@@ -721,22 +710,6 @@ app.post("/api/billing/restore-play-purchases", express.json({ limit: "64kb" }),
         }
 
         const tokenHash = hashPurchaseToken(purchaseToken);
-        const { data: existingEvents, error: existingEventsError } = await admin
-          .from("membership_events")
-          .select("id,user_id,plan")
-          .eq("purchase_token_hash", tokenHash)
-          .eq("provider", "google_play")
-          .limit(5);
-        if (existingEventsError) {
-          errors.push(`${productId}: membership verification unavailable`);
-          continue;
-        }
-        const claimedByOther = (existingEvents || []).find((row) => row.user_id && row.user_id !== userId);
-        if (claimedByOther) {
-          errors.push(`${productId}: already linked to another account`);
-          continue;
-        }
-
         if (Number(verification.acknowledgementState) !== 1) {
           const ack = await acknowledgePlaySubscriptionPurchase({ subscriptionId: productId, purchaseToken });
           if (!ack.ok) {
@@ -759,14 +732,13 @@ app.post("/api/billing/restore-play-purchases", express.json({ limit: "64kb" }),
           profileUpdate.quota_reset_at = resetDate.toISOString().slice(0, 10);
         }
 
-        const alreadyLogged = (existingEvents || []).some((row) => row.user_id === userId);
-        const persisted = await persistPlayMembership(admin, {
+        const persisted = await claimPlayMembership(admin, {
           userId,
+          tokenHash,
           profileUpdate,
-          event: alreadyLogged ? null : {
+          event: {
             event_type: "subscription_restored",
             plan: planConfig.plan,
-            purchase_token_hash: tokenHash,
             metadata: {
               productId,
               orderId: verification.orderId || "",
@@ -774,6 +746,11 @@ app.post("/api/billing/restore-play-purchases", express.json({ limit: "64kb" }),
             },
           },
         });
+        if (persisted.conflict) {
+          sawClaimConflict = true;
+          errors.push(`${productId}: already linked to another account`);
+          continue;
+        }
         if (!persisted.ok) {
           errors.push(`${productId}: membership persistence unavailable`);
           continue;
@@ -791,10 +768,10 @@ app.post("/api/billing/restore-play-purchases", express.json({ limit: "64kb" }),
     }
 
     if (!lastPlan) {
-      if (sawExpired) {
+      if (sawExpired && !sawClaimConflict) {
         await downgradePlayMembershipIfNeeded(userId, { reason: "expired_on_restore" });
       }
-      res.status(400).json({
+      res.status(sawClaimConflict ? 409 : 400).json({
         error: errors[0] || "No active Play purchases found.",
         errors,
       });
@@ -830,13 +807,12 @@ app.post("/api/billing/sync-play-membership", express.json({ limit: "32kb" }), a
       return;
     }
 
-    const { data: events } = await admin
-      .from("membership_events")
-      .select("plan,purchase_token_hash,metadata,created_at")
-      .eq("user_id", userId)
-      .eq("provider", "google_play")
-      .order("created_at", { ascending: false })
-      .limit(8);
+    const storedEvents = await loadPlayMembershipEvents(admin, userId);
+    if (!storedEvents.ok) {
+      res.status(503).json({ error: "Could not verify membership status. Please try again." });
+      return;
+    }
+    const events = storedEvents.events;
 
     const purchases = Array.isArray(req.body?.purchases) ? req.body.purchases : [];
     let stillActive = false;
@@ -853,15 +829,29 @@ app.post("/api/billing/sync-play-membership", express.json({ limit: "32kb" }), a
       if (!verification.ok) continue;
       stillActive = true;
       activePlan = planConfig.plan;
-      const persisted = await persistPlayMembership(admin, {
+      const tokenHash = hashPurchaseToken(purchaseToken);
+      const persisted = await claimPlayMembership(admin, {
         userId,
+        tokenHash,
         profileUpdate: {
           plan: planConfig.plan,
           quota_limit: planConfig.quotaLimit,
           play_billing: "Google Play",
           updated_at: new Date().toISOString(),
         },
+        event: {
+          event_type: "subscription_synced",
+          plan: planConfig.plan,
+          metadata: {
+            productId,
+            orderId: verification.orderId || "",
+            expiryTimeMillis: verification.expiryTimeMillis || null,
+          },
+        },
       });
+      if (persisted.conflict) {
+        throw publicApiError("This purchase is already linked to another account.", 409);
+      }
       if (!persisted.ok) {
         throw publicApiError("Could not update your membership. Please try again.", 503);
       }

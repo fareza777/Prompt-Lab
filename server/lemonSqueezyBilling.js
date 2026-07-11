@@ -157,23 +157,64 @@ export function resolveSubscriptionAction(payload, eventName) {
   return { action: "ignore", reason: eventName || status || "no_op" };
 }
 
+export function getLemonProviderEvent(payload, eventName) {
+  const attributes = payload?.data?.attributes || {};
+  const rawEventAt = attributes.updated_at || attributes.created_at || payload?.meta?.created_at || "1970-01-01T00:00:00Z";
+  const parsedEventAt = new Date(rawEventAt);
+  const eventAt = Number.isFinite(parsedEventAt.getTime())
+    ? parsedEventAt.toISOString()
+    : "1970-01-01T00:00:00.000Z";
+  const identity = [
+    String(eventName || ""),
+    String(payload?.data?.id || ""),
+    eventAt,
+    String(attributes.status || ""),
+    String(attributes.variant_id || attributes.first_subscription_item?.variant_id || ""),
+    String(attributes.order_id || ""),
+    String(attributes.ends_at || ""),
+  ].join("\n");
+  return {
+    key: crypto.createHash("sha256").update(identity, "utf8").digest("hex"),
+    eventAt,
+  };
+}
+
+async function applyLemonMembershipEvent(admin, {
+  userId,
+  plan,
+  quotaLimit,
+  eventName,
+  payload,
+  playBilling,
+  metadata,
+}) {
+  const providerEvent = getLemonProviderEvent(payload, eventName);
+  try {
+    const { data, error } = await admin.rpc("apply_promptlab_membership_event", {
+      p_user_id: userId,
+      p_provider: "lemon_squeezy",
+      p_provider_event_key: providerEvent.key,
+      p_provider_event_at: providerEvent.eventAt,
+      p_event_type: eventName,
+      p_plan: plan,
+      p_quota_limit: quotaLimit,
+      p_play_billing: playBilling,
+      p_metadata: metadata,
+    });
+    if (error) return { ok: false, error: "Failed to persist membership event." };
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row?.ok !== true || row?.conflict === true) {
+      return { ok: false, error: "Failed to persist membership event." };
+    }
+    return { ok: true, applied: row.applied === true };
+  } catch {
+    return { ok: false, error: "Failed to persist membership event." };
+  }
+}
+
 export async function applyLemonSqueezyMembership(admin, { userId, planConfig, eventName, payload }) {
   if (!admin || !userId) {
     return { ok: false, error: "Missing Supabase admin client or user id." };
-  }
-
-  const { error: profileError } = await admin
-    .from("profiles")
-    .update({
-      plan: planConfig.plan,
-      quota_limit: planConfig.quotaLimit,
-      play_billing: "Lemon Squeezy",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", userId);
-
-  if (profileError) {
-    return { ok: false, error: "Failed to update membership profile." };
   }
 
   const subscriptionId = payload?.data?.id || "";
@@ -182,11 +223,13 @@ export async function applyLemonSqueezyMembership(admin, { userId, planConfig, e
     payload?.data?.attributes?.first_subscription_item?.variant_id ||
     "";
 
-  const { error: eventError } = await admin.from("membership_events").insert({
-    user_id: userId,
-    event_type: eventName,
+  const persisted = await applyLemonMembershipEvent(admin, {
+    userId,
     plan: planConfig.plan,
-    provider: "lemon_squeezy",
+    quotaLimit: planConfig.quotaLimit,
+    eventName,
+    payload,
+    playBilling: "Lemon Squeezy",
     metadata: {
       subscriptionId: String(subscriptionId),
       variantId: String(variantId),
@@ -194,11 +237,9 @@ export async function applyLemonSqueezyMembership(admin, { userId, planConfig, e
       orderId: payload?.data?.attributes?.order_id || "",
     },
   });
-  if (eventError) {
-    return { ok: false, error: "Failed to record membership event." };
-  }
+  if (!persisted.ok) return persisted;
 
-  return { ok: true, plan: planConfig.plan };
+  return { ok: true, plan: planConfig.plan, applied: persisted.applied };
 }
 
 export async function downgradeToFree(admin, userId, eventName, payload) {
@@ -207,36 +248,22 @@ export async function downgradeToFree(admin, userId, eventName, payload) {
   }
 
   const freeQuota = getEntitlements("Free").quotaLimit;
-  const { error: profileError } = await admin
-    .from("profiles")
-    .update({
-      plan: "Free",
-      quota_limit: freeQuota,
-      play_billing: "Not linked",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", userId);
-
-  if (profileError) {
-    return { ok: false, error: "Failed to update membership profile." };
-  }
-
-  const { error: eventError } = await admin.from("membership_events").insert({
-    user_id: userId,
-    event_type: eventName,
+  const persisted = await applyLemonMembershipEvent(admin, {
+    userId,
     plan: "Free",
-    provider: "lemon_squeezy",
+    quotaLimit: freeQuota,
+    eventName,
+    payload,
+    playBilling: "Not linked",
     metadata: {
       subscriptionId: String(payload?.data?.id || ""),
       status: payload?.data?.attributes?.status || "",
       reason: "downgrade",
     },
   });
-  if (eventError) {
-    return { ok: false, error: "Failed to record membership event." };
-  }
+  if (!persisted.ok) return persisted;
 
-  return { ok: true, plan: "Free" };
+  return { ok: true, plan: "Free", applied: persisted.applied };
 }
 
 export async function resolveUserIdByEmail(admin, email) {
