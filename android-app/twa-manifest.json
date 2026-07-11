@@ -1,0 +1,51 @@
+{
+  "packageId": "app.promptlab.twa",
+  "host": "prompt-lab.xyz",
+  "name": "PromptLab",
+  "launcherName": "PromptLab",
+  "display": "standalone",
+  "themeColor": "#061011",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#061011",
+  "enableNotifications": true,
+  "startUrl": "/app",
+  "iconUrl": "https://prompt-lab.xyz/icons/icon-512.png",
+  "maskableIconUrl": "https://prompt-lab.xyz/icons/maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "../playstore/signing/promptlab-release.jks",
+    "alias": "promptlab"
+  },
+  "appVersionName": "1.0.6",
+  "appVersionCode": 7,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://prompt-lab.xyz/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {
+    "playBilling": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://prompt-lab.xyz/",
+  "minSdkVersion": 21,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "1.0.6"
+}

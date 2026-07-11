@@ -1,12 +1,14 @@
 // postbuild.mjs — split app shell (/app) from marketing site (/)
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { generateSeoPages } from "./generate-seo-pages.mjs";
 import { generateSitemap } from "./generate-sitemap.mjs";
 
 const dist = join(process.cwd(), "dist");
 const indexHtml = join(dist, "index.html");
 const appHtml = join(dist, "app.html");
+const isDirectRun = Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 const APP_NOINDEX = '<meta name="robots" content="noindex, nofollow" data-app-noindex="1" />';
 const APP_MARKER = "<!-- ============================== APP ============================== -->";
@@ -98,16 +100,24 @@ function patchBuiltHtml(html) {
   return relocateModuleScriptsToBody(html);
 }
 
-if (existsSync(indexHtml)) {
+function stripArticleMeta(html) {
+  return html.replace(
+    /\s*<meta id="og-article-(?:published|modified)"[^>]*>\s*/gi,
+    "\n"
+  );
+}
+
+if (isDirectRun && existsSync(indexHtml)) {
   const raw = readFileSync(indexHtml, "utf8");
   const patched = patchBuiltHtml(raw);
   writeFileSync(indexHtml, patched);
-  writeFileSync(appHtml, patchAppHtml(patched));
+  writeFileSync(appHtml, stripArticleMeta(patchAppHtml(patched)));
   console.log("✓ index.html → app.html (app shell, noindex)");
   generateSeoPages();
+  writeFileSync(indexHtml, stripArticleMeta(patched));
   generateSitemap(dist);
   generateSitemap(join(process.cwd(), "public"));
   console.log("✓ sitemap.xml → dist/ and public/");
-} else {
+} else if (isDirectRun) {
   console.error("✗ index.html not found in dist/");
 }
