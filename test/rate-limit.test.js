@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { getRequestIdentity } from "../server/requestIdentity.js";
-import { createAiRateLimiter } from "../server/rateLimit.js";
+import {
+  createAiRateLimiter,
+  createConfiguredRateLimitStore,
+  createRestKvStore,
+} from "../server/rateLimit.js";
 
 function createResponse() {
   const headers = new Map();
@@ -130,4 +134,66 @@ test("in-memory rate limiter bounds an Infinity bucket cap", async () => {
   const reintroduced = await requestFrom("203.0.113.1");
   assert.equal(reintroduced.statusCode, 200);
   assert.equal(reintroduced.headers.get("X-RateLimit-Remaining"), "23");
+});
+
+test("REST KV store atomically consumes a shared fixed-window bucket", async () => {
+  const calls = [];
+  let count = 0;
+  const store = createRestKvStore({
+    url: "https://kv.example.test",
+    token: "secret-token",
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      const requestCount = ++count;
+      return { ok: true, json: async () => ({ result: [requestCount, 60_000] }) };
+    },
+  });
+
+  const [first, second] = await Promise.all([
+    store.consume("ai:user:shared", 60_000, 1, 1_000),
+    store.consume("ai:user:shared", 60_000, 1, 1_000),
+  ]);
+
+  assert.deepEqual(first, { allowed: true, remaining: 0, retryAfter: 0 });
+  assert.deepEqual(second, { allowed: false, remaining: 0, retryAfter: 60 });
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].url, "https://kv.example.test");
+  assert.equal(calls[0].options.headers.Authorization, "Bearer secret-token");
+  const command = JSON.parse(calls[0].options.body);
+  assert.equal(command[0], "EVAL");
+  assert.equal(command[3], "rl:ai:user:shared");
+  assert.equal(command[4], "60000");
+});
+
+test("REST KV store rejects malformed responses without leaking credentials", async () => {
+  const store = createRestKvStore({
+    url: "https://kv.example.test",
+    token: "do-not-leak",
+    fetchImpl: async () => ({ ok: true, json: async () => ({ result: ["invalid", 1] }) }),
+  });
+
+  await assert.rejects(
+    store.consume("ai:user:1", 60_000, 24, 1_000),
+    (error) => error.message === "Rate limit store unavailable" && !error.message.includes("do-not-leak")
+  );
+});
+
+test("configured rate-limit store uses KV only when URL and token are both present", async () => {
+  let request;
+  const durable = createConfiguredRateLimitStore({
+    env: { KV_REST_API_URL: "https://kv.example.test/", KV_REST_API_TOKEN: "token" },
+    fetchImpl: async (url, options) => {
+      request = { url, options };
+      return { ok: true, json: async () => ({ result: [1, 60_000] }) };
+    },
+  });
+  await durable.consume("ai:user:1", 60_000, 24, 1_000);
+  assert.equal(request.url, "https://kv.example.test");
+
+  const partial = createConfiguredRateLimitStore({
+    env: { KV_REST_API_URL: "https://kv.example.test", KV_REST_API_TOKEN: "" },
+  });
+  await assert.rejects(partial.consume("ai:user:1", 60_000, 24, 1_000), {
+    message: "Rate limit store unavailable",
+  });
 });

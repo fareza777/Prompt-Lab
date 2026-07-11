@@ -88,7 +88,7 @@ import {
   resolveMinimaxBaseUrl,
 } from "./minimaxProvider.js";
 import { scorePromptForCompare, getLocalPromptRisks } from "../src/promptEngine/scoreCompare.js";
-import { createAiRateLimiter, markPriorityRequest } from "./rateLimit.js";
+import { createAiRateLimiter, createConfiguredRateLimitStore, markPriorityRequest } from "./rateLimit.js";
 import { prepareUntrustedAttachment } from "./safeAttachment.js";
 import { initSse, sendSse, sendSsePhase, consumeOpenRouterStream } from "./sse.js";
 
@@ -108,6 +108,7 @@ async function attachAiRateLimitIdentity(req, _res, next) {
 
 const aiRateLimit = createAiRateLimiter({
   getPlan: (req) => req.aiRateLimitPlan || "Free",
+  store: createConfiguredRateLimitStore(),
 });
 
 function enrichPayloadWithLanguage(payload, attachments = []) {
