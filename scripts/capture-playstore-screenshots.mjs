@@ -11,36 +11,101 @@ const baseUrl = `http://127.0.0.1:${port}`;
 
 const MOBILE_TABS = ["Builder", "Optimizer", "Templates", "Library", "Compare"];
 const screens = [...MOBILE_TABS, "Settings"];
+const SURFACE_EXPECTATIONS = Object.fromEntries(screens.map((name) => [name, `PromptLab / ${name}`]));
 const PHONE_WIDTH = 1080;
 const PHONE_HEIGHT = 1920;
 
 const mobileChromeCss = `
-  .v2-shell { grid-template-columns: 1fr !important; min-height: 100vh !important; }
-  .v2-sidebar { display: none !important; }
-  .v2-bottom-nav {
-    display: grid !important;
-    position: fixed !important;
-    left: 12px !important;
-    right: 12px !important;
-    bottom: max(12px, env(safe-area-inset-bottom)) !important;
-    z-index: 1000 !important;
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    gap: 4px !important;
-    padding: 5px !important;
-    background: rgba(12, 20, 26, 0.96) !important;
-    border: 1px solid rgba(148, 163, 184, 0.22) !important;
-    border-radius: 16px !important;
-  }
-  .v2-bottom-nav button {
-    min-height: 48px !important;
-    font-size: 10px !important;
-  }
-  .v2-main { padding: 12px 12px 110px !important; }
-  .v2-headerbar { flex-wrap: wrap !important; gap: 8px !important; }
-  .v2-studio-grid, .v2-diff-grid, .v2-library-grid { grid-template-columns: 1fr !important; }
-  .v2-hero h1 { font-size: clamp(28px, 7vw, 40px) !important; }
+  *, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }
   #app-splash { display: none !important; }
 `;
+
+async function waitForStableRender(page) {
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+}
+
+async function assertSurfaceReady(page, name) {
+  const expectedBreadcrumb = SURFACE_EXPECTATIONS[name];
+  const breadcrumb = page.locator(".v2-headerbar .v2-eyebrow");
+  await breadcrumb.filter({ hasText: expectedBreadcrumb }).waitFor({ state: "visible" });
+  const heading = page.locator(".v2-main h1").first();
+  if (!(await heading.isVisible()) || !(await heading.innerText()).trim()) {
+    throw new Error(`${name}: page heading is missing or empty`);
+  }
+
+  const navState = await page.locator(".v2-bottom-nav button").evaluateAll((buttons) => {
+    const colorToRgba = (color) => {
+      const values = color.match(/[\d.]+/g)?.map(Number) || [];
+      if (color.startsWith("rgb")) return [values[0], values[1], values[2], values[3] ?? 1];
+      if (color.startsWith("oklch")) {
+        const [lightness, chroma, hue, alpha = 1] = values;
+        const radians = hue * Math.PI / 180;
+        const a = chroma * Math.cos(radians);
+        const b = chroma * Math.sin(radians);
+        const l = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+        const m = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+        const s = (lightness - 0.0894841775 * a - 1.291485548 * b) ** 3;
+        const gamma = (value) => 255 * (value <= 0.0031308 ? 12.92 * value : 1.055 * value ** (1 / 2.4) - 0.055);
+        return [
+          gamma(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+          gamma(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+          gamma(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
+          alpha,
+        ];
+      }
+      throw new Error(`Unsupported computed color: ${color}`);
+    };
+    const luminance = ([r, g, b]) => {
+      const channels = [r, g, b].map((value) => {
+        const normalized = value / 255;
+        return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+    };
+    const contrastRatio = (foreground, background, parentBackground) => {
+      const alpha = background[3] ?? 1;
+      const effectiveBackground = background.slice(0, 3).map((value, index) => value * alpha + parentBackground[index] * (1 - alpha));
+      const lighter = Math.max(luminance(foreground), luminance(effectiveBackground));
+      const darker = Math.min(luminance(foreground), luminance(effectiveBackground));
+      return (lighter + 0.05) / (darker + 0.05);
+    };
+
+    return buttons.map((button) => {
+      const style = getComputedStyle(button);
+      const parentStyle = getComputedStyle(button.parentElement);
+      const rect = button.getBoundingClientRect();
+      const icon = button.querySelector("svg");
+      const label = button.querySelector("span");
+      const iconRect = icon?.getBoundingClientRect();
+      const labelRect = label?.getBoundingClientRect();
+      const accessibleName = (button.getAttribute("aria-label") || button.innerText || "").trim();
+      const iconVisible = Boolean(icon && getComputedStyle(icon).visibility !== "hidden" && iconRect?.width && iconRect?.height);
+      const insideViewport = rect.width > 0 && rect.height > 0 && rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight;
+      const topElement = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      const receivesPointer = Boolean(topElement && (topElement === button || button.contains(topElement)));
+      const labelInsideButton = Boolean(labelRect && labelRect.left >= rect.left && labelRect.right <= rect.right && labelRect.top >= rect.top && labelRect.bottom <= rect.bottom);
+      return {
+        accessibleName,
+        iconVisible,
+        insideViewport,
+        receivesPointer,
+        labelInsideButton,
+        contrastRatio: contrastRatio(colorToRgba(style.color), colorToRgba(style.backgroundColor), colorToRgba(parentStyle.backgroundColor)),
+      };
+    });
+  });
+
+  if (navState.length !== MOBILE_TABS.length) throw new Error(`${name}: expected five bottom navigation buttons`);
+  for (const [index, state] of navState.entries()) {
+    if (!state.accessibleName || !state.iconVisible || !state.insideViewport || !state.receivesPointer || !state.labelInsideButton || state.contrastRatio < 3) {
+      throw new Error(`${name}: invalid bottom navigation button ${index + 1}: ${JSON.stringify(state)}`);
+    }
+  }
+}
 
 function waitForServer(url, timeoutMs = 60000) {
   const start = Date.now();
@@ -85,8 +150,8 @@ try {
 
   const browser = await chromium.launch({ channel: "chrome" });
   const page = await browser.newPage({
-    viewport: { width: PHONE_WIDTH, height: PHONE_HEIGHT },
-    deviceScaleFactor: 1,
+    viewport: { width: 360, height: 640 },
+    deviceScaleFactor: 3,
     isMobile: true,
     hasTouch: true,
   });
@@ -103,7 +168,7 @@ try {
   }
   await page.waitForSelector(".v2-shell", { timeout: 30000 });
   await page.addStyleTag({ content: mobileChromeCss });
-  await page.waitForTimeout(1500);
+  await waitForStableRender(page);
 
   for (const name of screens) {
     const bottom = page.locator(".v2-bottom-nav button").filter({ hasText: name });
@@ -111,12 +176,16 @@ try {
     if (name === "Settings" && (await header.count())) {
       await header.first().click({ timeout: 15000 });
     } else if (await bottom.count()) {
-      await bottom.first().click({ timeout: 15000 });
+      // A fixed mobile nav is already validated with elementFromPoint below.
+      // Dispatch in-page so Playwright does not auto-scroll the page beneath it
+      // and move a content chip under the pointer between actionability checks.
+      await bottom.first().evaluate((button) => button.click());
     } else {
       const side = page.locator(".v2-nav button").filter({ hasText: name });
       await side.first().click({ timeout: 15000 });
     }
-    await page.waitForTimeout(1200);
+    await waitForStableRender(page);
+    await assertSurfaceReady(page, name);
     const file = join(outDir, `screenshot-phone-${name.toLowerCase()}.png`);
     const raw = await page.screenshot({ type: "png", fullPage: false });
     await exportPhoneScreenshot(raw, file);

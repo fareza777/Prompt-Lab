@@ -36,6 +36,37 @@ test("capture script targets the current five-tab V2 navigation and all six surf
   assert.doesNotMatch(source, /\.bottom-nav(?![\w-])/);
 });
 
+test("capture validates every surface and bottom navigation before writing PNGs", async () => {
+  const source = await readFile(join(root, "scripts", "capture-playstore-screenshots.mjs"), "utf8");
+  assert.match(source, /const SURFACE_EXPECTATIONS =/);
+  assert.match(source, /async function assertSurfaceReady/);
+  assert.match(source, /await assertSurfaceReady\(page, name\)/);
+  assert.match(source, /document\.fonts\.ready/);
+  assert.match(source, /requestAnimationFrame/);
+  assert.match(source, /contrastRatio/);
+  assert.match(source, /accessibleName/);
+  assert.match(source, /iconVisible/);
+  assert.match(source, /insideViewport/);
+  assert.match(source, /receivesPointer/);
+  assert.match(source, /labelInsideButton/);
+});
+
+test("capture uses natural responsive CSS at a 1080x1920 device viewport", async () => {
+  const source = await readFile(join(root, "scripts", "capture-playstore-screenshots.mjs"), "utf8");
+  assert.match(source, /viewport: \{ width: 360, height: 640 \}/);
+  assert.match(source, /deviceScaleFactor: 3/);
+  assert.doesNotMatch(source, /\.v2-shell \{/);
+  assert.doesNotMatch(source, /grid-template-columns: repeat\(5/);
+});
+
+test("production CSS gives bottom navigation buttons explicit V2 styling", async () => {
+  const css = await readFile(join(root, "src", "styles.css"), "utf8");
+  assert.match(css, /\.v2-nav button,\s*\.v2-bottom-nav button,/);
+  assert.match(css, /\.v2-nav button,\s*\.v2-bottom-nav button \{[\s\S]*display: flex;/);
+  assert.match(css, /@media \(max-width: 1180px\) \{[\s\S]*?\.v2-shell > \.v2-main \{[\s\S]*?z-index: auto;[\s\S]*?\.v2-bottom-nav \{[\s\S]*?z-index: 1000;/);
+  assert.match(css, /\.v2-bottom-nav button \{[\s\S]*?flex-direction: column;[\s\S]*?font-size: 10px;/);
+});
+
 test("production entry graph stays within the documented initial JS and CSS budget", async () => {
   const config = await readFile(join(root, "vite.config.js"), "utf8");
   assert.match(config, /INITIAL_JS_BUDGET_KB = 700/);
