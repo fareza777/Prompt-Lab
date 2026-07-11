@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+
 let GoogleAuthClass = null;
 
 async function loadGoogleAuth() {
@@ -167,20 +169,34 @@ export async function acknowledgePlaySubscriptionPurchase(params, { retries = 3 
 }
 
 export function hashPurchaseToken(token) {
-  // Stable fingerprint without storing the raw purchase token.
-  const value = String(token || "");
-  let h1 = 0x811c9dc5;
-  let h2 = 0x811c9dc5 ^ 0x9e3779b9;
-  for (let i = 0; i < value.length; i += 1) {
-    const code = value.charCodeAt(i);
-    h1 ^= code;
-    h1 = Math.imul(h1, 0x01000193);
-    h2 ^= code + ((i * 131) & 0xff);
-    h2 = Math.imul(h2, 0x01000193);
+  return crypto.createHash("sha256").update(String(token || ""), "utf8").digest("hex");
+}
+
+export async function persistPlayMembership(admin, { userId, profileUpdate, event = null }) {
+  if (!admin || !userId || !profileUpdate) {
+    return { ok: false, error: "Membership persistence is unavailable." };
   }
-  const a = (h1 >>> 0).toString(16).padStart(8, "0");
-  const b = (h2 >>> 0).toString(16).padStart(8, "0");
-  return `pt_${a}${b}_${value.length}`;
+
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update(profileUpdate)
+    .eq("id", userId);
+  if (profileError) {
+    return { ok: false, error: "Could not update membership profile." };
+  }
+
+  if (event) {
+    const { error: eventError } = await admin.from("membership_events").insert({
+      user_id: userId,
+      provider: "google_play",
+      ...event,
+    });
+    if (eventError) {
+      return { ok: false, error: "Could not record membership event." };
+    }
+  }
+
+  return { ok: true };
 }
 
 function humanizePlayApiError(message, status) {

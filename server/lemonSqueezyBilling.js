@@ -173,7 +173,7 @@ export async function applyLemonSqueezyMembership(admin, { userId, planConfig, e
     .eq("id", userId);
 
   if (profileError) {
-    return { ok: false, error: `Failed to update profile: ${profileError.message}` };
+    return { ok: false, error: "Failed to update membership profile." };
   }
 
   const subscriptionId = payload?.data?.id || "";
@@ -182,7 +182,7 @@ export async function applyLemonSqueezyMembership(admin, { userId, planConfig, e
     payload?.data?.attributes?.first_subscription_item?.variant_id ||
     "";
 
-  await admin.from("membership_events").insert({
+  const { error: eventError } = await admin.from("membership_events").insert({
     user_id: userId,
     event_type: eventName,
     plan: planConfig.plan,
@@ -194,6 +194,9 @@ export async function applyLemonSqueezyMembership(admin, { userId, planConfig, e
       orderId: payload?.data?.attributes?.order_id || "",
     },
   });
+  if (eventError) {
+    return { ok: false, error: "Failed to record membership event." };
+  }
 
   return { ok: true, plan: planConfig.plan };
 }
@@ -215,10 +218,10 @@ export async function downgradeToFree(admin, userId, eventName, payload) {
     .eq("id", userId);
 
   if (profileError) {
-    return { ok: false, error: `Failed to downgrade profile: ${profileError.message}` };
+    return { ok: false, error: "Failed to update membership profile." };
   }
 
-  await admin.from("membership_events").insert({
+  const { error: eventError } = await admin.from("membership_events").insert({
     user_id: userId,
     event_type: eventName,
     plan: "Free",
@@ -229,6 +232,9 @@ export async function downgradeToFree(admin, userId, eventName, payload) {
       reason: "downgrade",
     },
   });
+  if (eventError) {
+    return { ok: false, error: "Failed to record membership event." };
+  }
 
   return { ok: true, plan: "Free" };
 }

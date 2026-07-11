@@ -62,8 +62,10 @@ import {
   verifyPlaySubscriptionPurchase,
   acknowledgePlaySubscriptionPurchase,
   hashPurchaseToken,
+  persistPlayMembership,
   FREE_PLAN_DEFAULTS,
 } from "./playBillingGoogle.js";
+import { persistReservedUsage } from "./quotaReservation.js";
 import {
   handleLemonSqueezyWebhook,
   parseLemonSqueezyWebhook,
@@ -585,12 +587,16 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
     const userId = quotaSession.user.id;
     const tokenHash = hashPurchaseToken(purchaseToken);
 
-    const { data: existingEvents } = await admin
+    const { data: existingEvents, error: existingEventsError } = await admin
       .from("membership_events")
       .select("id,user_id,plan")
       .eq("purchase_token_hash", tokenHash)
       .eq("provider", "google_play")
       .limit(5);
+    if (existingEventsError) {
+      res.status(503).json({ error: "Could not verify membership ownership. Please try again." });
+      return;
+    }
 
     const claimedByOther = (existingEvents || []).find((row) => row.user_id && row.user_id !== userId);
     if (claimedByOther) {
@@ -631,23 +637,13 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
       profileUpdate.quota_reset_at = resetDate.toISOString().slice(0, 10);
     }
 
-    const { error: profileError } = await admin
-      .from("profiles")
-      .update(profileUpdate)
-      .eq("id", userId);
-
-    if (profileError) {
-      res.status(503).json({ error: "Could not update your membership. Please try again." });
-      return;
-    }
-
     const alreadyLogged = (existingEvents || []).some((row) => row.user_id === userId);
-    if (!alreadyLogged) {
-      await admin.from("membership_events").insert({
-        user_id: userId,
+    const persisted = await persistPlayMembership(admin, {
+      userId,
+      profileUpdate,
+      event: alreadyLogged ? null : {
         event_type: "subscription_verified",
         plan: planConfig.plan,
-        provider: "google_play",
         purchase_token_hash: tokenHash,
         metadata: {
           productId,
@@ -655,7 +651,11 @@ app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), a
           expiryTimeMillis: verification.expiryTimeMillis || null,
           acknowledged,
         },
-      });
+      },
+    });
+    if (!persisted.ok) {
+      res.status(503).json({ error: "Could not update your membership. Please try again." });
+      return;
     }
 
     const { data: profile, error: readError } = await admin
@@ -720,12 +720,16 @@ app.post("/api/billing/restore-play-purchases", express.json({ limit: "64kb" }),
         }
 
         const tokenHash = hashPurchaseToken(purchaseToken);
-        const { data: existingEvents } = await admin
+        const { data: existingEvents, error: existingEventsError } = await admin
           .from("membership_events")
           .select("id,user_id,plan")
           .eq("purchase_token_hash", tokenHash)
           .eq("provider", "google_play")
           .limit(5);
+        if (existingEventsError) {
+          errors.push(`${productId}: membership verification unavailable`);
+          continue;
+        }
         const claimedByOther = (existingEvents || []).find((row) => row.user_id && row.user_id !== userId);
         if (claimedByOther) {
           errors.push(`${productId}: already linked to another account`);
@@ -754,21 +758,24 @@ app.post("/api/billing/restore-play-purchases", express.json({ limit: "64kb" }),
           profileUpdate.quota_reset_at = resetDate.toISOString().slice(0, 10);
         }
 
-        await admin.from("profiles").update(profileUpdate).eq("id", userId);
         const alreadyLogged = (existingEvents || []).some((row) => row.user_id === userId);
-        if (!alreadyLogged) {
-          await admin.from("membership_events").insert({
-            user_id: userId,
+        const persisted = await persistPlayMembership(admin, {
+          userId,
+          profileUpdate,
+          event: alreadyLogged ? null : {
             event_type: "subscription_restored",
             plan: planConfig.plan,
-            provider: "google_play",
             purchase_token_hash: tokenHash,
             metadata: {
               productId,
               orderId: verification.orderId || "",
               expiryTimeMillis: verification.expiryTimeMillis || null,
             },
-          });
+          },
+        });
+        if (!persisted.ok) {
+          errors.push(`${productId}: membership persistence unavailable`);
+          continue;
         }
         lastPlan = planConfig.plan;
         const { data: profile } = await admin
@@ -845,15 +852,18 @@ app.post("/api/billing/sync-play-membership", express.json({ limit: "32kb" }), a
       if (!verification.ok) continue;
       stillActive = true;
       activePlan = planConfig.plan;
-      await admin
-        .from("profiles")
-        .update({
+      const persisted = await persistPlayMembership(admin, {
+        userId,
+        profileUpdate: {
           plan: planConfig.plan,
           quota_limit: planConfig.quotaLimit,
           play_billing: "Google Play",
           updated_at: new Date().toISOString(),
-        })
-        .eq("id", userId);
+        },
+      });
+      if (!persisted.ok) {
+        throw publicApiError("Could not update your membership. Please try again.", 503);
+      }
       const { data: profile } = await admin
         .from("profiles")
         .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
@@ -910,28 +920,29 @@ async function downgradePlayMembershipIfNeeded(userId, { reason = "expired", pro
   if (normalizePlanName(profile.plan) === "Free") return publicQuota(profile);
   if (!/google play/i.test(String(profile.play_billing || ""))) return publicQuota(profile);
 
-  const { data: updated, error } = await admin
-    .from("profiles")
-    .update({
+  const profileUpdate = {
       plan: FREE_PLAN_DEFAULTS.plan,
       quota_limit: FREE_PLAN_DEFAULTS.quotaLimit,
       play_billing: "Expired",
       updated_at: new Date().toISOString(),
-    })
-    .eq("id", userId)
-    .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
-    .maybeSingle();
-  if (error) {
-    console.warn("play downgrade failed", error.message);
-    return null;
-  }
-  await admin.from("membership_events").insert({
-    user_id: userId,
-    event_type: "subscription_expired",
-    plan: "Free",
-    provider: "google_play",
-    metadata: { reason, productId },
+  };
+  const persisted = await persistPlayMembership(admin, {
+    userId,
+    profileUpdate,
+    event: {
+      event_type: "subscription_expired",
+      plan: "Free",
+      metadata: { reason, productId },
+    },
   });
+  if (!persisted.ok) {
+    throw publicApiError("Could not update your membership. Please try again.", 503);
+  }
+  const { data: updated } = await admin
+    .from("profiles")
+    .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
+    .eq("id", userId)
+    .maybeSingle();
   return publicQuota(updated || { ...profile, plan: "Free", quota_limit: FREE_PLAN_DEFAULTS.quotaLimit, play_billing: "Expired" });
 }
 app.post("/api/account/delete", express.json({ limit: "8kb" }), async (req, res) => {
@@ -2017,108 +2028,27 @@ async function getQuotaSession(req, estimatedTokens = 0) {
   return { client, profile, user: userData.user };
 }
 
-function mapQuotaRecordError(error) {
-  const message = String(error?.message || "");
-  if (/quota exceeded/i.test(message)) {
-    return { message: "Token quota exceeded. Upgrade your plan or wait for quota reset.", statusCode: 402 };
-  }
-  if (/profile not found/i.test(message)) {
-    return { message: "Account profile is not ready. Sign out and sign in again.", statusCode: 403 };
-  }
-  if (/authentication required/i.test(message)) {
-    return { message: "Invalid session. Please sign in again.", statusCode: 401 };
-  }
-  if (/permission denied|row-level security|policy/i.test(message)) {
-    return {
-      message: "Membership database is temporarily unavailable. Please try again shortly.",
-      statusCode: 503,
-    };
-  }
-  return { message: "Failed to record quota usage.", statusCode: 503 };
-}
-
-async function recordUsageWithServiceRole(quotaSession, { eventType, metadata, tokenEstimate }) {
-  const admin = createServiceRoleSupabaseClient();
-  const userId = quotaSession?.user?.id;
-  if (!admin || !userId) return null;
-
-  const tokens = Math.max(1, Math.round(tokenEstimate || 0));
-  const { data: profile, error: profileError } = await admin
-    .from("profiles")
-    .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (profileError) throw publicApiError(`Failed to read quota profile: ${profileError.message}`, 503);
-  if (!profile) throw publicApiError("Account profile is not ready. Sign out and sign in again.", 403);
-
-  let quotaUsed = Number(profile.quota_used || 0);
-  let quotaResetAt = profile.quota_reset_at;
-  const today = new Date().toISOString().slice(0, 10);
-  if (quotaResetAt && String(quotaResetAt) < today) {
-    quotaUsed = 0;
-    const resetDate = new Date();
-    resetDate.setDate(resetDate.getDate() + 30);
-    quotaResetAt = resetDate.toISOString().slice(0, 10);
-  }
-
-  const unlimited = isSuperAccount(profile);
-  const quotaLimit = unlimited ? SUPER_QUOTA_LIMIT : Number(profile.quota_limit || 0);
-  if (!unlimited && quotaUsed + tokens > quotaLimit) {
-    throw publicApiError("Token quota exceeded. Upgrade your plan or wait for quota reset.", 402);
-  }
-
-  const { error: usageError } = await admin.from("usage_events").insert({
-    user_id: userId,
-    event_type: String(eventType || "generation").slice(0, 80),
-    token_estimate: tokens,
-    metadata: metadata || {},
-  });
-  if (usageError) throw publicApiError(`Failed to record quota usage: ${usageError.message}`, 503);
-
-  const nextQuotaUsed = unlimited ? quotaUsed : quotaUsed + tokens;
-  const { data: updated, error: updateError } = await admin
-    .from("profiles")
-    .update({ quota_used: nextQuotaUsed, quota_reset_at: quotaResetAt })
-    .eq("id", userId)
-    .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
-    .single();
-
-  if (updateError) throw publicApiError(`Failed to update quota: ${updateError.message}`, 503);
-  return publicQuota(updated);
-}
-
 async function recordUsage(quotaSession, { eventType, metadata, outputText, tokenEstimate }) {
   if (!quotaSession?.client) return null;
   const tokens = Math.max(1, Math.round(tokenEstimate || estimateTextTokens(outputText)));
-
-  if (quotaServiceRoleEnabled) {
-    try {
-      return await recordUsageWithServiceRole(quotaSession, { eventType, metadata, tokenEstimate: tokens });
-    } catch (serviceError) {
-      console.warn("recordUsage service-role failed, trying rpc", serviceError.publicMessage || serviceError.message);
-      if (serviceError.statusCode === 402) throw serviceError;
-    }
-  }
-
-  const { data, error } = await quotaSession.client.rpc("record_usage_event", {
-    p_event_type: eventType,
-    p_metadata: metadata || {},
-    p_token_estimate: tokens,
+  const result = await persistReservedUsage(quotaSession.client, {
+    userId: quotaSession.user?.id,
+    estimate: tokens,
+    eventType,
+    metadata: metadata || {},
   });
-  if (error) {
-    console.warn("record_usage_event rpc failed", {
-      code: error.code,
-      details: error.details,
-      hint: error.hint,
-      message: error.message,
-    });
-    const mapped = mapQuotaRecordError(error);
-    const detail = error.message ? `${mapped.message} (${error.message})` : mapped.message;
-    throw publicApiError(detail, mapped.statusCode);
+  if (!result.ok) {
+    const message = result.stage === "event"
+      ? "Failed to record quota usage."
+      : "Failed to reserve quota usage.";
+    throw publicApiError(message, 503);
   }
-  const profile = Array.isArray(data) ? data[0] : data;
-  return publicQuota(profile);
+
+  const quotaLimit = Number(quotaSession.profile?.quota_limit || 0);
+  return publicQuota({
+    ...quotaSession.profile,
+    quota_used: Math.max(0, quotaLimit - result.remaining),
+  });
 }
 
 async function finishGenerateResponse(res, quotaSession, usagePayload, body) {
@@ -2484,7 +2414,10 @@ async function runStreamedOpenRouterGenerate({
         tokenEstimate: quotaEstimate,
       });
     } catch (usageError) {
-      console.warn("stream recordUsage soft-failed", usageError.message);
+      console.warn("stream quota persistence failed", usageError.publicMessage || usageError.message);
+      sendSse(res, "error", { message: "Could not record quota usage. Please try again." });
+      res.end();
+      return;
     }
   }
 
