@@ -52,6 +52,16 @@ async function assertSurfaceReady(page, name) {
   if (!(await heading.isVisible()) || !(await heading.innerText()).trim()) {
     throw new Error(`${name}: page heading is missing or empty`);
   }
+  const headerState = await page.locator(".v2-headerbar").evaluate((header) => ({
+    avatar: (header.querySelector(".v2-avatar")?.textContent || "").trim(),
+    visibleSvgs: [...header.querySelectorAll("svg")].filter((svg) => {
+      const rect = svg.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && getComputedStyle(svg).visibility !== "hidden";
+    }).length,
+  }));
+  if (!headerState.avatar || headerState.visibleSvgs < 2) {
+    throw new Error(`${name}: incomplete header controls: ${JSON.stringify(headerState)}`);
+  }
 
   const layout = await page.evaluate(() => ({
     viewportWidth: innerWidth,
@@ -174,31 +184,17 @@ try {
   await waitForServer(baseUrl);
 
   const browser = await chromium.launch({ channel: "chrome" });
-  const page = await browser.newPage({
-    viewport: { width: 360, height: 640 },
-    deviceScaleFactor: 1,
-    isMobile: true,
-    hasTouch: true,
-  });
-
-  await page.addInitScript(() => {
-    localStorage.setItem("promptlab-onboarded", "1");
-    localStorage.removeItem("promptlab-guest");
-    localStorage.removeItem("promptlab-auth-intent");
-  });
-
-  await page.goto(`${baseUrl}/app`, { waitUntil: "networkidle" });
-  if (await page.getByRole("button", { name: /Continue as Guest/i }).count()) {
-    await page.getByRole("button", { name: /Continue as Guest/i }).click();
-  }
-  await page.waitForSelector(".v2-shell", { timeout: 30000 });
-  await page.addStyleTag({ content: mobileChromeCss });
-  await waitForStableRender(page);
-
   for (const name of screens) {
-    // Start every surface from a fresh compositor frame. Reusing a long-lived
-    // backdrop-heavy page can leave stale raster tiles in headless Chrome.
-    await page.reload({ waitUntil: "networkidle" });
+    const context = await browser.newContext({
+      viewport: { width: 360, height: 640 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true,
+    });
+    await context.addInitScript(() => {
+      localStorage.setItem("promptlab-onboarded", "1");
+      localStorage.removeItem("promptlab-guest");
+      localStorage.removeItem("promptlab-auth-intent");
+    });
+    const page = await context.newPage();
+    await page.goto(`${baseUrl}/app`, { waitUntil: "networkidle" });
     if (await page.getByRole("button", { name: /Continue as Guest/i }).count()) {
       await page.getByRole("button", { name: /Continue as Guest/i }).click();
     }
@@ -223,7 +219,9 @@ try {
     await assertSurfaceReady(page, name);
     const file = join(outDir, `screenshot-phone-${name.toLowerCase()}.png`);
     const raw = await captureStableScreenshot(page, name);
+    await writeFile(join(outDir, `.native-${name.toLowerCase()}.png`), raw);
     await exportPhoneScreenshot(raw, file);
+    await context.close();
   }
 
   await browser.close();

@@ -51,6 +51,9 @@ test("capture validates every surface and bottom navigation before writing PNGs"
   assert.match(source, /labelInsideButton/);
   assert.match(source, /document\.documentElement\.scrollWidth/);
   assert.match(source, /async function captureStableScreenshot/);
+  assert.match(source, /browser\.newContext/);
+  assert.match(source, /await context\.close\(\)/);
+  assert.match(source, /incomplete header controls/);
   assert.match(source, /createHash\("sha256"\)/);
   assert.match(source, /backdrop-filter: none !important/);
   assert.match(source, /\.v2-shell::before \{ display: none !important; \}/);
