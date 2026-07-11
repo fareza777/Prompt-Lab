@@ -1153,16 +1153,17 @@ app.post("/api/compare-prompts", attachAiRateLimitIdentity, aiRateLimit, express
       try {
         const generation = await createOpenRouterCompareCompletion(payload, runtime);
         const raw = generation.completion.choices?.[0]?.message?.content || "";
-        const evaluation = resolveCompareEvaluation(raw, payload);
-        let result = evaluation.result;
-        try {
-          const swappedPayload = buildSwappedComparePayload(payload);
-          const swappedGen = await createOpenRouterCompareCompletion(swappedPayload, runtime);
-          const swappedRaw = swappedGen.completion.choices?.[0]?.message?.content || "";
-          const swappedResult = parseCompareResult(swappedRaw);
-          if (swappedResult) result = mergeComparePositionSwap(result, swappedResult);
-        } catch (swapErr) {
-          console.warn("compare position-swap failed", swapErr.message);
+        let evaluation = resolveCompareEvaluation(raw, payload);
+        if (evaluation.evaluationMethod === "provider") {
+          try {
+            const swappedPayload = buildSwappedComparePayload(payload);
+            const swappedGen = await createOpenRouterCompareCompletion(swappedPayload, runtime);
+            const swappedRaw = swappedGen.completion.choices?.[0]?.message?.content || "";
+            const swappedResult = parseCompareResult(swappedRaw);
+            evaluation = mergeCompareEvaluationPositionSwap(evaluation, swappedResult);
+          } catch (swapErr) {
+            console.warn("compare position-swap failed", swapErr.message);
+          }
         }
         body = {
           source: runtime.provider,
@@ -1172,7 +1173,7 @@ app.post("/api/compare-prompts", attachAiRateLimitIdentity, aiRateLimit, express
             ? API_MSG.primaryFallback(generation.primaryError)
             : "",
           evaluationMethod: evaluation.evaluationMethod,
-          result,
+          result: evaluation.result,
         };
       } catch (error) {
         console.warn("openrouter compare fallback", error.status || error.code || error.message);
@@ -1208,28 +1209,29 @@ app.post("/api/compare-prompts", attachAiRateLimitIdentity, aiRateLimit, express
           },
         ],
       });
-      const evaluation = resolveCompareEvaluation(response.output_text || "", payload);
-      let result = evaluation.result;
-      try {
-        const swappedPayload = buildSwappedComparePayload(payload);
-        const swappedResp = await runtime.client.responses.create({
-          model: payload.modelSettings.primaryModel || runtime.defaultModel,
-          input: [
-            { role: "system", content: [{ type: "input_text", text: buildCompareSystemPromptXml(swappedPayload) }] },
-            { role: "user", content: [{ type: "input_text", text: buildCompareInstruction(swappedPayload) }] },
-          ],
-        });
-        const swappedResult = parseCompareResult(swappedResp.output_text || "");
-        if (swappedResult) result = mergeComparePositionSwap(result, swappedResult);
-      } catch (swapErr) {
-        console.warn("openai compare position-swap failed", swapErr.message);
+      let evaluation = resolveCompareEvaluation(response.output_text || "", payload);
+      if (evaluation.evaluationMethod === "provider") {
+        try {
+          const swappedPayload = buildSwappedComparePayload(payload);
+          const swappedResp = await runtime.client.responses.create({
+            model: payload.modelSettings.primaryModel || runtime.defaultModel,
+            input: [
+              { role: "system", content: [{ type: "input_text", text: buildCompareSystemPromptXml(swappedPayload) }] },
+              { role: "user", content: [{ type: "input_text", text: buildCompareInstruction(swappedPayload) }] },
+            ],
+          });
+          const swappedResult = parseCompareResult(swappedResp.output_text || "");
+          evaluation = mergeCompareEvaluationPositionSwap(evaluation, swappedResult);
+        } catch (swapErr) {
+          console.warn("openai compare position-swap failed", swapErr.message);
+        }
       }
       body = {
         source: "openai",
         model: payload.modelSettings.primaryModel || runtime.defaultModel,
         modelStatus: "primary-model",
         evaluationMethod: evaluation.evaluationMethod,
-        result,
+        result: evaluation.result,
       };
     } else {
       body = {
@@ -1702,6 +1704,7 @@ export {
   buildPromptSpecInstruction,
   downgradePlayMembershipIfNeeded,
   getDomainPromptPack,
+  mergeCompareEvaluationPositionSwap,
   resolveCompareEvaluation,
   scorePromptText,
   withCompareEvaluationMethod,
@@ -3072,7 +3075,7 @@ function isStructurallyValidCompareResult(result) {
       typeof scores === "object" &&
       requiredDimensions.every((dimension) => {
         const value = scores[dimension];
-        return value !== null && value !== "" && Number.isFinite(Number(value));
+        return typeof value === "number" && Number.isFinite(value);
       })
   );
 }
@@ -3106,6 +3109,14 @@ function resolveCompareEvaluation(raw, payload) {
   return providerResult
     ? { evaluationMethod: "provider", result: providerResult }
     : { evaluationMethod: "heuristic", result: buildLocalCompareResult(payload) };
+}
+
+function mergeCompareEvaluationPositionSwap(evaluation, swappedResult) {
+  if (evaluation?.evaluationMethod !== "provider" || !swappedResult) return evaluation;
+  return {
+    ...evaluation,
+    result: mergeComparePositionSwap(evaluation.result, swappedResult),
+  };
 }
 
 function withCompareEvaluationMethod(body, evaluationMethod) {

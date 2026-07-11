@@ -49,6 +49,40 @@ test("partial or non-numeric provider scores fall back to heuristic evaluation",
   assert.equal(serverModule.resolveCompareEvaluation(partial, payload).evaluationMethod, "heuristic");
 });
 
+test("provider score dimensions reject non-number JavaScript types", () => {
+  const invalidValues = [
+    ["numeric string", "90"],
+    ["blank string", ""],
+    ["boolean", true],
+    ["array", [90]],
+    ["object", { value: 90 }],
+  ];
+
+  for (const [label, invalidValue] of invalidValues) {
+    const candidate = JSON.parse(validProviderResult);
+    candidate.scores.A.clarity = invalidValue;
+    assert.equal(
+      serverModule.resolveCompareEvaluation(JSON.stringify(candidate), payload).evaluationMethod,
+      "heuristic",
+      `${label} was accepted as a provider score`
+    );
+  }
+});
+
+test("invalid primary provider output preserves untouched local fallback during position swap", () => {
+  assert.equal(typeof serverModule.mergeCompareEvaluationPositionSwap, "function");
+  if (!serverModule.mergeCompareEvaluationPositionSwap) return;
+
+  const primaryEvaluation = serverModule.resolveCompareEvaluation("{}", payload);
+  const originalResult = structuredClone(primaryEvaluation.result);
+  const swappedProviderResult = serverModule.resolveCompareEvaluation(validProviderResult, payload).result;
+  const merged = serverModule.mergeCompareEvaluationPositionSwap(primaryEvaluation, swappedProviderResult);
+
+  assert.strictEqual(merged, primaryEvaluation);
+  assert.deepEqual(merged.result, originalResult);
+  assert.equal(merged.evaluationMethod, "heuristic");
+});
+
 test("server response provenance remains heuristic even with a provider-looking source", () => {
   assert.equal(typeof serverModule.withCompareEvaluationMethod, "function");
   if (!serverModule.withCompareEvaluationMethod) return;
