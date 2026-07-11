@@ -11,6 +11,44 @@ const verifyWorkflow = readFileSync(
   join(process.cwd(), ".github", "workflows", "verify.yml"),
   "utf8"
 );
+const releaseGuide = readFileSync(join(process.cwd(), "playstore", "PRODUCTION_GO_LIVE.md"), "utf8");
+const readme = readFileSync(join(process.cwd(), "playstore", "README.md"), "utf8");
+const sourceHtml = readFileSync(join(process.cwd(), "index.html"), "utf8");
+
+test("release dependencies use reproducible concrete versions", () => {
+  for (const [name, version] of Object.entries({
+    ...packageJson.dependencies,
+    ...packageJson.devDependencies,
+  })) {
+    assert.notEqual(version, "latest", `${name} must not use latest`);
+  }
+});
+
+test("production runbook covers required server and Play Console gates", () => {
+  for (const requirement of [
+    /KV_REST_API_URL/,
+    /KV_REST_API_TOKEN/,
+    /KV_REST_TIMEOUT_MS/,
+    /fail.closed/i,
+    /011_atomic_quota_usage\.sql/,
+    /012_billing_idempotency\.sql/,
+    /Real.time Developer Notifications|RTDN/,
+    /physical device|perangkat fisik/i,
+    /Data Safety/,
+    /Content Rating/,
+    /playstore:assets/,
+  ]) assert.match(releaseGuide, requirement);
+});
+
+test("Play Store README describes the tracked wrapper as current source", () => {
+  assert.match(readme, /android-app\/.*tracked|tracked.*android-app\//i);
+  assert.doesNotMatch(readme, /Generated Android project: `android-app\/` \(ignored by Git\)/);
+});
+
+test("source HTML does not contain known malformed blog-link fragments", () => {
+  assert.doesNotMatch(sourceHtml, /href="[^"]+"\s*\n\s*<a href=/);
+  assert.doesNotMatch(sourceHtml, /href="[^"]+",\s*"color:/);
+});
 
 test("release source tracks Android build inputs but ignores signing material", () => {
   const ignore = readFileSync(join(process.cwd(), ".gitignore"), "utf8");

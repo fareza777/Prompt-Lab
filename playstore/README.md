@@ -24,13 +24,13 @@ Custom domain: **https://prompt-lab.xyz/** — checklist lengkap sebelum Product
    - `public/icons/icon-512.png`
    - `public/icons/maskable-512.png`
 
-2. Create the Android wrapper.
-   - Recommended: Bubblewrap / TWA.
+2. Maintain the Android wrapper.
+   - The Bubblewrap/TWA source under `android-app/` is tracked in Git; build outputs, local SDK paths, and signing material remain ignored.
    - Local tools installed on this machine:
      - JDK 17: `C:\Users\USER\promptlab-android-tools\jdk17`
      - Android SDK: `C:\Users\USER\promptlab-android-tools\android-sdk`
      - Bubblewrap CLI: `@bubblewrap/cli`
-   - Generated Android project: `android-app/` (ignored by Git).
+   - Android project source: `android-app/` (tracked by Git).
    - Signed APK: `android-app/app/build/outputs/apk/release/PromptLab-release-signed.apk`
    - Signed AAB: `android-app/app/build/outputs/bundle/release/PromptLab-release-signed.aab`
 

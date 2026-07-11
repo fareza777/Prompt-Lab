@@ -12,6 +12,10 @@ Gunakan checklist ini **sebelum** klik **Send for review** / **Start rollout to 
   - `CORS_ORIGIN=https://prompt-lab.xyz` (opsional, disarankan)
   - `VITE_WEB_MEMBERSHIP_EMAIL=support@prompt-lab.xyz`
   - `SUPER_ACCOUNT_EMAILS` + `SUPABASE_SERVICE_ROLE_KEY` (jika dipakai)
+  - `KV_REST_API_URL=https://...` (HTTPS wajib di production)
+  - `KV_REST_API_TOKEN=...`
+  - `KV_REST_TIMEOUT_MS=1500` (opsional; harus bilangan positif)
+- [ ] Uji rate limiter dengan dua instance server: keduanya harus berbagi bucket 429 yang sama. Production **fail-closed** (503) jika konfigurasi KV tidak lengkap, URL bukan HTTPS, timeout, atau KV gagal; jangan fallback ke memory.
 - [ ] Deploy terbaru dari branch `main`
 - [ ] Cek live:
   - https://prompt-lab.xyz/
@@ -33,6 +37,11 @@ Dashboard → **Authentication** → **URL Configuration**:
 | Redirect URLs | `https://prompt-lab.xyz/**` |
 
 Tambahkan juga `http://localhost:5173/**` untuk dev lokal.
+
+Sebelum deploy server, jalankan migration berikut melalui Supabase SQL Editor/CLI dan pastikan keduanya sukses:
+
+- [ ] `supabase/migrations/011_atomic_quota_usage.sql` — reservasi quota + usage event atomik/idempotent.
+- [ ] `supabase/migrations/012_billing_idempotency.sql` — kepemilikan purchase token dan replay billing idempotent.
 
 ## 3. Android TWA (wajib rebuild domain baru)
 
@@ -63,9 +72,11 @@ Naikkan `appVersionCode` di `twa-manifest.json` jika Play menolak versi duplikat
 | Package | `app.promptlab.twa` |
 
 - [ ] Store listing: copy dari `STORE_LISTING.md`
-- [ ] Data safety: sesuai tabel di `STORE_LISTING.md`
-- [ ] Content rating: selesai
+- [ ] Data Safety: sesuai tabel di `STORE_LISTING.md`
+- [ ] Content Rating: selesai
 - [ ] In-app products: `promptlab_pro_monthly`, `promptlab_business_monthly`
+- [ ] Real-time Developer Notifications (RTDN): topic Pub/Sub aktif, Play Console menunjuk topic yang benar, dan service account dapat publish.
+- [ ] Upload aset terbaru hasil `npm run playstore:assets`, lalu jalankan `npm run playstore:check` sebelum upload.
 
 ## 5. Digital Asset Links (hilangkan bar URL)
 
@@ -84,6 +95,7 @@ Panduan: `playstore/HILANGKAN_BAR_URL.md`
 - [ ] Generate prompt (bukan hanya local fallback)
 - [ ] Settings → membership tampil benar
 - [ ] Install dari Play (production track atau open testing) — fullscreen tanpa bar URL
+- [ ] Pada physical device/perangkat fisik dari track pengujian: beli, restore, cancel/refund, dan replay token; pastikan entitlement serta quota berubah tepat sekali.
 - [ ] Privacy & delete-account link dari app Settings
 
 ## 7. Promote ke Production
