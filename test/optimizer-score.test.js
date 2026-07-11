@@ -36,3 +36,35 @@ test("scoreOptimizedPrompt shows gain after optimization", () => {
   assert.ok(after.score > before.score);
   assert.ok(after.score - before.score >= 5);
 });
+
+test("optimizer mode alone cannot raise the measured score", () => {
+  const measured = scorePrompt(weakPrompt);
+
+  for (const mode of ["Clearer", "More Detailed", "Academic", "Coding"]) {
+    const optimized = scoreOptimizedPrompt(strongerPrompt, weakPrompt, {
+      fromOptimizer: true,
+      mode,
+    });
+
+    assert.equal(optimized.score, measured.score, `${mode} changed the measured score`);
+  }
+});
+
+test("optimized score is not lower-bounded by the previous prompt score", () => {
+  const before = scorePrompt(strongerPrompt);
+  const measuredAfter = scorePrompt(weakPrompt);
+  const optimized = scoreOptimizedPrompt(strongerPrompt, weakPrompt, {
+    fromOptimizer: true,
+    mode: "More Detailed",
+  });
+
+  assert.ok(measuredAfter.score < before.score);
+  assert.equal(optimized.score, measuredAfter.score);
+});
+
+test("local scores expose stable heuristic metadata", () => {
+  const score = scorePrompt(strongerPrompt);
+
+  assert.equal(score.scoreMethod, "heuristic");
+  assert.match(score.scoreNote, /heuristic/i);
+});

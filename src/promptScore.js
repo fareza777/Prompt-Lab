@@ -98,6 +98,8 @@ export function scorePrompt(prompt) {
   return {
     actionability,
     score,
+    scoreMethod: "heuristic",
+    scoreNote: "Heuristic score based on local prompt structure; not an AI evaluation.",
     clarity,
     context,
     constraints,
@@ -106,74 +108,9 @@ export function scorePrompt(prompt) {
   };
 }
 
-const SECTION_PATTERNS = [
-  /role|act as|bertindak sebagai|you are|kamu adalah/i,
-  /context|konteks|latar belakang/i,
-  /objective|tujuan|goal/i,
-  /output format|format output|struktur output|deliverable/i,
-  /constraint|batasan|jangan|must not|wajib|harus/i,
-  /acceptance|criteria|kriteria|checklist|quality gate/i,
-];
-
-function estimateSectionBump(beforeText, afterText) {
-  let bump = 0;
-  for (const pattern of SECTION_PATTERNS) {
-    if (pattern.test(afterText) && !pattern.test(beforeText)) bump += 2;
-  }
-  return Math.min(14, bump);
-}
-
-function modeOptimizationBump(mode, beforeText, afterText) {
-  const m = String(mode || "").toLowerCase();
-  const lengthRatio = afterText.length / Math.max(1, beforeText.length);
-  if (/detail/.test(m)) return lengthRatio >= 1.1 ? 10 : 6;
-  if (/clear|jelas/.test(m)) return 7;
-  if (/short|singkat/.test(m)) return lengthRatio <= 0.98 ? 6 : 3;
-  if (/academic|akademik/.test(m)) return 8;
-  if (/marketing/.test(m)) return 7;
-  if (/coding|code/.test(m)) return 8;
-  return 5;
-}
-
 /**
  * Score optimized output; reflects measurable gains when optimizer adds structure.
  */
-export function scoreOptimizedPrompt(rawPrompt, optimizedPrompt, options = {}) {
-  const before = scorePrompt(rawPrompt);
-  const after = scorePrompt(optimizedPrompt);
-  const beforeText = String(rawPrompt || "").trim();
-  const afterText = String(optimizedPrompt || "").trim();
-
-  if (!afterText || afterText === beforeText) return after;
-
-  const dimensionDelta =
-    after.clarity -
-    before.clarity +
-    (after.context - before.context) +
-    (after.format - before.format) +
-    (after.constraints - before.constraints) +
-    (after.actionability - before.actionability);
-
-  let displayScore = after.score;
-  if (displayScore <= before.score) {
-    const structuralBump = Math.max(0, Math.round(dimensionDelta / 4));
-    const sectionBump = estimateSectionBump(beforeText, afterText);
-    const modeBump = options.fromOptimizer ? modeOptimizationBump(options.mode, beforeText, afterText) : 0;
-    const bump = Math.max(structuralBump, sectionBump, modeBump);
-    if (bump > 0) {
-      displayScore = Math.min(99, before.score + bump);
-    }
-  }
-
-  return {
-    ...after,
-    score: displayScore,
-    tips:
-      displayScore > before.score
-        ? [
-            `Optimizer added ${displayScore - before.score} pts via clearer structure and stronger guardrails.`,
-            ...after.tips,
-          ]
-        : after.tips,
-  };
+export function scoreOptimizedPrompt(_rawPrompt, optimizedPrompt) {
+  return scorePrompt(optimizedPrompt);
 }

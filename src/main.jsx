@@ -1109,16 +1109,16 @@ function buildLocalCompareResult(promptA, promptB) {
         clarity: scoreA.clarity,
         context: scoreA.context,
         format: scoreA.format,
-        constraints: Math.max(40, scoreA.score - 4),
-        risk: Math.max(8, 100 - scoreA.score),
+        constraints: scoreA.constraints,
+        risk: scoreA.risk,
         overall: scoreA.score,
       },
       B: {
         clarity: scoreB.clarity,
         context: scoreB.context,
         format: scoreB.format,
-        constraints: Math.max(40, scoreB.score - 4),
-        risk: Math.max(8, 100 - scoreB.score),
+        constraints: scoreB.constraints,
+        risk: scoreB.risk,
         overall: scoreB.score,
       },
     },
@@ -3396,7 +3396,7 @@ function V2Builder(props) {
         compact
       >
         <div className="v2-hero-status">
-          <span>Readiness</span>
+          <span>{metrics.scoreMethod === "heuristic" ? "Heuristic score" : "Readiness"}</span>
           <strong>{metrics.score}</strong>
           <GenerationStatusHint status={generationStatus} source={generationSource} isGenerating={isGenerating} />
         </div>
@@ -3634,7 +3634,7 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
         <div className="v2-card-head">
           <div>
             <span className="v2-eyebrow">Prompt Check</span>
-            <h2>Readiness Score</h2>
+            <h2>Heuristic Readiness Score</h2>
           </div>
           <Sparkles size={20} />
         </div>
@@ -3642,7 +3642,7 @@ function V2ReadinessOutput({ prompt, metrics, generationStatus, generationSource
           <div className="v2-ring" style={{ "--score": `${metrics.score * 3.6}deg` }}><span>{metrics.score}</span></div>
           <div>
             <h3>{metrics.score >= 85 ? "Ready to use" : "Needs work"}</h3>
-            <p>Checks clarity, context, format, constraints, and actionability.</p>
+            <p>{metrics.scoreNote}</p>
           </div>
         </div>
         <V2Metric label="Clarity" value={metrics.clarity} />
@@ -3730,7 +3730,7 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
       </V2PageIntro>
       <section className="v2-diff-grid">
         <div className="v2-card v2-glass-card">
-          <div className="v2-card-head"><h2>Input</h2><span className="v2-score-badge">{beforeScore.score}</span></div>
+          <div className="v2-card-head"><h2>Input · Heuristic score</h2><span className="v2-score-badge">{beforeScore.score}</span></div>
           <textarea
             className="v2-textarea"
             value={rawPrompt}
@@ -3772,8 +3772,8 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
               <h2>Optimized Result</h2>
               <p>
                 {hasResult
-                  ? `${mode} · ${scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} pts`
-                  : "Run Optimize to score the improved prompt"}
+                  ? `${mode} · heuristic score ${scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} pts`
+                  : "Run Optimize to calculate a heuristic score"}
               </p>
             </div>
             <span className="v2-score-badge hot">{hasResult ? afterScore.score : "—"}</span>
@@ -3783,7 +3783,8 @@ function V2Optimizer({ optimizerResult, optimizerSource, isOptimizing, optimizer
           </pre>
           {hasResult && (
             <div className="v2-score-advice">
-              <span>Score notes</span>
+              <span>Heuristic score notes</span>
+              <p>{afterScore.scoreNote}</p>
               {afterScore.tips.slice(0, 2).map((tip) => <p key={tip}>{tip}</p>)}
             </div>
           )}
@@ -4115,31 +4116,36 @@ function V2Compare({
   const basePrompt = prompts[0] || "Paste prompts into panels A/B to compare instruction quality.";
   const scoreA = scorePrompt(compareA || "");
   const scoreB = scorePrompt(compareB || "");
+  const localJudgeScore = scorePrompt(basePrompt);
   const localWinner = scoreA.score >= scoreB.score ? "A" : "B";
   const winnerKey = compareResult?.winner && compareResult.winner !== "tie" ? compareResult.winner : localWinner;
   const winnerPrompt = winnerKey === "A" ? compareA : compareB;
   const mergedPrompt = compareResult?.merged_prompt || winnerPrompt;
   const aiScores = compareResult?.scores;
+  const isProviderCompare = Boolean(compareResult && compareSource !== "score-based");
   const compareCards = [
     {
       key: "A",
       title: "Prompt A",
       score: aiScores?.A?.overall ?? scoreA.score,
-      bestFor: compareResult?.best_for?.A || "Readiness score before AI judge.",
+      scoreMethod: isProviderCompare ? "provider" : scoreA.scoreMethod,
+      bestFor: compareResult?.best_for?.A || scoreA.scoreNote,
       risks: compareResult?.risks?.A || getLocalPromptRisks(compareA),
     },
     {
       key: "B",
       title: "Prompt B",
       score: aiScores?.B?.overall ?? scoreB.score,
-      bestFor: compareResult?.best_for?.B || "Readiness score before AI judge.",
+      scoreMethod: isProviderCompare ? "provider" : scoreB.scoreMethod,
+      bestFor: compareResult?.best_for?.B || scoreB.scoreNote,
       risks: compareResult?.risks?.B || getLocalPromptRisks(compareB),
     },
     {
       key: "J",
       title: "AI Judge",
-      score: compareResult ? Math.max(aiScores?.A?.overall || 0, aiScores?.B?.overall || 0) : Math.min(99, Math.max(42, scorePrompt(basePrompt).score + 6)),
-      bestFor: compareResult?.summary || "Run AI Compare to let the active model judge both prompts.",
+      score: compareResult ? Math.max(aiScores?.A?.overall || 0, aiScores?.B?.overall || 0) : localJudgeScore.score,
+      scoreMethod: isProviderCompare ? "provider" : localJudgeScore.scoreMethod,
+      bestFor: compareResult?.summary || `${localJudgeScore.scoreNote} Run AI Compare for a provider evaluation.`,
       risks: compareResult?.recommendations || ["Waiting for AI judge."],
     },
   ];
@@ -4163,11 +4169,11 @@ function V2Compare({
       )}
       <section className="v2-diff-grid">
         <div className="v2-card">
-          <div className="v2-card-head"><h2>Prompt A</h2><span className="v2-score-badge">{scoreA.score}</span></div>
+          <div className="v2-card-head"><h2>Prompt A · Heuristic score</h2><span className="v2-score-badge">{scoreA.score}</span></div>
           <textarea className="v2-textarea" value={compareA} onChange={(event) => setCompareA(event.target.value)} placeholder="Paste prompt A..." />
         </div>
         <div className="v2-card">
-          <div className="v2-card-head"><h2>Prompt B</h2><span className="v2-score-badge hot">{scoreB.score}</span></div>
+          <div className="v2-card-head"><h2>Prompt B · Heuristic score</h2><span className="v2-score-badge hot">{scoreB.score}</span></div>
           <textarea className="v2-textarea" value={compareB} onChange={(event) => setCompareB(event.target.value)} placeholder="Paste prompt B..." />
         </div>
       </section>
@@ -4194,6 +4200,7 @@ function V2Compare({
                 <h2>{card.title}</h2>
                 <span className={`v2-score-badge ${winnerKey === card.key ? "hot" : ""}`}>{card.score}</span>
               </div>
+              <p>{card.scoreMethod === "heuristic" ? "Heuristic score · local rules" : "Provider evaluation"}</p>
               <p>{card.bestFor}</p>
               <ul className="v2-risk-list">
                 {(card.risks || []).slice(0, 2).map((risk) => <li key={risk}>{risk}</li>)}
@@ -4211,8 +4218,8 @@ function V2Compare({
             ["Risk", "risk"],
             ["Overall", "overall"],
           ].map(([row, key]) => {
-            const scoreAValue = aiScores?.A?.[key] ?? (key === "overall" ? scoreA.score : scoreA[key] || Math.max(40, scoreA.score - 4));
-            const scoreBValue = aiScores?.B?.[key] ?? (key === "overall" ? scoreB.score : scoreB[key] || Math.max(40, scoreB.score - 4));
+            const scoreAValue = aiScores?.A?.[key] ?? (key === "overall" ? scoreA.score : scoreA[key] ?? 0);
+            const scoreBValue = aiScores?.B?.[key] ?? (key === "overall" ? scoreB.score : scoreB[key] ?? 0);
             return (
               <div key={row}>
                 <strong>{row}</strong>
