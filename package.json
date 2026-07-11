@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "server": "node --use-system-ca server/index.js",
-    "test": "node --test test/*.test.js",
+    "test": "npm run build && node --test test/*.test.js",
     "test:smoke": "node scripts/smoke-ui.mjs",
     "build": "node scripts/generate-seo-route-js.mjs && node scripts/generate-sitemap.mjs && vite build && node scripts/postbuild.mjs",
     "preview": "vite preview --host 0.0.0.0",

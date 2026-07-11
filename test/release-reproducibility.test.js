@@ -6,12 +6,26 @@ import { join } from "node:path";
 import test from "node:test";
 import { BLOG_PATHS, SEO_ROUTES } from "../scripts/seo-routes.mjs";
 
+const packageJson = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8"));
+const verifyWorkflow = readFileSync(
+  join(process.cwd(), ".github", "workflows", "verify.yml"),
+  "utf8"
+);
+
 test("release source tracks Android build inputs but ignores signing material", () => {
   const ignore = readFileSync(join(process.cwd(), ".gitignore"), "utf8");
   assert.doesNotMatch(ignore, /^android-app\/$/m);
   assert.match(ignore, /^android-app\/keystore\.properties$/m);
   assert.match(ignore, /^android-app\/local\.properties$/m);
   assert.match(ignore, /^android-app\/app\/build\/$/m);
+});
+
+test("npm test builds static output before running dist-dependent tests", () => {
+  assert.match(packageJson.scripts.test, /^npm run build && node --test /);
+});
+
+test("CI builds before invoking npm test", () => {
+  assert.ok(verifyWorkflow.indexOf("- run: npm run build") < verifyWorkflow.indexOf("- run: npm test"));
 });
 
 test("every article source has complete static route metadata", () => {
