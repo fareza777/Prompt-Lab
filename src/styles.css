@@ -2542,7 +2542,7 @@ button {
     bottom: max(12px, env(safe-area-inset-bottom));
     z-index: 40;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 4px;
     padding: 5px;
     background: rgba(12, 20, 26, 0.96);
@@ -4840,6 +4840,11 @@ pre {
   display: grid;
   place-items: start center;
   padding: 12vh 16px 16px;
+}
+
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 3px solid #38bdf8;
+  outline-offset: 3px;
 }
 
 .v2-command-panel {

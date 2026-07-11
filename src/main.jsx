@@ -3075,10 +3075,10 @@ function V2AuthGate({
         <h1>{isSignIn ? "Sign in to continue." : "Create your PromptLab account."}</h1>
         <p>Login unlocks AI generation quota, membership state, and synced prompt history. Guest mode stays local only.</p>
         <div className="v2-auth-mode" role="tablist" aria-label="Authentication mode">
-          <button className={isSignIn ? "active" : ""} onClick={() => setAuthMode("sign-in")}>Sign In</button>
-          <button className={!isSignIn ? "active" : ""} onClick={() => setAuthMode("create")}>Create Account</button>
+          <button role="tab" aria-selected={isSignIn} aria-controls="auth-panel" className={isSignIn ? "active" : ""} onClick={() => setAuthMode("sign-in")}>Sign In</button>
+          <button role="tab" aria-selected={!isSignIn} aria-controls="auth-panel" className={!isSignIn ? "active" : ""} onClick={() => setAuthMode("create")}>Create Account</button>
         </div>
-        <div className="v2-account-grid">
+        <div className="v2-account-grid" role="tabpanel" id="auth-panel">
           <label>
             <span>Email</span>
             <input className="v2-input" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} placeholder="user@email.com" autoComplete="email" />
@@ -3447,8 +3447,8 @@ function V2Builder(props) {
             </div>
             <Bot size={22} />
           </div>
-          <label className="v2-label">User request</label>
-          <textarea className="v2-textarea large" value={narrative} onChange={(event) => setNarrative(event.target.value)} placeholder="Describe what you want the AI to do..." />
+          <label className="v2-label" htmlFor="builder-request">User request</label>
+          <textarea id="builder-request" className="v2-textarea large" value={narrative} onChange={(event) => setNarrative(event.target.value)} placeholder="Describe what you want the AI to do..." />
           <label className="v2-attach">
             <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.csv,.xlsx" capture="environment" onChange={(event) => addAttachments(event.target.files)} />
             <Paperclip size={18} />
@@ -3945,7 +3945,7 @@ function V2Templates({
       </section>
       <div className="v2-toolbar">
         <div className="v2-search wide"><Search size={15} /><input value={templateSearch} onChange={(event) => setTemplateSearch(event.target.value)} placeholder="Search templates..." /></div>
-        <div className="v2-chip-row">{options.map((item) => <button key={item} className={`v2-chip ${filter === item ? "active" : ""}`} onClick={() => setFilter(item)}>{item}</button>)}</div>
+        <div className="v2-chip-row">{options.map((item) => <button key={item} aria-pressed={filter === item} className={`v2-chip ${filter === item ? "active" : ""}`} onClick={() => setFilter(item)}>{item}</button>)}</div>
       </div>
       {featured && (
         <section className="v2-featured-template v2-card v2-glass-card">
@@ -4403,7 +4403,7 @@ function V2PublicSettings(props) {
 
       <div className="v2-settings-tabs v2-settings-tabs-desktop" role="tablist" aria-label="Settings sections">
         {sections.map(([name, Icon]) => (
-          <button key={name} className={section === name ? "active" : ""} onClick={() => setSection(name)}>
+          <button key={name} role="tab" aria-selected={section === name} aria-controls={`settings-panel-${name.toLowerCase().replace(/[ &]+/g, "-")}`} className={section === name ? "active" : ""} onClick={() => setSection(name)}>
             <Icon size={16} />
             <span>{name}</span>
           </button>
@@ -4411,7 +4411,7 @@ function V2PublicSettings(props) {
       </div>
       <div className="v2-settings-list-mobile" role="tablist" aria-label="Settings sections">
         {sections.map(([name, Icon]) => (
-          <button key={name} className={section === name ? "active" : ""} onClick={() => setSection(name)}>
+          <button key={name} role="tab" aria-selected={section === name} aria-controls={`settings-panel-${name.toLowerCase().replace(/[ &]+/g, "-")}`} className={section === name ? "active" : ""} onClick={() => setSection(name)}>
             <Icon size={18} />
             <span>{name}</span>
           </button>
@@ -4419,7 +4419,7 @@ function V2PublicSettings(props) {
       </div>
 
       {section === "Account" && (
-        <section className="v2-settings-grid public">
+        <section className="v2-settings-grid public" role="tabpanel" id={`settings-panel-account`}>
           <div className="v2-card v2-settings-card v2-account-card">
             <div className="v2-card-head">
               <div>
@@ -4442,9 +4442,10 @@ function V2PublicSettings(props) {
               {!accountState.userId && (
                 <>
                   <div className="v2-auth-mode" role="tablist" aria-label="Authentication mode">
-                    <button className={authMode === "sign-in" ? "active" : ""} onClick={() => setAuthMode("sign-in")}>Sign In</button>
-                    <button className={authMode === "create" ? "active" : ""} onClick={() => setAuthMode("create")}>Create Account</button>
+                    <button role="tab" aria-selected={authMode === "sign-in"} aria-controls="settings-auth-panel" className={authMode === "sign-in" ? "active" : ""} onClick={() => setAuthMode("sign-in")}>Sign In</button>
+                    <button role="tab" aria-selected={authMode === "create"} aria-controls="settings-auth-panel" className={authMode === "create" ? "active" : ""} onClick={() => setAuthMode("create")}>Create Account</button>
                   </div>
+                  <div role="tabpanel" id="settings-auth-panel">
                   {authMode === "create" && (
                     <label>
                       <span>Name</span>
@@ -4460,6 +4461,7 @@ function V2PublicSettings(props) {
                       </button>
                     </div>
                   </label>
+                  </div>
                 </>
               )}
             </div>
@@ -4506,7 +4508,7 @@ function V2PublicSettings(props) {
       )}
 
       {section === "Membership" && (
-        <section className="v2-settings-grid public membership-calm">
+        <section className="v2-settings-grid public membership-calm" role="tabpanel" id={`settings-panel-membership`}>
           <div className="v2-card v2-settings-card v2-account-card v2-membership-hero">
             <div className="v2-card-head">
               <div>
@@ -4613,7 +4615,7 @@ function V2PublicSettings(props) {
       )}
 
       {section === "Prompt Defaults" && (
-        <section className="v2-settings-grid public">
+        <section className="v2-settings-grid public" role="tabpanel" id={`settings-panel-prompt-defaults`}>
           <div className="v2-card v2-settings-card v2-account-card">
             <div className="v2-card-head">
               <div>
@@ -4659,7 +4661,7 @@ function V2PublicSettings(props) {
       )}
 
       {section === "Data & Privacy" && (
-        <section className="v2-settings-grid public">
+        <section className="v2-settings-grid public" role="tabpanel" id={`settings-panel-data-privacy`}>
           <div className="v2-card v2-settings-card">
             <div className="v2-card-head">
               <div>
@@ -4741,7 +4743,7 @@ function V2PublicSettings(props) {
       )}
 
       {section === "Support" && (
-        <section className="v2-settings-grid public">
+        <section className="v2-settings-grid public" role="tabpanel" id={`settings-panel-support`}>
           <div className="v2-card v2-settings-card">
             <div className="v2-card-head">
               <div>
@@ -4808,7 +4810,7 @@ function V2AdminDashboard(props) {
 
       <div className="v2-settings-tabs" role="tablist" aria-label="Admin sections">
         {sections.map(([name, Icon]) => (
-          <button key={name} className={section === name ? "active" : ""} onClick={() => setSection(name)}>
+          <button key={name} role="tab" aria-selected={section === name} aria-controls={`admin-panel-${name.toLowerCase().replace(/[ &]+/g, "-")}`} className={section === name ? "active" : ""} onClick={() => setSection(name)}>
             <Icon size={16} />
             <span>{name}</span>
           </button>
@@ -4818,14 +4820,14 @@ function V2AdminDashboard(props) {
       {props.adminActionStatus && <p className="v2-note warn">{props.adminActionStatus}</p>}
 
       {section === "Overview" && (
-        <V2AdminOverview
+        <div role="tabpanel" id={`admin-panel-overview`}><V2AdminOverview
           analytics={props.adminAnalytics}
           loading={props.adminAnalyticsLoading}
           onRefresh={props.loadAdminAnalytics}
-        />
+        /></div>
       )}
       {section === "Users" && (
-        <V2AdminUsers
+        <div role="tabpanel" id={`admin-panel-users`}><V2AdminUsers
           usersPayload={props.adminUsers}
           loading={props.adminUsersLoading}
           search={props.adminUsersSearch}
@@ -4833,10 +4835,10 @@ function V2AdminDashboard(props) {
           onSearch={props.loadAdminUsers}
           onGrantSuper={props.grantSuperUser}
           onUpdateUser={props.updateAdminUser}
-        />
+        /></div>
       )}
       {section === "Model & AI" && (
-        <V2AdminSettings {...props} fallbackModels={fallbackModels} providerReady={providerReady} />
+        <div role="tabpanel" id={`admin-panel-model-ai`}><V2AdminSettings {...props} fallbackModels={fallbackModels} providerReady={providerReady} /></div>
       )}
     </div>
   );
@@ -5176,7 +5178,7 @@ function V2ChipGroup({ label, options, value, onChange }) {
       <span>{label}</span>
       <div className="v2-chip-row">
         {options.map((option) => (
-          <button key={option} className={`v2-chip ${value === option ? "active" : ""}`} onClick={() => onChange(option)}>{option}</button>
+          <button key={option} aria-pressed={value === option} className={`v2-chip ${value === option ? "active" : ""}`} onClick={() => onChange(option)}>{option}</button>
         ))}
       </div>
     </div>
@@ -5235,7 +5237,7 @@ function BottomNav({ active, setActive, isAdmin = false, entitlements }) {
   // Five primary tabs on phones; Settings stays in the header gear.
   const items = navItems(isAdmin).filter(([name]) => name !== "Admin").slice(0, 5);
   return (
-    <nav className="bottom-nav v2-bottom-nav">
+    <nav className="v2-bottom-nav">
       {items.map(([item, Icon]) => {
         const needsPro = (item === "Optimizer" && !entitlements?.aiOptimize) || (item === "Compare" && !entitlements?.aiCompare);
         return (

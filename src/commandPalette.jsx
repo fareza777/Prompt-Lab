@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BookOpenText, Library, PenLine, Search } from "lucide-react";
 
 export function V2CommandPalette({
@@ -14,6 +14,8 @@ export function V2CommandPalette({
   onUseLibraryItem,
 }) {
   const [query, setQuery] = useState("");
+  const panelRef = useRef(null);
+  const previouslyFocused = useRef(null);
 
   useEffect(() => {
     if (!open) setQuery("");
@@ -21,11 +23,30 @@ export function V2CommandPalette({
 
   useEffect(() => {
     if (!open) return undefined;
+    previouslyFocused.current = document.activeElement;
     const onKey = (event) => {
       if (event.key === "Escape") onClose?.();
+      if (event.key === "Tab") {
+        const focusable = panelRef.current?.querySelectorAll(
+          'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+        );
+        if (!focusable?.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      previouslyFocused.current?.focus();
+    };
   }, [open, onClose]);
 
   const results = useMemo(() => {
@@ -68,7 +89,7 @@ export function V2CommandPalette({
 
   return (
     <div className="v2-command-backdrop" role="presentation" onClick={onClose}>
-      <div className="v2-command-panel" role="dialog" aria-label="Command palette" onClick={(event) => event.stopPropagation()}>
+      <div ref={panelRef} className="v2-command-panel" role="dialog" aria-modal="true" aria-label="Command palette" onClick={(event) => event.stopPropagation()}>
         <div className="v2-command-search">
           <Search size={16} />
           <input
