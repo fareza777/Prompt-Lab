@@ -4,6 +4,7 @@ import { BookOpenText, Library, PenLine, Search } from "lucide-react";
 export function V2CommandPalette({
   open,
   onClose,
+  focusReturnRef,
   library = [],
   templates = [],
   recentPrompts = [],
@@ -15,7 +16,6 @@ export function V2CommandPalette({
 }) {
   const [query, setQuery] = useState("");
   const panelRef = useRef(null);
-  const previouslyFocused = useRef(null);
 
   useEffect(() => {
     if (!open) setQuery("");
@@ -23,7 +23,6 @@ export function V2CommandPalette({
 
   useEffect(() => {
     if (!open) return undefined;
-    previouslyFocused.current = document.activeElement;
     const onKey = (event) => {
       if (event.key === "Escape") onClose?.();
       if (event.key === "Tab") {
@@ -45,9 +44,9 @@ export function V2CommandPalette({
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
-      previouslyFocused.current?.focus();
+      focusReturnRef?.current?.();
     };
-  }, [open, onClose]);
+  }, [open, onClose, focusReturnRef]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();

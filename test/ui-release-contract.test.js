@@ -57,6 +57,5 @@ test("auth, settings, and admin tab controls identify tabs and panels", () => {
 test("command palette is modal and manages focus containment and restoration", () => {
   assert.match(commandPaletteSource, /aria-modal="true"/);
   assert.match(commandPaletteSource, /event\.key === "Tab"/);
-  assert.match(commandPaletteSource, /previouslyFocused/);
-  assert.match(commandPaletteSource, /\.focus\(\)/);
+  assert.match(commandPaletteSource, /focusReturnRef/);
 });

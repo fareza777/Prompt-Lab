@@ -98,6 +98,7 @@ import {
 import { purgeLegacyServiceWorkers, repairStuckLocalProfile } from "./bootRecovery.js";
 import { scorePrompt, scoreOptimizedPrompt } from "./promptScore.js";
 import { getCompareEvaluationMeta } from "./compareProvenance.js";
+import { captureFocusReturn, handleTabListKeyDown } from "./accessibilityInteractions.js";
 import { dismissStartupSplash, installSplashSafetyNet, markStartupSplashStarted } from "./startupSplash";
 import {
   buildGoogleOAuthOptions,
@@ -1272,6 +1273,11 @@ function App() {
   const [search, setSearch] = useState("");
   const [templateSearch, setTemplateSearch] = useState("");
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const commandPaletteRestoreFocus = React.useRef(() => {});
+  const openCommandPalette = () => {
+    commandPaletteRestoreFocus.current = captureFocusReturn(document);
+    setCommandPaletteOpen(true);
+  };
   const [librarySyncStatus, setLibrarySyncStatus] = useState("");
   const libraryPulledForUser = React.useRef("");
   const libraryPushEnabled = React.useRef(false);
@@ -1482,7 +1488,7 @@ function App() {
     const onKeyDown = (event) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        setCommandPaletteOpen(true);
+        openCommandPalette();
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -2655,6 +2661,8 @@ function App() {
     setTemplateSearch,
     commandPaletteOpen,
     setCommandPaletteOpen,
+    openCommandPalette,
+    commandPaletteRestoreFocus,
     librarySyncStatus,
     compareA,
     setCompareA,
@@ -2994,7 +3002,7 @@ function V2App(props) {
           isGuestMode={guestMode}
           accountState={accountState}
           librarySyncStatus={props.librarySyncStatus}
-          onOpenCommandPalette={() => props.setCommandPaletteOpen(true)}
+          onOpenCommandPalette={props.openCommandPalette}
         />
         {active === "Builder" && <V2Builder {...props} setGuestMode={setGuestMode} guestMode={guestMode} />}
         {active === "Optimizer" && <V2Optimizer {...props} />}
@@ -3008,6 +3016,7 @@ function V2App(props) {
       <V2CommandPalette
         open={props.commandPaletteOpen}
         onClose={() => props.setCommandPaletteOpen(false)}
+        focusReturnRef={props.commandPaletteRestoreFocus}
         library={props.library}
         templates={props.templates}
         recentPrompts={recentPrompts}
@@ -3075,8 +3084,8 @@ function V2AuthGate({
         <h1>{isSignIn ? "Sign in to continue." : "Create your PromptLab account."}</h1>
         <p>Login unlocks AI generation quota, membership state, and synced prompt history. Guest mode stays local only.</p>
         <div className="v2-auth-mode" role="tablist" aria-label="Authentication mode">
-          <button role="tab" aria-selected={isSignIn} aria-controls="auth-panel" className={isSignIn ? "active" : ""} onClick={() => setAuthMode("sign-in")}>Sign In</button>
-          <button role="tab" aria-selected={!isSignIn} aria-controls="auth-panel" className={!isSignIn ? "active" : ""} onClick={() => setAuthMode("create")}>Create Account</button>
+          <button role="tab" tabIndex={isSignIn ? 0 : -1} aria-selected={isSignIn} aria-controls="auth-panel" className={isSignIn ? "active" : ""} onKeyDown={(event) => onNamedTabKeyDown(event, ["sign-in", "create"], authMode, setAuthMode)} onClick={() => setAuthMode("sign-in")}>Sign In</button>
+          <button role="tab" tabIndex={!isSignIn ? 0 : -1} aria-selected={!isSignIn} aria-controls="auth-panel" className={!isSignIn ? "active" : ""} onKeyDown={(event) => onNamedTabKeyDown(event, ["sign-in", "create"], authMode, setAuthMode)} onClick={() => setAuthMode("create")}>Create Account</button>
         </div>
         <div className="v2-account-grid" role="tabpanel" id="auth-panel">
           <label>
@@ -4403,7 +4412,7 @@ function V2PublicSettings(props) {
 
       <div className="v2-settings-tabs v2-settings-tabs-desktop" role="tablist" aria-label="Settings sections">
         {sections.map(([name, Icon]) => (
-          <button key={name} role="tab" aria-selected={section === name} aria-controls={`settings-panel-${name.toLowerCase().replace(/[ &]+/g, "-")}`} className={section === name ? "active" : ""} onClick={() => setSection(name)}>
+          <button key={name} role="tab" tabIndex={section === name ? 0 : -1} aria-selected={section === name} aria-controls={`settings-panel-${name.toLowerCase().replace(/[ &]+/g, "-")}`} className={section === name ? "active" : ""} onKeyDown={(event) => onNamedTabKeyDown(event, sections.map(([item]) => item), section, setSection)} onClick={() => setSection(name)}>
             <Icon size={16} />
             <span>{name}</span>
           </button>
@@ -4411,7 +4420,7 @@ function V2PublicSettings(props) {
       </div>
       <div className="v2-settings-list-mobile" role="tablist" aria-label="Settings sections">
         {sections.map(([name, Icon]) => (
-          <button key={name} role="tab" aria-selected={section === name} aria-controls={`settings-panel-${name.toLowerCase().replace(/[ &]+/g, "-")}`} className={section === name ? "active" : ""} onClick={() => setSection(name)}>
+          <button key={name} role="tab" tabIndex={section === name ? 0 : -1} aria-selected={section === name} aria-controls={`settings-panel-${name.toLowerCase().replace(/[ &]+/g, "-")}`} className={section === name ? "active" : ""} onKeyDown={(event) => onNamedTabKeyDown(event, sections.map(([item]) => item), section, setSection, true)} onClick={() => setSection(name)}>
             <Icon size={18} />
             <span>{name}</span>
           </button>
@@ -4442,8 +4451,8 @@ function V2PublicSettings(props) {
               {!accountState.userId && (
                 <>
                   <div className="v2-auth-mode" role="tablist" aria-label="Authentication mode">
-                    <button role="tab" aria-selected={authMode === "sign-in"} aria-controls="settings-auth-panel" className={authMode === "sign-in" ? "active" : ""} onClick={() => setAuthMode("sign-in")}>Sign In</button>
-                    <button role="tab" aria-selected={authMode === "create"} aria-controls="settings-auth-panel" className={authMode === "create" ? "active" : ""} onClick={() => setAuthMode("create")}>Create Account</button>
+                    <button role="tab" tabIndex={authMode === "sign-in" ? 0 : -1} aria-selected={authMode === "sign-in"} aria-controls="settings-auth-panel" className={authMode === "sign-in" ? "active" : ""} onKeyDown={(event) => onNamedTabKeyDown(event, ["sign-in", "create"], authMode, setAuthMode)} onClick={() => setAuthMode("sign-in")}>Sign In</button>
+                    <button role="tab" tabIndex={authMode === "create" ? 0 : -1} aria-selected={authMode === "create"} aria-controls="settings-auth-panel" className={authMode === "create" ? "active" : ""} onKeyDown={(event) => onNamedTabKeyDown(event, ["sign-in", "create"], authMode, setAuthMode)} onClick={() => setAuthMode("create")}>Create Account</button>
                   </div>
                   <div role="tabpanel" id="settings-auth-panel">
                   {authMode === "create" && (
@@ -4810,7 +4819,7 @@ function V2AdminDashboard(props) {
 
       <div className="v2-settings-tabs" role="tablist" aria-label="Admin sections">
         {sections.map(([name, Icon]) => (
-          <button key={name} role="tab" aria-selected={section === name} aria-controls={`admin-panel-${name.toLowerCase().replace(/[ &]+/g, "-")}`} className={section === name ? "active" : ""} onClick={() => setSection(name)}>
+          <button key={name} role="tab" tabIndex={section === name ? 0 : -1} aria-selected={section === name} aria-controls={`admin-panel-${name.toLowerCase().replace(/[ &]+/g, "-")}`} className={section === name ? "active" : ""} onKeyDown={(event) => onNamedTabKeyDown(event, sections.map(([item]) => item), section, setSection)} onClick={() => setSection(name)}>
             <Icon size={16} />
             <span>{name}</span>
           </button>
@@ -5170,6 +5179,16 @@ function V2Stat({ label, value, detail, compact }) {
       <small>{detail}</small>
     </div>
   );
+}
+
+function onNamedTabKeyDown(event, names, activeName, setActiveName, vertical = false) {
+  const tabs = [...event.currentTarget.parentElement.querySelectorAll('[role="tab"]')];
+  handleTabListKeyDown(event, {
+    tabs,
+    currentIndex: names.indexOf(activeName),
+    onActivate: (index) => setActiveName(names[index]),
+    vertical,
+  });
 }
 
 function V2ChipGroup({ label, options, value, onChange }) {
