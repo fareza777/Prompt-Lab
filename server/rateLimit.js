@@ -6,6 +6,9 @@ import { getRequestIdentity } from "./requestIdentity.js";
 
 /** Finite fallback capacity when maxBuckets is omitted or invalid. */
 const DEFAULT_MAX_BUCKETS = 10_000;
+const DEFAULT_REST_TIMEOUT_MS = 2_000;
+const MIN_REST_TIMEOUT_MS = 10;
+const MAX_REST_TIMEOUT_MS = 10_000;
 const REST_KV_SCRIPT = `
 local count = redis.call("INCR", KEYS[1])
 if count == 1 then
@@ -74,8 +77,19 @@ function storeError() {
   return new Error("Rate limit store unavailable");
 }
 
+function normalizeRestTimeout(timeoutMs) {
+  const numericValue = Number(timeoutMs);
+  if (!Number.isFinite(numericValue)) return DEFAULT_REST_TIMEOUT_MS;
+  return Math.min(MAX_REST_TIMEOUT_MS, Math.max(MIN_REST_TIMEOUT_MS, Math.floor(numericValue)));
+}
+
 /** Upstash/Vercel KV REST adapter using one atomic Redis Lua command. */
-export function createRestKvStore({ url, token, fetchImpl = globalThis.fetch } = {}) {
+export function createRestKvStore({
+  url,
+  token,
+  fetchImpl = globalThis.fetch,
+  timeoutMs = DEFAULT_REST_TIMEOUT_MS,
+} = {}) {
   let endpoint;
   try {
     endpoint = new URL(String(url || ""));
@@ -87,13 +101,17 @@ export function createRestKvStore({ url, token, fetchImpl = globalThis.fetch } =
   }
   const requestUrl = endpoint.toString().replace(/\/$/, "");
   const authorization = `Bearer ${String(token).trim()}`;
+  const requestTimeoutMs = normalizeRestTimeout(timeoutMs);
 
   return {
     async consume(key, windowMs, max) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
       try {
         const response = await fetchImpl(requestUrl, {
           method: "POST",
           headers: { Authorization: authorization, "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify([
             "EVAL", REST_KV_SCRIPT, "1", `rl:${key}`,
             String(Math.max(1, Math.floor(windowMs))),
@@ -112,6 +130,8 @@ export function createRestKvStore({ url, token, fetchImpl = globalThis.fetch } =
         return { allowed: true, remaining: Math.max(0, max - count), retryAfter: 0 };
       } catch {
         throw storeError();
+      } finally {
+        clearTimeout(timeout);
       }
     },
   };
@@ -120,10 +140,18 @@ export function createRestKvStore({ url, token, fetchImpl = globalThis.fetch } =
 export function createConfiguredRateLimitStore({ env = process.env, fetchImpl = globalThis.fetch, maxBuckets } = {}) {
   const url = String(env?.KV_REST_API_URL || "").trim();
   const token = String(env?.KV_REST_API_TOKEN || "").trim();
-  if (!url && !token) return createInMemoryStore({ maxBuckets });
+  const requiresDurable = String(env?.NODE_ENV || "").toLowerCase() === "production"
+    || String(env?.VERCEL_ENV || "").toLowerCase() === "production"
+    || String(env?.RATE_LIMIT_REQUIRE_DURABLE || "").toLowerCase() === "true";
+  if (!url && !token) return requiresDurable ? unavailableStore() : createInMemoryStore({ maxBuckets });
   if (!url || !token) return unavailableStore();
   try {
-    return createRestKvStore({ url, token, fetchImpl });
+    return createRestKvStore({
+      url,
+      token,
+      fetchImpl,
+      timeoutMs: env?.RATE_LIMIT_KV_TIMEOUT_MS,
+    });
   } catch {
     return unavailableStore();
   }

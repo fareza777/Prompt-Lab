@@ -197,3 +197,63 @@ test("configured rate-limit store uses KV only when URL and token are both prese
     message: "Rate limit store unavailable",
   });
 });
+
+test("production without KV credentials fails closed instead of using process memory", async () => {
+  for (const env of [
+    { NODE_ENV: "production" },
+    { VERCEL_ENV: "production" },
+    { RATE_LIMIT_REQUIRE_DURABLE: "true" },
+  ]) {
+    const store = createConfiguredRateLimitStore({ env });
+    await assert.rejects(Promise.resolve().then(() => store.consume("ai:user:1", 60_000, 24, 1_000)), {
+      message: "Rate limit store unavailable",
+    });
+  }
+});
+
+test("development without KV credentials retains bounded in-memory fallback", async () => {
+  const store = createConfiguredRateLimitStore({ env: { NODE_ENV: "development" }, maxBuckets: 1 });
+  assert.deepEqual(await store.consume("ai:user:1", 60_000, 1, 1_000), {
+    allowed: true,
+    remaining: 0,
+    retryAfter: 0,
+  });
+});
+
+test("hanging REST KV request is aborted and middleware returns generic 503", async () => {
+  let aborted = false;
+  const store = createRestKvStore({
+    url: "https://kv.example.test",
+    token: "timeout-secret",
+    timeoutMs: 10,
+    fetchImpl: async (_url, { signal }) => new Promise((_resolve, reject) => {
+      signal.addEventListener("abort", () => {
+        aborted = true;
+        reject(new Error("timeout-secret"));
+      }, { once: true });
+    }),
+  });
+  const limiter = createAiRateLimiter({ store, getPlan: async () => "Free" });
+  const res = createResponse();
+
+  await limiter({ authUserId: "user-1", headers: {}, ip: "203.0.113.4" }, res, () => {});
+
+  assert.equal(res.statusCode, 503);
+  assert.equal(aborted, true);
+  assert.deepEqual(res.body, { error: "Rate limiter unavailable. Please try again in a moment." });
+});
+
+test("REST KV timeout is bounded when configuration is invalid", async () => {
+  let capturedSignal;
+  const store = createRestKvStore({
+    url: "https://kv.example.test",
+    token: "token",
+    timeoutMs: Infinity,
+    fetchImpl: async (_url, { signal }) => {
+      capturedSignal = signal;
+      return { ok: true, json: async () => ({ result: [1, 60_000] }) };
+    },
+  });
+  await store.consume("ai:user:1", 60_000, 24, 1_000);
+  assert.ok(capturedSignal instanceof AbortSignal);
+});
