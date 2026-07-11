@@ -96,7 +96,7 @@ export function createRestKvStore({
   } catch {
     throw storeError();
   }
-  if (!/^https?:$/.test(endpoint.protocol) || !String(token || "").trim() || typeof fetchImpl !== "function") {
+  if (endpoint.protocol !== "https:" || !String(token || "").trim() || typeof fetchImpl !== "function") {
     throw storeError();
   }
   const requestUrl = endpoint.toString().replace(/\/$/, "");

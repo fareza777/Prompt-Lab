@@ -178,6 +178,35 @@ test("REST KV store rejects malformed responses without leaking credentials", as
   );
 });
 
+test("REST KV store requires HTTPS and production rejects insecure configuration", async () => {
+  assert.throws(
+    () => createRestKvStore({ url: "http://kv.example.test", token: "do-not-send" }),
+    { message: "Rate limit store unavailable" }
+  );
+
+  const productionStore = createConfiguredRateLimitStore({
+    env: {
+      NODE_ENV: "production",
+      KV_REST_API_URL: "http://kv.example.test",
+      KV_REST_API_TOKEN: "do-not-send",
+    },
+  });
+  await assert.rejects(productionStore.consume("ai:user:1", 60_000, 24, 1_000), {
+    message: "Rate limit store unavailable",
+  });
+
+  const secureStore = createRestKvStore({
+    url: "https://kv.example.test",
+    token: "token",
+    fetchImpl: async () => ({ ok: true, json: async () => ({ result: [1, 60_000] }) }),
+  });
+  assert.deepEqual(await secureStore.consume("ai:user:1", 60_000, 24, 1_000), {
+    allowed: true,
+    remaining: 23,
+    retryAfter: 0,
+  });
+});
+
 test("configured rate-limit store uses KV only when URL and token are both present", async () => {
   let request;
   const durable = createConfiguredRateLimitStore({
