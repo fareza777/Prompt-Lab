@@ -20,3 +20,17 @@ export function captureFocusReturn(documentLike = document) {
   const opener = documentLike.activeElement;
   return () => opener?.focus?.();
 }
+
+export function createPaletteFocusLifecycle(restoreFocus) {
+  let open = false;
+  return {
+    open() {
+      open = true;
+    },
+    close() {
+      if (!open) return;
+      open = false;
+      restoreFocus();
+    },
+  };
+}

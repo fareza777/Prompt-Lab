@@ -50,3 +50,17 @@ test("focus restoration returns focus to the opener captured before the dialog o
 
   assert.equal(focused, true);
 });
+
+test("palette rerenders do not restore focus until close and restoration runs once", async () => {
+  const { createPaletteFocusLifecycle } = await loadHelpers();
+  let restores = 0;
+  const lifecycle = createPaletteFocusLifecycle(() => { restores += 1; });
+
+  lifecycle.open();
+  lifecycle.open(); // parent rerender with a new callback identity while still open
+  assert.equal(restores, 0);
+
+  lifecycle.close();
+  lifecycle.close(); // React cleanup/unmount after an already-closed transition
+  assert.equal(restores, 1);
+});

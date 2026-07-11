@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BookOpenText, Library, PenLine, Search } from "lucide-react";
+import { createPaletteFocusLifecycle } from "./accessibilityInteractions.js";
 
 export function V2CommandPalette({
   open,
@@ -16,6 +17,12 @@ export function V2CommandPalette({
 }) {
   const [query, setQuery] = useState("");
   const panelRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  const focusLifecycleRef = useRef(null);
+  onCloseRef.current = onClose;
+  if (!focusLifecycleRef.current) {
+    focusLifecycleRef.current = createPaletteFocusLifecycle(() => focusReturnRef?.current?.());
+  }
 
   useEffect(() => {
     if (!open) setQuery("");
@@ -23,8 +30,14 @@ export function V2CommandPalette({
 
   useEffect(() => {
     if (!open) return undefined;
+    focusLifecycleRef.current.open();
+    return () => focusLifecycleRef.current.close();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
     const onKey = (event) => {
-      if (event.key === "Escape") onClose?.();
+      if (event.key === "Escape") onCloseRef.current?.();
       if (event.key === "Tab") {
         const focusable = panelRef.current?.querySelectorAll(
           'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
@@ -42,11 +55,8 @@ export function V2CommandPalette({
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      focusReturnRef?.current?.();
-    };
-  }, [open, onClose, focusReturnRef]);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
