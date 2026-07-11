@@ -62,6 +62,7 @@ import {
   getPlanForProductId,
   verifyPlaySubscriptionPurchase,
   acknowledgePlaySubscriptionPurchase,
+  classifyPlaySyncVerification,
   hashPurchaseToken,
   claimPlayMembership,
   loadPlayMembershipEvents,
@@ -818,15 +819,37 @@ app.post("/api/billing/sync-play-membership", express.json({ limit: "32kb" }), a
     let stillActive = false;
     let activePlan = null;
     let activeQuota = null;
+    let sawAuthoritativeInactive = false;
+    let sawIndeterminate = false;
 
     for (const item of purchases.slice(0, 6)) {
       const productId = String(item.productId || item.itemId || "").trim();
       const purchaseToken = String(item.purchaseToken || item.token || "").trim();
-      if (!productId || !purchaseToken) continue;
+      if (!productId || !purchaseToken) {
+        sawIndeterminate = true;
+        continue;
+      }
       const planConfig = getPlanForProductId(productId);
-      if (!planConfig) continue;
-      const verification = await verifyPlaySubscriptionPurchase({ subscriptionId: productId, purchaseToken });
-      if (!verification.ok) continue;
+      if (!planConfig) {
+        sawIndeterminate = true;
+        continue;
+      }
+      let verification;
+      try {
+        verification = await verifyPlaySubscriptionPurchase({ subscriptionId: productId, purchaseToken });
+      } catch {
+        sawIndeterminate = true;
+        continue;
+      }
+      const verificationState = classifyPlaySyncVerification(verification);
+      if (verificationState === "inactive") {
+        sawAuthoritativeInactive = true;
+        continue;
+      }
+      if (verificationState === "indeterminate") {
+        sawIndeterminate = true;
+        continue;
+      }
       stillActive = true;
       activePlan = planConfig.plan;
       const tokenHash = hashPurchaseToken(purchaseToken);
@@ -872,10 +895,17 @@ app.post("/api/billing/sync-play-membership", express.json({ limit: "32kb" }), a
         stillActive = true;
         activePlan = currentPlan;
         activeQuota = publicQuota(quotaSession.profile);
+      } else if (expiry) {
+        sawAuthoritativeInactive = true;
+      } else {
+        sawIndeterminate = true;
       }
     }
 
     if (!stillActive) {
+      if (sawIndeterminate || !sawAuthoritativeInactive) {
+        throw publicApiError("Could not verify membership status. Please try again.", 503);
+      }
       const downgraded = await downgradePlayMembershipIfNeeded(userId, { reason: "sync_inactive" });
       res.json({
         ok: true,

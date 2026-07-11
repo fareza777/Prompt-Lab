@@ -246,3 +246,25 @@ test("Play downgrade fails closed when the profile lookup errors", async () => {
   );
   assert.equal(profileWrites, 0);
 });
+
+test("Play sync treats transient verification failures as indeterminate", () => {
+  assert.equal(
+    playBilling.classifyPlaySyncVerification({
+      ok: false,
+      error: "Could not get a Google Play access token.",
+    }),
+    "indeterminate"
+  );
+});
+
+test("Play sync treats an authoritative expired result as inactive", () => {
+  assert.equal(
+    playBilling.classifyPlaySyncVerification({
+      ok: false,
+      expired: true,
+      expiryTimeMillis: Date.now() - 60_000,
+      error: "This subscription has expired.",
+    }),
+    "inactive"
+  );
+});

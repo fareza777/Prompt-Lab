@@ -172,6 +172,12 @@ export function hashPurchaseToken(token) {
   return crypto.createHash("sha256").update(String(token || ""), "utf8").digest("hex");
 }
 
+export function classifyPlaySyncVerification(verification) {
+  if (verification?.ok === true) return "active";
+  if (verification?.expired === true || verification?.inactive === true) return "inactive";
+  return "indeterminate";
+}
+
 export async function loadPlayMembershipEvents(admin, userId) {
   if (!admin || !userId) return { ok: false, events: [] };
   try {
