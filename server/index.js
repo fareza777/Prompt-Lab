@@ -1,5 +1,6 @@
 import "dotenv/config";
 import cors from "cors";
+import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import {
   Document,
@@ -65,7 +66,7 @@ import {
   persistPlayMembership,
   FREE_PLAN_DEFAULTS,
 } from "./playBillingGoogle.js";
-import { persistReservedUsage } from "./quotaReservation.js";
+import { persistReservedUsage, quotaFailureStatus } from "./quotaReservation.js";
 import {
   handleLemonSqueezyWebhook,
   parseLemonSqueezyWebhook,
@@ -2025,7 +2026,12 @@ async function getQuotaSession(req, estimatedTokens = 0) {
     throw publicApiError("Token quota exceeded. Upgrade your plan or wait for quota reset.", 402);
   }
 
-  return { client, profile, user: userData.user };
+  return {
+    client,
+    profile,
+    user: userData.user,
+    usageIdempotencyKey: randomUUID(),
+  };
 }
 
 async function recordUsage(quotaSession, { eventType, metadata, outputText, tokenEstimate }) {
@@ -2036,12 +2042,14 @@ async function recordUsage(quotaSession, { eventType, metadata, outputText, toke
     estimate: tokens,
     eventType,
     metadata: metadata || {},
+    idempotencyKey: quotaSession.usageIdempotencyKey,
   });
   if (!result.ok) {
-    const message = result.stage === "event"
-      ? "Failed to record quota usage."
-      : "Failed to reserve quota usage.";
-    throw publicApiError(message, 503);
+    const exhausted = result.reason === "quota_exhausted";
+    const message = exhausted
+      ? "Token quota exceeded. Upgrade your plan or wait for quota reset."
+      : "Failed to record quota usage.";
+    throw publicApiError(message, quotaFailureStatus(result));
   }
 
   const quotaLimit = Number(quotaSession.profile?.quota_limit || 0);
