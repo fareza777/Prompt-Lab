@@ -477,6 +477,30 @@
       headline: "Best Prompt for Interview Prep: Practice Answers That Sound Like You",
       datePublished: "2026-07-11",
       dateModified: "2026-07-11",
+    },
+    "/blog/best-prompt-for-contract-review": {
+      title: "Best Prompt for Contract Review: Spot Risk Clauses Before You Sign | PromptLab",
+      description: "The best prompt for contract review uses a 5-section framework (Role, Document, Focus Areas, Output Format, Escalation Rules) to turn AI into a skeptical counterparty reviewer. 4 copy-paste templates (general, NDA, vendor, employment) plus 3 mistakes that make AI reviews useless.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-contract-review",
+      h1: "article-best-prompt-for-contract-review",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for contract review, contract prompt, legal AI prompt, clause review prompt, NDA review prompt, vendor agreement review, employment contract review, AI contract review, Claude legal, ChatGPT legal, contract risk analysis prompt, indemnity review prompt",
+      headline: "Best Prompt for Contract Review: Spot Risk Clauses Before You Sign",
+      datePublished: "2026-07-12",
+      dateModified: "2026-07-12",
+    },
+    "/blog/best-prompt-for-financial-analysis": {
+      title: "Best Prompt for Financial Analysis: Read a 10-K in One Pass | PromptLab",
+      description: "The best prompt for financial analysis uses a 5-part framework (Role, Document, Focus, Output, Rules) to turn a 10-K, earnings call, or peer set into a one-page memo with thesis, risks, multiples, and red flags. 4 copy-paste templates + 3 mistakes that make AI finance output untrustworthy.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-financial-analysis",
+      h1: "article-best-prompt-for-financial-analysis",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for financial analysis, finance prompt, earnings analysis prompt, 10-K prompt, investment memo prompt, equity research prompt, AI financial analysis, Claude finance, ChatGPT finance, comps table prompt, earnings call prompt",
+      headline: "Best Prompt for Financial Analysis: Read a 10-K in One Pass",
+      datePublished: "2026-07-13",
+      dateModified: "2026-07-13",
     }
   };
 
@@ -521,7 +545,9 @@
     "/blog/best-prompt-for-tutoring": "article-best-prompt-for-tutoring",
     "/blog/best-prompt-for-negotiation": "article-best-prompt-for-negotiation",
     "/blog/best-prompt-for-research": "article-best-prompt-for-research",
-    "/blog/best-prompt-for-interview-prep": "article-best-prompt-for-interview-prep"
+    "/blog/best-prompt-for-interview-prep": "article-best-prompt-for-interview-prep",
+    "/blog/best-prompt-for-contract-review": "article-best-prompt-for-contract-review",
+    "/blog/best-prompt-for-financial-analysis": "article-best-prompt-for-financial-analysis"
   };
 
   function normalizePath(pathname) {

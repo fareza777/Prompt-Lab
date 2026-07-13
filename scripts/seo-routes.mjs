@@ -553,19 +553,47 @@ export const SEO_ROUTES = {
                             keywords: "best prompt for research, research prompt, AI research assistant, literature review prompt, deep research prompt, Claude research, ChatGPT research, Gemini research, source-grounded prompt, citation prompt"
                               },
                             "/blog/best-prompt-for-interview-prep": {
-                            routeKey: "article-best-prompt-for-interview-prep",
-                            h1: "article-best-prompt-for-interview-prep",
+                                                        routeKey: "article-best-prompt-for-interview-prep",
+                                                        h1: "article-best-prompt-for-interview-prep",
+                                                        lang: "en",
+                                                        ogType: "article",
+                                                        title: "Best Prompt for Interview Prep: Practice Answers That Sound Like You | PromptLab",
+                                                        description:
+                                                          "The best prompt for interview prep uses a 4-part framework (Role, Context, Task, Output) to turn AI into a mock interviewer, STAR story builder, and weak-answer stress test. 5 copy-paste templates + 3 mistakes that keep your prep generic.",
+                                                        canonical: `${SITE}/blog/best-prompt-for-interview-prep`,
+                                                        headline: "Best Prompt for Interview Prep: Practice Answers That Sound Like You",
+                                                        datePublished: "2026-07-11",
+                                                        dateModified: "2026-07-11",
+                                                        keywords: "best prompt for interview prep, interview prompt, job interview AI, STAR method prompt, mock interview prompt, behavioral interview AI, Claude interview, ChatGPT interview, interview practice prompt, job prep AI"
+                                                                                                                  },
+                                                                                                                  "/blog/best-prompt-for-contract-review": {
+                                                        routeKey: "article-best-prompt-for-contract-review",
+                                                        h1: "article-best-prompt-for-contract-review",
+                                                        lang: "en",
+                                                        ogType: "article",
+                                                        title: "Best Prompt for Contract Review: Spot Risk Clauses Before You Sign | PromptLab",
+                                                        description:
+                                                          "The best prompt for contract review uses a 5-section framework (Role, Document, Focus Areas, Output Format, Escalation Rules) to turn AI into a skeptical counterparty reviewer. 4 copy-paste templates (general, NDA, vendor, employment) plus 3 mistakes that make AI reviews useless.",
+                                                        canonical: `${SITE}/blog/best-prompt-for-contract-review`,
+                                                        headline: "Best Prompt for Contract Review: Spot Risk Clauses Before You Sign",
+                                                        datePublished: "2026-07-12",
+                                                        dateModified: "2026-07-12",
+                                                        keywords: "best prompt for contract review, contract prompt, legal AI prompt, clause review prompt, NDA review prompt, vendor agreement review, employment contract review, AI contract review, Claude legal, ChatGPT legal, contract risk analysis prompt, indemnity review prompt"
+                          },
+                          "/blog/best-prompt-for-financial-analysis": {
+                            routeKey: "article-best-prompt-for-financial-analysis",
+                            h1: "article-best-prompt-for-financial-analysis",
                             lang: "en",
                             ogType: "article",
-                            title: "Best Prompt for Interview Prep: Practice Answers That Sound Like You | PromptLab",
+                            title: "Best Prompt for Financial Analysis: Read a 10-K in One Pass | PromptLab",
                             description:
-                              "The best prompt for interview prep uses a 4-part framework (Role, Context, Task, Output) to turn AI into a mock interviewer, STAR story builder, and weak-answer stress test. 5 copy-paste templates + 3 mistakes that keep your prep generic.",
-                            canonical: `${SITE}/blog/best-prompt-for-interview-prep`,
-                            headline: "Best Prompt for Interview Prep: Practice Answers That Sound Like You",
-                            datePublished: "2026-07-11",
-                            dateModified: "2026-07-11",
-                            keywords: "best prompt for interview prep, interview prompt, job interview AI, STAR method prompt, mock interview prompt, behavioral interview AI, Claude interview, ChatGPT interview, interview practice prompt, job prep AI"
-                              }
+                              "The best prompt for financial analysis uses a 5-part framework (Role, Document, Focus, Output, Rules) to turn a 10-K, earnings call, or peer set into a one-page memo with thesis, risks, multiples, and red flags. 4 copy-paste templates + 3 mistakes that make AI finance output untrustworthy.",
+                            canonical: `${SITE}/blog/best-prompt-for-financial-analysis`,
+                            headline: "Best Prompt for Financial Analysis: Read a 10-K in One Pass",
+                            datePublished: "2026-07-13",
+                            dateModified: "2026-07-13",
+                            keywords: "best prompt for financial analysis, finance prompt, earnings analysis prompt, 10-K prompt, investment memo prompt, equity research prompt, AI financial analysis, Claude finance, ChatGPT finance, comps table prompt, earnings call prompt"
+                          }
                           };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
