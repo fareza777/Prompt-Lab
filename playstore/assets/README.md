@@ -10,6 +10,15 @@ Generated assets for Google Play **Store listing**.
 | `feature-graphic-1024x500.png` | **Feature graphic** (1024×500) |
 | `screenshot-phone-*.png` | **Phone screenshots** — 1080×1920 (9:16), PNG, min. 2 upload |
 
+## Premium sources (preferred)
+
+If present, `npm run playstore:assets` uses these instead of the SVG fallback:
+
+| Source | Output |
+|--------|--------|
+| `sources/app-icon-source.png` | `app-icon-512.png` (512×512, full-bleed, no rounded corners) |
+| `sources/feature-graphic-source.png` | `feature-graphic-1024x500.png` (1024×500) |
+
 ## Regenerate
 
 ```bash
