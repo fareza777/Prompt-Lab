@@ -36,7 +36,7 @@ begin
 end;
 $$;
 
-revoke all on function public.reserve_promptlab_quota(bigint) from public;
+revoke all on function public.reserve_promptlab_quota(bigint) from public, anon;
 grant execute on function public.reserve_promptlab_quota(bigint) to authenticated;
 
 alter table public.usage_events
@@ -135,5 +135,5 @@ begin
 end;
 $$;
 
-revoke all on function public.record_promptlab_usage(bigint, text, jsonb, text) from public;
+revoke all on function public.record_promptlab_usage(bigint, text, jsonb, text) from public, anon;
 grant execute on function public.record_promptlab_usage(bigint, text, jsonb, text) to authenticated;

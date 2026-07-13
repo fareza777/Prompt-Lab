@@ -174,7 +174,7 @@ begin
 end;
 $$;
 
-revoke all on function public.apply_promptlab_membership_event(uuid, text, text, timestamptz, text, text, integer, text, jsonb) from public;
-revoke all on function public.claim_google_play_membership(uuid, text, text, text, integer, text, boolean, date, jsonb) from public;
+revoke all on function public.apply_promptlab_membership_event(uuid, text, text, timestamptz, text, text, integer, text, jsonb) from public, anon, authenticated;
+revoke all on function public.claim_google_play_membership(uuid, text, text, text, integer, text, boolean, date, jsonb) from public, anon, authenticated;
 grant execute on function public.apply_promptlab_membership_event(uuid, text, text, timestamptz, text, text, integer, text, jsonb) to service_role;
 grant execute on function public.claim_google_play_membership(uuid, text, text, text, integer, text, boolean, date, jsonb) to service_role;
