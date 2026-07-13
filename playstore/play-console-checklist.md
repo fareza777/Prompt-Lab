@@ -3,6 +3,7 @@
 ## App Setup
 
 - App name: `PromptLab`
+- Public title: `Prompt generator: Prompt Lab`
 - Package name: `app.promptlab.twa`
 - Default language: English
 - App/category: Productivity
@@ -13,11 +14,13 @@
 
 Short description:
 
-`Turn rough ideas, files, and screenshots into structured AI prompts.`
+`Build, optimize, compare, and save AI prompts from ideas, images, and files.`
 
 Full description:
 
-`PromptLab helps creators, students, marketers, and builders transform rough instructions into structured prompts for ChatGPT, Claude, Gemini, Grok, Midjourney, and other AI tools. Build prompts, optimize old prompts, save reusable templates, compare prompt versions, and export working documents.`
+Use the canonical English full description from `playstore/STORE_LISTING.md`.
+
+Metadata and creative updates are a **no new AAB required** release. Upload a new AAB only for Android wrapper changes.
 
 ## Required Screenshots
 
