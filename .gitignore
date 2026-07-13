@@ -29,5 +29,6 @@ playwright-results.*
 .tmp_*
 .env*
 .superpowers/
+.worktrees/
 playstore/assets/.native-*.png
 playstore/assets/*.prev.png
