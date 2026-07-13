@@ -99,6 +99,11 @@ import { purgeLegacyServiceWorkers, repairStuckLocalProfile } from "./bootRecove
 import { scorePrompt, scoreOptimizedPrompt } from "./promptScore.js";
 import { getCompareEvaluationMeta } from "./compareProvenance.js";
 import { captureFocusReturn, handleTabListKeyDown } from "./accessibilityInteractions.js";
+import {
+  ONBOARDING_STEPS,
+  getNextOnboardingStep,
+  getPreviousOnboardingStep,
+} from "./onboardingGuide.js";
 import { dismissStartupSplash, installSplashSafetyNet, markStartupSplashStarted } from "./startupSplash";
 import {
   buildGoogleOAuthOptions,
@@ -3151,25 +3156,57 @@ function V2AuthGate({
 }
 
 function V2Onboarding({ onAuth, onGuest }) {
+  const [stepIndex, setStepIndex] = useState(0);
+  const step = ONBOARDING_STEPS[stepIndex];
+  const isFirstStep = stepIndex === 0;
+  const isFinalStep = stepIndex === ONBOARDING_STEPS.length - 1;
+
   return (
     <main className="v2-onboarding" data-theme="v2">
       <section className="v2-onboarding-card">
-        <span className="v2-eyebrow">PromptLab</span>
-        <h1>Build better prompts from ideas, files, and screenshots.</h1>
-        <p>Generate, optimize, score, save, and reuse prompts for ChatGPT, Claude, Gemini, and creative AI tools.</p>
-        <div className="v2-onboarding-points">
-          <div><Sparkles size={18} /><strong>Generate</strong><span>Turn rough requests into structured prompts.</span></div>
-          <div><Gauge size={18} /><strong>Improve</strong><span>Check clarity, context, format, constraints, and actionability.</span></div>
-          <div><Library size={18} /><strong>Sync later</strong><span>Create an account to keep library and membership data across devices.</span></div>
+        <header className="v2-onboarding-topline">
+          <span className="v2-eyebrow">PromptLab / {step.eyebrow}</span>
+          {!isFinalStep && <button className="v2-onboarding-link" onClick={() => setStepIndex(ONBOARDING_STEPS.length - 1)}>Skip</button>}
+        </header>
+
+        <div className="v2-onboarding-layout" aria-live="polite">
+          <div className="v2-onboarding-copy">
+            <p className="v2-onboarding-count">{stepIndex + 1} of {ONBOARDING_STEPS.length}</p>
+            <h1>{step.title}</h1>
+            <p>{step.body}</p>
+          </div>
+
+          <OnboardingVisual kind={step.visual} />
         </div>
-        <div className="v2-actions">
-          <button className="v2-btn primary" onClick={onAuth}>Sign In / Create Account</button>
-          <button className="v2-btn" onClick={onGuest}>Continue as Guest</button>
+
+        <div className="v2-onboarding-progress" aria-label="Onboarding progress">
+          {ONBOARDING_STEPS.map((item, index) => (
+            <span key={item.id} className={index === stepIndex ? "active" : ""} aria-current={index === stepIndex ? "step" : undefined} />
+          ))}
         </div>
-        <p className="v2-note">AI generation needs a free account. Guest mode keeps drafts on this device only.</p>
+
+        <div className="v2-actions v2-onboarding-actions">
+          {!isFirstStep && <button className="v2-btn" onClick={() => setStepIndex(getPreviousOnboardingStep(stepIndex))}>Back</button>}
+          {!isFinalStep && <button className="v2-btn primary" onClick={() => setStepIndex(getNextOnboardingStep(stepIndex))}>{step.primaryLabel}</button>}
+          {isFinalStep && <button className="v2-btn primary" onClick={onAuth}>{step.primaryLabel}</button>}
+          {isFinalStep && <button className="v2-btn" onClick={onGuest}>Continue as guest</button>}
+        </div>
       </section>
     </main>
   );
+}
+
+function OnboardingVisual({ kind }) {
+  if (kind === "idea-to-prompt") {
+    return <div className="v2-onboarding-visual"><span>Rough idea</span><ArrowRightLeft size={22} /><strong>Structured prompt</strong></div>;
+  }
+  if (kind === "score-and-compare") {
+    return <div className="v2-onboarding-visual"><span className="v2-score-before">5</span><Gauge size={28} /><span className="v2-score-after">9</span><strong>Clearer. Stronger. Ready.</strong></div>;
+  }
+  if (kind === "template-to-library") {
+    return <div className="v2-onboarding-visual"><BookOpenText size={28} /><span>Template</span><ArrowRightLeft size={22} /><Library size={28} /><strong>Saved to Library</strong></div>;
+  }
+  return <div className="v2-onboarding-visual"><Sparkles size={30} /><strong>Start free</strong><span>Explore first. Sync anytime.</span></div>;
 }
 
 function V2Header({ active, setActive, settingsStatus, isGenerating, generationStatus, generationSource, isGuestMode, accountState, librarySyncStatus, onOpenCommandPalette }) {
