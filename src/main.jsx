@@ -18,6 +18,7 @@ import {
   FileText,
   FolderOpen,
   Gauge,
+  Info,
   KeyRound,
   Layers3,
   Library,
@@ -56,6 +57,7 @@ import {
 import { consumeGenerateSse } from "./generateStreamClient.js";
 import { V2CommandPalette } from "./commandPalette.jsx";
 import { V2EmptyState } from "./v2EmptyState.jsx";
+import { AboutPanel } from "./aboutPanel.jsx";
 import { getUserInitials } from "./userInitials.js";
 import {
   getLanguageLockInstruction,
@@ -4421,6 +4423,7 @@ function V2PublicSettings(props) {
     ["Prompt Defaults", SlidersHorizontal],
     ["Data & Privacy", ShieldCheck],
     ["Support", LifeBuoy],
+    ["About", Info],
   ];
   const copyData = () => {
     const data = { account: accountState, library, customTemplates, exportedAt: new Date().toISOString() };
@@ -4806,23 +4809,10 @@ function V2PublicSettings(props) {
             )}
           </div>
 
-          <div className="v2-card v2-settings-card">
-            <div className="v2-card-head">
-              <div>
-                <h2>About PromptLab</h2>
-                <p>PromptLab helps turn rough ideas, files, and screenshots into structured prompts that are clearer, safer, and ready to run.</p>
-              </div>
-              <Rocket size={20} />
-            </div>
-            <div className="v2-info-grid">
-              <V2Info label="Builder" value="Intent-aware prompt generator" />
-              <V2Info label="Optimizer" value="Rewrite, score, and strengthen old prompts" />
-              <V2Info label="Templates" value="Production-ready patterns for common work" />
-              <V2Info label="Library" value="Save, compare, copy, and reuse your best prompts" />
-            </div>
-          </div>
         </section>
       )}
+
+      {section === "About" && <AboutPanel />}
     </div>
   );
 }
