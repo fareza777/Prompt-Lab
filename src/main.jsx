@@ -58,6 +58,7 @@ import { consumeGenerateSse } from "./generateStreamClient.js";
 import { V2CommandPalette } from "./commandPalette.jsx";
 import { V2EmptyState } from "./v2EmptyState.jsx";
 import { AboutPanel } from "./aboutPanel.jsx";
+import { SETTINGS_SECTION_NAMES } from "./aboutApp.js";
 import { getUserInitials } from "./userInitials.js";
 import {
   getLanguageLockInstruction,
@@ -4417,14 +4418,15 @@ function V2PublicSettings(props) {
   const [authPassword, setAuthPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const isAdmin = accountState.role === "admin";
-  const sections = [
-    ["Account", User],
-    ["Membership", CreditCard],
-    ["Prompt Defaults", SlidersHorizontal],
-    ["Data & Privacy", ShieldCheck],
-    ["Support", LifeBuoy],
-    ["About", Info],
-  ];
+  const sectionIcons = {
+    Account: User,
+    Membership: CreditCard,
+    "Prompt Defaults": SlidersHorizontal,
+    "Data & Privacy": ShieldCheck,
+    Support: LifeBuoy,
+    About: Info,
+  };
+  const sections = SETTINGS_SECTION_NAMES.map((name) => [name, sectionIcons[name]]);
   const copyData = () => {
     const data = { account: accountState, library, customTemplates, exportedAt: new Date().toISOString() };
     navigator.clipboard?.writeText(JSON.stringify(data, null, 2)).catch(() => {});

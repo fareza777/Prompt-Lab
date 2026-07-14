@@ -100,7 +100,10 @@ export function AboutPanel() {
           <Trash2 size={17} aria-hidden="true" />
           <span>Delete Account</span>
         </a>
-        <a href="mailto:support@prompt-lab.xyz">
+        <a
+          href="mailto:support@prompt-lab.xyz"
+          aria-label="Contact support by email at support@prompt-lab.xyz"
+        >
           <Mail size={17} aria-hidden="true" />
           <span>Contact Support</span>
         </a>

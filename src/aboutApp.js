@@ -3,6 +3,15 @@ export const PLAY_STORE_PACKAGE_ID = "app.promptlab.twa";
 export const PLAY_STORE_LISTING_URL =
   `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE_ID}`;
 
+export const SETTINGS_SECTION_NAMES = Object.freeze([
+  "Account",
+  "Membership",
+  "Prompt Defaults",
+  "Data & Privacy",
+  "Support",
+  "About",
+]);
+
 export const ABOUT_WORKFLOW = Object.freeze([
   Object.freeze({
     label: "Build",

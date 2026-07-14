@@ -2458,12 +2458,11 @@ button {
   text-decoration: none;
   white-space: nowrap;
   box-shadow: 0 16px 38px var(--ac-soft);
-  transition: transform 180ms ease, box-shadow 180ms ease;
+  transition: transform 180ms ease;
 }
 
 .v2-about-rate-action:hover {
   transform: translateY(-2px);
-  box-shadow: 0 22px 46px var(--ac-soft);
 }
 
 .v2-about-trust {
