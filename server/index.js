@@ -25,6 +25,7 @@ import {
 } from "../src/imageVideoPromptDelivery.js";
 import {
   buildIntentSystemPromptXml,
+  acceptBuilderCandidate,
   buildLeanIntentSystemPrompt,
   buildDepthDirective,
   buildOptimizerSystemPromptXml,
@@ -1271,6 +1272,8 @@ app.post("/api/compare-prompts", attachAiRateLimitIdentity, aiRateLimit, express
 const VERCEL_FUNCTION_BUDGET_MS = Number(process.env.VERCEL_FUNCTION_BUDGET_MS || 58000);
 const RETRY_ON_EMPTY_RESERVE_MS = 22000;
 const PREMIUM_PASS_RESERVE_MS = 28000;
+const STREAM_RECOVERY_FINALIZE_RESERVE_MS = 4000;
+const MIN_STREAM_RECOVERY_PROVIDER_MS = 8000;
 
 function capProviderTimeouts(timing, { primaryReserveMs = 14000, fallbackReserveMs = 22000 } = {}) {
   const capped = { ...timing };
@@ -1309,11 +1312,14 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
       ...uploadedAttachments,
       ...manifestAttachments.filter((file) => !uploadedNames.has(file.filename)),
     ].slice(0, entitlements.maxAttachments);
-    const payload = enrichPayloadWithLanguage(
-      { ...basePayload, modelSettings: routedSettings },
-      attachments
-    );
-    const qualityPolicy = getBuilderQualityPolicy({ ...payload, attachments });
+    const payload = {
+      ...enrichPayloadWithLanguage(
+        { ...basePayload, modelSettings: routedSettings },
+        attachments
+      ),
+      attachmentCount: attachments.length,
+    };
+    const qualityPolicy = getBuilderQualityPolicy(payload);
     const runtime = getRuntimeProvider(payload.modelSettings);
     // Quality parity: MiniMax no longer skips structure retry / critique-refine.
     // Streaming stays off for MiniMax to avoid serverless timeout risk.
@@ -1413,8 +1419,9 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
               ), retryTimeoutMs, primaryModelLocal);
               const retriedRaw = retryRes.choices?.[0]?.message?.content || "";
               const retried = sanitizePromptOutput(retriedRaw);
-              if (retried && !isPromptTooShort(retried, qualityPolicy)) {
-                prompt = retried;
+              const accepted = acceptBuilderCandidate(retried, prompt, qualityPolicy);
+              if (accepted !== prompt) {
+                prompt = accepted;
               }
             }
           } catch (retryError) {
@@ -1445,8 +1452,9 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
               plan: membership.plan,
               qualityPolicy,
             });
-            if (refined && !isPromptTooShort(refined, qualityPolicy) && refined !== prompt) {
-              prompt = refined;
+            const accepted = acceptBuilderCandidate(refined, prompt, qualityPolicy);
+            if (accepted !== prompt) {
+              prompt = accepted;
               qualityNote = API_MSG.premiumQualityApplied;
             }
           } catch (refineError) {
@@ -1582,8 +1590,9 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
           ],
         });
         const retried = sanitizePromptOutput(retryRes.output_text);
-        if (retried && !isPromptTooShort(retried, qualityPolicy)) {
-          openaiPrompt = retried;
+        const accepted = acceptBuilderCandidate(retried, openaiPrompt, qualityPolicy);
+        if (accepted !== openaiPrompt) {
+          openaiPrompt = accepted;
           openaiWarnings.push(`Auto-retry untuk melengkapi section: ${structCheck.missing.join(", ")}.`);
         }
       } catch (retryError) {
@@ -1602,8 +1611,13 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
           ],
         });
         const altPrompt = sanitizePromptOutput(altRes.output_text);
-        if (altPrompt && !isPromptTooShort(altPrompt, qualityPolicy)) {
-          const picked = pickBestCandidate([openaiPrompt, altPrompt]);
+        const acceptedAlt = acceptBuilderCandidate(altPrompt, openaiPrompt, qualityPolicy);
+        if (acceptedAlt !== openaiPrompt) {
+          const currentStructure = validatePromptStructure(openaiPrompt, qualityPolicy);
+          const acceptedStructure = validatePromptStructure(acceptedAlt, qualityPolicy);
+          const picked = currentStructure.valid
+            ? pickBestCandidate([openaiPrompt, acceptedAlt])
+            : { best: acceptedAlt, scores: [currentStructure.score, acceptedStructure.score] };
           if (picked.best && picked.best !== openaiPrompt) {
             openaiPrompt = picked.best;
             openaiWarnings.push(`Self-consistency: 2 kandidat dibandingkan, terbaik dipilih (skor ${picked.scores.join(" vs ")}).`);
@@ -1629,7 +1643,7 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
             },
             {
               role: "user",
-              content: [{ type: "input_text", text: `Audit prompt berikut. Fokus pada role specificity, output format quantification, constraints konkret, konsistensi deliverable (${payload.outputType || "tidak dipilih"}), frasa kosong/placeholder, acceptance criteria.\n\n---\n${openaiPrompt}\n---\n\nOutput hanya bullet points cacat.` }],
+              content: [{ type: "input_text", text: `Audit prompt berikut. Fokus pada role specificity, output format quantification, minimal ${qualityPolicy.constraintCount} constraints konkret, konsistensi deliverable (${payload.outputType || "tidak dipilih"}), frasa kosong/placeholder, dan minimal ${qualityPolicy.acceptanceCount} acceptance criteria.\n\n---\n${openaiPrompt}\n---\n\nOutput hanya bullet points cacat.` }],
             },
           ],
         });
@@ -1649,8 +1663,9 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
             ],
           });
           const refined = sanitizePromptOutput(refineRes.output_text);
-          if (refined && !isPromptTooShort(refined, qualityPolicy)) {
-            openaiPrompt = refined;
+          const accepted = acceptBuilderCandidate(refined, openaiPrompt, qualityPolicy);
+          if (accepted !== openaiPrompt) {
+            openaiPrompt = accepted;
             openaiWarnings.push(API_MSG.premiumQualityApplied);
           }
         }
@@ -1781,7 +1796,7 @@ async function runCritiqueRefinePass({ runtime, payload, attachments, basePrompt
       content: `Audit prompt berikut. Sebutkan 3-6 cacat paling kritis. Fokus pada:
 - Role specificity (jabatan + domain + level)
 - Output format quantification (jumlah, panjang, struktur eksplisit)
-- Constraints konkret (≥3)
+- Constraints konkret (minimal ${qualityPolicy?.constraintCount || 3})
 - Konsistensi deliverable: ${payload.outputType || "tidak dipilih"}
 - Frasa kosong / placeholder yang tidak di-instantiate
 - Acceptance criteria atau quality gates yang hilang
@@ -1861,7 +1876,7 @@ Output: prompt final saja.`,
     ), timing.primaryTimeoutMs, primaryModel);
     const refined = refineRes.choices?.[0]?.message?.content || "";
     const sanitized = sanitizePromptOutput(refined);
-    return sanitized && !isPromptTooShort(sanitized, qualityPolicy) ? sanitized : basePrompt;
+    return acceptBuilderCandidate(sanitized, basePrompt, qualityPolicy);
   } catch (error) {
     if (shouldTryFallbackModel(error) && fallbackModels.length > 0) {
       try {
@@ -1876,7 +1891,7 @@ Output: prompt final saja.`,
         );
         const refined = fb.completion.choices?.[0]?.message?.content || "";
         const sanitized = sanitizePromptOutput(refined);
-        return sanitized && !isPromptTooShort(sanitized, qualityPolicy) ? sanitized : basePrompt;
+        return acceptBuilderCandidate(sanitized, basePrompt, qualityPolicy);
       } catch {
         return basePrompt;
       }
@@ -2407,10 +2422,19 @@ async function runStreamedOpenRouterGenerate({
     completionModel = streamed.model || primaryModel;
   } catch (error) {
     const remainingBudgetMs = remainingBudget();
-    if (shouldTryFallbackModel(error) && shouldRecoverStream({ remainingBudgetMs, fallbackModels })) {
+    const recoveryProviderBudgetMs = remainingBudgetMs - STREAM_RECOVERY_FINALIZE_RESERVE_MS;
+    if (
+      shouldTryFallbackModel(error) &&
+      shouldRecoverStream({ remainingBudgetMs, fallbackModels }) &&
+      recoveryProviderBudgetMs >= MIN_STREAM_RECOVERY_PROVIDER_MS
+    ) {
       try {
         sendSsePhase(res, "recovering", "Primary model unavailable; trying a fallback...");
-        const fallbackTimeoutMs = Math.min(timing.fallbackTimeoutMs, remainingBudgetMs, 22_000);
+        const fallbackTimeoutMs = Math.min(
+          timing.fallbackTimeoutMs,
+          remainingBudgetMs - STREAM_RECOVERY_FINALIZE_RESERVE_MS,
+          22_000
+        );
         const recovered = await tryOpenRouterFallbackModels(
           runtime.client,
           fallbackModels,
@@ -2470,7 +2494,7 @@ async function runStreamedOpenRouterGenerate({
           primaryModel
         );
         const retried = sanitizePromptOutput(retryRes.choices?.[0]?.message?.content || "");
-        if (retried && !isPromptTooShort(retried, qualityPolicy)) prompt = retried;
+        prompt = acceptBuilderCandidate(retried, prompt, qualityPolicy);
       }
     } catch (retryError) {
       console.warn("stream structure retry failed", retryError.message);
@@ -2497,10 +2521,11 @@ async function runStreamedOpenRouterGenerate({
         plan: membership.plan,
         qualityPolicy,
       });
-      if (refined && !isPromptTooShort(refined, qualityPolicy) && refined !== prompt) {
+      const accepted = acceptBuilderCandidate(refined, prompt, qualityPolicy);
+      if (accepted !== prompt) {
         sendSsePhase(res, "refining", "Applying refinements...");
-        prompt = refined;
-        sendSse(res, "chunk", { text: refined, replace: true });
+        prompt = accepted;
+        sendSse(res, "chunk", { text: accepted, replace: true });
         qualityNote = API_MSG.premiumQualityApplied;
       }
     } catch (refineError) {
@@ -2950,15 +2975,19 @@ function getOptimizerEngineInstruction(payload) {
 
 function buildPromptSpecInstruction(payload, attachments = [], { lean = false } = {}) {
   const pack = getDomainPromptPack(payload);
+  const qualityPolicy = getBuilderQualityPolicy({
+    ...payload,
+    attachmentCount: payload.attachmentCount ?? attachments.length,
+  });
   const attachmentManifest = buildAttachmentManifest(attachments);
   if (lean) {
     return `Domain pack:
 - Domain: ${pack.domain}
 - Role: ${pack.role}
-- Requirements: ${pack.requirements.slice(0, 5).join("; ")}
-- Constraints: ${pack.constraints.slice(0, 4).join("; ")}
+- Requirements: ${pack.requirements.slice(0, qualityPolicy.requirementCount).join("; ")}
+- Constraints: ${pack.constraints.slice(0, qualityPolicy.constraintCount).join("; ")}
 - Output controls: ${pack.outputControls.slice(0, 4).join("; ")}
-- Quality gates: ${pack.qualityGates.slice(0, 4).join("; ")}
+- Quality gates: ${pack.qualityGates.slice(0, qualityPolicy.acceptanceCount).join("; ")}
 ${attachmentManifest ? `- Attachments:\n${attachmentManifest}` : ""}`;
   }
   return `Prompt Spec JSON planning step:
@@ -2982,10 +3011,10 @@ ${attachmentManifest ? `- Attachments:\n${attachmentManifest}` : ""}`;
 Domain pack to apply:
 - Domain: ${pack.domain}
 - Role hint: ${pack.role}
-- Requirements: ${pack.requirements.join("; ")}
-- Constraints: ${pack.constraints.join("; ")}
+- Requirements: ${pack.requirements.slice(0, qualityPolicy.requirementCount).join("; ")}
+- Constraints: ${pack.constraints.slice(0, qualityPolicy.constraintCount).join("; ")}
 - Output controls: ${pack.outputControls.join("; ")}
-- Quality gates: ${pack.qualityGates.join("; ")}
+- Quality gates: ${pack.qualityGates.slice(0, qualityPolicy.acceptanceCount).join("; ")}
 ${attachmentManifest ? `- Attachment context:\n${attachmentManifest}` : "- Attachment context: none."}
 
 Render rule:
@@ -3666,7 +3695,7 @@ Prompt final wajib punya:
 - Konteks dari narasi dan lampiran
 - Tujuan yang jelas
 - Format output dengan minimal satu batasan kuantitatif (jumlah, panjang, durasi, struktur)
-- Batasan/constraints konkret (≥3 item)
+- Batasan/constraints konkret sesuai depth mandate
 - Acceptance criteria atau quality gates
 - Instruksi agar AI bertanya hanya bila informasi penting benar-benar memblokir
 
@@ -3768,7 +3797,7 @@ Prompt final wajib punya:
 - Konteks dari narasi dan lampiran
 - Tujuan yang jelas
 - Format output dengan minimal satu batasan kuantitatif (jumlah, panjang, durasi, struktur)
-- Batasan/constraints konkret (≥3 item)
+- Batasan/constraints konkret sesuai depth mandate
 - Acceptance criteria atau quality gates
 - Instruksi agar AI bertanya hanya bila informasi penting benar-benar memblokir
 

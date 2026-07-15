@@ -27,12 +27,19 @@ const QUALITY_LEVELS = {
   },
 };
 
+const REGULATED_DOMAINS = new Set([
+  "legal & compliance",
+  "finance & accounting",
+  "healthcare & clinical",
+]);
+
 export function assessBuilderComplexity(payload = {}) {
   const text = `${payload.narrative || ""} ${payload.category || ""} ${payload.outputType || ""}`.toLowerCase();
   const attachmentCount = Array.isArray(payload.attachments)
     ? payload.attachments.length
     : Math.max(0, Number(payload.attachmentCount) || 0);
-  const highStakes = /\b(legal|hukum|contract|kontrak|compliance|regulasi|finance|financial|keuangan|cashflow|pajak|tax|medical|medis|healthcare|kesehatan|patient|pasien|medication|obat)\b/i.test(text);
+  const routedDomains = detectDomains(payload);
+  const highStakes = [routedDomains.primary, routedDomains.secondary].some((domain) => REGULATED_DOMAINS.has(domain));
   const complexSignals = [
     /application code|aplikasi|web app|mobile app|full[ -]?stack|backend|frontend|api\b/i.test(text),
     /\b(ppt|powerpoint|presentation|presentasi|pitch deck|slide deck|video prompt|image prompt|structured audit|audit lengkap)\b/i.test(text),
@@ -125,7 +132,7 @@ export function shouldRecoverStream({ remainingBudgetMs, fallbackModels } = {}) 
  * Implementasi 10 optimasi engine prompt:
  *   1. System prompt restructure → XML/section tags
  *   2. Post-generation structure validator (+ retry hint)
- *   3. Critique-refine helper config (untuk dipanggil untuk semua tier)
+ *   3. Critique-refine helper config (premium-only, parity lintas provider)
  *   4. Domain pack diperluas (17 domain, multi-domain detection)
  *   5. Few-shot examples per optimizer mode
  *   6. Compare Judge swap-position (bias mitigation)
@@ -324,7 +331,7 @@ export function buildStructureRetryInstruction(basePrompt, missing, policy = QUA
     context: "Context / Konteks",
     task: "Task / Tugas terukur",
     output_format: "Output Format / struktur deliverable",
-    constraints: "Constraints / Batasan konkret (≥3)",
+    constraints: "Constraints / Batasan konkret",
     acceptance: "Acceptance Criteria / Quality gates",
   };
   const labels = missing.map((id) => `- ${labelMap[id] || id}`).join("\n");
@@ -375,7 +382,7 @@ export function detectDomains(payload = {}) {
     { domain: "education k12 & higher", weight: 55, re: /\b(pelajaran|materi|curriculum|kurikulum|silabus|guru|murid|siswa|mahasiswa|rpp|modul ajar|lesson plan)\b/i },
     { domain: "ux research & product discovery", weight: 50, re: /\b(ux|user research|persona|user journey|usability|wireframe|prototype|product discovery|jtbd)\b/i },
     { domain: "ecommerce & marketplace ops", weight: 50, re: /\b(tokopedia|shopee|lazada|marketplace|product listing|toko online|katalog|sku|promo)\b/i },
-    { domain: "healthcare & clinical", weight: 70, re: /\b(healthcare|health|medical|medication|patient|clinic|kesehatan|medis|dokter|pasien|klinik|diagnosa|obat|farmasi|rumah sakit|edukasi pasien)\b/i },
+    { domain: "healthcare & clinical", weight: 70, re: /\b(healthcare|health|medical|clinical|medication|patient|doctor|clinic|diagnosis|pharmacy|kesehatan|medis|dokter|pasien|klinik|diagnosa|obat|farmasi|rumah sakit|edukasi pasien)\b/i },
     { domain: "data analytics & reporting", weight: 60, re: /\b(analisis data|data analysis|dashboard data|spreadsheet|sql|bigquery|metabase|kpi|metrics|cohort|funnel analytics|tableau|power bi)\b/i },
     { domain: "hr & people ops", weight: 50, re: /\b(hr|sdm|rekrutmen|recruitment|onboarding|kpi karyawan|job description|interview|appraisal)\b/i },
     { domain: "customer support & ops", weight: 50, re: /\b(customer support|cs|helpdesk|ticket|faq|knowledge base|escalation|sla)\b/i },
@@ -406,6 +413,17 @@ export function detectDomains(payload = {}) {
     secondary: scores[1]?.domain || null,
     confidence,
   };
+}
+
+/**
+ * Accept a repair/refinement only when it clears both the adaptive length and
+ * structure floors. Otherwise preserve the previous candidate.
+ */
+export function acceptBuilderCandidate(candidate, current, policy) {
+  const next = String(candidate || "").trim();
+  if (isPromptBelowQualityFloor(next, policy)) return current;
+  if (!validatePromptStructure(next, policy).valid) return current;
+  return next;
 }
 
 /**

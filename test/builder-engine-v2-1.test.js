@@ -3,6 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 
 import {
+  acceptBuilderCandidate,
   assessBuilderComplexity,
   buildDepthDirective,
   buildIntentSystemPromptXml,
@@ -78,6 +79,14 @@ test("adaptive policy marks regulated domains as high stakes without adding a ve
     const result = assessBuilderComplexity({ narrative, outputType: "Analysis" });
     assert.equal(result.highStakes, true);
     assert.ok(["standard", "complex"].includes(result.level));
+  }
+
+  for (const narrative of [
+    "Assess investor valuation and budget downside.",
+    "Review an NDA for GDPR privacy risk.",
+    "Prepare diagnosis guidance for a doctor and pharmacy team.",
+  ]) {
+    assert.equal(assessBuilderComplexity({ narrative, outputType: "Analysis" }).highStakes, true, narrative);
   }
 });
 
@@ -160,6 +169,14 @@ test("full and lean provider prompts share the adaptive depth mandate", () => {
   assert.match(buildLeanIntentSystemPrompt(payload), /<depth_mandate profile="complex">/);
   assert.match(buildOpenRouterContent(payload, [], { lean: true }), /Quality gates:/i);
   assert.match(buildOpenRouterContent(payload, [], { lean: true }), /Output controls:/i);
+
+  const multiAttachmentPayload = {
+    narrative: "Analyze the supplied files and summarize the findings.",
+    outputType: "Analysis",
+    outputLanguage: "en",
+    attachmentCount: 2,
+  };
+  assert.match(buildIntentSystemPromptXml(multiAttachmentPayload), /<depth_mandate profile="complex">/);
 });
 
 test("lean prompt spec retains domain output controls and quality gates", () => {
@@ -173,6 +190,13 @@ test("lean prompt spec retains domain output controls and quality gates", () => 
   assert.match(spec, /Output controls:/i);
   assert.match(spec, /Quality gates:/i);
   assert.match(spec, /local run steps/i);
+
+  const simpleSpec = buildPromptSpecInstruction({
+    narrative: "Write a short follow-up email.",
+    outputType: "Content",
+    outputLanguage: "en",
+  }, [], { lean: true });
+  assert.doesNotMatch(simpleSpec, /ask only blocking questions/i);
 });
 
 test("structure validation is proportional to the selected policy", () => {
@@ -188,6 +212,23 @@ test("structure validation is proportional to the selected policy", () => {
   assert.equal(validatePromptStructure(fourSections, simple).valid, true);
   assert.equal(validatePromptStructure(fourSections, standard).valid, false);
   assert.equal(validatePromptStructure(fourSections, standard).requiredSections, 5);
+});
+
+test("repair and refinement candidates cannot regress adaptive structure", () => {
+  const policy = getBuilderQualityPolicy({ narrative: "Create a marketing campaign", outputType: "Content" });
+  const current = [
+    "Role: Senior marketer.",
+    "Context: Launch a subscription app.",
+    "Task: Create an activation campaign.",
+    "Output format: Return a three-channel table.",
+    "Constraints: Avoid unsupported claims.",
+    "Acceptance criteria: Verify channel coverage.",
+    "x".repeat(450),
+  ].join("\n");
+  const longButInvalid = `Role: Senior marketer. Task: Write copy. ${"filler ".repeat(100)}`;
+
+  assert.equal(acceptBuilderCandidate(longButInvalid, current, policy), current);
+  assert.equal(acceptBuilderCandidate(current, longButInvalid, policy), current);
 });
 
 test("repair instruction carries missing sections and adaptive depth targets", () => {
@@ -211,6 +252,7 @@ test("generation route publishes v2.1 adaptive quality metadata", () => {
   assert.match(serverSource, /qualityProfile:\s*qualityPolicy\.level/);
   assert.match(serverSource, /structureScore:\s*finalStructure\.score/);
   assert.match(serverSource, /getBuilderQualityPolicy/);
+  assert.match(serverSource, /attachmentCount:\s*attachments\.length/);
 });
 
 test("stream recovery requires a fallback model and at least twelve seconds", () => {
@@ -228,6 +270,7 @@ test("streamed Builder route performs one bounded replacement recovery", () => {
   assert.match(serverSource, /sendSse\(res,\s*"chunk",\s*\{\s*text:\s*fallbackPrompt,\s*replace:\s*true\s*\}\)/);
   assert.match(serverSource, /modelStatus:\s*streamModelStatus/);
   assert.match(serverSource, /warning:\s*streamWarning/);
+  assert.match(serverSource, /remainingBudgetMs\s*-\s*STREAM_RECOVERY_FINALIZE_RESERVE_MS/);
 });
 
 test("heuristic evaluator rewards concrete controls without rewarding padding", () => {
