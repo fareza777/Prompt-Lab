@@ -1744,6 +1744,7 @@ export {
   mergeCompareEvaluationPositionSwap,
   resolveCompareEvaluation,
   scorePromptText,
+  tryOpenRouterFallbackModels,
   withCompareEvaluationMethod,
 };
 
@@ -2435,6 +2436,7 @@ async function runStreamedOpenRouterGenerate({
           remainingBudgetMs - STREAM_RECOVERY_FINALIZE_RESERVE_MS,
           22_000
         );
+        const recoveryDeadlineMs = Date.now() + fallbackTimeoutMs;
         const recovered = await tryOpenRouterFallbackModels(
           runtime.client,
           fallbackModels,
@@ -2442,7 +2444,8 @@ async function runStreamedOpenRouterGenerate({
           fallbackTimeoutMs,
           maxTokens,
           0.4,
-          runtime
+          runtime,
+          { deadlineMs: recoveryDeadlineMs }
         );
         const fallbackPrompt = sanitizePromptOutput(recovered.completion.choices?.[0]?.message?.content || "");
         if (isPromptTooShort(fallbackPrompt, qualityPolicy)) {
@@ -2817,15 +2820,20 @@ async function tryOpenRouterFallbackModels(
   timeoutMs,
   maxTokens = 2200,
   temperature = 0.4,
-  runtime = null
+  runtime = null,
+  { deadlineMs = 0, minimumAttemptMs = 1000 } = {}
 ) {
   const errors = [];
   let lastError = null;
 
   for (const model of models) {
+    const remainingChainBudgetMs = deadlineMs
+      ? Math.max(0, deadlineMs - Date.now())
+      : timeoutMs;
+    if (deadlineMs && remainingChainBudgetMs < minimumAttemptMs) break;
     try {
       console.warn(`trying openrouter fallback model ${model}`);
-      const perModelTimeout = Math.min(timeoutMs, 22000);
+      const perModelTimeout = Math.min(timeoutMs, remainingChainBudgetMs, 22000);
       const completion = await withTimeout(client.chat.completions.create(
         buildProviderChatCompletionBody(runtime || { provider: "openrouter" }, {
           model,

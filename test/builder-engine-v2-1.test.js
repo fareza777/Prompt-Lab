@@ -18,7 +18,11 @@ import {
   shouldRecoverStream,
   validatePromptStructure,
 } from "../server/prompt-engine-v2.js";
-import { buildOpenRouterContent, buildPromptSpecInstruction } from "../server/index.js";
+import {
+  buildOpenRouterContent,
+  buildPromptSpecInstruction,
+  tryOpenRouterFallbackModels,
+} from "../server/index.js";
 
 test("adaptive policy keeps small communication tasks concise", () => {
   const payload = {
@@ -271,6 +275,40 @@ test("streamed Builder route performs one bounded replacement recovery", () => {
   assert.match(serverSource, /modelStatus:\s*streamModelStatus/);
   assert.match(serverSource, /warning:\s*streamWarning/);
   assert.match(serverSource, /remainingBudgetMs\s*-\s*STREAM_RECOVERY_FINALIZE_RESERVE_MS/);
+  assert.match(serverSource, /deadlineMs:\s*recoveryDeadlineMs/);
+});
+
+test("fallback models share one absolute recovery deadline", async () => {
+  let attempts = 0;
+  const retryableError = Object.assign(new Error("provider unavailable"), { status: 503 });
+  const client = {
+    chat: {
+      completions: {
+        create: async () => {
+          attempts += 1;
+          await new Promise((resolve) => setTimeout(resolve, 25));
+          throw retryableError;
+        },
+      },
+    },
+  };
+  const startedAt = Date.now();
+
+  await assert.rejects(
+    tryOpenRouterFallbackModels(
+      client,
+      ["fallback/a", "fallback/b", "fallback/c"],
+      [{ role: "user", content: "test" }],
+      1_000,
+      200,
+      0.4,
+      { provider: "openrouter" },
+      { deadlineMs: Date.now() + 45, minimumAttemptMs: 5 }
+    )
+  );
+
+  assert.ok(attempts <= 2, `expected at most 2 attempts, got ${attempts}`);
+  assert.ok(Date.now() - startedAt < 200, "fallback chain exceeded its total deadline");
 });
 
 test("heuristic evaluator rewards concrete controls without rewarding padding", () => {
