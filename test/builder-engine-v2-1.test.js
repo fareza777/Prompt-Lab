@@ -11,7 +11,10 @@ import {
   detectDomains,
   getBuilderQualityPolicy,
   isPromptBelowQualityFloor,
+  evalDelta,
+  localPromptScore,
   PROMPT_ENGINE_VERSION,
+  shouldRecoverStream,
   validatePromptStructure,
 } from "../server/prompt-engine-v2.js";
 import { buildOpenRouterContent, buildPromptSpecInstruction } from "../server/index.js";
@@ -208,4 +211,43 @@ test("generation route publishes v2.1 adaptive quality metadata", () => {
   assert.match(serverSource, /qualityProfile:\s*qualityPolicy\.level/);
   assert.match(serverSource, /structureScore:\s*finalStructure\.score/);
   assert.match(serverSource, /getBuilderQualityPolicy/);
+});
+
+test("stream recovery requires a fallback model and at least twelve seconds", () => {
+  assert.equal(shouldRecoverStream({ remainingBudgetMs: 12_000, fallbackModels: ["fallback/model"] }), true);
+  assert.equal(shouldRecoverStream({ remainingBudgetMs: 11_999, fallbackModels: ["fallback/model"] }), false);
+  assert.equal(shouldRecoverStream({ remainingBudgetMs: 20_000, fallbackModels: [] }), false);
+  assert.equal(shouldRecoverStream({ remainingBudgetMs: Number.NaN, fallbackModels: ["fallback/model"] }), false);
+});
+
+test("streamed Builder route performs one bounded replacement recovery", () => {
+  const serverSource = fs.readFileSync(new URL("../server/index.js", import.meta.url), "utf8");
+
+  assert.match(serverSource, /shouldRecoverStream\s*\(/);
+  assert.match(serverSource, /tryOpenRouterFallbackModels\s*\(/);
+  assert.match(serverSource, /sendSse\(res,\s*"chunk",\s*\{\s*text:\s*fallbackPrompt,\s*replace:\s*true\s*\}\)/);
+  assert.match(serverSource, /modelStatus:\s*streamModelStatus/);
+  assert.match(serverSource, /warning:\s*streamWarning/);
+});
+
+test("heuristic evaluator rewards concrete controls without rewarding padding", () => {
+  const headingOnly = `
+Role: Expert.
+Context: General context.
+Task: Do the task well.
+Output format: Provide an answer.
+Constraints: Follow constraints.
+Acceptance criteria: Make it high quality.`;
+  const executable = `
+Role: Senior lifecycle marketer for subscription mobile apps.
+Context: Re-engage trial users who stopped before activation.
+Task: Write a three-email sequence that increases completed onboarding.
+Output format: Return a table with subject, preview text, body, CTA, and send delay for each email.
+Constraints: Keep each body under 140 words; use exactly one CTA; avoid unsupported performance claims.
+Acceptance criteria: Verify all three emails map to a distinct objection and include measurable CTA copy.`;
+  const padded = `${executable}\n${"Additional background without new requirements. ".repeat(80)}`;
+
+  assert.ok(localPromptScore(executable) >= localPromptScore(headingOnly) + 15);
+  assert.equal(localPromptScore(padded), localPromptScore(executable));
+  assert.equal(evalDelta("Write emails", executable).method, "heuristic-v2.1");
 });

@@ -33,6 +33,7 @@ import {
   buildStructureRetryInstruction,
   getBuilderQualityPolicy,
   isPromptBelowQualityFloor,
+  shouldRecoverStream,
   getExpandedDomainPack,
   getFewShotForMode,
   buildSwappedComparePayload,
@@ -2369,12 +2370,20 @@ async function runStreamedOpenRouterGenerate({
   ];
   const primaryModel = payload.modelSettings?.primaryModel || runtime.defaultModel;
   const timing = resolveProviderTiming(payload, runtime, payload.generationMode);
+  const fallbackModels = getOpenRouterFallbackModels(
+    primaryModel,
+    payload.generationMode,
+    payload.modelSettings?.fallbackModels,
+    runtime.provider
+  );
   const primaryTimeoutMs = Math.min(
     timing.primaryTimeoutMs,
     Math.max(12000, VERCEL_FUNCTION_BUDGET_MS - (Date.now() - startedAt) - 2000)
   );
 
   let completionModel = primaryModel;
+  let streamModelStatus = "primary-model";
+  let streamWarning = "";
   let rawPrompt = "";
   try {
     const stream = await withTimeout(
@@ -2397,9 +2406,39 @@ async function runStreamedOpenRouterGenerate({
     rawPrompt = streamed.content;
     completionModel = streamed.model || primaryModel;
   } catch (error) {
-    sendSse(res, "error", { message: formatProviderError(error) });
-    res.end();
-    return;
+    const remainingBudgetMs = remainingBudget();
+    if (shouldTryFallbackModel(error) && shouldRecoverStream({ remainingBudgetMs, fallbackModels })) {
+      try {
+        sendSsePhase(res, "recovering", "Primary model unavailable; trying a fallback...");
+        const fallbackTimeoutMs = Math.min(timing.fallbackTimeoutMs, remainingBudgetMs, 22_000);
+        const recovered = await tryOpenRouterFallbackModels(
+          runtime.client,
+          fallbackModels,
+          messages,
+          fallbackTimeoutMs,
+          maxTokens,
+          0.4,
+          runtime
+        );
+        const fallbackPrompt = sanitizePromptOutput(recovered.completion.choices?.[0]?.message?.content || "");
+        if (isPromptTooShort(fallbackPrompt, qualityPolicy)) {
+          throw new Error("Fallback model returned an incomplete prompt.");
+        }
+        rawPrompt = fallbackPrompt;
+        completionModel = recovered.completion.model || fallbackModels[0];
+        streamModelStatus = "fallback-model";
+        streamWarning = API_MSG.primaryFallback(formatProviderError(error));
+        sendSse(res, "chunk", { text: fallbackPrompt, replace: true });
+      } catch (fallbackError) {
+        sendSse(res, "error", { message: formatProviderError(fallbackError) });
+        res.end();
+        return;
+      }
+    } else {
+      sendSse(res, "error", { message: formatProviderError(error) });
+      res.end();
+      return;
+    }
   }
 
   let prompt = sanitizePromptOutput(rawPrompt);
@@ -2498,16 +2537,17 @@ async function runStreamedOpenRouterGenerate({
   }
 
   sendSsePhase(res, "done", "Complete");
+  streamWarning = [streamWarning, qualityNote].filter(Boolean).join(" ");
   sendSse(res, "done", {
     prompt,
     source: runtime.provider,
     model: completionModel,
-    modelStatus: "primary-model",
+    modelStatus: streamModelStatus,
     engineVersion: PROMPT_ENGINE_VERSION,
     ...qualityMetadata,
     evalDelta: orEval,
     piiFindings: payload.piiFindings || [],
-    warning: qualityNote,
+    warning: streamWarning,
     quota,
   });
   res.end();

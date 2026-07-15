@@ -107,6 +107,19 @@ export function isPromptBelowQualityFloor(prompt, policy = QUALITY_LEVELS.standa
 }
 
 /**
+ * Keep stream recovery bounded to requests with a real fallback and enough
+ * serverless budget for one non-stream completion.
+ */
+export function shouldRecoverStream({ remainingBudgetMs, fallbackModels } = {}) {
+  return (
+    Number.isFinite(remainingBudgetMs) &&
+    remainingBudgetMs >= 12_000 &&
+    Array.isArray(fallbackModels) &&
+    fallbackModels.length > 0
+  );
+}
+
+/**
  * PromptLab Prompt Engine v2
  * --------------------------------------------------------------------------
  * Implementasi 10 optimasi engine prompt:
@@ -761,12 +774,29 @@ export function localPromptScore(prompt) {
   const text = String(prompt || "");
   if (!text.trim()) return 0;
   const { score: structScore } = validatePromptStructure(text);
-  const length = text.length;
-  const lengthScore = length < 200 ? 20 : length < 500 ? 60 : length < 3000 ? 90 : 75;
-  const hasNumbers = /\b\d+\b/.test(text) ? 10 : 0;
-  const hasBullets = /^[-*\d]+[\.)]?\s/m.test(text) ? 10 : 0;
-  const genericPenalty = /\b(seamless|cutting-?edge|kelas dunia|terbaik|revolusioner|world-?class)\b/i.test(text) ? -15 : 0;
-  return Math.max(0, Math.min(100, Math.round(structScore * 0.5 + lengthScore * 0.3 + hasNumbers + hasBullets + genericPenalty)));
+  // Useful detail gets credit only up to 450 characters. Padding beyond that
+  // cannot increase the score.
+  const usefulLengthScore = Math.min(15, Math.floor(text.trim().length / 30));
+  const quantifiedControlScore = [
+    /\b\d+\b/,
+    /\b(at least|at most|exactly|under|maximum|minimum)\b/i,
+    /\b(minimal|maksimal|tepat|tidak lebih dari)\b/i,
+  ].reduce((score, pattern) => score + (pattern.test(text) ? 3 : 0), 0);
+  const executableControlScore = [
+    /\b(table|json|schema|section|slide|email|file|api|tabel|bagian)\b/i,
+    /\b(test|verify|validate|check|ukur|uji|verifikasi|validasi)\b/i,
+    /\b(avoid|must not|do not|jangan|hindari|tanpa)\b/i,
+  ].reduce((score, pattern) => score + (pattern.test(text) ? 4 : 0), 0);
+  const hasList = /^[-*\d]+[\.)]?\s/m.test(text) ? 4 : 0;
+  const genericPenalty = /\b(expert|high quality|seamless|cutting-?edge|kelas dunia|terbaik|revolusioner|world-?class)\b/i.test(text) ? -12 : 0;
+  return Math.max(0, Math.min(100, Math.round(
+    structScore * 0.5 +
+    usefulLengthScore +
+    quantifiedControlScore +
+    executableControlScore +
+    hasList +
+    genericPenalty
+  )));
 }
 
 /**
@@ -774,12 +804,13 @@ export function localPromptScore(prompt) {
  * Hasil dapat dikirim ke logging/telemetry untuk dashboard "win rate".
  * @param {string} rawInput
  * @param {string} promptLabOutput
- * @returns {{ baseline: number, optimized: number, delta: number, win: boolean }}
+ * @returns {{ baseline: number, optimized: number, delta: number, win: boolean, method: string }}
  */
 export function evalDelta(rawInput, promptLabOutput) {
   const baseline = localPromptScore(rawInput);
   const optimized = localPromptScore(promptLabOutput);
   return {
+    method: "heuristic-v2.1",
     baseline,
     optimized,
     delta: optimized - baseline,
