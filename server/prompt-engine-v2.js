@@ -3,6 +3,109 @@ import { getLanguageLockInstruction, getLanguageMeta } from "../src/promptLangua
 import { buildPhasedAppDeliveryInstruction } from "../src/phasedAppDelivery.js";
 import { buildStructuredAuditInstruction } from "../src/structuredAuditDelivery.js";
 
+const QUALITY_LEVELS = {
+  simple: {
+    minimumSections: 4,
+    minimumCharacters: 280,
+    requirementCount: 3,
+    constraintCount: 2,
+    acceptanceCount: 1,
+  },
+  standard: {
+    minimumSections: 5,
+    minimumCharacters: 450,
+    requirementCount: 5,
+    constraintCount: 3,
+    acceptanceCount: 2,
+  },
+  complex: {
+    minimumSections: 5,
+    minimumCharacters: 650,
+    requirementCount: 7,
+    constraintCount: 4,
+    acceptanceCount: 3,
+  },
+};
+
+export function assessBuilderComplexity(payload = {}) {
+  const text = `${payload.narrative || ""} ${payload.category || ""} ${payload.outputType || ""}`.toLowerCase();
+  const attachmentCount = Array.isArray(payload.attachments)
+    ? payload.attachments.length
+    : Math.max(0, Number(payload.attachmentCount) || 0);
+  const highStakes = /\b(legal|hukum|contract|kontrak|compliance|regulasi|finance|financial|keuangan|cashflow|pajak|tax|medical|medis|healthcare|kesehatan|patient|pasien|medication|obat)\b/i.test(text);
+  const complexSignals = [
+    /application code|aplikasi|web app|mobile app|full[ -]?stack|backend|frontend|api\b/i.test(text),
+    /\b(ppt|powerpoint|presentation|presentasi|pitch deck|slide deck|video prompt|image prompt|structured audit|audit lengkap)\b/i.test(text),
+    /\b(reconcile|rekonsiliasi|multi-file|multiple documents|beberapa dokumen|systematic review|research paper)\b/i.test(text),
+    attachmentCount >= 2,
+    String(payload.narrative || "").length >= 500,
+  ];
+  const standardSignals = [
+    /\b(marketing|campaign|kampanye|landing page|conversion|funnel|strategy|strategi|analysis|analisis|report|laporan|proposal)\b/i.test(text),
+    highStakes,
+    attachmentCount === 1,
+  ];
+  const isShortForm = /\b(email|caption|subject line|short post|pesan singkat|follow-up|follow up)\b/i.test(text);
+  const reasons = [];
+
+  if (complexSignals.some(Boolean)) {
+    if (complexSignals[0]) reasons.push("implementation deliverable");
+    if (complexSignals[1]) reasons.push("structured media deliverable");
+    if (complexSignals[2]) reasons.push("multi-source reasoning");
+    if (attachmentCount >= 2) reasons.push("multiple attachments");
+    if (complexSignals[4]) reasons.push("long source brief");
+    if (highStakes) reasons.push("regulated or high-stakes domain");
+    return { level: "complex", highStakes, reasons };
+  }
+
+  if (isShortForm && !standardSignals.some(Boolean)) {
+    return { level: "simple", highStakes: false, reasons: ["short-form deliverable"] };
+  }
+
+  if (standardSignals[0]) reasons.push("multi-section professional deliverable");
+  if (highStakes) reasons.push("regulated or high-stakes domain");
+  if (attachmentCount === 1) reasons.push("attachment-backed request");
+  if (!reasons.length) reasons.push("general professional request");
+  return { level: "standard", highStakes, reasons };
+}
+
+export function getBuilderQualityPolicy(payload = {}) {
+  const complexity = assessBuilderComplexity(payload);
+  return {
+    ...complexity,
+    ...QUALITY_LEVELS[complexity.level],
+  };
+}
+
+export function buildDepthDirective(payload = {}) {
+  const policy = getBuilderQualityPolicy(payload);
+  const isEnglish = String(payload.outputLanguage || "id").toLowerCase().startsWith("en");
+  const lines = isEnglish
+    ? [
+        `<depth_mandate profile="${policy.level}">`,
+        `- Include at least ${policy.requirementCount} concrete requirements, at least ${policy.constraintCount} constraints, and at least ${policy.acceptanceCount} testable acceptance criteria.`,
+        "- Add detail only when it improves execution; do not pad simple deliverables.",
+      ]
+    : [
+        `<depth_mandate profile="${policy.level}">`,
+        `- Sertakan minimal ${policy.requirementCount} requirement konkret, ${policy.constraintCount} batasan, dan ${policy.acceptanceCount} acceptance criteria yang bisa diuji.`,
+        "- Tambahkan detail hanya jika membantu eksekusi; jangan memanjangkan deliverable sederhana.",
+      ];
+  if (policy.highStakes) {
+    lines.push(
+      isEnglish
+        ? "- Verify evidence, state uncertainty, avoid authoritative professional claims, and flag decisions that require qualified professional review."
+        : "- Lakukan verifikasi bukti, nyatakan ketidakpastian, hindari klaim otoritatif, dan tandai keputusan yang memerlukan review profesional."
+    );
+  }
+  lines.push("</depth_mandate>");
+  return lines.join("\n");
+}
+
+export function isPromptBelowQualityFloor(prompt, policy = QUALITY_LEVELS.standard) {
+  return String(prompt || "").trim().length < (Number(policy?.minimumCharacters) || QUALITY_LEVELS.standard.minimumCharacters);
+}
+
 /**
  * PromptLab Prompt Engine v2
  * --------------------------------------------------------------------------
