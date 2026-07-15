@@ -166,6 +166,7 @@ export function buildIntentSystemPromptXml(payload = {}) {
     "  - Placeholder kosong seperti [isi topik] tanpa di-instantiate.",
     "  - Switching output language away from the user's input language.",
     "</forbidden>",
+    buildDepthDirective(payload),
     `<language>${getLanguageLockInstruction(langCode).replace(/\n/g, "\n  ")}</language>`,
     (() => {
       const audit = buildStructuredAuditInstruction(
@@ -212,6 +213,7 @@ export function buildLeanIntentSystemPrompt(payload = {}) {
     getLanguageLockInstruction(langCode),
   ];
   if (media) blocks.push(media);
+  blocks.push(buildDepthDirective(payload));
   blocks.push("<output>Return only the final prompt.</output>");
   return blocks.join("\n");
 }
@@ -281,7 +283,7 @@ const REQUIRED_SECTIONS = [
  * @param {string} prompt
  * @returns {{ valid: boolean, missing: string[], score: number }}
  */
-export function validatePromptStructure(prompt) {
+export function validatePromptStructure(prompt, policy = QUALITY_LEVELS.simple) {
   const text = String(prompt || "");
   const missing = [];
   let hits = 0;
@@ -292,7 +294,8 @@ export function validatePromptStructure(prompt) {
   }
   const score = Math.round((hits / REQUIRED_SECTIONS.length) * 100);
   // Toleran: ≥4 dari 6 dianggap valid. Kurang dari itu → retry hint.
-  return { valid: hits >= 4, missing, score };
+  const requiredSections = Math.min(REQUIRED_SECTIONS.length, Math.max(1, Number(policy?.minimumSections) || 5));
+  return { valid: hits >= requiredSections, missing, score, requiredSections };
 }
 
 /**
@@ -301,7 +304,7 @@ export function validatePromptStructure(prompt) {
  * @param {string[]} missing
  * @returns {string}
  */
-export function buildStructureRetryInstruction(basePrompt, missing) {
+export function buildStructureRetryInstruction(basePrompt, missing, policy = QUALITY_LEVELS.simple) {
   if (!missing.length) return "";
   const labelMap = {
     role: "Role / Peran spesifik",
@@ -315,6 +318,7 @@ export function buildStructureRetryInstruction(basePrompt, missing) {
   return [
     "Prompt berikut masih kurang section penting. Lengkapi dengan menambahkan:",
     labels,
+    `- Depth targets: ${policy.requirementCount} concrete requirements / requirement konkret, ${policy.constraintCount} concrete constraints / batasan konkret, ${policy.acceptanceCount} testable acceptance criteria.`,
     "",
     "Prompt yang harus dilengkapi:",
     "---",
@@ -420,7 +424,7 @@ const EXPANDED_PACKS = {
     role: "senior full-stack product engineer",
     requirements: ["tentukan stack", "daftar screen", "data model", "API/mock API", "states + validation", "local run steps"],
     constraints: ["hindari arsitektur kabur", "sertakan empty/loading/error states", "harus runnable"],
-    outputControls: ["folder structure", "file-by-file plan", "acceptance tests", "manual QA steps"],
+    outputControls: ["folder structure", "file-by-file plan", "local run steps", "acceptance tests", "manual QA steps"],
     qualityGates: ["app bisa di-run lokal", "flow utama testable", "UI states tercover", "data contract eksplisit"],
   },
   "presentation planning": {
@@ -885,4 +889,4 @@ export function scrubPII(text, { mode = "redact" } = {}) {
 // ---------------------------------------------------------------------------
 // Versi engine — untuk tracking di telemetri
 // ---------------------------------------------------------------------------
-export const PROMPT_ENGINE_VERSION = "v2.0.0";
+export const PROMPT_ENGINE_VERSION = "v2.1.0";

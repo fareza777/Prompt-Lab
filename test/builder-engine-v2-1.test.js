@@ -1,13 +1,20 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 
 import {
   assessBuilderComplexity,
   buildDepthDirective,
+  buildIntentSystemPromptXml,
+  buildLeanIntentSystemPrompt,
+  buildStructureRetryInstruction,
   detectDomains,
   getBuilderQualityPolicy,
   isPromptBelowQualityFloor,
+  PROMPT_ENGINE_VERSION,
+  validatePromptStructure,
 } from "../server/prompt-engine-v2.js";
+import { buildOpenRouterContent, buildPromptSpecInstruction } from "../server/index.js";
 
 test("adaptive policy keeps small communication tasks concise", () => {
   const payload = {
@@ -136,4 +143,69 @@ test("weighted routing keeps specialist context as secondary instead of winning 
   assert.ok(legal.confidence > 50);
   assert.equal(investorDeck.primary, "presentation planning");
   assert.equal(investorDeck.secondary, "finance & accounting");
+});
+
+test("full and lean provider prompts share the adaptive depth mandate", () => {
+  const payload = {
+    narrative: "Build a production-ready inventory application with API and tests.",
+    category: "Coding",
+    outputType: "Application Code",
+    outputLanguage: "en",
+  };
+
+  assert.match(buildIntentSystemPromptXml(payload), /<depth_mandate profile="complex">/);
+  assert.match(buildLeanIntentSystemPrompt(payload), /<depth_mandate profile="complex">/);
+  assert.match(buildOpenRouterContent(payload, [], { lean: true }), /Quality gates:/i);
+  assert.match(buildOpenRouterContent(payload, [], { lean: true }), /Output controls:/i);
+});
+
+test("lean prompt spec retains domain output controls and quality gates", () => {
+  const spec = buildPromptSpecInstruction({
+    narrative: "Build a bakery POS application.",
+    category: "Coding",
+    outputType: "Application Code",
+    outputLanguage: "en",
+  }, [], { lean: true });
+
+  assert.match(spec, /Output controls:/i);
+  assert.match(spec, /Quality gates:/i);
+  assert.match(spec, /local run steps/i);
+});
+
+test("structure validation is proportional to the selected policy", () => {
+  const fourSections = [
+    "Role: Senior communication writer.",
+    "Context: Follow up after a client call.",
+    "Task: Write a thank-you email.",
+    "Output format: Subject and two short paragraphs.",
+  ].join("\n");
+  const simple = getBuilderQualityPolicy({ narrative: "Write a follow-up email", outputType: "Content" });
+  const standard = getBuilderQualityPolicy({ narrative: "Create a marketing campaign", outputType: "Content" });
+
+  assert.equal(validatePromptStructure(fourSections, simple).valid, true);
+  assert.equal(validatePromptStructure(fourSections, standard).valid, false);
+  assert.equal(validatePromptStructure(fourSections, standard).requiredSections, 5);
+});
+
+test("repair instruction carries missing sections and adaptive depth targets", () => {
+  const policy = getBuilderQualityPolicy({
+    narrative: "Build a complete web application with API and tests.",
+    outputType: "Application Code",
+    outputLanguage: "en",
+  });
+  const retry = buildStructureRetryInstruction("Role: engineer", ["context", "acceptance"], policy);
+
+  assert.match(retry, /Context \/ Konteks/);
+  assert.match(retry, /Acceptance Criteria/);
+  assert.match(retry, /7 concrete requirements/i);
+  assert.match(retry, /3 testable acceptance criteria/i);
+});
+
+test("generation route publishes v2.1 adaptive quality metadata", () => {
+  const serverSource = fs.readFileSync(new URL("../server/index.js", import.meta.url), "utf8");
+
+  assert.equal(PROMPT_ENGINE_VERSION, "v2.1.0");
+  assert.match(serverSource, /qualityProfile:\s*qualityPolicy\.level/);
+  assert.match(serverSource, /structureScore:\s*finalStructure\.score/);
+  assert.match(serverSource, /getBuilderQualityPolicy/);
 });

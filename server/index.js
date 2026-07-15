@@ -26,10 +26,13 @@ import {
 import {
   buildIntentSystemPromptXml,
   buildLeanIntentSystemPrompt,
+  buildDepthDirective,
   buildOptimizerSystemPromptXml,
   buildCompareSystemPromptXml,
   validatePromptStructure,
   buildStructureRetryInstruction,
+  getBuilderQualityPolicy,
+  isPromptBelowQualityFloor,
   getExpandedDomainPack,
   getFewShotForMode,
   buildSwappedComparePayload,
@@ -1309,6 +1312,7 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
       { ...basePayload, modelSettings: routedSettings },
       attachments
     );
+    const qualityPolicy = getBuilderQualityPolicy({ ...payload, attachments });
     const runtime = getRuntimeProvider(payload.modelSettings);
     // Quality parity: MiniMax no longer skips structure retry / critique-refine.
     // Streaming stays off for MiniMax to avoid serverless timeout risk.
@@ -1320,6 +1324,7 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
     if (runtime.provider !== "openai") {
       if (!runtime.client) {
         const fallbackPrompt = buildFallbackPrompt(payload, attachments);
+        const qualityMetadata = getBuilderQualityMetadata(fallbackPrompt, qualityPolicy);
         await finishGenerateResponse(res, quotaSession, {
           eventType: "generate_prompt",
           metadata: {
@@ -1327,10 +1332,12 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
             outputType: payload.outputType,
             provider: runtime.provider,
             source: "fallback",
+            ...qualityMetadata,
           },
           outputText: fallbackPrompt,
           tokenEstimate: quotaEstimate,
         }, {
+          ...qualityMetadata,
           source: "fallback",
           model: "Local fallback",
           modelStatus: "local-fallback",
@@ -1350,6 +1357,7 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
             attachments,
             runtime,
             membership,
+            qualityPolicy,
             startedAt,
             remainingBudget,
           });
@@ -1363,7 +1371,7 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
         let retried = false;
         let truncatedOutput = isCompletionTruncated(completion);
 
-        if (isPromptTooShort(prompt) && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
+        if (isPromptTooShort(prompt, qualityPolicy) && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
           retried = true;
           try {
             generation = await createOpenRouterCompletion(payload, attachments, runtime, membership.plan, startedAt);
@@ -1375,18 +1383,18 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
           }
         }
 
-        if (isPromptTooShort(prompt)) {
+        if (isPromptTooShort(prompt, qualityPolicy)) {
           prompt = buildFallbackPrompt(payload, attachments);
         }
 
         // v2: structure validator + retry (all non-OpenAI providers).
-        const orStructCheck = validatePromptStructure(prompt);
+        const orStructCheck = validatePromptStructure(prompt, qualityPolicy);
         const structRetryBudget = remainingBudget();
         if (!orStructCheck.valid && structRetryBudget > RETRY_ON_EMPTY_RESERVE_MS) {
           try {
             const retryMessages = [
               { role: "system", content: buildIntentSystemPromptXml(payload) },
-              { role: "user", content: buildStructureRetryInstruction(prompt, orStructCheck.missing) },
+              { role: "user", content: buildStructureRetryInstruction(prompt, orStructCheck.missing, qualityPolicy) },
             ];
             const primaryModelLocal = payload.modelSettings?.primaryModel || runtime.defaultModel;
             const timingLocal = capProviderTimeouts(getOpenRouterTiming(payload.generationMode));
@@ -1404,7 +1412,7 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
               ), retryTimeoutMs, primaryModelLocal);
               const retriedRaw = retryRes.choices?.[0]?.message?.content || "";
               const retried = sanitizePromptOutput(retriedRaw);
-              if (retried && !isPromptTooShort(retried)) {
+              if (retried && !isPromptTooShort(retried, qualityPolicy)) {
                 prompt = retried;
               }
             }
@@ -1414,7 +1422,7 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
         }
 
         let qualityNote = "";
-        if (payload.qualityMode === "premium" && !isPromptTooShort(prompt) && remainingBudget() > PREMIUM_PASS_RESERVE_MS) {
+        if (payload.qualityMode === "premium" && !isPromptTooShort(prompt, qualityPolicy) && remainingBudget() > PREMIUM_PASS_RESERVE_MS) {
           const primaryModel = payload.modelSettings?.primaryModel || runtime.defaultModel;
           const fallbackModels = getOpenRouterFallbackModels(
             primaryModel,
@@ -1434,8 +1442,9 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
               primaryModel,
               fallbackModels,
               plan: membership.plan,
+              qualityPolicy,
             });
-            if (refined && !isPromptTooShort(refined) && refined !== prompt) {
+            if (refined && !isPromptTooShort(refined, qualityPolicy) && refined !== prompt) {
               prompt = refined;
               qualityNote = API_MSG.premiumQualityApplied;
             }
@@ -1447,6 +1456,7 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
         // v2: dialect render + eval delta.
         prompt = renderForModelDialect(prompt, payload.modelTarget, payload.outputLanguage);
         const orEval = evalDelta(payload.narrative, prompt);
+        const qualityMetadata = getBuilderQualityMetadata(prompt, qualityPolicy);
 
         const warnings = [];
         if (generation.usedFallbackModel) warnings.push(API_MSG.primaryFallback(generation.primaryError));
@@ -1466,11 +1476,13 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
             outputType: payload.outputType,
             provider: runtime.provider,
             source: runtime.provider,
+            ...qualityMetadata,
           },
           outputText: prompt,
           tokenEstimate: quotaEstimate,
         }, {
           engineVersion: PROMPT_ENGINE_VERSION,
+          ...qualityMetadata,
           evalDelta: orEval,
           piiFindings: payload.piiFindings || [],
           source: runtime.provider,
@@ -1482,6 +1494,7 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
       } catch (error) {
         console.warn("generate provider failed", formatProviderError(error));
         const fallbackPrompt = buildFallbackPrompt(payload, attachments);
+        const qualityMetadata = getBuilderQualityMetadata(fallbackPrompt, qualityPolicy);
         await finishGenerateResponse(res, quotaSession, {
           eventType: "generate_prompt",
           metadata: {
@@ -1489,10 +1502,12 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
             outputType: payload.outputType,
             provider: runtime.provider,
             source: "fallback",
+            ...qualityMetadata,
           },
           outputText: fallbackPrompt,
           tokenEstimate: quotaEstimate,
         }, {
+          ...qualityMetadata,
           source: "fallback",
           model: "Local fallback",
           modelStatus: "local-fallback",
@@ -1505,6 +1520,7 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
 
     if (!runtime.client) {
       const fallbackPrompt = buildFallbackPrompt(payload, attachments);
+      const qualityMetadata = getBuilderQualityMetadata(fallbackPrompt, qualityPolicy);
       await finishGenerateResponse(res, quotaSession, {
         eventType: "generate_prompt",
         metadata: {
@@ -1512,10 +1528,12 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
           outputType: payload.outputType,
           provider: runtime.provider,
           source: "fallback",
+          ...qualityMetadata,
         },
         outputText: fallbackPrompt,
         tokenEstimate: quotaEstimate,
       }, {
+        ...qualityMetadata,
         source: "fallback",
         model: "Local fallback",
         modelStatus: "local-fallback",
@@ -1538,7 +1556,7 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
     let response = await callOpenAI();
     let openaiPrompt = sanitizePromptOutput(response.output_text);
     const openaiWarnings = [];
-    if (isPromptTooShort(openaiPrompt) && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
+    if (isPromptTooShort(openaiPrompt, qualityPolicy) && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
       try {
         response = await callOpenAI();
         openaiPrompt = sanitizePromptOutput(response.output_text);
@@ -1547,23 +1565,23 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
         console.warn("openai retry-on-empty failed", retryError.message);
       }
     }
-    if (isPromptTooShort(openaiPrompt)) {
+    if (isPromptTooShort(openaiPrompt, qualityPolicy)) {
       openaiPrompt = buildFallbackPrompt(payload, attachments);
     }
 
     // v2: structure validator + 1 retry kalau section kritis hilang.
-    const structCheck = validatePromptStructure(openaiPrompt);
+    const structCheck = validatePromptStructure(openaiPrompt, qualityPolicy);
     if (!structCheck.valid && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
       try {
         const retryRes = await runtime.client.responses.create({
           model: payload.modelSettings.primaryModel || runtime.defaultModel,
           input: [
             { role: "system", content: [{ type: "input_text", text: systemPrompt }] },
-            { role: "user", content: [{ type: "input_text", text: buildStructureRetryInstruction(openaiPrompt, structCheck.missing) }] },
+            { role: "user", content: [{ type: "input_text", text: buildStructureRetryInstruction(openaiPrompt, structCheck.missing, qualityPolicy) }] },
           ],
         });
         const retried = sanitizePromptOutput(retryRes.output_text);
-        if (retried && !isPromptTooShort(retried)) {
+        if (retried && !isPromptTooShort(retried, qualityPolicy)) {
           openaiPrompt = retried;
           openaiWarnings.push(`Auto-retry untuk melengkapi section: ${structCheck.missing.join(", ")}.`);
         }
@@ -1573,7 +1591,7 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
     }
 
     // v2: self-consistency n=2 untuk high-stakes request.
-    if (shouldRunSelfConsistency(payload, remainingBudget()) && !isPromptTooShort(openaiPrompt)) {
+    if (shouldRunSelfConsistency(payload, remainingBudget()) && !isPromptTooShort(openaiPrompt, qualityPolicy)) {
       try {
         const altRes = await runtime.client.responses.create({
           model: payload.modelSettings.primaryModel || runtime.defaultModel,
@@ -1583,7 +1601,7 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
           ],
         });
         const altPrompt = sanitizePromptOutput(altRes.output_text);
-        if (altPrompt && !isPromptTooShort(altPrompt)) {
+        if (altPrompt && !isPromptTooShort(altPrompt, qualityPolicy)) {
           const picked = pickBestCandidate([openaiPrompt, altPrompt]);
           if (picked.best && picked.best !== openaiPrompt) {
             openaiPrompt = picked.best;
@@ -1595,9 +1613,8 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
       }
     }
 
-    // v2: critique-refine sekarang jalan untuk semua user (bukan premium-only).
-    // Premium tetap pakai pass lebih panjang via flag di runCritiqueRefinePass.
-    if (payload.qualityMode === "premium" && !isPromptTooShort(openaiPrompt) && remainingBudget() > PREMIUM_PASS_RESERVE_MS) {
+    // v2.1: critique-refine tetap premium-only agar perilaku billing tidak berubah.
+    if (payload.qualityMode === "premium" && !isPromptTooShort(openaiPrompt, qualityPolicy) && remainingBudget() > PREMIUM_PASS_RESERVE_MS) {
       try {
         const premiumLang = getLanguageMeta(
           payload.outputLanguage || resolveOutputLanguage(payload.narrative, openaiPrompt)
@@ -1631,7 +1648,7 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
             ],
           });
           const refined = sanitizePromptOutput(refineRes.output_text);
-          if (refined && !isPromptTooShort(refined)) {
+          if (refined && !isPromptTooShort(refined, qualityPolicy)) {
             openaiPrompt = refined;
             openaiWarnings.push(API_MSG.premiumQualityApplied);
           }
@@ -1644,6 +1661,7 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
     openaiPrompt = renderForModelDialect(openaiPrompt, payload.modelTarget, payload.outputLanguage);
     // v2: eval delta untuk telemetri win-rate.
     const openaiEval = evalDelta(payload.narrative, openaiPrompt);
+    const qualityMetadata = getBuilderQualityMetadata(openaiPrompt, qualityPolicy);
     await finishGenerateResponse(res, quotaSession, {
       eventType: "generate_prompt",
       metadata: {
@@ -1655,11 +1673,13 @@ app.post("/api/generate-prompt", attachAiRateLimitIdentity, aiRateLimit, upload.
         outputType: payload.outputType,
         provider: runtime.provider,
         source: "openai",
+        ...qualityMetadata,
       },
       outputText: openaiPrompt,
       tokenEstimate: quotaEstimate,
     }, {
       engineVersion: PROMPT_ENGINE_VERSION,
+      ...qualityMetadata,
       evalDelta: openaiEval,
       piiFindings: payload.piiFindings || [],
       source: "openai",
@@ -1734,14 +1754,19 @@ function normalizeQualityMode(value) {
   return "standard";
 }
 
-const MIN_PROMPT_LENGTH = 280;
-
-function isPromptTooShort(text) {
-  if (!text || typeof text !== "string") return true;
-  return text.trim().length < MIN_PROMPT_LENGTH;
+function isPromptTooShort(text, qualityPolicy = { minimumCharacters: 280 }) {
+  return isPromptBelowQualityFloor(text, qualityPolicy);
 }
 
-async function runCritiqueRefinePass({ runtime, payload, attachments, basePrompt, timing, primaryModel, fallbackModels, plan = "Free" }) {
+function getBuilderQualityMetadata(prompt, qualityPolicy) {
+  const finalStructure = validatePromptStructure(prompt, qualityPolicy);
+  return {
+    qualityProfile: qualityPolicy.level,
+    structureScore: finalStructure.score,
+  };
+}
+
+async function runCritiqueRefinePass({ runtime, payload, attachments, basePrompt, timing, primaryModel, fallbackModels, plan = "Free", qualityPolicy }) {
   const refineMaxTokens = Math.min(8000, resolveGenerateMaxTokens(plan, payload) + 400);
   const langCode = payload.outputLanguage || resolveOutputLanguage(payload.narrative, payload.prompt, basePrompt);
   const langMeta = getLanguageMeta(langCode);
@@ -1835,7 +1860,7 @@ Output: prompt final saja.`,
     ), timing.primaryTimeoutMs, primaryModel);
     const refined = refineRes.choices?.[0]?.message?.content || "";
     const sanitized = sanitizePromptOutput(refined);
-    return sanitized && !isPromptTooShort(sanitized) ? sanitized : basePrompt;
+    return sanitized && !isPromptTooShort(sanitized, qualityPolicy) ? sanitized : basePrompt;
   } catch (error) {
     if (shouldTryFallbackModel(error) && fallbackModels.length > 0) {
       try {
@@ -1850,7 +1875,7 @@ Output: prompt final saja.`,
         );
         const refined = fb.completion.choices?.[0]?.message?.content || "";
         const sanitized = sanitizePromptOutput(refined);
-        return sanitized && !isPromptTooShort(sanitized) ? sanitized : basePrompt;
+        return sanitized && !isPromptTooShort(sanitized, qualityPolicy) ? sanitized : basePrompt;
       } catch {
         return basePrompt;
       }
@@ -2330,6 +2355,7 @@ async function runStreamedOpenRouterGenerate({
   attachments,
   runtime,
   membership,
+  qualityPolicy,
   startedAt,
   remainingBudget,
 }) {
@@ -2377,17 +2403,17 @@ async function runStreamedOpenRouterGenerate({
   }
 
   let prompt = sanitizePromptOutput(rawPrompt);
-  if (isPromptTooShort(prompt)) {
+  if (isPromptTooShort(prompt, qualityPolicy)) {
     prompt = buildFallbackPrompt(payload, attachments);
   }
 
   sendSsePhase(res, "validating", "Validating structure...");
-  const structCheck = validatePromptStructure(prompt);
+  const structCheck = validatePromptStructure(prompt, qualityPolicy);
   if (!structCheck.valid && remainingBudget() > RETRY_ON_EMPTY_RESERVE_MS) {
     try {
       const retryMessages = [
         { role: "system", content: buildIntentSystemPromptXml(payload) },
-        { role: "user", content: buildStructureRetryInstruction(prompt, structCheck.missing) },
+        { role: "user", content: buildStructureRetryInstruction(prompt, structCheck.missing, qualityPolicy) },
       ];
       const retryTimeoutMs = Math.min(timing.primaryTimeoutMs, remainingBudget() - 2500);
       if (retryTimeoutMs >= 8000) {
@@ -2405,7 +2431,7 @@ async function runStreamedOpenRouterGenerate({
           primaryModel
         );
         const retried = sanitizePromptOutput(retryRes.choices?.[0]?.message?.content || "");
-        if (retried && !isPromptTooShort(retried)) prompt = retried;
+        if (retried && !isPromptTooShort(retried, qualityPolicy)) prompt = retried;
       }
     } catch (retryError) {
       console.warn("stream structure retry failed", retryError.message);
@@ -2413,7 +2439,7 @@ async function runStreamedOpenRouterGenerate({
   }
 
   let qualityNote = "";
-  if (payload.qualityMode === "premium" && !isPromptTooShort(prompt) && remainingBudget() > PREMIUM_PASS_RESERVE_MS) {
+  if (payload.qualityMode === "premium" && !isPromptTooShort(prompt, qualityPolicy) && remainingBudget() > PREMIUM_PASS_RESERVE_MS) {
     sendSsePhase(res, "critique", "Running critique pass...");
     try {
       const refined = await runCritiqueRefinePass({
@@ -2430,8 +2456,9 @@ async function runStreamedOpenRouterGenerate({
           runtime.provider
         ),
         plan: membership.plan,
+        qualityPolicy,
       });
-      if (refined && !isPromptTooShort(refined) && refined !== prompt) {
+      if (refined && !isPromptTooShort(refined, qualityPolicy) && refined !== prompt) {
         sendSsePhase(res, "refining", "Applying refinements...");
         prompt = refined;
         sendSse(res, "chunk", { text: refined, replace: true });
@@ -2445,6 +2472,7 @@ async function runStreamedOpenRouterGenerate({
   sendSsePhase(res, "dialect", "Applying model dialect...");
   prompt = renderForModelDialect(prompt, payload.modelTarget, payload.outputLanguage);
   const orEval = evalDelta(payload.narrative, prompt);
+  const qualityMetadata = getBuilderQualityMetadata(prompt, qualityPolicy);
 
   let quota = null;
   if (quotaSession) {
@@ -2456,6 +2484,7 @@ async function runStreamedOpenRouterGenerate({
           stream: true,
           modelTarget: payload.modelTarget,
           provider: runtime.provider,
+          ...qualityMetadata,
         },
         outputText: prompt,
         tokenEstimate: quotaEstimate,
@@ -2475,6 +2504,7 @@ async function runStreamedOpenRouterGenerate({
     model: completionModel,
     modelStatus: "primary-model",
     engineVersion: PROMPT_ENGINE_VERSION,
+    ...qualityMetadata,
     evalDelta: orEval,
     piiFindings: payload.piiFindings || [],
     warning: qualityNote,
@@ -2887,6 +2917,8 @@ function buildPromptSpecInstruction(payload, attachments = [], { lean = false } 
 - Role: ${pack.role}
 - Requirements: ${pack.requirements.slice(0, 5).join("; ")}
 - Constraints: ${pack.constraints.slice(0, 4).join("; ")}
+- Output controls: ${pack.outputControls.slice(0, 4).join("; ")}
+- Quality gates: ${pack.qualityGates.slice(0, 4).join("; ")}
 ${attachmentManifest ? `- Attachments:\n${attachmentManifest}` : ""}`;
   }
   return `Prompt Spec JSON planning step:
@@ -2961,7 +2993,7 @@ function getDomainPromptPack(payload = {}) {
       role: "senior full-stack product engineer",
       requirements: ["define stack", "list screens", "specify data model", "map API or mock API", "include states and validation", "include local run steps"],
       constraints: ["avoid vague architecture", "include empty/loading/error states", "keep implementation runnable"],
-      outputControls: ["folder structure", "file-by-file plan", "acceptance tests", "manual QA steps"],
+      outputControls: ["folder structure", "file-by-file plan", "local run steps", "acceptance tests", "manual QA steps"],
       qualityGates: ["app can run locally", "core flow is testable", "UI states are covered", "data contracts are explicit"],
     },
     "presentation planning": {
@@ -3607,6 +3639,8 @@ ${deliverableGuard}
 - Jika isi lampiran tersedia, gunakan isi tersebut sebagai konteks utama.
 ${targetGuidance}${conditionalInstructions}${antiGeneric}
 
+${buildDepthDirective(payload)}
+
 ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative))}`,
     },
   ];
@@ -3661,6 +3695,7 @@ Jenis Output: ${payload.outputType || "Tidak dipilih"}
 ${promptSpec}
 ${deliverableGuard}
 ${targetGuidance}${conditionalInstructions}
+${buildDepthDirective(payload)}
 Output WAJIB langsung berupa prompt final siap copy-paste. Tanpa preface atau meta brief.
 
 ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative))}`;
@@ -3705,6 +3740,8 @@ Aturan penting:
 ${deliverableGuard}
 - Jika isi lampiran tersedia, gunakan isi tersebut sebagai konteks utama.
 ${targetGuidance}${conditionalInstructions}${antiGeneric}
+
+${buildDepthDirective(payload)}
 
 ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative))}`;
 
@@ -3804,6 +3841,8 @@ Ikuti jenis deliverable yang diminta user secara eksplisit. Jika user meminta PP
 ${deliverableGuard}
 ${targetGuidance}
 ${conditionalInstructions}
+
+${buildDepthDirective(payload)}
 
 ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative))}
 
