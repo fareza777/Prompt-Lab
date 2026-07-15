@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   assessBuilderComplexity,
   buildDepthDirective,
+  detectDomains,
   getBuilderQualityPolicy,
   isPromptBelowQualityFloor,
 } from "../server/prompt-engine-v2.js";
@@ -97,4 +98,42 @@ test("quality floor uses the selected profile instead of one global length", () 
 
   assert.equal(isPromptBelowQualityFloor(text, simple), false);
   assert.equal(isPromptBelowQualityFloor(text, standard), true);
+});
+
+test("weighted domain corpus routes explicit deliverables and specialist work", () => {
+  const corpus = [
+    ["Write a short client follow-up email", "Content", "generic prompt"],
+    ["Create a conversion landing page campaign with CTA", "Content", "marketing conversion workflow"],
+    ["Build inventory screens, API, and tests", "Application Code", "runnable application"],
+    ["Create an investor pitch deck with valuation and cashflow", "PPT", "presentation planning"],
+    ["Write an annual operations report with evidence", "Word Document", "structured document"],
+    ["Review a vendor contract and write a legal risk report", "Analysis", "legal & compliance"],
+    ["Analyze cashflow, tax, budget, and valuation downside", "Analysis", "finance & accounting"],
+    ["Prepare patient medication safety guidance for a clinic", "Content", "healthcare & clinical"],
+    ["Design a K-12 curriculum and lesson plan", "Content", "education k12 & higher"],
+    ["Generate a studio product photograph with Flux tuning", "Image Prompt", "AI image generation prompt"],
+    ["Generate a 15-second cinematic ad with scene timing", "Video Prompt", "AI video generation prompt"],
+    ["Analyze KPI spreadsheet data for a Power BI dashboard", "Analysis", "data analytics & reporting"],
+  ];
+
+  for (const [narrative, outputType, expected] of corpus) {
+    assert.equal(detectDomains({ narrative, outputType }).primary, expected, narrative);
+  }
+});
+
+test("weighted routing keeps specialist context as secondary instead of winning ties by source order", () => {
+  const legal = detectDomains({
+    narrative: "Review a vendor contract and prepare a structured legal compliance report.",
+    outputType: "Analysis",
+  });
+  const investorDeck = detectDomains({
+    narrative: "Create an investor pitch deck covering valuation, budget, and cashflow.",
+    outputType: "PPT",
+  });
+
+  assert.equal(legal.primary, "legal & compliance");
+  assert.equal(legal.secondary, "structured document");
+  assert.ok(legal.confidence > 50);
+  assert.equal(investorDeck.primary, "presentation planning");
+  assert.equal(investorDeck.secondary, "finance & accounting");
 });

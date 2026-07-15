@@ -337,47 +337,57 @@ export function buildStructureRetryInstruction(basePrompt, missing) {
 export function detectDomains(payload = {}) {
   const text = `${payload.narrative || ""} ${payload.category || ""} ${payload.outputType || ""}`.toLowerCase();
   const signals = [
-    { domain: "marketing conversion workflow", re: /\b(marketing|iklan|ads|kampanye|copywriting|landing|funnel|conversion|leads|cta|brand)\b/i },
-    { domain: "runnable application", re: /\b(aplikasi|app|website|web app|dashboard|sistem|platform|software|frontend|backend|full-?stack|api|kasir|pos)\b/i },
-    { domain: "presentation planning", re: /\b(ppt|powerpoint|presentasi|slide|deck|pitch)\b/i },
-    { domain: "structured document", re: /\b(word|docx|dokumen|laporan|report|proposal|memo|sop|kebijakan)\b/i },
-    { domain: "creative photo editing tool", re: /\b(edit foto|photo editor|image editor|editor foto)\b/i },
+    { domain: "marketing conversion workflow", weight: 35, re: /\b(marketing|iklan|ads|kampanye|campaign|copywriting|landing|funnel|conversion|leads|cta|brand)\b/i },
+    { domain: "runnable application", weight: 45, re: /\b(aplikasi|app|website|web app|mobile app|dashboard|sistem|platform|software|frontend|backend|full-?stack|api|kasir|pos)\b/i },
+    { domain: "presentation planning", weight: 45, re: /\b(ppt|powerpoint|presentasi|presentation|slide|deck|pitch)\b/i },
+    { domain: "structured document", weight: 25, re: /\b(word|docx|dokumen|laporan|report|proposal|memo|sop|kebijakan)\b/i },
+    { domain: "creative photo editing tool", weight: 55, re: /\b(edit foto|photo editor|image editor|editor foto)\b/i },
     {
       domain: "AI image generation prompt",
+      weight: 65,
       re: /\b(image prompt|text[\s-]?to[\s-]?image|t2i|midjourney|dall-?e|flux|stable diffusion|sdxl|ideogram|leonardo|firefly|image ai)\b/i,
     },
     {
       domain: "AI video generation prompt",
+      weight: 65,
       re: /\b(video prompt|text[\s-]?to[\s-]?video|t2v|runway|kling|sora|pika|haiper|luma|veo|minimax video|hailuo|seedance|video ai|generate video)\b/i,
     },
-    { domain: "survey or form analysis", re: /\b(survey|kuesioner|questionnaire|formulir|riset|responden|sample)\b/i },
-    { domain: "legal & compliance", re: /\b(legal|hukum|kontrak|perjanjian|nda|tos|privacy|gdpr|uu pdp|compliance|regulasi)\b/i },
-    { domain: "finance & accounting", re: /\b(finance|keuangan|akuntansi|laporan keuangan|pajak|tax|invoice|cashflow|budget|investor|valuation)\b/i },
-    { domain: "education k12 & higher", re: /\b(pelajaran|materi|kurikulum|silabus|guru|murid|siswa|mahasiswa|rpp|modul ajar|lesson plan)\b/i },
-    { domain: "ux research & product discovery", re: /\b(ux|user research|persona|user journey|usability|wireframe|prototype|product discovery|jtbd)\b/i },
-    { domain: "ecommerce & marketplace ops", re: /\b(tokopedia|shopee|lazada|marketplace|product listing|toko online|katalog|sku|promo)\b/i },
-    { domain: "healthcare & clinical", re: /\b(kesehatan|medis|dokter|pasien|klinik|diagnosa|obat|farmasi|rumah sakit|edukasi pasien)\b/i },
-    { domain: "data analytics & reporting", re: /\b(analisis data|dashboard data|sql|bigquery|metabase|kpi|metrics|cohort|funnel analytics|tableau|power bi)\b/i },
-    { domain: "hr & people ops", re: /\b(hr|sdm|rekrutmen|recruitment|onboarding|kpi karyawan|job description|interview|appraisal)\b/i },
-    { domain: "customer support & ops", re: /\b(customer support|cs|helpdesk|ticket|faq|knowledge base|escalation|sla)\b/i },
-    { domain: "social media content", re: /\b(tiktok|instagram|reels|twitter|x post|threads|linkedin|caption|hashtag|short video|konten medsos)\b/i },
-    { domain: "video script & podcast", re: /\b(youtube|video script|naskah|voice over|vo|podcast|episode|shorts script)\b/i },
+    { domain: "survey or form analysis", weight: 45, re: /\b(survey|kuesioner|questionnaire|formulir|riset|responden|sample)\b/i },
+    { domain: "legal & compliance", weight: 70, re: /\b(legal|hukum|contract|kontrak|perjanjian|nda|tos|privacy|gdpr|uu pdp|compliance|regulasi)\b/i },
+    { domain: "finance & accounting", weight: 60, re: /\b(finance|financial|keuangan|akuntansi|laporan keuangan|pajak|tax|invoice|cashflow|budget|investor|valuation)\b/i },
+    { domain: "education k12 & higher", weight: 55, re: /\b(pelajaran|materi|curriculum|kurikulum|silabus|guru|murid|siswa|mahasiswa|rpp|modul ajar|lesson plan)\b/i },
+    { domain: "ux research & product discovery", weight: 50, re: /\b(ux|user research|persona|user journey|usability|wireframe|prototype|product discovery|jtbd)\b/i },
+    { domain: "ecommerce & marketplace ops", weight: 50, re: /\b(tokopedia|shopee|lazada|marketplace|product listing|toko online|katalog|sku|promo)\b/i },
+    { domain: "healthcare & clinical", weight: 70, re: /\b(healthcare|health|medical|medication|patient|clinic|kesehatan|medis|dokter|pasien|klinik|diagnosa|obat|farmasi|rumah sakit|edukasi pasien)\b/i },
+    { domain: "data analytics & reporting", weight: 60, re: /\b(analisis data|data analysis|dashboard data|spreadsheet|sql|bigquery|metabase|kpi|metrics|cohort|funnel analytics|tableau|power bi)\b/i },
+    { domain: "hr & people ops", weight: 50, re: /\b(hr|sdm|rekrutmen|recruitment|onboarding|kpi karyawan|job description|interview|appraisal)\b/i },
+    { domain: "customer support & ops", weight: 50, re: /\b(customer support|cs|helpdesk|ticket|faq|knowledge base|escalation|sla)\b/i },
+    { domain: "social media content", weight: 45, re: /\b(tiktok|instagram|reels|twitter|x post|threads|linkedin|caption|hashtag|short video|konten medsos)\b/i },
+    { domain: "video script & podcast", weight: 45, re: /\b(youtube|video script|naskah|voice over|vo|podcast|episode|shorts script)\b/i },
   ];
-
-  const matches = signals.filter((s) => s.re.test(text));
-  if (matches.length === 0) {
+  const outputBonuses = {
+    "application code": "runnable application",
+    ppt: "presentation planning",
+    "word document": "structured document",
+    "image prompt": "AI image generation prompt",
+    "video prompt": "AI video generation prompt",
+  };
+  const scores = signals.map((signal, index) => {
+    const regex = new RegExp(signal.re.source, "gi");
+    const occurrences = (text.match(regex) || []).length;
+    const outputBonus = outputBonuses[String(payload.outputType || "").toLowerCase()] === signal.domain ? 220 : 0;
+    return { ...signal, index, score: occurrences * signal.weight + outputBonus };
+  }).filter((signal) => signal.score > 0);
+  if (scores.length === 0) {
     return { primary: "generic prompt", secondary: null, confidence: 0 };
   }
-  // Skor sederhana: berapa banyak match di teks
-  matches.sort((a, b) => {
-    const ac = (text.match(a.re) || []).length;
-    const bc = (text.match(b.re) || []).length;
-    return bc - ac;
-  });
+  scores.sort((a, b) => b.score - a.score || a.index - b.index);
+  const secondScore = scores[1]?.score || 0;
+  const confidence = Math.round((scores[0].score / (scores[0].score + secondScore || scores[0].score)) * 100);
   return {
-    primary: matches[0].domain,
-    secondary: matches[1]?.domain || null,
-    confidence: Math.min(100, matches.length * 30),
+    primary: scores[0].domain,
+    secondary: scores[1]?.domain || null,
+    confidence,
   };
 }
 
