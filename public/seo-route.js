@@ -501,6 +501,18 @@
       headline: "Best Prompt for Financial Analysis: Read a 10-K in One Pass",
       datePublished: "2026-07-13",
       dateModified: "2026-07-13",
+    },
+    "/blog/best-prompt-for-teaching": {
+      title: "Best Prompt for Teaching: Lesson Plans That Actually Stick | PromptLab",
+      description: "The best prompt for teaching isn't one sentence — it's a 4-prompt framework (objectives, activities, assessment, differentiated explanation) that produces Bloom-aligned, UDL-tagged, standards-anchored lesson plans. 4 copy-paste templates + 3 mistakes that make AI lesson plans useless.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-teaching",
+      h1: "article-best-prompt-for-teaching",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for teaching, lesson plan prompt, teacher AI prompt, curriculum prompt, quiz generator prompt, Bloom's taxonomy prompt, UDL lesson plan, differentiated instruction prompt, objectives prompt, formative assessment prompt, AI teaching assistant, ChatGPT teacher, Claude lesson plan",
+      headline: "Best Prompt for Teaching: Lesson Plans That Actually Stick",
+      datePublished: "2026-07-15",
+      dateModified: "2026-07-15",
     }
   };
 
@@ -547,7 +559,8 @@
     "/blog/best-prompt-for-research": "article-best-prompt-for-research",
     "/blog/best-prompt-for-interview-prep": "article-best-prompt-for-interview-prep",
     "/blog/best-prompt-for-contract-review": "article-best-prompt-for-contract-review",
-    "/blog/best-prompt-for-financial-analysis": "article-best-prompt-for-financial-analysis"
+    "/blog/best-prompt-for-financial-analysis": "article-best-prompt-for-financial-analysis",
+    "/blog/best-prompt-for-teaching": "article-best-prompt-for-teaching"
   };
 
   function normalizePath(pathname) {

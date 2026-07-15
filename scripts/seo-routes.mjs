@@ -593,6 +593,20 @@ export const SEO_ROUTES = {
                             datePublished: "2026-07-13",
                             dateModified: "2026-07-13",
                             keywords: "best prompt for financial analysis, finance prompt, earnings analysis prompt, 10-K prompt, investment memo prompt, equity research prompt, AI financial analysis, Claude finance, ChatGPT finance, comps table prompt, earnings call prompt"
+                          },
+                          "/blog/best-prompt-for-teaching": {
+                            routeKey: "article-best-prompt-for-teaching",
+                            h1: "article-best-prompt-for-teaching",
+                            lang: "en",
+                            ogType: "article",
+                            title: "Best Prompt for Teaching: Lesson Plans That Actually Stick | PromptLab",
+                            description:
+                              "The best prompt for teaching isn't one sentence — it's a 4-prompt framework (objectives, activities, assessment, differentiated explanation) that produces Bloom-aligned, UDL-tagged, standards-anchored lesson plans. 4 copy-paste templates + 3 mistakes that make AI lesson plans useless.",
+                            canonical: `${SITE}/blog/best-prompt-for-teaching`,
+                            headline: "Best Prompt for Teaching: Lesson Plans That Actually Stick",
+                            datePublished: "2026-07-15",
+                            dateModified: "2026-07-15",
+                            keywords: "best prompt for teaching, lesson plan prompt, teacher AI prompt, curriculum prompt, quiz generator prompt, Bloom's taxonomy prompt, UDL lesson plan, differentiated instruction prompt, objectives prompt, formative assessment prompt, AI teaching assistant, ChatGPT teacher, Claude lesson plan"
                           }
                           };
 
