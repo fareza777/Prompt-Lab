@@ -513,6 +513,18 @@
       headline: "Best Prompt for Teaching: Lesson Plans That Actually Stick",
       datePublished: "2026-07-15",
       dateModified: "2026-07-15",
+    },
+    "/blog/best-prompt-for-presentations": {
+      title: "Best Prompt for Presentations: Slides With a Clear Story Arc | PromptLab",
+      description: "The best prompt for presentations turns a topic into a 12-slide story arc: hook, problem, proof, demo, and ask. Includes pitch deck, executive proposal, product demo, and workshop templates with speaker notes.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-presentations",
+      h1: "article-best-prompt-for-presentations",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for presentations, presentation prompt, slide deck prompt, pitch deck prompt, PowerPoint AI prompt",
+      headline: "Best Prompt for Presentations: Slides With a Clear Story Arc",
+      datePublished: "2026-07-17",
+      dateModified: "2026-07-17",
     }
   };
 
@@ -560,7 +572,8 @@
     "/blog/best-prompt-for-interview-prep": "article-best-prompt-for-interview-prep",
     "/blog/best-prompt-for-contract-review": "article-best-prompt-for-contract-review",
     "/blog/best-prompt-for-financial-analysis": "article-best-prompt-for-financial-analysis",
-    "/blog/best-prompt-for-teaching": "article-best-prompt-for-teaching"
+    "/blog/best-prompt-for-teaching": "article-best-prompt-for-teaching",
+    "/blog/best-prompt-for-presentations": "article-best-prompt-for-presentations"
   };
 
   function normalizePath(pathname) {

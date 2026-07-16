@@ -607,6 +607,20 @@ export const SEO_ROUTES = {
                             datePublished: "2026-07-15",
                             dateModified: "2026-07-15",
                             keywords: "best prompt for teaching, lesson plan prompt, teacher AI prompt, curriculum prompt, quiz generator prompt, Bloom's taxonomy prompt, UDL lesson plan, differentiated instruction prompt, objectives prompt, formative assessment prompt, AI teaching assistant, ChatGPT teacher, Claude lesson plan"
+                          },
+                          "/blog/best-prompt-for-presentations": {
+                            routeKey: "article-best-prompt-for-presentations",
+                            h1: "article-best-prompt-for-presentations",
+                            lang: "en",
+                            ogType: "article",
+                            title: "Best Prompt for Presentations: Slides With a Clear Story Arc | PromptLab",
+                            description:
+                              "The best prompt for presentations turns a topic into a 12-slide story arc: hook, problem, proof, demo, and ask. Includes pitch deck, executive proposal, product demo, and workshop templates with speaker notes.",
+                            canonical: `${SITE}/blog/best-prompt-for-presentations`,
+                            headline: "Best Prompt for Presentations: Slides With a Clear Story Arc",
+                            datePublished: "2026-07-17",
+                            dateModified: "2026-07-17",
+                            keywords: "best prompt for presentations, presentation prompt, slide deck prompt, pitch deck prompt, PowerPoint AI prompt"
                           }
                           };
 
