@@ -621,8 +621,22 @@ export const SEO_ROUTES = {
                             datePublished: "2026-07-17",
                             dateModified: "2026-07-17",
                             keywords: "best prompt for presentations, presentation prompt, slide deck prompt, pitch deck prompt, PowerPoint AI prompt"
+                          },
+                          "/blog/best-prompt-for-swot-analysis": {
+                            routeKey: "article-best-prompt-for-swot-analysis",
+                            h1: "article-best-prompt-for-swot-analysis",
+                            lang: "en",
+                            ogType: "article",
+                            title: "Best Prompt for SWOT Analysis: Strategy in 15 Minutes | PromptLab",
+                            description:
+                              "The best prompt for SWOT analysis is one that forces the model to reason from each quadrant into a prioritized set of moves you can execute this week. 4 copy-paste templates (personal, product, competitive, AI startup) plus the framework + 3 mistakes that turn SWOT into procrastination.",
+                            canonical: `${SITE}/blog/best-prompt-for-swot-analysis`,
+                            headline: "Best Prompt for SWOT Analysis: Strategy in 15 Minutes",
+                            datePublished: "2026-07-18",
+                            dateModified: "2026-07-18",
+                            keywords: "best prompt for SWOT analysis, SWOT prompt, strategy prompt, competitive strategy AI, business analysis prompt, SO ST WO WT strategy, personal SWOT prompt, product SWOT, AI product strategy, ChatGPT strategy, Claude strategy prompt"
                           }
-                          };
+                        };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
 
