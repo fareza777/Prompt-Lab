@@ -636,6 +636,21 @@ export const SEO_ROUTES = {
                             dateModified: "2026-07-18",
                             keywords: "best prompt for SWOT analysis, SWOT prompt, strategy prompt, competitive strategy AI, business analysis prompt, SO ST WO WT strategy, personal SWOT prompt, product SWOT, AI product strategy, ChatGPT strategy, Claude strategy prompt"
                           }
+                        ,
+                          "/blog/best-prompt-for-user-stories": {
+                            routeKey: "article-best-prompt-for-user-stories",
+                            h1: "article-best-prompt-for-user-stories",
+                            lang: "en",
+                            ogType: "article",
+                            title: "Best Prompt for User Stories: From Idea to Sprint-Ready Tickets | PromptLab",
+                            description:
+                              "The best prompt for user stories turns a feature brief into 10 INVEST stories with Given/When/Then acceptance criteria, edge cases, and test ideas. 4 copy-paste templates + 3 mistakes to avoid.",
+                            canonical: `${SITE}/blog/best-prompt-for-user-stories`,
+                            headline: "Best Prompt for User Stories: From Idea to Sprint-Ready Tickets",
+                            datePublished: "2026-07-19",
+                            dateModified: "2026-07-19",
+                            keywords: "best prompt for user stories, user story prompt, agile prompt, Jira ticket prompt, acceptance criteria prompt, INVEST user story, Gherkin prompt, Given When Then prompt, product backlog prompt, sprint planning prompt"
+                          }
                         };
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));

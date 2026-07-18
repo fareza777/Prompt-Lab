@@ -525,6 +525,30 @@
       headline: "Best Prompt for Presentations: Slides With a Clear Story Arc",
       datePublished: "2026-07-17",
       dateModified: "2026-07-17",
+    },
+    "/blog/best-prompt-for-swot-analysis": {
+      title: "Best Prompt for SWOT Analysis: Strategy in 15 Minutes | PromptLab",
+      description: "The best prompt for SWOT analysis is one that forces the model to reason from each quadrant into a prioritized set of moves you can execute this week. 4 copy-paste templates (personal, product, competitive, AI startup) plus the framework + 3 mistakes that turn SWOT into procrastination.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-swot-analysis",
+      h1: "article-best-prompt-for-swot-analysis",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for SWOT analysis, SWOT prompt, strategy prompt, competitive strategy AI, business analysis prompt, SO ST WO WT strategy, personal SWOT prompt, product SWOT, AI product strategy, ChatGPT strategy, Claude strategy prompt",
+      headline: "Best Prompt for SWOT Analysis: Strategy in 15 Minutes",
+      datePublished: "2026-07-18",
+      dateModified: "2026-07-18",
+    },
+    "/blog/best-prompt-for-user-stories": {
+      title: "Best Prompt for User Stories: From Idea to Sprint-Ready Tickets | PromptLab",
+      description: "The best prompt for user stories turns a feature brief into 10 INVEST stories with Given/When/Then acceptance criteria, edge cases, and test ideas. 4 copy-paste templates + 3 mistakes to avoid.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-user-stories",
+      h1: "article-best-prompt-for-user-stories",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for user stories, user story prompt, agile prompt, Jira ticket prompt, acceptance criteria prompt, INVEST user story, Gherkin prompt, Given When Then prompt, product backlog prompt, sprint planning prompt",
+      headline: "Best Prompt for User Stories: From Idea to Sprint-Ready Tickets",
+      datePublished: "2026-07-19",
+      dateModified: "2026-07-19",
     }
   };
 
@@ -573,7 +597,9 @@
     "/blog/best-prompt-for-contract-review": "article-best-prompt-for-contract-review",
     "/blog/best-prompt-for-financial-analysis": "article-best-prompt-for-financial-analysis",
     "/blog/best-prompt-for-teaching": "article-best-prompt-for-teaching",
-    "/blog/best-prompt-for-presentations": "article-best-prompt-for-presentations"
+    "/blog/best-prompt-for-presentations": "article-best-prompt-for-presentations",
+    "/blog/best-prompt-for-swot-analysis": "article-best-prompt-for-swot-analysis",
+    "/blog/best-prompt-for-user-stories": "article-best-prompt-for-user-stories"
   };
 
   function normalizePath(pathname) {
