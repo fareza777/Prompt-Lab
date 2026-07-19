@@ -549,6 +549,18 @@
       headline: "Best Prompt for User Stories: From Idea to Sprint-Ready Tickets",
       datePublished: "2026-07-19",
       dateModified: "2026-07-19",
+    },
+    "/blog/best-prompt-for-api-documentation": {
+      title: "Best Prompt for API Documentation: Docs Developers Actually Read | PromptLab",
+      description: "The best prompt for API documentation turns OpenAPI, code, and examples into a grounded overview, authentication guide, endpoint reference, error catalog, and tested quickstart. 4 copy-paste templates plus 3 mistakes to avoid.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-api-documentation",
+      h1: "article-best-prompt-for-api-documentation",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for API documentation, API docs prompt, OpenAPI prompt, developer docs AI, endpoint documentation prompt",
+      headline: "Best Prompt for API Documentation: Docs Developers Actually Read",
+      datePublished: "2026-07-20",
+      dateModified: "2026-07-20",
     }
   };
 
@@ -599,7 +611,8 @@
     "/blog/best-prompt-for-teaching": "article-best-prompt-for-teaching",
     "/blog/best-prompt-for-presentations": "article-best-prompt-for-presentations",
     "/blog/best-prompt-for-swot-analysis": "article-best-prompt-for-swot-analysis",
-    "/blog/best-prompt-for-user-stories": "article-best-prompt-for-user-stories"
+    "/blog/best-prompt-for-user-stories": "article-best-prompt-for-user-stories",
+    "/blog/best-prompt-for-api-documentation": "article-best-prompt-for-api-documentation"
   };
 
   function normalizePath(pathname) {

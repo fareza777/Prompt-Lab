@@ -650,6 +650,20 @@ export const SEO_ROUTES = {
                             datePublished: "2026-07-19",
                             dateModified: "2026-07-19",
                             keywords: "best prompt for user stories, user story prompt, agile prompt, Jira ticket prompt, acceptance criteria prompt, INVEST user story, Gherkin prompt, Given When Then prompt, product backlog prompt, sprint planning prompt"
+                          },
+                          "/blog/best-prompt-for-api-documentation": {
+                            routeKey: "article-best-prompt-for-api-documentation",
+                            h1: "article-best-prompt-for-api-documentation",
+                            lang: "en",
+                            ogType: "article",
+                            title: "Best Prompt for API Documentation: Docs Developers Actually Read | PromptLab",
+                            description:
+                              "The best prompt for API documentation turns OpenAPI, code, and examples into a grounded overview, authentication guide, endpoint reference, error catalog, and tested quickstart. 4 copy-paste templates plus 3 mistakes to avoid.",
+                            canonical: `${SITE}/blog/best-prompt-for-api-documentation`,
+                            headline: "Best Prompt for API Documentation: Docs Developers Actually Read",
+                            datePublished: "2026-07-20",
+                            dateModified: "2026-07-20",
+                            keywords: "best prompt for API documentation, API docs prompt, OpenAPI prompt, developer docs AI, endpoint documentation prompt"
                           }
                         };
 
