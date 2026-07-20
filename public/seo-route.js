@@ -561,6 +561,18 @@
       headline: "Best Prompt for API Documentation: Docs Developers Actually Read",
       datePublished: "2026-07-20",
       dateModified: "2026-07-20",
+    },
+    "/blog/best-prompt-for-test-cases": {
+      title: "Best Prompt for Test Cases: Coverage Without the Spreadsheet Pain | PromptLab",
+      description: "The best prompt for test cases gives the model a 4-part brief (role, context, coverage matrix, format) and turns a user story into a table of prioritized cases with concrete expected results. 4 copy-paste templates (happy path, edge, security, regression) plus 5 mistakes to avoid.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-test-cases",
+      h1: "article-best-prompt-for-test-cases",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for test cases, QA prompt, test case prompt, software testing AI, UAT prompt",
+      headline: "Best Prompt for Test Cases: Coverage Without the Spreadsheet Pain",
+      datePublished: "2026-07-21",
+      dateModified: "2026-07-21",
     }
   };
 
@@ -612,7 +624,8 @@
     "/blog/best-prompt-for-presentations": "article-best-prompt-for-presentations",
     "/blog/best-prompt-for-swot-analysis": "article-best-prompt-for-swot-analysis",
     "/blog/best-prompt-for-user-stories": "article-best-prompt-for-user-stories",
-    "/blog/best-prompt-for-api-documentation": "article-best-prompt-for-api-documentation"
+    "/blog/best-prompt-for-api-documentation": "article-best-prompt-for-api-documentation",
+    "/blog/best-prompt-for-test-cases": "article-best-prompt-for-test-cases"
   };
 
   function normalizePath(pathname) {

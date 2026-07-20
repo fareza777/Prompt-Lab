@@ -664,6 +664,20 @@ export const SEO_ROUTES = {
                             datePublished: "2026-07-20",
                             dateModified: "2026-07-20",
                             keywords: "best prompt for API documentation, API docs prompt, OpenAPI prompt, developer docs AI, endpoint documentation prompt"
+                          },
+                          "/blog/best-prompt-for-test-cases": {
+                            routeKey: "article-best-prompt-for-test-cases",
+                            h1: "article-best-prompt-for-test-cases",
+                            lang: "en",
+                            ogType: "article",
+                            title: "Best Prompt for Test Cases: Coverage Without the Spreadsheet Pain | PromptLab",
+                            description:
+                              "The best prompt for test cases gives the model a 4-part brief (role, context, coverage matrix, format) and turns a user story into a table of prioritized cases with concrete expected results. 4 copy-paste templates (happy path, edge, security, regression) plus 5 mistakes to avoid.",
+                            canonical: `${SITE}/blog/best-prompt-for-test-cases`,
+                            headline: "Best Prompt for Test Cases: Coverage Without the Spreadsheet Pain",
+                            datePublished: "2026-07-21",
+                            dateModified: "2026-07-21",
+                            keywords: "best prompt for test cases, QA prompt, test case prompt, software testing AI, UAT prompt"
                           }
                         };
 
