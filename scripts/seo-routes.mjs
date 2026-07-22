@@ -678,8 +678,20 @@ export const SEO_ROUTES = {
                             datePublished: "2026-07-21",
                             dateModified: "2026-07-21",
                             keywords: "best prompt for test cases, QA prompt, test case prompt, software testing AI, UAT prompt"
-                          }
-                        };
+                          },
+  "/blog/best-prompt-for-refactoring-code": {
+    routeKey: "article-best-prompt-for-refactoring-code",
+    h1: "article-best-prompt-for-refactoring-code",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for Refactoring Code: Safer Diffs, Same Behavior | PromptLab",
+    description: "The best prompt for refactoring code makes behavior preservation explicit: establish a test baseline, name the code smells, propose small reversible steps, and verify every diff. Includes 4 copy-paste templates for legacy code, safe cleanup, modernization, and review.",
+    canonical: `${SITE}/blog/best-prompt-for-refactoring-code`,
+    headline: "Best Prompt for Refactoring Code: Safer Diffs, Same Behavior",
+    datePublished: "2026-07-23",
+    dateModified: "2026-07-23",
+    keywords: "best prompt for refactoring code, refactoring prompt, clean code AI, legacy code prompt, code improvement prompt, AI pair programmer, safe refactoring, characterization tests, code modernization prompt, Claude Code refactoring, Cursor refactoring, Copilot refactoring"
+  }};
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
 

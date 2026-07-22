@@ -573,6 +573,18 @@
       headline: "Best Prompt for Test Cases: Coverage Without the Spreadsheet Pain",
       datePublished: "2026-07-21",
       dateModified: "2026-07-21",
+    },
+    "/blog/best-prompt-for-refactoring-code": {
+      title: "Best Prompt for Refactoring Code: Safer Diffs, Same Behavior | PromptLab",
+      description: "The best prompt for refactoring code makes behavior preservation explicit: establish a test baseline, name the code smells, propose small reversible steps, and verify every diff. Includes 4 copy-paste templates for legacy code, safe cleanup, modernization, and review.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-refactoring-code",
+      h1: "article-best-prompt-for-refactoring-code",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for refactoring code, refactoring prompt, clean code AI, legacy code prompt, code improvement prompt, AI pair programmer, safe refactoring, characterization tests, code modernization prompt, Claude Code refactoring, Cursor refactoring, Copilot refactoring",
+      headline: "Best Prompt for Refactoring Code: Safer Diffs, Same Behavior",
+      datePublished: "2026-07-23",
+      dateModified: "2026-07-23",
     }
   };
 
@@ -625,7 +637,8 @@
     "/blog/best-prompt-for-swot-analysis": "article-best-prompt-for-swot-analysis",
     "/blog/best-prompt-for-user-stories": "article-best-prompt-for-user-stories",
     "/blog/best-prompt-for-api-documentation": "article-best-prompt-for-api-documentation",
-    "/blog/best-prompt-for-test-cases": "article-best-prompt-for-test-cases"
+    "/blog/best-prompt-for-test-cases": "article-best-prompt-for-test-cases",
+    "/blog/best-prompt-for-refactoring-code": "article-best-prompt-for-refactoring-code"
   };
 
   function normalizePath(pathname) {
