@@ -585,6 +585,18 @@
       headline: "Best Prompt for Refactoring Code: Safer Diffs, Same Behavior",
       datePublished: "2026-07-23",
       dateModified: "2026-07-23",
+    },
+    "/blog/best-prompt-for-sql-queries": {
+      title: "Best Prompt for SQL Queries: From English to Optimized SQL | PromptLab",
+      description: "The best prompt for SQL queries is a 5-part schema-aware brief: role, schema (CREATE TABLE), sample rows, question, output contract. 3 copy-paste templates (SELECT, JOIN, window functions) plus the 5 mistakes that corrupt AI-generated SQL and an EXPLAIN-friendly optimization checklist for PostgreSQL, MySQL, and SQLite.",
+      canonical: "https://prompt-lab.xyz/blog/best-prompt-for-sql-queries",
+      h1: "article-best-prompt-for-sql-queries",
+      lang: "en",
+      ogType: "article",
+      keywords: "best prompt for SQL queries, SQL prompt, database query AI, PostgreSQL prompt, analytics SQL prompt, SQL EXPLAIN, schema-aware prompt, AI SQL generation, JOIN prompt, window function prompt, MySQL prompt, SQLite prompt, ChatGPT SQL, Claude SQL",
+      headline: "Best Prompt for SQL Queries: From English to Optimized SQL",
+      datePublished: "2026-07-24",
+      dateModified: "2026-07-24",
     }
   };
 
@@ -638,7 +650,8 @@
     "/blog/best-prompt-for-user-stories": "article-best-prompt-for-user-stories",
     "/blog/best-prompt-for-api-documentation": "article-best-prompt-for-api-documentation",
     "/blog/best-prompt-for-test-cases": "article-best-prompt-for-test-cases",
-    "/blog/best-prompt-for-refactoring-code": "article-best-prompt-for-refactoring-code"
+    "/blog/best-prompt-for-refactoring-code": "article-best-prompt-for-refactoring-code",
+    "/blog/best-prompt-for-sql-queries": "article-best-prompt-for-sql-queries"
   };
 
   function normalizePath(pathname) {

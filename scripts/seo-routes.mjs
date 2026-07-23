@@ -691,6 +691,19 @@ export const SEO_ROUTES = {
     datePublished: "2026-07-23",
     dateModified: "2026-07-23",
     keywords: "best prompt for refactoring code, refactoring prompt, clean code AI, legacy code prompt, code improvement prompt, AI pair programmer, safe refactoring, characterization tests, code modernization prompt, Claude Code refactoring, Cursor refactoring, Copilot refactoring"
+  },
+  "/blog/best-prompt-for-sql-queries": {
+    routeKey: "article-best-prompt-for-sql-queries",
+    h1: "article-best-prompt-for-sql-queries",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for SQL Queries: From English to Optimized SQL | PromptLab",
+    description: "The best prompt for SQL queries is a 5-part schema-aware brief: role, schema (CREATE TABLE), sample rows, question, output contract. 3 copy-paste templates (SELECT, JOIN, window functions) plus the 5 mistakes that corrupt AI-generated SQL and an EXPLAIN-friendly optimization checklist for PostgreSQL, MySQL, and SQLite.",
+    canonical: `${SITE}/blog/best-prompt-for-sql-queries`,
+    headline: "Best Prompt for SQL Queries: From English to Optimized SQL",
+    datePublished: "2026-07-24",
+    dateModified: "2026-07-24",
+    keywords: "best prompt for SQL queries, SQL prompt, database query AI, PostgreSQL prompt, analytics SQL prompt, SQL EXPLAIN, schema-aware prompt, AI SQL generation, JOIN prompt, window function prompt, MySQL prompt, SQLite prompt, ChatGPT SQL, Claude SQL"
   }};
 
 export const BLOG_PATHS = Object.keys(SEO_ROUTES).filter((p) => p === "/blog" || p.startsWith("/blog/"));
