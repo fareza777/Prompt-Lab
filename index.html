@@ -71,6 +71,10 @@ html.boot-app #article-page-best-prompt-for-swot-analysis { display: none !impor
       /* Defensive: even if React's #root mount slips past #app-root hiding,
          kill the React landing render for any non-app route. */
       html:not([data-route="app"]):not(.boot-app) #root { display: none !important; }
+
+      html[data-route="article-best-prompt-for-excel-analysis"] #landing-page { display: none !important; }
+      html[data-route="article-best-prompt-for-excel-analysis"] #article-page-best-prompt-for-excel-analysis { display: block !important; }
+      html.boot-app #article-page-best-prompt-for-excel-analysis { display: none !important; }
     </style>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon-192.png" />
@@ -515,7 +519,28 @@ html.boot-app #article-page-best-prompt-for-swot-analysis { display: none !impor
         "image": "https://prompt-lab.xyz/og-image.png",
         "inLanguage": "en",
         "keywords": "best prompt for test cases, QA prompt, test case prompt, software testing AI, UAT prompt"
-      }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Best Prompt for Excel Analysis: Formulas, Pivot Logic, and Insights",
+        "description": "Learn the best prompt for Excel analysis with copy-paste templates for formulas, PivotTable logic, data quality checks, and evidence-based insights.",
+        "author": {
+                "@type": "Organization",
+                "name": "PromptLab"
+        },
+        "publisher": {
+                "@type": "Organization",
+                "name": "PromptLab",
+                "url": "https://prompt-lab.xyz"
+        },
+        "datePublished": "2026-07-25",
+        "dateModified": "2026-07-25",
+        "mainEntityOfPage": "https://prompt-lab.xyz/blog/best-prompt-for-excel-analysis",
+        "url": "https://prompt-lab.xyz/blog/best-prompt-for-excel-analysis",
+        "image": "https://prompt-lab.xyz/og-image.png",
+        "keywords": "best prompt for excel analysis, Excel prompt, spreadsheet AI, pivot table prompt, formula prompt"
+}
     ]
       ,{
         "@context": "https://schema.org",
@@ -2865,6 +2890,10 @@ Build a campaign prompt with:
             <span class="blog-read-more">Read guide →</span>
           </div>
         </a>
+        <a href="/blog/best-prompt-for-excel-analysis" class="blog-card fade-up">
+          <div class="blog-thumb"><div class="blog-thumb-bg">📑</div><span class="blog-category">Tutorial</span></div>
+          <div class="blog-body"><span class="blog-date">July 25, 2026</span><h3>Best Prompt for Excel Analysis: Formulas, Pivot Logic, and Insights</h3><p>Copy-paste prompts for Excel formulas, PivotTable logic, data-quality checks, and evidence-based insights.</p><span class="blog-read-more">Read guide →</span></div>
+        </a>
         <a href="/blog/best-prompt-for-sales" class="blog-card fade-up">
           <div class="blog-thumb">
             <div class="blog-thumb-bg">💰</div>
@@ -3829,9 +3858,83 @@ deck until I approve the fixes.</code></pre>
             <h3>Best Prompt for SQL Queries: From English to Optimized SQL</h3>
             <p>Schema-aware prompts that return correct JOINs, filters, and an EXPLAIN-friendly version.</p>
           </div>
+        </a>
+        <a href="/blog/best-prompt-for-excel-analysis" class="blog-list-card">
+          <div class="blog-list-thumb">📑</div><div class="blog-list-content"><span class="blog-list-meta">July 25, 2026 · Tutorial · 7 min read</span><h3>Best Prompt for Excel Analysis: Formulas, Pivot Logic, and Insights</h3><p>Four practical prompt templates for formulas, PivotTables, messy data, and decision-ready insights.</p></div>
         </a> — reuse the hook, problem, proof, and answer structure when you convert a talk into a search-focused article.
         </div>
       </article>
+    </div>
+
+
+    <div id="article-page-best-prompt-for-excel-analysis" class="article-page" data-page-h1="article-best-prompt-for-excel-analysis">
+      <nav class="navbar"><a href="/" class="nav-brand"><div class="nav-logo">P</div><span class="nav-brand-text">PromptLab</span></a><div class="nav-links"><a href="/">Home</a><a href="/#features">Features</a><a href="/blog">Blog</a><a href="/app" class="nav-cta">Open App →</a></div></nav>
+      <header class="article-header"><div class="article-header-inner"><span class="article-category">Tutorial</span><h1>Best Prompt for Excel Analysis: Formulas, Pivot Logic, and Insights</h1><p class="article-tagline">Paste column headers and goals — get formulas, pivot steps, and a short narrative of findings.</p><div class="article-meta">July 25, 2026 · Tutorial · 7 min read</div></div></header>
+      <article class="article-body"><p>If you work with spreadsheets, the difference between a vague request and a useful answer can be enormous. A good <strong>best prompt for excel analysis</strong> gives an AI assistant enough structure to suggest formulas, design a PivotTable, check assumptions, and explain what the numbers mean without pretending to know facts that are not in the workbook.</p>
+
+<h2>What an AI assistant can do with an Excel workbook</h2>
+<p>AI is most useful in Excel when you treat it as a reasoning partner, not as an automatic source of truth. It can translate a business question into a formula, explain why a formula returns an error, propose a data-cleaning sequence, and turn a summary table into a concise narrative. It can also outline PivotTable fields and recommend useful comparisons.</p>
+<p>Microsoft describes a PivotTable as a way to calculate, summarize, and analyze worksheet data to see hidden patterns and trends. That is a useful mental model for prompting: give the assistant a clean table, define the metric, and specify the dimensions you want to compare. For formula work, Microsoft’s formula overview highlights functions, cell references, operators, and constants. Ask the model to identify each of those pieces instead of requesting a mysterious “Excel formula.”</p>
+
+<h2>The five-part Excel analysis prompt structure</h2>
+<p>A dependable request usually contains five parts: role, data context, objective, constraints, and output format. Role tells the model whether to act as a financial analyst, operations manager, or Excel trainer. Data context describes columns, units, date ranges, and grain. The objective states the decision or question. Constraints define Excel version, assumptions, and what the model must not invent. Output format determines whether you want formulas, steps, a table, or a narrative.</p>
+<p>This structure is closely related to the framework in our <a href="/blog/prompt-engineering-guide" style="color:var(--accent)">complete prompt engineering guide</a>. If your workbook contains sensitive information, use column names and representative values rather than pasting confidential rows. For more general spreadsheet workflows, compare it with the <a href="/blog/best-prompt-for-data-analysis" style="color:var(--accent)">best prompt for data analysis</a>.</p>
+<pre><code>Act as an Excel analyst and teacher.
+Workbook context: [describe sheets, table names, and column headers].
+Goal: [state the business question and decision this should support].
+Constraints: Use Excel [version]; do not invent values; flag missing or ambiguous fields.
+Return:
+1. A short data-quality checklist
+2. The exact formula(s), with cell/table references explained
+3. PivotTable fields and filters, if useful
+4. Three findings to look for and how to validate them
+5. A plain-English summary under 120 words</code></pre>
+
+<h2>Prompt template for formulas</h2>
+<p>Formula prompts fail when they omit the desired result, the row structure, or the expected behavior for blanks and errors. Tell the assistant whether the data is an Excel Table, provide the relevant headers, and include a small example of input and expected output. Ask for both a modern formula and a compatibility alternative when your audience may use different Excel versions.</p>
+<p>Always request an explanation of references. A formula that works in one cell can break when copied if absolute and relative references are mixed incorrectly. Ask the model to test edge cases such as blank dates, duplicate IDs, zero denominators, text that looks like a number, and unmatched lookup keys.</p>
+<pre><code>Build an Excel formula for this task: [describe result].
+Data is an Excel Table named [TableName] with columns: [list headers].
+Rules: blanks should return [blank/0/message]; duplicate keys should [behavior]; errors should [behavior].
+Example: input [example] should produce [expected result].
+Give:
+- the recommended formula for Excel 365
+- a compatible alternative if needed
+- a token-by-token explanation
+- three edge cases and a quick validation test</code></pre>
+
+<h2>Prompt template for PivotTable logic</h2>
+<p>For a PivotTable, name the measure, dimensions, filters, and time grain. “Analyze sales” is not enough. “Compare net revenue by region and quarter, excluding returns, with product category as a filter” gives the model something concrete to design. Ask whether the source should be normalized first and whether a calculated field or helper column is safer.</p>
+<p>Remember that a PivotTable summarizes the data it receives; it cannot repair inconsistent categories or a duplicated transaction table by magic. Include a request to identify the correct grain and to explain how totals should reconcile to the source. If you need financial context, the <a href="/blog/best-prompt-for-financial-analysis" style="color:var(--accent)">financial analysis prompt guide</a> adds useful checks for variance and assumptions.</p>
+<pre><code>You are designing a PivotTable for [decision].
+Source table: [name], one row represents [transaction/event].
+Measure: [revenue/count/margin], calculated as [definition].
+Rows: [dimension]. Columns: [dimension/time grain]. Filters/slicers: [list].
+Exclude or group: [returns, blanks, categories, date range].
+Return the field layout, any helper columns required, refresh steps, and two reconciliation checks.
+Explain what pattern would be meaningful versus a misleading aggregation.</code></pre>
+
+<h2>Prompt template for finding insights</h2>
+<p>Insight requests should specify the comparison and the evidence threshold. Otherwise, an AI may produce generic observations such as “sales increased” without quantifying the change or checking whether the increase is seasonal. Ask for ranked findings with the calculation behind each one, the rows or fields used, and a confidence or caveat label.</p>
+<p>For an especially large workbook, ask for a staged process: profile the columns first, propose analyses second, and write the narrative only after you approve the plan. This is safer than asking for conclusions in one leap. You can use the <a href="/blog/best-prompt-for-summarization" style="color:var(--accent)">summarization prompt guide</a> after you have validated the metrics.</p>
+<pre><code>Analyze the following summarized Excel data: [paste table or describe available fields].
+Question: [specific decision]. Compare [segments] across [periods].
+Do not infer causation. Separate observed facts from hypotheses.
+Return a ranked table with: finding, calculation, evidence, caveat, and recommended follow-up.
+Show the arithmetic for every percentage change and state the denominator.
+End with a five-bullet executive summary and three questions that the data cannot answer.</code></pre>
+
+<h2>How to make the prompt work with messy data</h2>
+<p>Before analysis, ask the model to inspect column names and data types. Common problems include dates stored as text, currency symbols mixed into numeric cells, inconsistent spellings, merged cells, subtotal rows inside a dataset, and formulas copied beyond the real range. Describe these risks explicitly and request a cleaning plan that preserves the original sheet.</p>
+<p>One practical approach is to create a copy of the source, convert the range to a Table, and add helper columns for normalized dates, categories, and calculated metrics. Ask for one change at a time. After each formula or transformation, test a known row. Never accept a plausible-looking result without reconciling totals to the source.</p>
+
+<h2>Five mistakes that produce bad Excel answers</h2>
+<ol><li><strong>Missing grain:</strong> The prompt does not say what one row represents, so totals may be double-counted.</li><li><strong>Undefined metric:</strong> “Profit” might mean gross profit, contribution margin, or net income. Define the numerator and denominator.</li><li><strong>No version constraint:</strong> A model may return XLOOKUP, LET, or dynamic arrays when the recipient uses an older Excel release.</li><li><strong>Unstated blank and error behavior:</strong> Empty cells and unmatched keys can silently distort a dashboard.</li><li><strong>Trusting generated insights:</strong> AI can calculate incorrectly or overstate causality. Validate formulas, samples, and reconciliations.</li></ol>
+<p>For a second opinion on prompt quality, run the request through the <a href="/app" style="color:var(--accent)">PromptLab workspace</a>. It can help expose missing context and output requirements before you use the prompt on a real workbook.</p>
+
+<div class="tip-box"><strong>Related:</strong> <a href="/blog/best-prompt-for-data-analysis" style="color:var(--accent)">Best Prompt for Data Analysis</a> — structure data questions, validation steps, and evidence-based findings.</div>
+<div class="tip-box"><strong>Related:</strong> <a href="/blog/best-prompt-for-financial-analysis" style="color:var(--accent)">Best Prompt for Financial Analysis</a> — add assumptions, variance checks, and decision-ready summaries.</div>
+<div class="tip-box"><strong>Related:</strong> <a href="/blog/best-prompt-for-summarization" style="color:var(--accent)">Best Prompt for Summarization</a> — turn validated tables into concise, useful explanations.</div></article>
     </div>
 
     <!-- ============================== ARTICLE: PROMPT ENGINEERING GUIDE ============================== -->
@@ -4067,6 +4170,7 @@ For each improvement:
         </div>
 </div>
 <div class="tip-box"><strong>Related:</strong> <a href="/blog/best-prompt-for-test-cases" style="color:var(--accent)">Best Prompt for Test Cases</a> — the same role + structure + format thinking applied to QA: 4 copy-paste templates (happy path, edge, security, regression) plus the 5 mistakes that make AI-generated test cases useless.</div>
+<div class="tip-box"><strong>Related:</strong> <a href="/blog/best-prompt-for-excel-analysis" style="color:var(--accent)">Best Prompt for Excel Analysis</a></div>
 <p>The best way to learn is to experiment. <a href="/app" style="color:var(--accent)">Open PromptLab</a>, create a prompt, and compare the results. For platform-specific templates, see our <a href="/blog/best-prompt-for-social-media" style="color:var(--accent)">social media prompt guide</a>. When your code breaks, the <a href="/blog/best-prompt-for-debugging-code" style="color:var(--accent)">best prompt for debugging code</a> turns a 50-line stack trace into a 3-step fix. The readiness score will tell you if your prompt works well for both models — or if it needs adjustment.</p>
 <div class="tip-box"><strong>Related:</strong> <a href="/blog/best-prompt-for-sql-queries" style="color:var(--accent)">Best Prompt for SQL Queries: From English to Optimized SQL</a> — the same role + schema + output-contract thinking applied to SQL: 3 templates (SELECT, JOIN, window functions) plus the 5 mistakes that corrupt AI-generated SQL.</div>
             <div class="tip-box"><strong>Related:</strong> <a href="/blog/best-prompt-for-swot-analysis" style="color:var(--accent)">Best Prompt for SWOT Analysis</a></div>

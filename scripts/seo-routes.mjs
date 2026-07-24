@@ -198,6 +198,19 @@ export const SEO_ROUTES = {
     keywords:
       "how to create a system prompt, Custom GPT system prompt, GPT builder instructions, system prompt engineering, AI persona prompt, ChatGPT system prompt, Claude system prompt, GPT instructions, custom GPT best practices, system prompt anatomy",
   },
+  "/blog/best-prompt-for-excel-analysis": {
+    routeKey: "article-best-prompt-for-excel-analysis",
+    h1: "article-best-prompt-for-excel-analysis",
+    lang: "en",
+    ogType: "article",
+    title: "Best Prompt for Excel Analysis: Formulas, Pivot Logic, and Insights | PromptLab",
+    description: "Learn the best prompt for Excel analysis with copy-paste templates for formulas, PivotTable logic, data quality checks, and evidence-based insights.",
+    canonical: `${SITE}/blog/best-prompt-for-excel-analysis`,
+    headline: "Best Prompt for Excel Analysis: Formulas, Pivot Logic, and Insights",
+    datePublished: "2026-07-25",
+    dateModified: "2026-07-25",
+    keywords: "best prompt for excel analysis, Excel prompt, spreadsheet AI, pivot table prompt, formula prompt",
+  },
   "/blog/best-prompt-for-coding": {
     routeKey: "article-best-prompt-for-coding",
     h1: "article-best-prompt-for-coding",
