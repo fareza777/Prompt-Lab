@@ -1260,6 +1260,10 @@ function App() {
   const [adminActionStatus, setAdminActionStatus] = useState("");
   const [globalPublishAt, setGlobalPublishAt] = useState("");
   const [globalConfigSource, setGlobalConfigSource] = useState("env");
+  /** Output of running the prompt — the finished deliverable, not instructions. */
+  const [runOutput, setRunOutput] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
+  const [runError, setRunError] = useState("");
   const [optimizerResult, setOptimizerResult] = useState("");
   const [optimizerSource, setOptimizerSource] = useState("local");
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -2253,6 +2257,42 @@ function App() {
     setOptimizerWarning("");
   }
 
+  /**
+   * Executes the generated prompt and returns the finished content. This is
+   * what turns the app's output from instructions-for-an-AI into the thing the
+   * user actually wanted.
+   */
+  async function runPrompt(rawPrompt = prompt) {
+    const text = String(rawPrompt || "").trim();
+    if (!text) return null;
+
+    setIsRunning(true);
+    setRunError("");
+    try {
+      const response = await fetch(`${apiBase}/api/run-prompt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+        body: JSON.stringify({
+          prompt: text,
+          outputType,
+          category,
+          generationMode,
+        }),
+      });
+      const data = await readApiJson(response);
+      if (!response.ok) throw new Error(data.error || "Failed to run the prompt.");
+      const content = data.content || data.prompt || "";
+      setRunOutput(content);
+      applyServerQuota(data.quota);
+      return content;
+    } catch (error) {
+      setRunError(error.message || "Failed to run the prompt.");
+      return null;
+    } finally {
+      setIsRunning(false);
+    }
+  }
+
   async function optimizePrompt(rawPrompt, mode) {
     setIsOptimizing(true);
     setOptimizerError("");
@@ -2769,6 +2809,11 @@ function App() {
     // the user has generated anything.
     prompt: generatedPrompt,
     setPrompt: setGeneratedPrompt,
+    runPrompt,
+    runOutput,
+    setRunOutput,
+    isRunning,
+    runError,
     getAuthHeaders,
     googleEnabled: isGoogleAuthEnabled,
     quotaSummary: formatQuotaSummary(accountState),

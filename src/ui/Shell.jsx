@@ -53,7 +53,6 @@ export default function Shell(props) {
     maxAttachments,
     generatePrompt,
     isGenerating,
-    generationStatus,
     errorMessage,
     warningMessage,
     setErrorMessage,
@@ -98,6 +97,11 @@ export default function Shell(props) {
     billingBusy,
     googleEnabled,
     quotaSummary,
+    runPrompt,
+    runOutput,
+    setRunOutput,
+    isRunning,
+    runError,
     optimizePrompt,
     isOptimizing,
     optimizerResult,
@@ -162,12 +166,17 @@ export default function Shell(props) {
 
   const handleGenerate = useCallback(() => {
     setPreviousPrompt("");
+    // A new prompt invalidates the output of the previous one.
+    setRunOutput?.("");
     generatePrompt();
-  }, [generatePrompt]);
+  }, [generatePrompt, setRunOutput]);
 
-  const handleSave = useCallback(() => {
-    if (savePrompt(prompt, narrative)) setSaved(true);
-  }, [savePrompt, prompt, narrative]);
+  const handleSave = useCallback(
+    (text) => {
+      if (savePrompt(text ?? prompt, narrative)) setSaved(true);
+    },
+    [savePrompt, prompt, narrative]
+  );
 
   const openImprove = useCallback(() => {
     clearOptimizerResult?.();
@@ -354,15 +363,18 @@ export default function Shell(props) {
             prompt={prompt}
             metrics={metrics}
             isGenerating={isGenerating}
-            generationStatus={generationStatus}
             copied={copied}
-            onCopy={() => copyText(prompt)}
+            onCopy={(text) => copyText(text ?? prompt)}
             onSave={handleSave}
             saved={saved}
             onImprove={openImprove}
             onCompare={openCompare}
             canCompare={Boolean(previousPrompt)}
-            onExport={(format) => exportFile(format, prompt, narrative)}
+            onRun={() => runPrompt?.(prompt)}
+            runOutput={runOutput}
+            isRunning={isRunning}
+            runError={humanizeApiError(runError, t)}
+            onExport={(format, text) => exportFile(format, text ?? prompt, narrative)}
             canExportWord={Boolean(entitlements?.docxExport)}
             canExportPpt={Boolean(entitlements?.pptxExport)}
             exportStatus={exportStatus}

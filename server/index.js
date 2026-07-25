@@ -1075,6 +1075,135 @@ app.post("/api/report-content", express.json({ limit: "64kb" }), async (req, res
   }
 });
 
+/**
+ * Runs a prompt and returns the finished text.
+ *
+ * Until now the product stopped at the prompt: the user still had to copy it
+ * into a chat app to get anything usable. This executes it here so the result
+ * is the deliverable, not the instructions for one. The prompt stays visible —
+ * this is an extra step on the result, not a replacement for it.
+ */
+function estimateRunTokens(payload, plan) {
+  const input = estimateTextTokens(payload.prompt || "");
+  return Math.min(9000, Math.max(700, input + resolveGenerateMaxTokens(plan, payload)));
+}
+
+const RUN_SYSTEM_PROMPT =
+  "You are executing the user's instructions to produce a finished deliverable. " +
+  "Return only the requested content itself — no preamble, no restatement of the " +
+  "instructions, no commentary about what you are doing. Match the language the " +
+  "instructions are written in. Use plain text with clear headings and lists; do " +
+  "not wrap the whole response in a code fence.";
+
+app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json({ limit: "256kb" }), async (req, res) => {
+  try {
+    const prompt = String(req.body?.prompt || "").trim();
+    if (!prompt) {
+      res.status(400).json({ error: "No prompt to run." });
+      return;
+    }
+
+    const membership = await getMembershipFromRequest(req);
+    const modelSettings = applyPriorityRouting(
+      await resolveModelSettings(req, req.body),
+      membership.plan
+    );
+    const payload = {
+      prompt,
+      outputType: String(req.body?.outputType || ""),
+      category: String(req.body?.category || ""),
+      narrative: prompt,
+      generationMode: String(req.body?.generationMode || "Balanced"),
+      modelSettings,
+    };
+
+    const quotaEstimate = estimateRunTokens(payload, membership.plan);
+    const quotaSession = await getQuotaSession(req, quotaEstimate);
+    const runtime = getRuntimeProvider(modelSettings);
+    const maxTokens = resolveGenerateMaxTokens(membership.plan, payload);
+
+    if (!runtime.client) {
+      res.status(503).json({ error: API_MSG.apiKeyInactive });
+      return;
+    }
+
+    const messages = [
+      { role: "system", content: RUN_SYSTEM_PROMPT },
+      { role: "user", content: prompt },
+    ];
+    const primaryModel = modelSettings?.primaryModel || runtime.defaultModel;
+    const fallbackModels = getOpenRouterFallbackModels(
+      primaryModel,
+      payload.generationMode,
+      modelSettings?.fallbackModels,
+      runtime.provider
+    );
+    const timing = getOpenRouterTiming(payload.generationMode);
+    if (modelSettings?.timeoutMs) timing.primaryTimeoutMs = modelSettings.timeoutMs;
+
+    let completion;
+    let usedModel = primaryModel;
+    try {
+      completion = await withTimeout(
+        runtime.client.chat.completions.create(
+          buildProviderChatCompletionBody(runtime, {
+            model: primaryModel,
+            messages,
+            max_tokens: maxTokens,
+            temperature: 0.6,
+          }),
+          { timeout: timing.primaryTimeoutMs }
+        ),
+        timing.primaryTimeoutMs,
+        primaryModel
+      );
+    } catch (error) {
+      if (!shouldTryFallbackModel(error) || fallbackModels.length === 0) throw error;
+      console.warn("run-prompt primary failed, trying fallback chain", error.status || error.message);
+      const fallback = await tryOpenRouterFallbackModels(
+        runtime.client,
+        fallbackModels,
+        messages,
+        timing.fallbackTimeoutMs,
+        maxTokens,
+        0.6,
+        runtime
+      );
+      completion = fallback.completion;
+      // The helper reports errors, not which model won; the provider echoes the
+      // model it actually served.
+      usedModel = completion?.model || "fallback";
+    }
+
+    const content = String(completion?.choices?.[0]?.message?.content || "").trim();
+    if (!content) throw new Error("The model returned an empty result.");
+
+    await finishGenerateResponse(
+      res,
+      quotaSession,
+      {
+        eventType: "run_prompt",
+        metadata: { outputType: payload.outputType, model: usedModel, provider: runtime.provider },
+        tokenEstimate: quotaEstimate,
+        outputText: content,
+      },
+      {
+        engineVersion: PROMPT_ENGINE_VERSION,
+        source: runtime.provider,
+        model: usedModel,
+        prompt: content,
+        content,
+      }
+    );
+  } catch (error) {
+    console.error("run-prompt failed", error.message);
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      error: error.publicMessage || error.message || "Could not run the prompt.",
+    });
+  }
+});
+
 app.post("/api/optimize-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json({ limit: "256kb" }), async (req, res) => {
   try {
     const membership = await getMembershipFromRequest(req);

@@ -1,7 +1,29 @@
 import { useEffect, useState } from "react";
-import { Copy, Check, Download, Wand2, ArrowRightLeft, Star, Flag, AlertTriangle } from "lucide-react";
+import {
+  Copy,
+  Check,
+  Download,
+  Wand2,
+  ArrowRightLeft,
+  Star,
+  Flag,
+  AlertTriangle,
+  Play,
+} from "lucide-react";
 
-/** Counts up while a generation is in flight, so the wait is legible. */
+/**
+ * The result, presented as a document.
+ *
+ * Two things can live here: the prompt PromptLab built, and — once the user
+ * runs it — the finished content that prompt produced. The prompt used to be
+ * the end of the line, which left the user to paste it into a chat app to get
+ * anything usable; running it here closes that gap without hiding the prompt
+ * from people who want it.
+ *
+ * Improve and Compare act on the prompt, since that is what they rewrite.
+ */
+
+/** Counts up while a request is in flight, so the wait is legible. */
 function Elapsed() {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
@@ -13,20 +35,27 @@ function Elapsed() {
   return <time dateTime={`PT${seconds}S`}>{`${mm}:${ss}`}</time>;
 }
 
-/**
- * The result, presented as a document.
- *
- * Improve and Compare used to be separate destinations; here they are actions
- * on the thing already on screen, which is how people actually think about
- * them ("make this better") and removes the manual copy-paste between tabs.
- */
+function Working({ title, hint }) {
+  return (
+    <div className="pl-working">
+      <div className="pl-working-head">
+        <span className="pl-spinner" aria-hidden="true" />
+        <strong>{title}</strong>
+        <Elapsed />
+      </div>
+      <span className="pl-working-track" aria-hidden="true">
+        <i />
+      </span>
+      <p>{hint}</p>
+    </div>
+  );
+}
 
 export default function Result({
   t,
   prompt,
   metrics,
   isGenerating,
-  generationStatus,
   copied,
   onCopy,
   onSave,
@@ -39,46 +68,74 @@ export default function Result({
   canExportPpt,
   exportStatus,
   onReport,
+  onRun,
+  runOutput,
+  isRunning,
+  runError,
 }) {
+  const [view, setView] = useState("prompt");
+
+  // A finished run is what the user came for, so surface it as soon as it lands.
+  useEffect(() => {
+    if (runOutput) setView("output");
+  }, [runOutput]);
+
+  useEffect(() => {
+    if (!runOutput) setView("prompt");
+  }, [prompt, runOutput]);
+
   const score = Number(metrics?.score) || 0;
 
   if (isGenerating && !prompt) {
     return (
       <section className="pl-result" aria-live="polite">
-        <div className="pl-working">
-          <div className="pl-working-head">
-            <span className="pl-spinner" aria-hidden="true" />
-            <strong>{t("result.working")}</strong>
-            <Elapsed />
-          </div>
-          <span className="pl-working-track" aria-hidden="true">
-            <i />
-          </span>
-          {/* State the expected duration rather than leaving a blank wait that
-              reads as a hang. */}
-          <p>{t("result.workingHint")}</p>
-        </div>
+        <Working title={t("result.working")} hint={t("result.workingHint")} />
       </section>
     );
   }
 
   if (!prompt) return null;
 
+  const showingOutput = view === "output" && Boolean(runOutput);
+  const visibleText = showingOutput ? runOutput : prompt;
+
   return (
     <section className="pl-result" aria-label={t("result.title")}>
       <div className="pl-result-head">
-        <h2 className="pl-eyebrow">{t("result.title")}</h2>
-        <p className="pl-readiness" title={t("result.readinessHelp")}>
-          <span>{t("result.readiness")}</span>
-          <strong>{score}</strong>
-          <span className="pl-bar" aria-hidden="true">
-            <i style={{ width: `${Math.max(0, Math.min(100, score * 10))}%` }} />
-          </span>
-        </p>
+        {runOutput ? (
+          <div className="pl-segment" role="group" aria-label={t("result.title")}>
+            <button
+              type="button"
+              aria-pressed={!showingOutput}
+              onClick={() => setView("prompt")}
+            >
+              {t("result.tabPrompt")}
+            </button>
+            <button
+              type="button"
+              aria-pressed={showingOutput}
+              onClick={() => setView("output")}
+            >
+              {t("result.tabOutput")}
+            </button>
+          </div>
+        ) : (
+          <h2 className="pl-eyebrow">{t("result.title")}</h2>
+        )}
+
+        {!showingOutput && (
+          <p className="pl-readiness" title={t("result.readinessHelp")}>
+            <span>{t("result.readiness")}</span>
+            <strong>{score}</strong>
+            <span className="pl-bar" aria-hidden="true">
+              <i style={{ width: `${Math.max(0, Math.min(100, score * 10))}%` }} />
+            </span>
+          </p>
+        )}
       </div>
 
-      <article className={`pl-doc${isGenerating ? " pl-doc--busy" : ""}`} aria-live="polite">
-        {prompt}
+      <article className="pl-doc" aria-live="polite">
+        {visibleText}
       </article>
 
       <p className="pl-notice">
@@ -86,24 +143,62 @@ export default function Result({
         <span>{t("result.aiNotice")}</span>
       </p>
 
+      {/* Running the prompt is the primary next step while only the prompt exists. */}
+      {!runOutput && !isRunning && (
+        <div className="pl-runcta">
+          <button type="button" className="pl-btn pl-btn--primary" onClick={onRun}>
+            <Play size={17} aria-hidden="true" />
+            {t("result.run")}
+          </button>
+          <p className="pl-hint">{t("result.runHint")}</p>
+        </div>
+      )}
+
+      {isRunning && (
+        <Working title={t("result.runWorking")} hint={t("result.runWorkingHint")} />
+      )}
+
+      {runError && (
+        <div className="pl-notice pl-notice--danger" role="alert">
+          {runError}
+        </div>
+      )}
+
       <div className="pl-actions">
-        <button type="button" className="pl-btn pl-btn--primary" onClick={onCopy}>
+        <button type="button" className="pl-btn" onClick={() => onCopy(visibleText)}>
           {copied ? <Check size={17} aria-hidden="true" /> : <Copy size={17} aria-hidden="true" />}
           {copied ? t("result.copied") : t("result.copy")}
         </button>
 
-        <button type="button" className="pl-btn" onClick={onSave} disabled={isGenerating}>
+        <button
+          type="button"
+          className="pl-btn"
+          onClick={() => onSave(visibleText)}
+          disabled={isGenerating || isRunning}
+        >
           <Star size={17} aria-hidden="true" />
           {saved ? t("result.saved") : t("result.save")}
         </button>
 
-        <button type="button" className="pl-btn" onClick={onImprove} disabled={isGenerating}>
-          <Wand2 size={17} aria-hidden="true" />
-          {t("result.improve")}
-        </button>
+        {!showingOutput && (
+          <button
+            type="button"
+            className="pl-btn"
+            onClick={onImprove}
+            disabled={isGenerating || isRunning}
+          >
+            <Wand2 size={17} aria-hidden="true" />
+            {t("result.improve")}
+          </button>
+        )}
 
-        {canCompare && (
-          <button type="button" className="pl-btn" onClick={onCompare} disabled={isGenerating}>
+        {!showingOutput && canCompare && (
+          <button
+            type="button"
+            className="pl-btn"
+            onClick={onCompare}
+            disabled={isGenerating || isRunning}
+          >
             <ArrowRightLeft size={17} aria-hidden="true" />
             {t("result.compare")}
           </button>
@@ -113,8 +208,8 @@ export default function Result({
           <button
             type="button"
             className="pl-btn"
-            onClick={() => onExport("docx")}
-            disabled={isGenerating}
+            onClick={() => onExport("docx", visibleText)}
+            disabled={isGenerating || isRunning}
           >
             <Download size={17} aria-hidden="true" />
             {t("result.exportWord")}
@@ -125,8 +220,8 @@ export default function Result({
           <button
             type="button"
             className="pl-btn"
-            onClick={() => onExport("pptx")}
-            disabled={isGenerating}
+            onClick={() => onExport("pptx", visibleText)}
+            disabled={isGenerating || isRunning}
           >
             <Download size={17} aria-hidden="true" />
             {t("result.exportPpt")}

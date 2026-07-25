@@ -1053,6 +1053,34 @@
   line-height: var(--lh-snug);
 }
 
+/* ---- Run call-to-action ------------------------------------------------- */
+
+.pl-runcta {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-4);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+}
+
+.pl-runcta .pl-btn--primary {
+  flex: none;
+}
+
+.pl-runcta .pl-hint {
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  .pl-runcta {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s-3);
+  }
+}
+
 /* ---- Toast -------------------------------------------------------------- */
 
 .pl-toast {

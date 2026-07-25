@@ -71,8 +71,12 @@ const WHAT_IT_DOES = [
     desc: "Type a request, or attach photos, screenshots, PDF, Word, Excel, and PowerPoint files. Text is read out of the file and used as context.",
   },
   {
-    title: "Get a structured result",
+    title: "Get a structured prompt",
     desc: "The output is organised into role, context, task, constraints, and output format — ready to paste into ChatGPT, Claude, Gemini, or Grok.",
+  },
+  {
+    title: "Or just run it here",
+    desc: "One tap runs the prompt and writes the result in the app, so you do not have to copy it into a chat tool at all. The prompt stays available either way.",
   },
   {
     title: "Improve it in place",
@@ -153,13 +157,14 @@ export default function LandingPage() {
               marginBottom: 20,
             }}
           >
-            Turn notes, photos, and files
+            From rough notes
             <br />
-            into work you can send
+            to a finished draft
           </h1>
           <p style={{ ...S.lede, fontSize: "1.15rem", marginBottom: 36 }}>
-            PromptLab turns rough input into structured prompts and documents for ChatGPT, Claude,
-            Gemini, and Grok — with Word and PowerPoint export.
+            PromptLab turns your idea, photos, and files into a structured prompt for ChatGPT,
+            Claude, Gemini, or Grok — then runs it here, so you get the written result without
+            leaving the app.
           </p>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center" }}>
             <a href="/app" style={S.primary}>
