@@ -79,10 +79,31 @@ if (missing) {
   console.log("   Pelaporan konten AI siap (butuh SUPABASE_SERVICE_ROLE_KEY di produksi).");
 }
 
-// ---- 3. Server-side key reminder -----------------------------------------
-process.stdout.write("\n3. SUPABASE_SERVICE_ROLE_KEY .. ");
-console.log(env.SUPABASE_SERVICE_ROLE_KEY ? "ada di env lokal ✓" : "tidak ada di env lokal");
-console.log("   Wajib diisi di Vercel Production agar laporan tersimpan.");
+// ---- 3. Service role key in production ------------------------------------
+// What matters is production, not this machine. The server reads its published
+// runtime config through the service-role client, so `configSource` reports
+// "published" only when that key is present — and "env" when it is missing.
+process.stdout.write("\n3. SERVICE_ROLE_KEY (produksi) . ");
+const appUrl = env.APP_URL || "https://prompt-lab.xyz";
+try {
+  const response = await fetch(`${appUrl}/api/health`, {
+    signal: AbortSignal.timeout(15000),
+  });
+  const health = await response.json();
+  if (health.configSource === "published") {
+    console.log("TERPASANG ✓");
+    console.log("   Hapus akun, konsol admin, dan penyimpanan laporan berfungsi.");
+  } else {
+    failures += 1;
+    console.log("TIDAK TERPASANG ✖");
+    console.log(`   /api/health melaporkan configSource="${health.configSource}".`);
+    console.log("   Akibatnya: hapus akun permanen gagal (503) dan laporan konten tidak tersimpan.");
+    console.log("   Perbaiki: Vercel → Settings → Environment Variables → SUPABASE_SERVICE_ROLE_KEY (Production).");
+  }
+} catch (error) {
+  console.log("TIDAK BISA DICEK");
+  console.log(`   ${appUrl}/api/health tidak terjangkau: ${error.message}`);
+}
 
 console.log(
   failures === 0
