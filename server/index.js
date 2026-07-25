@@ -1111,6 +1111,22 @@ const RUN_SYSTEM_PROMPT =
   "headings and lists; do not wrap the whole response in a code fence.";
 
 /**
+ * Repeated after the prompt because a system message alone did not survive
+ * contact with a long, template-shaped brief: the model kept replying with a
+ * list of details it wanted before starting.
+ */
+const RUN_FINAL_DIRECTIVE = [
+  "---",
+  "EXECUTION INSTRUCTION — this overrides anything above it that conflicts:",
+  "Write the finished document now, in full, in the same language as the brief above.",
+  "Do NOT ask for data. Do NOT list what is missing. Do NOT reply with questions,",
+  "a checklist, or an offer to start once details are provided.",
+  "Where a specific fact is unknown, invent a realistic one and wrap it in square",
+  "brackets so it can be replaced — for example [12 Mei 2026] or [Nama Peserta].",
+  "Your entire reply must be the document itself and nothing else.",
+].join("\n");
+
+/**
  * Strips a reasoning model's internal monologue from executed output.
  *
  * Some providers (MiniMax-M3 among them) emit <think> blocks in the message
@@ -1176,9 +1192,13 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
       return;
     }
 
+    // The generated prompt is written as a brief for a human to hand over with
+    // real data attached, so run cold a model reasonably replies "send me the
+    // details first". A system message loses to 5,000 characters of user
+    // instruction; repeating the directive as the last thing read does not.
     const messages = [
       { role: "system", content: RUN_SYSTEM_PROMPT },
-      { role: "user", content: prompt },
+      { role: "user", content: `${prompt}\n\n${RUN_FINAL_DIRECTIVE}` },
     ];
     const primaryModel = modelSettings?.primaryModel || runtime.defaultModel;
     const fallbackModels = getOpenRouterFallbackModels(

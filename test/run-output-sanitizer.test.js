@@ -76,6 +76,19 @@ test("survives empty and non-string input", () => {
   assert.equal(sanitizeRunOutput(42), "");
 });
 
+test("the anti-stalling directive is repeated after the prompt", () => {
+  // A system message alone lost to a 5,000-character brief: production replied
+  // "Mohon dilengkapi data berikut sebelum saya menyusun notulen" instead of
+  // writing anything. The directive has to be the last thing the model reads.
+  assert.match(server, /const RUN_FINAL_DIRECTIVE = \[/);
+  assert.match(server, /this overrides anything above it that conflicts/i);
+  assert.match(server, /Do NOT ask for data/i);
+  assert.match(server, /Do NOT list what is missing/i);
+  assert.match(server, /square\s*\n?\s*"?brackets/i);
+  // It must be appended to the user turn, not left in the system slot.
+  assert.match(server, /content: `\$\{prompt\}\\n\\n\$\{RUN_FINAL_DIRECTIVE\}`/);
+});
+
 test("the run instruction forbids stalling for more detail", () => {
   // The first live run replied asking for details instead of writing anything.
   const prompt = server.slice(
