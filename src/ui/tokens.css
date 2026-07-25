@@ -1,0 +1,187 @@
+/**
+ * PromptLab design tokens.
+ *
+ * Direction: "kertas kerja" — the surface behaves like paper so the user's
+ * document is the only thing with presence. Light is the default because this
+ * is a read/write tool; dark follows the system and can be overridden.
+ *
+ * Manual override wins in both directions via [data-ui-theme] on <html>.
+ * No web fonts: system stacks render instantly on low-end Android and remove a
+ * blocking third-party request.
+ */
+
+:root {
+  /* ---- Surface ---------------------------------------------------------- */
+  --paper: #fcfcfa;
+  --paper-raised: #ffffff;
+  --paper-sunken: #f4f4f0;
+  --paper-inset: #efefea;
+
+  /* ---- Ink -------------------------------------------------------------- */
+  --ink: #1a1d1b;
+  --ink-2: #3d423f;
+  --ink-mute: #6b716d;
+  --ink-faint: #9aa09c;
+
+  /* ---- Rules (hairlines carry structure instead of shadows) -------------- */
+  --rule: #e3e3de;
+  --rule-strong: #cfcfc8;
+
+  /* ---- Accent: one colour, reserved for the primary action --------------- */
+  --accent: #0f6b5c;
+  --accent-hover: #0c584c;
+  --accent-ink: #ffffff;
+  --accent-soft: #e6f2ef;
+  --accent-line: #a9cfc6;
+
+  /* ---- Status ----------------------------------------------------------- */
+  --ok: #1c6b45;
+  --ok-soft: #e6f1eb;
+  --warn: #8a5a12;
+  --warn-soft: #f8efdd;
+  --danger: #a32b28;
+  --danger-soft: #f9e9e8;
+
+  /* ---- Focus ------------------------------------------------------------ */
+  --focus: #0f6b5c;
+  --focus-halo: rgba(15, 107, 92, 0.22);
+
+  /* ---- Elevation: deliberately faint ------------------------------------ */
+  --lift-1: 0 1px 2px rgba(26, 29, 27, 0.05);
+  --lift-2: 0 4px 16px rgba(26, 29, 27, 0.08);
+  --lift-3: 0 12px 32px rgba(26, 29, 27, 0.12);
+
+  /* ---- Type ------------------------------------------------------------- */
+  --font-ui:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", sans-serif;
+  --font-doc:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", "Roboto Mono", "Cascadia Mono", Consolas, monospace;
+
+  --t-xs: 0.75rem;
+  --t-sm: 0.8125rem;
+  --t-base: 0.9375rem;
+  --t-md: 1.0625rem;
+  --t-lg: 1.25rem;
+  --t-xl: 1.5rem;
+  --t-2xl: 1.875rem;
+
+  --lh-tight: 1.25;
+  --lh-snug: 1.4;
+  --lh-body: 1.6;
+  --lh-doc: 1.7;
+
+  --tracking-wide: 0.06em;
+
+  /* ---- Space (4px base) -------------------------------------------------- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+
+  /* ---- Radius: restrained ------------------------------------------------ */
+  --r-sm: 6px;
+  --r: 9px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-full: 999px;
+
+  /* ---- Layout ------------------------------------------------------------ */
+  --measure: 68ch;
+  --shell-max: 780px;
+  --tap: 44px;
+
+  /* ---- Motion ------------------------------------------------------------ */
+  --ease: cubic-bezier(0.2, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 320ms;
+
+  color-scheme: light;
+}
+
+/* Dark tokens, shared by the system signal and the manual override. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-ui-theme="light"]) {
+    --paper: #16191b;
+    --paper-raised: #1d2124;
+    --paper-sunken: #121517;
+    --paper-inset: #0f1213;
+
+    --ink: #ecefec;
+    --ink-2: #c8cdc9;
+    --ink-mute: #949a96;
+    --ink-faint: #6b716d;
+
+    --rule: #2a2f31;
+    --rule-strong: #3b4245;
+
+    --accent: #5fc9b4;
+    --accent-hover: #7ad6c3;
+    --accent-ink: #0c211d;
+    --accent-soft: #17302b;
+    --accent-line: #2f5c53;
+
+    --ok: #6bc79a;
+    --ok-soft: #172c22;
+    --warn: #d9a84f;
+    --warn-soft: #2e2617;
+    --danger: #e88b87;
+    --danger-soft: #2f1e1d;
+
+    --focus: #5fc9b4;
+    --focus-halo: rgba(95, 201, 180, 0.28);
+
+    --lift-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --lift-2: 0 4px 16px rgba(0, 0, 0, 0.45);
+    --lift-3: 0 12px 32px rgba(0, 0, 0, 0.5);
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-ui-theme="dark"] {
+  --paper: #16191b;
+  --paper-raised: #1d2124;
+  --paper-sunken: #121517;
+  --paper-inset: #0f1213;
+
+  --ink: #ecefec;
+  --ink-2: #c8cdc9;
+  --ink-mute: #949a96;
+  --ink-faint: #6b716d;
+
+  --rule: #2a2f31;
+  --rule-strong: #3b4245;
+
+  --accent: #5fc9b4;
+  --accent-hover: #7ad6c3;
+  --accent-ink: #0c211d;
+  --accent-soft: #17302b;
+  --accent-line: #2f5c53;
+
+  --ok: #6bc79a;
+  --ok-soft: #172c22;
+  --warn: #d9a84f;
+  --warn-soft: #2e2617;
+  --danger: #e88b87;
+  --danger-soft: #2f1e1d;
+
+  --focus: #5fc9b4;
+  --focus-halo: rgba(95, 201, 180, 0.28);
+
+  --lift-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --lift-2: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --lift-3: 0 12px 32px rgba(0, 0, 0, 0.5);
+
+  color-scheme: dark;
+}

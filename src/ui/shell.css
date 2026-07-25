@@ -1,0 +1,672 @@
+/**
+ * Shell layer: the single canvas.
+ *
+ * There is one screen. Composing and reading the result happen in the same
+ * place; everything secondary (history, account, advanced options, reporting)
+ * arrives as a sheet over it and leaves again.
+ */
+
+.pl-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+/* ---- Top bar: names the app, nothing else competes ---------------------- */
+
+.pl-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-4);
+  padding-top: max(var(--s-2), env(safe-area-inset-top));
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+}
+
+@supports not (backdrop-filter: blur(8px)) {
+  .pl-top {
+    background: var(--paper);
+  }
+}
+
+.pl-brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin-right: auto;
+  font-size: var(--t-md);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.pl-brand span {
+  font-size: var(--t-xs);
+  font-weight: 500;
+  color: var(--ink-faint);
+}
+
+.pl-top-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.pl-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--ink-mute);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.pl-icon-btn:hover {
+  background: var(--paper-sunken);
+  color: var(--ink);
+}
+
+.pl-icon-btn[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* ---- Canvas ------------------------------------------------------------- */
+
+.pl-main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--shell-max);
+  margin-inline: auto;
+  padding: var(--s-5) var(--s-4) var(--s-16);
+}
+
+.pl-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+
+/* ---- Opening line: sets the job, then gets out of the way --------------- */
+
+.pl-lede {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding-block: var(--s-2) var(--s-1);
+}
+
+.pl-lede h1 {
+  font-size: var(--t-xl);
+  letter-spacing: -0.02em;
+}
+
+.pl-lede p {
+  color: var(--ink-mute);
+  max-width: 46ch;
+}
+
+/* ---- Composer ----------------------------------------------------------- */
+
+.pl-composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  background: var(--paper-raised);
+  box-shadow: var(--lift-1);
+}
+
+.pl-composer:focus-within {
+  border-color: var(--accent-line);
+}
+
+.pl-composer .pl-textarea {
+  border: none;
+  padding: 0;
+  min-height: 116px;
+  background: transparent;
+  font-size: var(--t-md);
+  line-height: var(--lh-body);
+}
+
+.pl-composer .pl-textarea:focus-visible {
+  box-shadow: none;
+}
+
+.pl-composer-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+}
+
+.pl-composer-foot .pl-btn--primary {
+  margin-left: auto;
+}
+
+/* ---- Attachments -------------------------------------------------------- */
+
+.pl-attach {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: var(--tap);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r);
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pl-attach:hover {
+  background: var(--paper-sunken);
+}
+
+/* The input stays in the layout so it remains keyboard reachable; it is the
+   label that is styled, and focus is mirrored onto it. */
+.pl-attach input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.pl-attach:has(input[type="file"]:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.pl-files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.pl-file {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--paper-sunken);
+  font-size: var(--t-sm);
+}
+
+.pl-file-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pl-file-note {
+  font-size: var(--t-xs);
+  color: var(--ink-mute);
+  white-space: nowrap;
+}
+
+/* ---- Advanced disclosure ------------------------------------------------ */
+
+.pl-advanced {
+  border-top: 1px solid var(--rule);
+  padding-top: var(--s-3);
+}
+
+.pl-advanced-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 36px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ink-mute);
+  font-family: inherit;
+  font-size: var(--t-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pl-advanced-toggle:hover {
+  color: var(--ink);
+}
+
+.pl-advanced-toggle svg {
+  transition: transform var(--dur) var(--ease);
+}
+
+.pl-advanced-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.pl-advanced-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--s-3);
+  padding-top: var(--s-4);
+}
+
+/* ---- Starters: what to do when the canvas is empty ---------------------- */
+
+.pl-starters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.pl-starters-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding-bottom: var(--s-2);
+}
+
+.pl-starter {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-3);
+  border: none;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: var(--t-base);
+  text-align: left;
+  cursor: pointer;
+}
+
+.pl-starter:last-child {
+  border-bottom: none;
+}
+
+.pl-starter:hover {
+  background: var(--paper-sunken);
+}
+
+.pl-starter-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.pl-starter-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pl-starter-text strong {
+  font-weight: 500;
+}
+
+.pl-starter-text span {
+  font-size: var(--t-sm);
+  color: var(--ink-mute);
+  line-height: var(--lh-snug);
+}
+
+/* ---- Result: rendered as a document, not as terminal output ------------- */
+
+.pl-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.pl-result-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.pl-doc {
+  padding: var(--s-5);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: var(--paper-raised);
+  box-shadow: var(--lift-1);
+  font-family: var(--font-doc);
+  font-size: var(--t-base);
+  line-height: var(--lh-doc);
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: var(--measure);
+}
+
+.pl-doc--busy {
+  color: var(--ink-mute);
+}
+
+/* Actions sit under the document and wrap rather than scroll off-screen. */
+.pl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.pl-actions--split {
+  justify-content: space-between;
+}
+
+/* ---- Readiness: a quiet fact, not a scoreboard -------------------------- */
+
+.pl-readiness {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  font-size: var(--t-sm);
+  color: var(--ink-mute);
+}
+
+.pl-readiness strong {
+  font-size: var(--t-md);
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.pl-bar {
+  width: 64px;
+  height: 4px;
+  border-radius: var(--r-full);
+  background: var(--paper-inset);
+  overflow: hidden;
+}
+
+.pl-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width var(--dur-slow) var(--ease);
+}
+
+/* ---- Progress while generating ------------------------------------------ */
+
+.pl-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--paper-sunken);
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+}
+
+.pl-spinner {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--rule-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: pl-spin 700ms linear infinite;
+}
+
+@keyframes pl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- Sheet: every secondary surface uses this --------------------------- */
+
+.pl-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(12, 14, 13, 0.42);
+  animation: pl-fade var(--dur) var(--ease);
+}
+
+@keyframes pl-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.pl-sheet {
+  position: fixed;
+  z-index: 41;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 88dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  border-top: 1px solid var(--rule-strong);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  box-shadow: var(--lift-3);
+  animation: pl-rise var(--dur-slow) var(--ease);
+}
+
+@keyframes pl-rise {
+  from {
+    transform: translateY(3%);
+    opacity: 0;
+  }
+}
+
+.pl-sheet-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-bottom: 1px solid var(--rule);
+}
+
+.pl-sheet-head h2 {
+  margin-right: auto;
+}
+
+.pl-sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--s-4);
+  padding-bottom: max(var(--s-6), env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+@media (min-width: 640px) {
+  .pl-sheet {
+    left: 50%;
+    bottom: auto;
+    top: 50%;
+    width: min(560px, calc(100vw - var(--s-8)));
+    transform: translate(-50%, -50%);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--rule-strong);
+    max-height: 84dvh;
+  }
+
+  @keyframes pl-rise {
+    from {
+      transform: translate(-50%, -48%);
+      opacity: 0;
+    }
+    to {
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
+/* ---- History rows ------------------------------------------------------- */
+
+.pl-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.pl-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-3) var(--s-2);
+  border: none;
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: var(--t-base);
+  text-align: left;
+  cursor: pointer;
+}
+
+.pl-row:last-child {
+  border-bottom: none;
+}
+
+.pl-row:hover {
+  background: var(--paper-sunken);
+}
+
+.pl-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pl-row-text strong {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pl-row-text span {
+  font-size: var(--t-sm);
+  color: var(--ink-mute);
+}
+
+/* ---- Empty state -------------------------------------------------------- */
+
+.pl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-10) var(--s-4);
+  text-align: center;
+  color: var(--ink-mute);
+}
+
+/* ---- Segmented control (used for language and theme) -------------------- */
+
+.pl-segment {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r);
+  background: var(--paper-sunken);
+}
+
+.pl-segment button {
+  min-height: 36px;
+  padding: 0 var(--s-3);
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--ink-mute);
+  font-family: inherit;
+  font-size: var(--t-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pl-segment button[aria-pressed="true"] {
+  background: var(--paper-raised);
+  color: var(--ink);
+  box-shadow: var(--lift-1);
+}
+
+/* ---- Definition rows (account, quota) ----------------------------------- */
+
+.pl-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.pl-fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: var(--s-2) 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--t-sm);
+}
+
+.pl-fact:last-child {
+  border-bottom: none;
+}
+
+.pl-fact dt {
+  color: var(--ink-mute);
+}
+
+.pl-fact dd {
+  margin: 0;
+  font-weight: 500;
+  text-align: right;
+}
+
+/* ---- Toast -------------------------------------------------------------- */
+
+.pl-toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(var(--s-6), env(safe-area-inset-bottom));
+  z-index: 60;
+  transform: translateX(-50%);
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--r-full);
+  background: var(--ink);
+  color: var(--paper);
+  font-size: var(--t-sm);
+  box-shadow: var(--lift-2);
+  animation: pl-fade var(--dur) var(--ease);
+}

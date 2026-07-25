@@ -1,4 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap");
+/* Web fonts were removed: the import blocked first paint, cost a third-party
+   request on slow mobile networks, and the new surface uses system stacks. The
+   families below still name Geist/Instrument Serif so an installed copy is
+   honoured, and fall back to the system otherwise. */
 
 :root {
   color: #f4f8ff;

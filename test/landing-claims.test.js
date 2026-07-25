@@ -1,0 +1,66 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+/**
+ * The visible page at "/" is the static markup inlined in index.html, not the
+ * React LandingPage component (which sits inside the hidden #app-root). That
+ * makes index.html the surface a Play reviewer actually reads, and the one an
+ * automated article pipeline can silently rewrite — so the honesty checks live
+ * here.
+ */
+
+const indexHtml = await readFile(new URL("../index.html", import.meta.url), "utf8");
+const landingComponent = await readFile(new URL("../src/LandingPage.jsx", import.meta.url), "utf8");
+
+/** Marketing copy only — blog prose is allowed to discuss these as topics. */
+const PRODUCT_CLAIM_BLOCKS = [
+  {
+    term: "Perfect Prompt",
+    why: "promises an outcome the product cannot guarantee",
+  },
+  {
+    term: "bias mitigation",
+    why: "claims a safeguard the compare feature does not unconditionally apply",
+  },
+  {
+    term: "expert-level context",
+    why: "overstates what domain detection adds",
+  },
+  {
+    term: "Six powerful tools",
+    why: "the app is a single canvas, not six tools",
+  },
+];
+
+test("landing markup makes no unsupportable product claims", () => {
+  for (const { term, why } of PRODUCT_CLAIM_BLOCKS) {
+    assert.ok(
+      !new RegExp(term, "i").test(indexHtml),
+      `index.html still claims "${term}" — ${why}`
+    );
+    assert.ok(
+      !new RegExp(term, "i").test(landingComponent),
+      `LandingPage.jsx still claims "${term}" — ${why}`
+    );
+  }
+});
+
+test('"production-ready" survives only as blog prose, never as a product claim', () => {
+  const hits = indexHtml.match(/.{0,90}production-ready.{0,60}/gi) || [];
+  for (const hit of hits) {
+    assert.ok(
+      /System Prompt/i.test(hit),
+      `unexpected product-facing "production-ready" claim: ${hit.replace(/\s+/g, " ").trim()}`
+    );
+  }
+});
+
+test("landing markup does not promise AI generation only after signup", () => {
+  // The trial grants AI generation before an account exists; saying otherwise
+  // understates the product and contradicts the store listing.
+  assert.ok(
+    !/account when you want AI generation/i.test(indexHtml),
+    "landing still says AI generation requires an account"
+  );
+});

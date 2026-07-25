@@ -62,9 +62,9 @@ android {
     defaultConfig {
         applicationId "app.promptlab.twa"
         minSdkVersion 21
-        targetSdkVersion 35
-        versionCode 7
-        versionName "1.0.6"
+        targetSdkVersion 36
+        versionCode 8
+        versionName "1.0.7"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -224,13 +224,21 @@ repositories {
     
 }
 
+configurations.configureEach {
+    resolutionStrategy {
+        // Play policy: Billing Library 6.0.0+ (recommend 7.x).
+        // androidbrowserhelper:billing:1.1.0 ships 7.1.1 — force so older
+        // transitive versions cannot sneak into the bundle.
+        force 'com.android.billingclient:billing:7.1.1'
+    }
+}
+
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    
-        implementation 'com.google.androidbrowserhelper:billing:1.1.0'
-    
-        implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
-    
+
+    implementation 'com.google.androidbrowserhelper:billing:1.1.0'
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
+    implementation 'com.android.billingclient:billing:7.1.1'
 }
 
 

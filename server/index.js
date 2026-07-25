@@ -1015,6 +1015,66 @@ app.post("/api/account/delete", express.json({ limit: "8kb" }), async (req, res)
   }
 });
 
+const REPORT_REASONS = new Set([
+  "offensive",
+  "harmful",
+  "sexual",
+  "violence",
+  "privacy",
+  "ip",
+  "other",
+]);
+
+/**
+ * In-app reporting for AI-generated output.
+ *
+ * Required by Google Play's Generative AI policy: users must be able to flag
+ * offensive output from inside the app. Reporting deliberately does not
+ * require an account — the trial user who sees bad output is exactly the
+ * person most likely to report it.
+ */
+app.post("/api/report-content", express.json({ limit: "64kb" }), async (req, res) => {
+  try {
+    const reason = String(req.body?.reason || "").trim();
+    if (!REPORT_REASONS.has(reason)) {
+      res.status(400).json({ error: "Unknown report reason." });
+      return;
+    }
+
+    const detail = String(req.body?.detail || "").slice(0, 2000);
+    const content = String(req.body?.content || "").slice(0, 8000);
+
+    let userId = null;
+    try {
+      const membership = await getMembershipFromRequest(req);
+      userId = membership?.user?.id || null;
+    } catch {
+      // An unauthenticated report is still a valid report.
+    }
+
+    const admin = createServiceRoleSupabaseClient();
+    if (!admin) {
+      // Never drop a report silently; make it recoverable from logs.
+      console.error("content report (no database configured)", { reason, userId, detail });
+      res.json({ ok: true });
+      return;
+    }
+
+    const { error } = await admin.from("content_reports").insert({
+      user_id: userId,
+      reason,
+      detail,
+      content,
+    });
+    if (error) throw new Error(error.message);
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("content report failed", error);
+    res.status(500).json({ error: "Could not record the report." });
+  }
+});
+
 app.post("/api/optimize-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json({ limit: "256kb" }), async (req, res) => {
   try {
     const membership = await getMembershipFromRequest(req);

@@ -41,31 +41,31 @@ test("Settings keyboard traversal includes About as the sixth destination", () =
   assert.equal(getTabTargetIndex("ArrowRight", 5, SETTINGS_SECTION_NAMES.length), 0);
 });
 
-test("Settings exposes the accessible About tab and panel", () => {
-  const mainSource = fs.readFileSync(new URL("../src/main.jsx", import.meta.url), "utf8");
+// The About surface moved out of the Settings tab strip and into the Account
+// sheet when the app collapsed to a single canvas. The destinations it must
+// expose are unchanged.
+test("Account sheet exposes product, rating, and trust destinations", () => {
+  const source = fs.readFileSync(new URL("../src/ui/Account.jsx", import.meta.url), "utf8");
 
-  assert.match(mainSource, /About: Info/);
-  assert.match(mainSource, /SETTINGS_SECTION_NAMES\.map/);
-  assert.match(mainSource, /section === "About"/);
-  assert.match(mainSource, /<AboutPanel\s*\/>/);
+  assert.match(source, /aria-labelledby="about-promptlab-title"/);
+  assert.match(source, /id="about-promptlab-title"/);
+  assert.match(source, /\/icons\/icon-512\.png/);
+  assert.match(source, /alt="PromptLab app icon"/);
+  assert.match(source, /href=\{PLAY_STORE_LISTING_URL\}/);
+  assert.match(source, /target="_blank"/);
+  assert.match(source, /rel="noreferrer"/);
+  assert.match(source, /href="\/privacy"/);
+  assert.match(source, /href="\/privacy\/delete-account"/);
+  assert.match(source, /href=\{`mailto:\$\{SUPPORT_EMAIL\}`\}/);
+  assert.match(source, /aria-label=\{`Contact support by email at \$\{SUPPORT_EMAIL\}`\}/);
+  // Play rejects apps that deep-link the store through raw intents.
+  assert.doesNotMatch(source, /(?:market|intent):\/\//);
 });
 
-test("About panel exposes product, rating, and trust destinations", () => {
-  const panelSource = fs.readFileSync(new URL("../src/aboutPanel.jsx", import.meta.url), "utf8");
-
-  assert.match(panelSource, /role="tabpanel"/);
-  assert.match(panelSource, /id="settings-panel-about"/);
-  assert.match(panelSource, /\/icons\/icon-512\.png/);
-  assert.match(panelSource, /alt="PromptLab app icon"/);
-  assert.match(panelSource, /Rate Prompt Lab/);
-  assert.match(panelSource, /href=\{PLAY_STORE_LISTING_URL\}/);
-  assert.match(panelSource, /target="_blank"/);
-  assert.match(panelSource, /rel="noreferrer"/);
-  assert.match(panelSource, /href="\/privacy"/);
-  assert.match(panelSource, /href="\/privacy\/delete-account"/);
-  assert.match(panelSource, /href="mailto:support@prompt-lab\.xyz"/);
-  assert.match(panelSource, /aria-label="Contact support by email at support@prompt-lab\.xyz"/);
-  assert.doesNotMatch(panelSource, /(?:market|intent):\/\//);
+test("About rating link points at the published listing", async () => {
+  const { PLAY_STORE_LISTING_URL, SUPPORT_EMAIL } = await import("../src/aboutApp.js");
+  assert.match(PLAY_STORE_LISTING_URL, /^https:\/\/play\.google\.com\/store\/apps\/details\?id=/);
+  assert.equal(SUPPORT_EMAIL, "support@prompt-lab.xyz");
 });
 
 test("About presentation covers responsive and reduced-motion states", () => {

@@ -28,6 +28,16 @@ playwright-results.*
 .tools/
 .tmp_*
 .env*
+
+# Local agent worktrees and their build output
+.claude/worktrees/
+.worktrees/
+
+# Timestamped backups written by the article cron
+*.bak.*
+
+# Unframed screenshot sources
+playstore/assets/raw/
 .superpowers/
 .worktrees/
 playstore/assets/.native-*.png

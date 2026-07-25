@@ -3,7 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#061011" />
+    <meta name="theme-color" content="#fcfcfa" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      /* Apply the saved appearance before first paint so the launch screen and
+         status bar never flash the wrong scheme. Mirrors src/ui/theme.js. */
+      (function () {
+        try {
+          var mode = localStorage.getItem("promptlab-ui-theme");
+          if (mode === "light" || mode === "dark") {
+            document.documentElement.setAttribute("data-ui-theme", mode);
+          }
+          var dark =
+            mode === "dark" ||
+            (mode !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", dark ? "#16191b" : "#fcfcfa");
+        } catch (e) {}
+      })();
+    </script>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -848,9 +866,10 @@ html.boot-app #article-page-best-prompt-for-swot-analysis { display: none !impor
     }
     </script>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+    <!-- Web fonts removed: three render-blocking requests to a third party on
+         every page, expensive on the slow mobile networks this app targets.
+         The --display/--ui/--mono stacks below already fall back to Georgia,
+         system-ui, and monospace. -->
 
     <style>
       *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -2084,6 +2103,10 @@ html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !impor
       html[data-route="article-best-prompt-for-presentations"] #blog-page { display: none !important; }
       html[data-route="article-best-prompt-for-presentations"] [id^="article-page"] { display: none !important; }
       html[data-route="article-best-prompt-for-presentations"] #article-page-best-prompt-for-presentations { display: block !important; }
+      html[data-route="article-best-prompt-for-swot-analysis"] #landing-page { display: none !important; }
+      html[data-route="article-best-prompt-for-swot-analysis"] #blog-page { display: none !important; }
+      html[data-route="article-best-prompt-for-swot-analysis"] [id^="article-page"] { display: none !important; }
+      html[data-route="article-best-prompt-for-swot-analysis"] #article-page-best-prompt-for-swot-analysis { display: block !important; }
 
       /* API documentation article style contract: 16 full selectors. */
       #article-page-best-prompt-for-test-cases { min-height: 100vh; padding-top: 100px; }
@@ -2176,129 +2199,72 @@ html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !impor
       html.boot-app #app-splash.is-exiting,
       html[data-route="app"] #app-splash.is-exiting { display: none !important; }
 
+      /* Launch screen: quiet, theme-aware, and gone as soon as the app mounts.
+         The previous version animated an orbiting glow over a dark gradient and
+         held itself on screen for a minimum time, which made a fast start feel
+         slow. */
       #app-splash {
         position: fixed;
         inset: 0;
         z-index: 99999;
         display: none;
         place-items: center;
-        overflow: hidden;
-        background: #061011;
+        background: #fcfcfa;
         padding-top: env(safe-area-inset-top, 0px);
         padding-bottom: env(safe-area-inset-bottom, 0px);
       }
-      @media (prefers-reduced-motion: reduce) {
-        .app-splash__backdrop,
-        .app-splash__orbits,
-        .app-splash__logo,
-        .app-splash__bar i {
-          animation: none !important;
-        }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-ui-theme='light']) #app-splash { background: #16191b; }
       }
+      html[data-ui-theme='dark'] #app-splash { background: #16191b; }
+      html[data-ui-theme='light'] #app-splash { background: #fcfcfa; }
       #app-splash.is-exiting {
         opacity: 0;
-        transition: opacity 0.5s ease;
+        transition: opacity 0.24s ease;
       }
-      .app-splash__backdrop {
-        position: absolute;
-        inset: -20%;
-        background:
-          radial-gradient(circle at 30% 20%, rgba(56, 189, 248, 0.22), transparent 42%),
-          radial-gradient(circle at 72% 12%, rgba(99, 102, 241, 0.18), transparent 36%),
-          linear-gradient(180deg, #061011, #0a1518 55%, #061011);
-        animation: splash-bg-shift 2.4s ease-in-out infinite alternate;
-      }
-      @keyframes splash-bg-shift {
-        to { transform: scale(1.06) translateY(-1%); }
-      }
-      .app-splash__orbits {
-        position: absolute;
-        width: 220px;
-        height: 220px;
-        animation: splash-orbit 3.2s linear infinite;
-      }
-      .app-splash__orbits span {
-        position: absolute;
-        width: 10px;
-        height: 10px;
-        border-radius: 999px;
-        background: linear-gradient(135deg, #38bdf8, #22d3ee);
-        box-shadow: 0 0 18px rgba(56, 189, 248, 0.65);
-      }
-      .app-splash__orbits span:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); }
-      .app-splash__orbits span:nth-child(2) { bottom: 12%; right: 8%; opacity: 0.85; }
-      .app-splash__orbits span:nth-child(3) { bottom: 12%; left: 8%; opacity: 0.7; }
-      @keyframes splash-orbit {
-        to { transform: rotate(360deg); }
+      .app-splash__backdrop,
+      .app-splash__orbits,
+      .app-splash__bar {
+        display: none;
       }
       .app-splash__brand {
-        position: relative;
-        z-index: 1;
         display: grid;
         justify-items: center;
-        gap: 10px;
+        gap: 12px;
         text-align: center;
         padding: 24px;
-        animation: splash-brand-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
-      }
-      @keyframes splash-brand-in {
-        from { opacity: 0; transform: translateY(18px) scale(0.96); }
-        to { opacity: 1; transform: none; }
       }
       .app-splash__logo {
-        width: 92px;
-        height: 92px;
+        width: 64px;
+        height: 64px;
         display: grid;
         place-items: center;
-        border-radius: 24px;
-        background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(34, 211, 238, 0.12));
-        box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.25), 0 24px 60px rgba(0, 0, 0, 0.45);
-        animation: splash-logo-pulse 1.8s ease-in-out infinite;
-      }
-      @keyframes splash-logo-pulse {
-        50% { transform: scale(1.04); box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.4), 0 28px 70px rgba(34, 211, 238, 0.18); }
       }
       .app-splash__logo img {
-        width: 72px;
-        height: 72px;
-        border-radius: 18px;
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
       }
       .app-splash__brand strong {
-        color: #e8f4f6;
-        font-size: 28px;
+        color: #1a1d1b;
+        font-size: 20px;
+        font-weight: 600;
         letter-spacing: -0.02em;
-        font-family: Georgia, "Times New Roman", serif;
-        font-weight: 400;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
       }
       .app-splash__brand p {
         margin: 0;
-        color: rgba(184, 205, 210, 0.88);
-        font: 600 12px/1.4 system-ui, sans-serif;
-        letter-spacing: 0.12em;
+        color: #6b716d;
+        font: 500 12px/1.4 system-ui, sans-serif;
+        letter-spacing: 0.06em;
         text-transform: uppercase;
       }
-      .app-splash__bar {
-        position: absolute;
-        left: 12%;
-        right: 12%;
-        bottom: max(28px, env(safe-area-inset-bottom));
-        height: 4px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-        overflow: hidden;
+      @media (prefers-color-scheme: dark) {
+        html:not([data-ui-theme='light']) .app-splash__brand strong { color: #ecefec; }
+        html:not([data-ui-theme='light']) .app-splash__brand p { color: #949a96; }
       }
-      .app-splash__bar i {
-        display: block;
-        width: 42%;
-        height: 100%;
-        border-radius: inherit;
-        background: linear-gradient(90deg, #22d3ee, #38bdf8, #818cf8);
-        animation: splash-bar 1.2s ease-in-out infinite;
-      }
-      @keyframes splash-bar {
-        0% { transform: translateX(-120%); }
-        100% { transform: translateX(260%); }
-      }
+      html[data-ui-theme='dark'] .app-splash__brand strong { color: #ecefec; }
+      html[data-ui-theme='dark'] .app-splash__brand p { color: #949a96; }
 
       /* Blog listing page */
       #blog-page { min-height: 100vh; padding-top: 100px; }
@@ -2602,7 +2568,7 @@ Build a campaign prompt with:
         <div class="section-header">
           <div class="section-label">⚡ Features</div>
           <h2>Everything You Need to<br>Prompt Like a Pro</h2>
-          <p>Six powerful tools in one workspace — from first draft to production-ready prompt.</p>
+          <p>One workspace — from a rough idea to a structured prompt you can send.</p>
         </div>
         <div class="features-grid">
           <article class="feature-card fade-up">
@@ -2626,7 +2592,7 @@ Build a campaign prompt with:
           <article class="feature-card fade-up">
             <div class="feature-icon">📋</div>
             <h3>Templates Library</h3>
-            <p>Start from production-ready prompt patterns for Marketing, Coding, Academic, Business, Content Creator, and Image AI.</p>
+            <p>Start from practical prompt patterns for Marketing, Coding, Academic, Business, Content Creator, and Image AI.</p>
             <span class="feature-tag">Ready-to-Use</span>
           </article>
           <article class="feature-card fade-up">
@@ -2638,7 +2604,7 @@ Build a campaign prompt with:
           <article class="feature-card fade-up">
             <div class="feature-icon">⚖️</div>
             <h3>Side-by-Side Compare</h3>
-            <p>Compare two prompts head-to-head. Scored on 6 dimensions with bias mitigation and structured feedback.</p>
+            <p>Compare two prompts head-to-head, scored across clarity, context, format, and constraints. The result states whether it was judged by AI or scored locally.</p>
             <span class="feature-tag">Pro Tool</span>
           </article>
         </div>
@@ -2648,7 +2614,7 @@ Build a campaign prompt with:
       <section class="section how-section" id="how">
         <div class="section-header">
           <div class="section-label">🚀 How It Works</div>
-          <h2>From Idea to Perfect Prompt<br>in 3 Steps</h2>
+          <h2>From Idea to a Clear Prompt<br>in 3 Steps</h2>
           <p>No learning curve. Just describe what you want and let the engine handle the rest.</p>
         </div>
         <div class="steps-grid">
@@ -2675,7 +2641,7 @@ Build a campaign prompt with:
         <div class="section-header">
           <div class="section-label">🎯 Domain Packs</div>
           <h2>17 Industry-Specific<br>Domain Packs</h2>
-          <p>The engine detects your domain and adds expert-level context automatically.</p>
+          <p>The engine recognises common domains and adds relevant context to the prompt it builds.</p>
         </div>
         <div class="domain-tags">
           <span class="domain-tag">Marketing</span>

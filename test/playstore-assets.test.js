@@ -88,13 +88,35 @@ test("production entry graph stays within the documented initial JS and CSS budg
     assert.match(config, new RegExp(`return "${chunk}"`));
   }
 
+  // "Initial" means what the app route actually loads before it is usable:
+  // the entry document's own <script>/<link> graph. Assets fetched later
+  // through a dynamic import (the admin console) are excluded on purpose —
+  // counting them made lazy-loading unable to satisfy the budget it exists to
+  // encourage.
+  const appHtml = await readFile(join(root, "dist", "app.html"), "utf8");
+  const referenced = new Set(
+    [...appHtml.matchAll(/(?:src|href)="\/assets\/([^"]+)"/g)].map((match) => match[1])
+  );
+  assert.ok(referenced.size > 0, "app.html references no build assets");
+
   const files = await readdir(join(root, "dist", "assets"), { withFileTypes: true });
-  const sizes = await Promise.all(files.filter((file) => file.isFile()).map(async (file) => ({
-    name: file.name,
-    bytes: (await readFile(join(root, "dist", "assets", file.name))).length,
-  })));
+  const sizes = await Promise.all(
+    files
+      .filter((file) => file.isFile() && referenced.has(file.name))
+      .map(async (file) => ({
+        name: file.name,
+        bytes: (await readFile(join(root, "dist", "assets", file.name))).length,
+      }))
+  );
   const jsKb = sizes.filter(({ name }) => name.endsWith(".js")).reduce((sum, file) => sum + file.bytes, 0) / 1024;
   const cssKb = sizes.filter(({ name }) => name.endsWith(".css")).reduce((sum, file) => sum + file.bytes, 0) / 1024;
   assert.ok(jsKb <= 700, `initial JS is ${jsKb.toFixed(1)} KiB`);
   assert.ok(cssKb <= 80, `initial CSS is ${cssKb.toFixed(1)} KiB`);
+
+  // The admin console must stay off the initial path.
+  const adminAssets = files.filter((file) => file.name.startsWith("AdminConsole"));
+  assert.ok(adminAssets.length > 0, "admin console should be emitted as its own chunk");
+  for (const asset of adminAssets) {
+    assert.ok(!referenced.has(asset.name), `${asset.name} must not load on the initial path`);
+  }
 });

@@ -1,6 +1,36 @@
 # PromptLab
 
-PromptLab adalah aplikasi mobile-first untuk mengubah narasi biasa, gambar, screenshot, dan file menjadi prompt AI profesional.
+PromptLab adalah aplikasi mobile-first untuk mengubah catatan, foto, screenshot, dan file menjadi dokumen kerja: prompt AI terstruktur, laporan Word, dan slide PowerPoint.
+
+## Wajib dilakukan setelah rilis ini
+
+Dua langkah manual berikut belum aktif dan **fitur terkait tidak jalan tanpanya**:
+
+**1. Aktifkan Anonymous Sign-Ins di Supabase** — tanpa ini, percobaan gratis
+tanpa akun tidak berfungsi dan pengguna baru langsung diminta membuat akun
+(persis masalah yang ingin dihilangkan rilis ini).
+
+Supabase Dashboard → Authentication → Sign In / Providers → **Anonymous Sign-Ins → Enable**.
+
+Verifikasi: buka `/app` dalam mode incognito, ketik permintaan, tekan
+**Buatkan**. Kalau muncul "Buat akun gratis dulu untuk memakai AI", toggle
+tersebut masih mati.
+
+**2. Jalankan `supabase/phase-13-content-reports.sql`** — membuat tabel
+`content_reports` untuk pelaporan konten AI yang diwajibkan kebijakan
+Generative AI Google Play. Tanpa tabel ini laporan hanya masuk log server,
+tidak tersimpan.
+
+Butuh `SUPABASE_SERVICE_ROLE_KEY` terisi di environment produksi.
+
+## Bahasa
+
+Antarmuka memakai bahasa Indonesia sebagai default dan mendeteksi locale
+perangkat; English tersedia dan bisa dipilih manual di **Akun → Bahasa**.
+
+Bahasa antarmuka terpisah dari bahasa keluaran — pengguna bisa memakai UI
+Indonesia dan tetap meminta dokumen berbahasa Inggris (lihat
+`src/promptLanguage.js`).
 
 ## Jalankan Lokal
 

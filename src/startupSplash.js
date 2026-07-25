@@ -1,4 +1,8 @@
-const MIN_VISIBLE_MS = 900;
+/**
+ * Hold the launch screen only long enough to avoid a flash. The previous 900ms
+ * floor made every start feel slow even when the app was ready sooner.
+ */
+const MIN_VISIBLE_MS = 150;
 
 function splashElement() {
   return document.getElementById("app-splash");

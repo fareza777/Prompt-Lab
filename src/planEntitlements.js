@@ -19,7 +19,13 @@ export const PLAN_ENTITLEMENTS = {
     pptxExport: false,
     ocrPriority: false,
     aiCompare: false,
-    aiOptimize: false,
+    /**
+     * Free users get the Improve action. It is what distinguishes PromptLab
+     * from pasting straight into a chat app, and locking it meant nobody could
+     * experience the difference before being asked to pay. Cost stays bounded
+     * by the token quota, which Improve draws from like any other call.
+     */
+    aiOptimize: true,
     priorityRouting: false,
     teamLibraryBundle: false,
   },
@@ -172,26 +178,33 @@ export function applyPriorityRouting(modelSettings = {}, plan) {
 export const MEMBERSHIP_MARKETING = {
   Free: {
     price: "Free",
-    detail: "Builder, limited local library, no Office export.",
-    highlights: ["50k tokens/month", "25 saved prompts", "5 custom templates"],
+    detail: "Create and improve results. No Office export.",
+    // Quota is metered in tokens; the approximate result count is stated so the
+    // number means something to someone who has never counted a token.
+    highlights: [
+      "~15 results/month (50k tokens)",
+      "Improve included",
+      "25 saved results",
+      "5 custom templates",
+    ],
   },
   Pro: {
     price: "Rp 49.000/mo",
-    detail: "Higher quota, priority OCR, DOCX/PPTX export, AI Compare & Optimizer.",
+    detail: "Higher quota, priority OCR, Word/PowerPoint export, and AI Compare.",
     highlights: [
-      "500k tokens/month",
-      "DOCX & PPTX export",
-      "Priority OCR for image attachments",
-      "AI Compare & Optimizer (uses quota)",
+      "~110 results/month (500k tokens)",
+      "Word & PowerPoint export",
+      "Priority OCR for images",
+      "AI Compare (uses quota)",
     ],
   },
   Business: {
     price: "Rp 199.000/mo",
-    detail: "Everything in Pro plus priority model routing, team library, highest limits.",
+    detail: "Everything in Pro plus priority routing, team library, and the highest limits.",
     highlights: [
-      "2M tokens/month",
+      "~330 results/month (2M tokens)",
       "Priority AI routing",
-      "500-prompt library + team backup",
+      "500 saved results + team backup",
       "120 custom templates",
     ],
   },

@@ -7,6 +7,7 @@ import sharp from "sharp";
 
 const root = process.cwd();
 const outDir = join(root, "playstore", "assets");
+const rawDir = join(outDir, "raw");
 const port = 4173;
 const baseUrl = `http://127.0.0.1:${port}`;
 
@@ -217,10 +218,12 @@ try {
     await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
     await waitForStableRender(page);
     await assertSurfaceReady(page, name);
-    const file = join(outDir, `screenshot-phone-${name.toLowerCase()}.png`);
-    const raw = await captureStableScreenshot(page, name);
-    await writeFile(join(outDir, `.native-${name.toLowerCase()}.png`), raw);
-    await exportPhoneScreenshot(raw, file);
+    const rawCapture = await captureStableScreenshot(page, name);
+    await writeFile(join(outDir, `.native-${name.toLowerCase()}.png`), rawCapture);
+    // Raw UI shot for marketing frames (headline + phone mockup).
+    await mkdir(rawDir, { recursive: true });
+    const rawPhone = join(rawDir, `screenshot-phone-${name.toLowerCase()}.png`);
+    await exportPhoneScreenshot(rawCapture, rawPhone);
     await context.close();
   }
 
@@ -229,4 +232,5 @@ try {
   preview.kill("SIGTERM");
 }
 
-console.log(`\nPhone screenshots: ${PHONE_WIDTH}x${PHONE_HEIGHT} (9:16) in ${outDir}`);
+console.log(`\nRaw phone screenshots: ${PHONE_WIDTH}x${PHONE_HEIGHT} (9:16) in ${rawDir}`);
+console.log(`Frame for Play Console with: npm run playstore:frame`);
