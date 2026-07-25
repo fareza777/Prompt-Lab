@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Clock, User } from "lucide-react";
-import { makeTranslator, detectLanguage, persistLanguage } from "./i18n.js";
+import { Clock, User, HelpCircle } from "lucide-react";
+import { makeTranslator, detectLanguage, persistLanguage, hasStoredLanguage } from "./i18n.js";
+import FirstRun from "./FirstRun.jsx";
+import Guide from "./Guide.jsx";
 import { humanizeApiError } from "./errors.js";
 import { readThemeMode, applyThemeMode, watchSystemScheme, resolveScheme } from "./theme.js";
 import Composer from "./Composer.jsx";
@@ -18,6 +20,25 @@ import Report from "./Report.jsx";
  * Optimizer, Templates, Library, Compare), which split a single job across
  * five screens and made the user carry text between them by hand.
  */
+
+const FIRST_RUN_KEY = "promptlab-onboarded";
+
+function readFirstRunDone() {
+  try {
+    return localStorage.getItem(FIRST_RUN_KEY) === "1";
+  } catch {
+    return true; // No storage: never trap the user on a screen we cannot dismiss.
+  }
+}
+
+function writeFirstRunDone(done) {
+  try {
+    if (done) localStorage.setItem(FIRST_RUN_KEY, "1");
+    else localStorage.removeItem(FIRST_RUN_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 export default function Shell(props) {
   const {
@@ -101,6 +122,10 @@ export default function Shell(props) {
   const [lang, setLangState] = useState(detectLanguage);
   const [themeMode, setThemeModeState] = useState(readThemeMode);
   const [sheet, setSheet] = useState(null);
+  const [firstRunDone, setFirstRunDone] = useState(readFirstRunDone);
+  // The language screen only appears when nothing has been chosen or detected
+  // before; a returning user is never asked again.
+  const [languageChosen, setLanguageChosen] = useState(hasStoredLanguage);
   const [previousPrompt, setPreviousPrompt] = useState("");
   const [saved, setSaved] = useState(false);
 
@@ -200,6 +225,32 @@ export default function Shell(props) {
 
   const trialExhausted = !hasAuthSession && trialRemaining != null && trialRemaining <= 0;
 
+  const finishFirstRun = useCallback(() => {
+    writeFirstRunDone(true);
+    setFirstRunDone(true);
+    setLanguageChosen(true);
+  }, []);
+
+  const replayFirstRun = useCallback(() => {
+    setSheet(null);
+    writeFirstRunDone(false);
+    setFirstRunDone(false);
+  }, []);
+
+  if (!firstRunDone) {
+    return (
+      <FirstRun
+        t={t}
+        lang={languageChosen ? lang : null}
+        onPickLanguage={(code) => {
+          setLang(code);
+          setLanguageChosen(true);
+        }}
+        onFinish={finishFirstRun}
+      />
+    );
+  }
+
   return (
     <div className="pl-shell">
       <a className="pl-skip" href="#pl-main">
@@ -216,6 +267,14 @@ export default function Shell(props) {
               Admin
             </button>
           )}
+          <button
+            type="button"
+            className="pl-icon-btn"
+            onClick={() => setSheet("guide")}
+            aria-label={t("guide.title")}
+          >
+            <HelpCircle size={20} aria-hidden="true" />
+          </button>
           <button
             type="button"
             className="pl-icon-btn"
@@ -382,6 +441,13 @@ export default function Shell(props) {
         error={humanizeApiError(compareError, t)}
         warning={humanizeApiError(compareWarning, t)}
         onRun={comparePrompts}
+      />
+
+      <Guide
+        t={t}
+        open={sheet === "guide"}
+        onClose={closeSheet}
+        onReplay={replayFirstRun}
       />
 
       <Report

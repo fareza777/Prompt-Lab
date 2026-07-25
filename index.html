@@ -2199,10 +2199,9 @@ html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !impor
       html.boot-app #app-splash.is-exiting,
       html[data-route="app"] #app-splash.is-exiting { display: none !important; }
 
-      /* Launch screen: quiet, theme-aware, and gone as soon as the app mounts.
-         The previous version animated an orbiting glow over a dark gradient and
-         held itself on screen for a minimum time, which made a fast start feel
-         slow. */
+      /* Launch screen. Deliberately brief: it covers the mount, then leaves.
+         Restraint is the point — a long animated intro makes a fast start feel
+         slow, and this one never holds the app back. */
       #app-splash {
         position: fixed;
         inset: 0;
@@ -2220,51 +2219,92 @@ html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !impor
       html[data-ui-theme='light'] #app-splash { background: #fcfcfa; }
       #app-splash.is-exiting {
         opacity: 0;
-        transition: opacity 0.24s ease;
-      }
-      .app-splash__backdrop,
-      .app-splash__orbits,
-      .app-splash__bar {
-        display: none;
+        transition: opacity 0.28s ease;
       }
       .app-splash__brand {
         display: grid;
         justify-items: center;
-        gap: 12px;
+        gap: 18px;
         text-align: center;
-        padding: 24px;
+        animation: splash-rise 0.5s cubic-bezier(0.2, 0, 0.2, 1) both;
+      }
+      @keyframes splash-rise {
+        from { opacity: 0; transform: translateY(10px) scale(0.97); }
       }
       .app-splash__logo {
-        width: 64px;
-        height: 64px;
+        position: relative;
         display: grid;
         place-items: center;
+        width: 76px;
+        height: 76px;
+      }
+      /* A single soft ring breathing behind the mark — one idea, not five. */
+      .app-splash__logo::after {
+        content: "";
+        position: absolute;
+        inset: -10px;
+        border-radius: 26px;
+        border: 1px solid rgba(15, 107, 92, 0.22);
+        animation: splash-ring 2.2s ease-in-out infinite;
+      }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-ui-theme='light']) .app-splash__logo::after { border-color: rgba(95, 201, 180, 0.28); }
+      }
+      html[data-ui-theme='dark'] .app-splash__logo::after { border-color: rgba(95, 201, 180, 0.28); }
+      @keyframes splash-ring {
+        0%, 100% { transform: scale(1); opacity: 0.75; }
+        50% { transform: scale(1.06); opacity: 0.35; }
       }
       .app-splash__logo img {
-        width: 56px;
-        height: 56px;
-        border-radius: 14px;
+        width: 68px;
+        height: 68px;
+        border-radius: 18px;
       }
       .app-splash__brand strong {
         color: #1a1d1b;
-        font-size: 20px;
+        font-size: 19px;
         font-weight: 600;
         letter-spacing: -0.02em;
         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
       }
-      .app-splash__brand p {
-        margin: 0;
-        color: #6b716d;
-        font: 500 12px/1.4 system-ui, sans-serif;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-      }
       @media (prefers-color-scheme: dark) {
         html:not([data-ui-theme='light']) .app-splash__brand strong { color: #ecefec; }
-        html:not([data-ui-theme='light']) .app-splash__brand p { color: #949a96; }
       }
       html[data-ui-theme='dark'] .app-splash__brand strong { color: #ecefec; }
-      html[data-ui-theme='dark'] .app-splash__brand p { color: #949a96; }
+      .app-splash__bar {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: max(48px, env(safe-area-inset-bottom));
+        width: 128px;
+        height: 2px;
+        border-radius: 999px;
+        background: rgba(26, 29, 27, 0.10);
+        overflow: hidden;
+      }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-ui-theme='light']) .app-splash__bar { background: rgba(236, 239, 236, 0.12); }
+      }
+      html[data-ui-theme='dark'] .app-splash__bar { background: rgba(236, 239, 236, 0.12); }
+      .app-splash__bar i {
+        display: block;
+        width: 42%;
+        height: 100%;
+        border-radius: inherit;
+        background: #0f6b5c;
+        animation: splash-bar 1.15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-ui-theme='light']) .app-splash__bar i { background: #5fc9b4; }
+      }
+      html[data-ui-theme='dark'] .app-splash__bar i { background: #5fc9b4; }
+      @keyframes splash-bar {
+        0% { transform: translateX(-110%); }
+        100% { transform: translateX(275%); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .app-splash__brand, .app-splash__logo::after, .app-splash__bar i { animation: none !important; }
+      }
 
       /* Blog listing page */
       #blog-page { min-height: 100vh; padding-top: 100px; }
@@ -4313,19 +4353,16 @@ Original content: [paste here]</code></pre>
     <!-- ============================== APP ============================== -->
     <div id="app-root">
       <div id="app-splash" role="presentation" aria-hidden="true">
-        <div class="app-splash__backdrop"></div>
-        <div class="app-splash__orbits" aria-hidden="true"><span></span><span></span><span></span></div>
         <div class="app-splash__brand">
           <div class="app-splash__logo">
-            <img src="/icons/icon-192.png" alt="" width="72" height="72" decoding="async" />
+            <img src="/icons/icon-192.png" alt="" width="72" height="72" decoding="async" fetchpriority="high" />
           </div>
           <strong>PromptLab</strong>
-          <p>AI prompt workspace</p>
         </div>
         <div class="app-splash__bar" aria-hidden="true"><i></i></div>
       </div>
       <div id="root">
-        <p id="boot-hint" style="margin:0;padding:24px;color:#e8f4f6;font:600 14px system-ui,sans-serif;background:#061011;min-height:100vh">
+        <p id="boot-hint" style="margin:0;padding:24px;color:#6b716d;font:500 14px system-ui,sans-serif;min-height:100vh">
           Loading PromptLab...
         </p>
       </div>

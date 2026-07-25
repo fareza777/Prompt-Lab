@@ -1,4 +1,17 @@
+import { useEffect, useState } from "react";
 import { Copy, Check, Download, Wand2, ArrowRightLeft, Star, Flag, AlertTriangle } from "lucide-react";
+
+/** Counts up while a generation is in flight, so the wait is legible. */
+function Elapsed() {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const mm = String(Math.floor(seconds / 60)).padStart(1, "0");
+  const ss = String(seconds % 60).padStart(2, "0");
+  return <time dateTime={`PT${seconds}S`}>{`${mm}:${ss}`}</time>;
+}
 
 /**
  * The result, presented as a document.
@@ -32,9 +45,18 @@ export default function Result({
   if (isGenerating && !prompt) {
     return (
       <section className="pl-result" aria-live="polite">
-        <div className="pl-progress">
-          <span className="pl-spinner" aria-hidden="true" />
-          <span>{generationStatus || t("canvas.generating")}</span>
+        <div className="pl-working">
+          <div className="pl-working-head">
+            <span className="pl-spinner" aria-hidden="true" />
+            <strong>{t("result.working")}</strong>
+            <Elapsed />
+          </div>
+          <span className="pl-working-track" aria-hidden="true">
+            <i />
+          </span>
+          {/* State the expected duration rather than leaving a blank wait that
+              reads as a hang. */}
+          <p>{t("result.workingHint")}</p>
         </div>
       </section>
     );
