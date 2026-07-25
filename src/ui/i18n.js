@@ -256,6 +256,8 @@ const id = {
   "error.quota": "Kuotamu sudah habis bulan ini. Tingkatkan paket untuk melanjutkan.",
   "error.rateLimited": "Terlalu banyak permintaan. Tunggu sebentar, lalu coba lagi.",
   "error.timeout": "AI terlalu lama merespons. Coba lagi sebentar.",
+  "error.runTooLong":
+    "Dokumennya terlalu panjang untuk diselesaikan sekali jalan. Persingkat permintaanmu, atau minta satu bagian dulu.",
   "error.busy": "AI sedang sibuk. Coba lagi sebentar.",
   "error.notConfigured": "Layanan AI belum dikonfigurasi. Hubungi dukungan.",
   "error.fileTooLarge": "File terlalu besar. Maksimal 8 MB per file.",
@@ -519,6 +521,8 @@ const en = {
   "error.quota": "Your quota for this month is used up. Upgrade to continue.",
   "error.rateLimited": "Too many requests. Wait a moment, then try again.",
   "error.timeout": "The AI took too long to respond. Try again shortly.",
+  "error.runTooLong":
+    "That document was too long to finish in one run. Shorten your request, or ask for one section at a time.",
   "error.busy": "The AI is busy. Try again shortly.",
   "error.notConfigured": "The AI service is not configured. Please contact support.",
   "error.fileTooLarge": "That file is too large. Maximum 8 MB per file.",

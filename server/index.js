@@ -1083,6 +1083,17 @@ app.post("/api/report-content", express.json({ limit: "64kb" }), async (req, res
  * is the deliverable, not the instructions for one. The prompt stays visible —
  * this is an extra step on the result, not a replacement for it.
  */
+/**
+ * Time budget for a run, derived from the platform limit in vercel.json
+ * (`functions["api/index.js"].maxDuration`). Everything below has to finish
+ * inside it — including writing the response — so a reserve is held back.
+ */
+const RUN_FUNCTION_BUDGET_MS = 55_000;
+const RUN_PRIMARY_TIMEOUT_MS = 44_000;
+const RUN_RESERVE_MS = 4_000;
+const RUN_MIN_FALLBACK_MS = 12_000;
+const RUN_MAX_TOKENS = 2_600;
+
 function estimateRunTokens(payload, plan) {
   const input = estimateTextTokens(payload.prompt || "");
   return Math.min(9000, Math.max(700, input + resolveGenerateMaxTokens(plan, payload)));
@@ -1156,7 +1167,9 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
     const quotaEstimate = estimateRunTokens(payload, membership.plan);
     const quotaSession = await getQuotaSession(req, quotaEstimate);
     const runtime = getRuntimeProvider(modelSettings);
-    const maxTokens = resolveGenerateMaxTokens(membership.plan, payload);
+    // Capped below the plan's prompt allowance: a longer ceiling only makes the
+    // model write past the time budget and time out with nothing to show.
+    const maxTokens = Math.min(RUN_MAX_TOKENS, resolveGenerateMaxTokens(membership.plan, payload));
 
     if (!runtime.client) {
       res.status(503).json({ error: API_MSG.apiKeyInactive });
@@ -1174,8 +1187,18 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
       modelSettings?.fallbackModels,
       runtime.provider
     );
-    const timing = getOpenRouterTiming(payload.generationMode);
-    if (modelSettings?.timeoutMs) timing.primaryTimeoutMs = modelSettings.timeoutMs;
+
+    /**
+     * Writing a whole document takes far longer than writing the prompt for
+     * one, and the platform gives the function RUN_FUNCTION_BUDGET_MS in
+     * total. The shared "balanced" profile alone (28s primary + 35s fallback)
+     * overruns that before a single word is written, which is how the first
+     * live run died on a timeout. So the run gets its own budget: one generous
+     * primary attempt, and a fallback only if enough time is genuinely left.
+     */
+    const startedRunAt = Date.now();
+    const remaining = () => RUN_FUNCTION_BUDGET_MS - (Date.now() - startedRunAt);
+    const primaryTimeoutMs = Math.min(RUN_PRIMARY_TIMEOUT_MS, remaining() - RUN_RESERVE_MS);
 
     let completion;
     let usedModel = primaryModel;
@@ -1188,22 +1211,26 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
             max_tokens: maxTokens,
             temperature: 0.6,
           }),
-          { timeout: timing.primaryTimeoutMs }
+          { timeout: primaryTimeoutMs }
         ),
-        timing.primaryTimeoutMs,
+        primaryTimeoutMs,
         primaryModel
       );
     } catch (error) {
-      if (!shouldTryFallbackModel(error) || fallbackModels.length === 0) throw error;
-      console.warn("run-prompt primary failed, trying fallback chain", error.status || error.message);
+      const budgetLeft = remaining() - RUN_RESERVE_MS;
+      if (!shouldTryFallbackModel(error) || fallbackModels.length === 0 || budgetLeft < RUN_MIN_FALLBACK_MS) {
+        throw error;
+      }
+      console.warn("run-prompt primary failed, trying fallback", error.status || error.message);
       const fallback = await tryOpenRouterFallbackModels(
         runtime.client,
         fallbackModels,
         messages,
-        timing.fallbackTimeoutMs,
+        budgetLeft,
         maxTokens,
         0.6,
-        runtime
+        runtime,
+        { deadlineMs: startedRunAt + RUN_FUNCTION_BUDGET_MS - RUN_RESERVE_MS }
       );
       completion = fallback.completion;
       // The helper reports errors, not which model won; the provider echoes the
@@ -1234,6 +1261,13 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
     );
   } catch (error) {
     console.error("run-prompt failed", error.message);
+    // A timeout here means the document was too big to finish inside the
+    // platform's function limit, which the user can act on — unlike a generic
+    // "try again", which would just fail the same way.
+    if (/timed? ?out|took too long/i.test(error.message || "")) {
+      res.status(504).json({ error: "RUN_TOO_LONG" });
+      return;
+    }
     const statusCode = error.statusCode || 500;
     res.status(statusCode).json({
       error: error.publicMessage || error.message || "Could not run the prompt.",
