@@ -1090,10 +1090,46 @@ function estimateRunTokens(payload, plan) {
 
 const RUN_SYSTEM_PROMPT =
   "You are executing the user's instructions to produce a finished deliverable. " +
+  "Write the complete document now, in full. " +
   "Return only the requested content itself — no preamble, no restatement of the " +
-  "instructions, no commentary about what you are doing. Match the language the " +
-  "instructions are written in. Use plain text with clear headings and lists; do " +
-  "not wrap the whole response in a code fence.";
+  "instructions, no commentary about what you are doing, and no reasoning notes. " +
+  "Never ask a question, never ask for more details, and never offer to wait for " +
+  "further information: if a specific detail is missing, invent a plausible one " +
+  "and mark it in square brackets so the user can replace it. " +
+  "Match the language the instructions are written in. Use plain text with clear " +
+  "headings and lists; do not wrap the whole response in a code fence.";
+
+/**
+ * Strips a reasoning model's internal monologue from executed output.
+ *
+ * Some providers (MiniMax-M3 among them) emit <think> blocks in the message
+ * content. Left alone they surface to the user as the visible result, which is
+ * how a run first shipped — the deliverable began "<think> The user is asking
+ * me to...".
+ */
+function sanitizeRunOutput(text) {
+  if (!text || typeof text !== "string") return "";
+  const TAGS = "think|thinking|reasoning|scratchpad|antml:thinking";
+  let cleaned = text;
+
+  // Complete pairs first.
+  cleaned = cleaned.replace(new RegExp(`<(${TAGS})>[\\s\\S]*?<\\/\\1>`, "gi"), "");
+
+  // An opener with no closer means the response was cut off mid-monologue, so
+  // everything from it onwards is reasoning and there is no deliverable. Drop
+  // it and let the caller report an empty result rather than showing the
+  // model's private notes as the answer.
+  cleaned = cleaned.replace(new RegExp(`<(?:${TAGS})>[\\s\\S]*$`, "i"), "");
+  cleaned = cleaned.replace(new RegExp(`<\\/?(?:${TAGS})>`, "gi"), "");
+
+  // A whole-response code fence is formatting, not content.
+  cleaned = cleaned
+    .trim()
+    .replace(/^```(?:markdown|md|xml|text|plaintext|html)?\s*\n?/i, "")
+    .replace(/\n?```\s*$/i, "");
+
+  return cleaned.replace(/\n{3,}/g, "\n\n").trim();
+}
 
 app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json({ limit: "256kb" }), async (req, res) => {
   try {
@@ -1175,7 +1211,8 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
       usedModel = completion?.model || "fallback";
     }
 
-    const content = String(completion?.choices?.[0]?.message?.content || "").trim();
+    const raw = String(completion?.choices?.[0]?.message?.content || "");
+    const content = sanitizeRunOutput(raw);
     if (!content) throw new Error("The model returned an empty result.");
 
     await finishGenerateResponse(
