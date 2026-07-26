@@ -31,3 +31,11 @@ test("extractMermaidCode reads fenced block", () => {
   const code = extractMermaidCode("# Title\n\n```mermaid\nflowchart TD\n  A-->B\n```\n");
   assert.match(code, /flowchart TD/);
 });
+
+test("extractMermaidCode strips accidental fence wrappers and prose", async () => {
+  const { sanitizeMermaidCode } = await import("../src/exportDiagram.js");
+  const cleaned = sanitizeMermaidCode("Ringkasan\n\n```mermaid\nflowchart LR\n  A-->B\n```\n");
+  assert.equal(cleaned.startsWith("flowchart"), true);
+  assert.doesNotMatch(cleaned, /```/);
+});
+

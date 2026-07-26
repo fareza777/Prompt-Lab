@@ -200,8 +200,16 @@ function SectionCards({ sections, t }) {
                 <ChevronDown size={18} aria-hidden="true" className="pl-doc-card__chevron" />
               </button>
             </h3>
-            {open && (
-              <div className="pl-doc-card__body pl-doc pl-doc--output" id={`${section.id}-body`}>
+            {/**
+              Keep diagram body mounted after first open so the painted SVG stays
+              available for PNG export (Android re-render often fails).
+            */}
+            {(open || hasMermaid) && (
+              <div
+                className="pl-doc-card__body pl-doc pl-doc--output"
+                id={`${section.id}-body`}
+                hidden={!open}
+              >
                 {section.blocks.length ? (
                   section.blocks.map((block, blockIndex) => (
                     <BlockView
