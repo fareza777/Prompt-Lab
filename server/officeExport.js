@@ -1,3 +1,4 @@
+import { createRequire } from "node:module";
 import {
   AlignmentType,
   BorderStyle,
@@ -15,16 +16,31 @@ import {
   WidthType,
 } from "docx";
 
+// Vercel serverless resolves dynamic import("pptxgenjs") to the ESM build and
+// then crashes with "Cannot use import statement outside a module". Force CJS.
+const require = createRequire(import.meta.url);
+function loadPptxGen() {
+  // createRequire hits the package "require" export (CJS). Dynamic import()
+  // resolves to the ESM build and crashes on Vercel serverless.
+  const mod = require("pptxgenjs");
+  return mod?.default || mod;
+}
+
 const BRAND = "AI Work Studio";
 const COLORS = {
-  ink: "242A27",
-  muted: "66706A",
-  accent: "315C48",
+  ink: "1F241F",
+  muted: "667067",
+  accent: "2F5A46",
+  accentSoft: "DFE9E1",
   pale: "EEF2EC",
-  rule: "D8DED9",
+  rule: "D8D0C2",
   paper: "FAF8F3",
+  paperDeep: "F0EBE1",
   white: "FFFFFF",
 };
+
+const FONT_HEAD = "Calibri";
+const FONT_BODY = "Calibri";
 
 const stripInline = (value = "") =>
   String(value)
@@ -278,44 +294,118 @@ export async function buildDocxBuffer({
   return Packer.toBuffer(doc);
 }
 
-function splitForSlides(blocks) {
+function clipText(value = "", max = 220) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= max) return text;
+  return `${text.slice(0, max - 1).trim()}…`;
+}
+
+function splitForSlides(blocks, language = "id") {
+  const fallbackTitle = language === "en" ? "Overview" : "Ringkasan";
   const sections = [];
-  let current = { title: "", items: [] };
+  let current = { title: "", items: [], kind: "content" };
   const push = () => {
     if (current.title || current.items.length) sections.push(current);
-    current = { title: "", items: [] };
+    current = { title: "", items: [], kind: "content" };
   };
+
   for (const block of blocks) {
     if (block.type === "heading") {
+      // Level-1 headings become section openers when they stand alone.
+      if (block.level === 1 && (current.title || current.items.length)) push();
+      if (block.level === 1) {
+        push();
+        sections.push({ title: clipText(block.text, 80), items: [], kind: "section" });
+        continue;
+      }
       push();
-      current.title = block.text;
-    } else if (block.type === "list") current.items.push(...block.items);
-    else if (block.type === "paragraph") current.items.push(block.text);
-    else if (block.type === "table") {
-      current.items.push(...block.rows.slice(1).map((row) => row.join(" — ")));
+      current.title = clipText(block.text, 90);
+      continue;
+    }
+    if (block.type === "list") {
+      current.items.push(...block.items.map((item) => clipText(item, 160)));
+      continue;
+    }
+    if (block.type === "paragraph") {
+      current.items.push(clipText(block.text, 180));
+      continue;
+    }
+    if (block.type === "table") {
+      const rows = block.rows || [];
+      if (rows.length > 1) {
+        const headers = rows[0];
+        rows.slice(1).forEach((row) => {
+          current.items.push(
+            clipText(
+              row
+                .map((cell, index) => `${headers[index] || `Col ${index + 1}`}: ${cell || "—"}`)
+                .join(" · "),
+              170,
+            ),
+          );
+        });
+      }
     }
   }
   push();
-  return sections.flatMap((section) => {
-    const chunks = [];
-    let items = [...section.items];
-    do {
+
+  const slides = [];
+  for (const section of sections) {
+    if (section.kind === "section") {
+      slides.push(section);
+      continue;
+    }
+    let items = [...section.items].filter(Boolean);
+    if (!items.length && section.title) {
+      slides.push({ title: section.title || fallbackTitle, items: ["—"], kind: "content" });
+      continue;
+    }
+    let part = 0;
+    while (items.length) {
       const selected = [];
       let words = 0;
-      while (items.length && selected.length < 6) {
+      while (items.length && selected.length < 5) {
         const candidate = items[0];
         const count = candidate.split(/\s+/).filter(Boolean).length;
-        if (selected.length && words + count > 45) break;
+        if (selected.length && words + count > 42) break;
         selected.push(items.shift());
         words += count;
       }
       if (!selected.length && items.length) selected.push(items.shift());
-      chunks.push({
-        title: chunks.length ? `${section.title || "Overview"} — continued` : section.title || "Overview",
+      const base = section.title || fallbackTitle;
+      slides.push({
+        title: part ? `${base} (${part + 1})` : base,
         items: selected,
+        kind: "content",
       });
-    } while (items.length);
-    return chunks;
+      part += 1;
+    }
+  }
+  return slides;
+}
+
+function addAccentRail(pptx, slide, wide = false) {
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 0,
+    y: 0,
+    w: wide ? 0.28 : 0.18,
+    h: 7.5,
+    fill: { color: COLORS.accent },
+    line: { color: COLORS.accent },
+  });
+}
+
+function addFooter(pptx, slide, pageLabel) {
+  slide.addText(pageLabel, {
+    x: 0.7,
+    y: 7.05,
+    w: 11.8,
+    h: 0.28,
+    align: "right",
+    fontFace: FONT_BODY,
+    fontSize: 10,
+    color: COLORS.muted,
+    margin: 0,
   });
 }
 
@@ -324,131 +414,210 @@ export async function buildPptxBuffer({
   content = "",
   language = "id",
 } = {}) {
-  const { default: pptxgen } = await import("pptxgenjs");
-  const pptx = new pptxgen();
-  pptx.layout = "LAYOUT_WIDE";
+  const PptxGenJS = loadPptxGen();
+  const pptx = new PptxGenJS();
+  pptx.defineLayout({ name: "WIDE_16x9", width: 13.333, height: 7.5 });
+  pptx.layout = "WIDE_16x9";
   pptx.author = BRAND;
   pptx.company = BRAND;
   pptx.subject = title;
   pptx.title = title;
-  pptx.lang = language === "en" ? "en-US" : "id-ID";
   pptx.theme = {
-    headFontFace: "Aptos Display",
-    bodyFontFace: "Aptos",
-    lang: pptx.lang,
+    headFontFace: FONT_HEAD,
+    bodyFontFace: FONT_BODY,
+    lang: language === "en" ? "en-US" : "id-ID",
   };
+
+  const safeTitle = clipText(title, 90) || BRAND;
+  const subtitle =
+    language === "en" ? "Professional working presentation" : "Presentasi kerja profesional";
 
   const titleSlide = pptx.addSlide();
   titleSlide.background = { color: COLORS.paper };
+  addAccentRail(pptx, titleSlide, true);
   titleSlide.addShape(pptx.ShapeType.rect, {
     x: 0,
-    y: 0,
-    w: 0.24,
-    h: 7.5,
-    line: { color: COLORS.accent, transparency: 100 },
-    fill: { color: COLORS.accent },
+    y: 6.85,
+    w: 13.333,
+    h: 0.65,
+    fill: { color: COLORS.paperDeep },
+    line: { color: COLORS.paperDeep },
   });
-  titleSlide.addText(title, {
-    x: 0.9,
-    y: 2.05,
+  titleSlide.addText(BRAND, {
+    x: 0.95,
+    y: 1.55,
+    w: 11,
+    h: 0.35,
+    fontFace: FONT_BODY,
+    fontSize: 13,
+    color: COLORS.accent,
+    bold: true,
+    margin: 0,
+  });
+  titleSlide.addText(safeTitle, {
+    x: 0.95,
+    y: 2.1,
     w: 11.2,
-    h: 1.15,
-    fontFace: "Aptos Display",
-    fontSize: 34,
+    h: 1.5,
+    fontFace: FONT_HEAD,
+    fontSize: 36,
     bold: true,
     color: COLORS.ink,
     margin: 0,
-    breakLine: false,
-    fit: "shrink",
+    valign: "middle",
   });
-  const subtitle =
-    language === "en" ? "Professional presentation" : "Presentasi kerja profesional";
+  titleSlide.addShape(pptx.ShapeType.rect, {
+    x: 0.95,
+    y: 3.75,
+    w: 1.5,
+    h: 0.06,
+    fill: { color: COLORS.accent },
+    line: { color: COLORS.accent },
+  });
   titleSlide.addText(subtitle, {
-    x: 0.92,
-    y: 3.35,
+    x: 0.95,
+    y: 4.05,
     w: 10,
-    h: 0.35,
-    fontFace: "Aptos",
-    fontSize: 14,
+    h: 0.4,
+    fontFace: FONT_BODY,
+    fontSize: 15,
     color: COLORS.muted,
     margin: 0,
   });
-  titleSlide.addText(BRAND, {
-    x: 0.92,
-    y: 3.85,
-    w: 5,
-    h: 0.35,
-    fontFace: "Aptos",
-    fontSize: 13,
-    color: COLORS.accent,
+  titleSlide.addText(language === "en" ? "Created with AI Work Studio" : "Dibuat dengan AI Work Studio", {
+    x: 0.95,
+    y: 7.02,
+    w: 11,
+    h: 0.28,
+    fontFace: FONT_BODY,
+    fontSize: 11,
+    color: COLORS.muted,
     margin: 0,
   });
 
-  const sections = splitForSlides(parseStructuredContent(content, title)).slice(0, 30);
+  const sections = splitForSlides(parseStructuredContent(content, title), language).slice(0, 28);
   if (!sections.length) {
     sections.push({
       title: language === "en" ? "Overview" : "Ringkasan",
       items: [language === "en" ? "No slide content was available." : "Konten slide belum tersedia."],
+      kind: "content",
     });
   }
 
-  sections.forEach((section, index) => {
+  let page = 2;
+  sections.forEach((section) => {
     const slide = pptx.addSlide();
     slide.background = { color: COLORS.paper };
-    slide.addShape(pptx.ShapeType.rect, {
-      x: 0,
-      y: 0,
-      w: 0.18,
-      h: 7.5,
-      line: { color: COLORS.accent, transparency: 100 },
-      fill: { color: COLORS.accent },
-    });
-    slide.addText(section.title, {
-      x: 0.7,
-      y: 0.42,
-      w: 11.5,
-      h: 0.62,
-      fontFace: "Aptos Display",
-      fontSize: 24,
+    addAccentRail(pptx, slide);
+
+    if (section.kind === "section") {
+      slide.addShape(pptx.ShapeType.rect, {
+        x: 0.18,
+        y: 0,
+        w: 13.153,
+        h: 7.5,
+        fill: { color: COLORS.accentSoft },
+        line: { color: COLORS.accentSoft },
+      });
+      slide.addText(language === "en" ? "Section" : "Bagian", {
+        x: 1.1,
+        y: 2.55,
+        w: 10.5,
+        h: 0.35,
+        fontFace: FONT_BODY,
+        fontSize: 13,
+        color: COLORS.accent,
+        bold: true,
+        margin: 0,
+      });
+      slide.addText(section.title || (language === "en" ? "Overview" : "Ringkasan"), {
+        x: 1.1,
+        y: 3.0,
+        w: 10.8,
+        h: 1.2,
+        fontFace: FONT_HEAD,
+        fontSize: 32,
+        bold: true,
+        color: COLORS.ink,
+        margin: 0,
+      });
+      addFooter(pptx, slide, `${BRAND}  ·  ${page}`);
+      page += 1;
+      return;
+    }
+
+    slide.addText(section.title || (language === "en" ? "Overview" : "Ringkasan"), {
+      x: 0.75,
+      y: 0.38,
+      w: 11.8,
+      h: 0.7,
+      fontFace: FONT_HEAD,
+      fontSize: 26,
       bold: true,
       color: COLORS.ink,
       margin: 0,
-      fit: "shrink",
+      valign: "middle",
     });
-    slide.addShape(pptx.ShapeType.line, {
-      x: 0.7,
-      y: 1.12,
-      w: 1.35,
-      h: 0,
-      line: { color: COLORS.accent, width: 3 },
+    slide.addShape(pptx.ShapeType.rect, {
+      x: 0.75,
+      y: 1.15,
+      w: 1.4,
+      h: 0.055,
+      fill: { color: COLORS.accent },
+      line: { color: COLORS.accent },
     });
-    const runs = (section.items.length ? section.items : ["—"]).map((text) => ({
-      text: String(text).trim(),
-      options: { bullet: { indent: 18 }, breakLine: true, paraSpaceAfter: 10 },
+
+    const bullets = (section.items.length ? section.items : ["—"]).map((text, index, list) => ({
+      text: String(text).trim() || "—",
+      options: {
+        bullet: true,
+        breakLine: index < list.length - 1,
+        paraSpaceAfter: 12,
+      },
     }));
-    slide.addText(runs, {
-      x: 0.88,
-      y: 1.42,
-      w: 11.3,
-      h: 5.05,
-      fontFace: "Aptos",
+
+    slide.addText(bullets, {
+      x: 0.85,
+      y: 1.5,
+      w: 11.6,
+      h: 5.1,
+      fontFace: FONT_BODY,
       fontSize: 18,
       color: COLORS.ink,
-      margin: 0.04,
+      margin: 0.05,
       valign: "top",
-      paraSpaceAfter: 8,
+      paraSpaceAfter: 10,
     });
-    slide.addText(`${BRAND}   ·   ${index + 2}`, {
-      x: 9.2,
-      y: 7.05,
-      w: 3.35,
-      h: 0.22,
-      align: "right",
-      fontFace: "Aptos",
-      fontSize: 9,
-      color: COLORS.muted,
-      margin: 0,
-    });
+    addFooter(pptx, slide, `${BRAND}  ·  ${page}`);
+    page += 1;
   });
-  return pptx.write({ outputType: "nodebuffer" });
+
+  const closing = pptx.addSlide();
+  closing.background = { color: COLORS.paper };
+  addAccentRail(pptx, closing, true);
+  closing.addText(language === "en" ? "Thank you" : "Terima kasih", {
+    x: 0.95,
+    y: 2.7,
+    w: 11.2,
+    h: 0.8,
+    fontFace: FONT_HEAD,
+    fontSize: 36,
+    bold: true,
+    color: COLORS.ink,
+    margin: 0,
+  });
+  closing.addText(BRAND, {
+    x: 0.95,
+    y: 3.6,
+    w: 11.2,
+    h: 0.4,
+    fontFace: FONT_BODY,
+    fontSize: 16,
+    color: COLORS.accent,
+    margin: 0,
+  });
+  addFooter(pptx, closing, `${BRAND}  ·  ${page}`);
+
+  const output = await pptx.write({ outputType: "nodebuffer" });
+  return Buffer.isBuffer(output) ? output : Buffer.from(output);
 }

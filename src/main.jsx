@@ -2741,9 +2741,12 @@ function App() {
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || `Failed to export ${formatLabel}.`);
+        throw new Error(payload.error || `Failed to export ${formatLabel} (${response.status}).`);
       }
       const blob = await response.blob();
+      if (!blob || blob.size < 64) {
+        throw new Error(`Failed to export ${formatLabel}: empty file.`);
+      }
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;

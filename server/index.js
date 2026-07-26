@@ -545,7 +545,7 @@ app.post("/api/export/pptx", express.json({ limit: "2mb" }), async (req, res) =>
       "application/vnd.openxmlformats-officedocument.presentationml.presentation"
     );
     res.setHeader("Content-Disposition", `attachment; filename="${safeFilename(title)}.pptx"`);
-    res.send(buffer);
+    res.send(Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer));
   } catch (error) {
     console.error("pptx export failed", error.message);
     res.status(500).json({ error: API_MSG.pptxFailed });

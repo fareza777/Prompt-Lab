@@ -28,9 +28,19 @@
   border-bottom: 1px solid var(--rule);
 }
 
+:root[data-ui-theme="dark"] .pl-top {
+  background: color-mix(in srgb, var(--paper-raised) 82%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--rule) 70%, var(--accent-line));
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
 @supports not (backdrop-filter: blur(8px)) {
   .pl-top {
     background: var(--paper);
+  }
+
+  :root[data-ui-theme="dark"] .pl-top {
+    background: var(--paper-raised);
   }
 }
 
@@ -494,6 +504,16 @@
   animation: pl-rise var(--dur-slow) var(--ease);
 }
 
+:root[data-ui-theme="dark"] .pl-sheet {
+  background: var(--paper-raised);
+  border-top-color: color-mix(in srgb, var(--rule-strong) 70%, var(--accent-line));
+  box-shadow: var(--lift-3), 0 -12px 40px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-ui-theme="dark"] .pl-scrim {
+  background: rgba(4, 8, 8, 0.62);
+}
+
 @keyframes pl-rise {
   from {
     transform: translateY(3%);
@@ -683,6 +703,12 @@
   background: var(--paper);
 }
 
+:root[data-ui-theme="dark"] .pl-firstrun {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(111, 208, 187, 0.08), transparent 55%),
+    var(--paper);
+}
+
 .pl-firstrun-card {
   width: 100%;
   max-width: 460px;
@@ -690,6 +716,14 @@
   flex-direction: column;
   gap: var(--s-4);
   animation: pl-firstrun-in var(--dur-slow) var(--ease);
+}
+
+:root[data-ui-theme="dark"] .pl-firstrun-card {
+  padding: var(--s-5);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--paper-raised) 92%, transparent);
+  box-shadow: var(--lift-2);
 }
 
 @keyframes pl-firstrun-in {
@@ -1660,4 +1694,32 @@
     width: 100%;
     margin-left: 0;
   }
+}
+
+/* ---- Dark mode surface polish ------------------------------------------- */
+
+:root[data-ui-theme="dark"] .pl-doc-card {
+  border-color: color-mix(in srgb, var(--rule) 80%, var(--accent-line));
+  background: var(--paper-raised);
+  box-shadow: var(--lift-1);
+}
+
+:root[data-ui-theme="dark"] .pl-doc-card__toggle {
+  background: var(--paper-muted);
+}
+
+:root[data-ui-theme="dark"] .pl-composer,
+:root[data-ui-theme="dark"] .pl-result,
+:root[data-ui-theme="dark"] .pl-composer-tray,
+:root[data-ui-theme="dark"] .pl-result-tray {
+  border-color: color-mix(in srgb, var(--rule) 75%, var(--accent-line));
+}
+
+:root[data-ui-theme="dark"] .pl-icon-btn:hover {
+  background: var(--paper-muted);
+  color: var(--ink);
+}
+
+:root[data-ui-theme="dark"] .pl-btn--primary {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
 }

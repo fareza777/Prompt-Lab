@@ -39,15 +39,24 @@ test("DOCX contains professional document parts and new branding", async () => {
   assert.doesNotMatch(footer, /PromptLab/);
 });
 
-test("PPTX creates multiple slides with AI Work Studio metadata", async () => {
+test("PPTX creates structured slides via the CJS pptxgenjs build", async () => {
+  const source = await readFile(new URL("../server/officeExport.js", import.meta.url), "utf8");
+  assert.match(source, /createRequire/);
+  assert.match(source, /require\("pptxgenjs"\)/);
+  assert.doesNotMatch(source, /await import\("pptxgenjs"\)/);
+
   const buffer = await buildPptxBuffer({
     title: "Rencana Kegiatan",
-    content: "# Konteks\nMasalah utama\n\n# Rekomendasi\n- Langkah satu\n- Langkah dua",
+    content: "# Konteks\nMasalah utama\n\n## Rekomendasi\n- Langkah satu\n- Langkah dua",
     language: "id",
   });
+  assert.ok(Buffer.isBuffer(buffer));
   const zip = await JSZip.loadAsync(buffer);
   assert.ok(zip.file("ppt/slides/slide1.xml"));
   assert.ok(zip.file("ppt/slides/slide2.xml"));
+  assert.ok(zip.file("ppt/slides/slide3.xml"), "content + closing slide expected");
   const core = await zip.file("docProps/core.xml").async("string");
   assert.match(core, /AI Work Studio/);
+  const slide1 = await zip.file("ppt/slides/slide1.xml").async("string");
+  assert.match(slide1, /Rencana Kegiatan|AI Work Studio/);
 });

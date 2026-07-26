@@ -10,7 +10,7 @@ const STORE_KEY = "promptlab-ui-theme";
 const MODES = ["system", "light", "dark"];
 
 /** Matches --paper in tokens.css for each scheme. */
-const BAR_COLOR = { light: "#f7f3eb", dark: "#16191b" };
+const BAR_COLOR = { light: "#f7f3eb", dark: "#121618" };
 
 export function readThemeMode() {
   try {
@@ -38,12 +38,14 @@ export function resolveScheme(mode) {
 export function applyThemeMode(mode) {
   const safeMode = MODES.includes(mode) ? mode : "light";
   const root = document.documentElement;
+  const scheme = resolveScheme(safeMode);
 
-  if (safeMode === "system") root.removeAttribute("data-ui-theme");
-  else root.setAttribute("data-ui-theme", safeMode);
+  // Always write the resolved scheme so dark tokens apply for both "dark"
+  // and "system" (when the OS is dark). Light remains the saved default.
+  root.setAttribute("data-ui-theme", scheme);
 
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", BAR_COLOR[resolveScheme(safeMode)]);
+  if (meta) meta.setAttribute("content", BAR_COLOR[scheme]);
 
   try {
     localStorage.setItem(STORE_KEY, safeMode);

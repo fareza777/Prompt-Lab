@@ -16,6 +16,7 @@
   --paper-raised: #fffdf8;
   --paper-sunken: #eee8dc;
   --paper-inset: #e7dfd1;
+  --paper-muted: #efe8db;
   --tray: #e8e0d2;
 
   /* ---- Ink -------------------------------------------------------------- */
@@ -23,6 +24,7 @@
   --ink-2: #414940;
   --ink-mute: #667067;
   --ink-faint: #737b74;
+  --ink-soft: #555e56;
 
   /* ---- Rules (hairlines carry structure instead of shadows) -------------- */
   --rule: #d8d0c2;
@@ -113,38 +115,43 @@
 }
 
 :root[data-ui-theme="dark"] {
-  --paper: #16191b;
-  --paper-raised: #1d2124;
-  --paper-sunken: #121517;
-  --paper-inset: #0f1213;
+  /* Deep charcoal with a cool green cast — readable, not pure black. */
+  --paper: #121618;
+  --paper-raised: #1a1f22;
+  --paper-sunken: #0e1113;
+  --paper-inset: #0a0c0e;
+  --paper-muted: #1c2226;
+  --tray: #171c1f;
 
-  --ink: #ecefec;
-  --ink-2: #c8cdc9;
-  --ink-mute: #949a96;
-  --ink-faint: #6b716d;
+  --ink: #eef2ef;
+  --ink-2: #c5cdc8;
+  --ink-mute: #9aa39e;
+  --ink-faint: #6f7873;
+  --ink-soft: #b4bdb8;
 
-  --rule: #2a2f31;
-  --rule-strong: #3b4245;
+  --rule: #2c3438;
+  --rule-strong: #3d474c;
 
-  --accent: #5fc9b4;
-  --accent-hover: #7ad6c3;
-  --accent-ink: #0c211d;
-  --accent-soft: #17302b;
-  --accent-line: #2f5c53;
+  --accent: #6fd0bb;
+  --accent-hover: #8bdbc9;
+  --accent-ink: #07201b;
+  --accent-soft: #16332e;
+  --accent-line: #3a6b60;
 
-  --ok: #6bc79a;
-  --ok-soft: #172c22;
-  --warn: #d9a84f;
-  --warn-soft: #2e2617;
-  --danger: #e88b87;
-  --danger-soft: #2f1e1d;
+  --ok: #73d0a4;
+  --ok-soft: #143024;
+  --warn: #e0b45c;
+  --warn-soft: #2f2614;
+  --danger: #f0a09c;
+  --danger-soft: #321f1e;
 
-  --focus: #5fc9b4;
-  --focus-halo: rgba(95, 201, 180, 0.28);
+  --focus: #6fd0bb;
+  --focus-halo: rgba(111, 208, 187, 0.32);
 
-  --lift-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --lift-2: 0 4px 16px rgba(0, 0, 0, 0.45);
-  --lift-3: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --lift-1: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --lift-2: 0 8px 24px rgba(0, 0, 0, 0.42);
+  --lift-3: 0 18px 40px rgba(0, 0, 0, 0.5);
+  --shadow-ambient: 0 28px 70px rgba(0, 0, 0, 0.55);
 
   color-scheme: dark;
 }
