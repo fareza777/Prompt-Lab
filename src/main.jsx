@@ -2686,8 +2686,9 @@ function App() {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({
-          title: titleSeed.trim().split(/\s+/).slice(0, 10).join(" ") || "PromptLab Export",
+          title: titleSeed.trim().split(/\s+/).slice(0, 10).join(" ") || "AI Work Studio Export",
           content,
+          language: lang,
         }),
       });
       if (!response.ok) {
@@ -2698,7 +2699,7 @@ function App() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `promptlab-export.${format}`;
+      link.download = `ai-work-studio.${format}`;
       document.body.appendChild(link);
       link.click();
       link.remove();

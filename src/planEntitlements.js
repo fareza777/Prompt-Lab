@@ -15,7 +15,7 @@ export const PLAN_ENTITLEMENTS = {
     /** OpenRouter max_tokens for /api/generate-prompt (completion length cap). */
     generateMaxTokens: 3200,
     maxAttachments: 3,
-    docxExport: false,
+    docxExport: true,
     pptxExport: false,
     ocrPriority: false,
     aiCompare: false,
@@ -178,14 +178,14 @@ export function applyPriorityRouting(modelSettings = {}, plan) {
 export const MEMBERSHIP_MARKETING = {
   Free: {
     price: "Free",
-    detail: "Create and improve results. No Office export.",
+    detail: "5 finished results per week with complete Word export.",
     // Quota is metered in tokens; the approximate result count is stated so the
     // number means something to someone who has never counted a token.
     highlights: [
-      "~15 results/month (50k tokens)",
+      "5 results/week",
+      "Word export included",
       "Improve included",
       "25 saved results",
-      "5 custom templates",
     ],
   },
   Pro: {

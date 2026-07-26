@@ -80,6 +80,7 @@ import {
   FREE_PLAN_DEFAULTS,
 } from "./playBillingGoogle.js";
 import { persistReservedUsage, quotaFailureStatus } from "./quotaReservation.js";
+import { buildDocxBuffer, buildPptxBuffer } from "./officeExport.js";
 import {
   handleLemonSqueezyWebhook,
   parseLemonSqueezyWebhook,
@@ -504,21 +505,12 @@ app.post("/api/export/docx", express.json({ limit: "2mb" }), async (req, res) =>
       return;
     }
     const { title, content } = normalizeExportPayload(req.body);
-    const doc = new Document({
-      sections: [
-        {
-          properties: {},
-          children: [
-            new Paragraph({
-              text: title,
-              heading: HeadingLevel.TITLE,
-            }),
-            ...markdownToDocxParagraphs(content),
-          ],
-        },
-      ],
+    const buffer = await buildDocxBuffer({
+      title,
+      content,
+      language: String(req.body?.language || "id"),
+      plan: membership.plan,
     });
-    const buffer = await Packer.toBuffer(doc);
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -539,16 +531,11 @@ app.post("/api/export/pptx", express.json({ limit: "2mb" }), async (req, res) =>
       return;
     }
     const { title, content } = normalizeExportPayload(req.body);
-    const { default: pptxgen } = await import("pptxgenjs");
-    const pptx = new pptxgen();
-    pptx.layout = "LAYOUT_WIDE";
-    pptx.author = "PromptLab";
-    pptx.subject = title;
-    pptx.title = title;
-    pptx.company = "PromptLab";
-    pptx.lang = "id-ID";
-    buildSlidesFromContent(pptx, title, content);
-    const buffer = await pptx.write({ outputType: "nodebuffer" });
+    const buffer = await buildPptxBuffer({
+      title,
+      content,
+      language: String(req.body?.language || "id"),
+    });
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.presentationml.presentation"
@@ -4416,7 +4403,7 @@ function decodeXml(value) {
 
 function normalizeExportPayload(body) {
   return {
-    title: String(body.title || "PromptLab Export").slice(0, 120),
+    title: String(body.title || "AI Work Studio Export").slice(0, 120),
     content: String(body.content || "").slice(0, 50000),
   };
 }
@@ -4426,7 +4413,7 @@ function safeFilename(title) {
     .replace(/[<>:"/\\|?*\x00-\x1f]/g, "")
     .replace(/\s+/g, "-")
     .slice(0, 80);
-  return cleaned || "promptlab-export";
+  return cleaned || "ai-work-studio-export";
 }
 
 function cleanMarkdown(line) {

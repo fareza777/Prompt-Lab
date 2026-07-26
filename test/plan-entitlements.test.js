@@ -17,9 +17,14 @@ test("normalizePlanName falls back to Free", () => {
 
 test("Pro unlocks exports and AI features", () => {
   assert.equal(canExportFormat("Pro", "docx"), true);
-  assert.equal(canExportFormat("Free", "docx"), false);
+  assert.equal(canExportFormat("Pro", "pptx"), true);
   assert.equal(canUseFeature("Pro", "aiCompare"), true);
   assert.equal(canUseFeature("Free", "aiCompare"), false);
+});
+
+test("Free includes complete Word export but keeps PowerPoint paid", () => {
+  assert.equal(canExportFormat("Free", "docx"), true);
+  assert.equal(canExportFormat("Free", "pptx"), false);
 });
 
 test("Business has higher limits than Pro", () => {
