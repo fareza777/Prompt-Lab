@@ -54,7 +54,7 @@ export function getPlayBillingHint() {
 
 async function getBillingService() {
   if (!isPlayBillingAvailable()) {
-    throw new Error("Play Billing is only available in the PromptLab app from Google Play (Android).");
+    throw new Error("Play Billing is only available in AI Work Studio from Google Play (Android).");
   }
   return window.getDigitalGoodsService(PLAY_BILLING_SERVICE);
 }

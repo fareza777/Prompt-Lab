@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const title = "Prompt Lab: AI Work Studio";
-const shortDescription = "Turn ideas, photos, and files directly into finished AI work you can continue.";
+const title = "AI Work Studio: Documents";
+const shortDescription = "Turn notes, photos, and files into polished documents ready to use.";
 
 const listing = await readFile(new URL("../playstore/STORE_LISTING.md", import.meta.url), "utf8");
 const checklist = await readFile(new URL("../playstore/play-console-checklist.md", import.meta.url), "utf8");
@@ -28,18 +28,20 @@ test("store narrative sells finished work rather than prompt creation", () => {
     .slice(0, listing.indexOf("## Data Safety"))
     .replaceAll(/Prompt[-\s]*Lab/gi, "");
   assert.doesNotMatch(customerCopy, /\b(prompt|prompts|prompting)\b/i);
-  assert.match(customerCopy, /directly into finished AI work/i);
+  assert.match(customerCopy, /polished documents/i);
+  assert.match(customerCopy, /5 results per week/i);
+  assert.match(customerCopy, /Export complete results to Word/i);
   assert.match(customerCopy, /LANGSUNG MENJADI HASIL/i);
 });
 
 test("listing documents benefit-led screenshots and the no-AAB metadata path", () => {
-  assert.match(listing, /From rough input to a finished AI draft/);
+  assert.match(listing, /From rough input to finished work/i);
   assert.match(listing, /No new AAB required/i);
 });
 
 test("Indonesian listing fits Play's metadata limits", () => {
-  const idTitle = "Prompt Lab: Studio Kerja AI";
-  const idShort = "Ubah ide, foto, dan file langsung jadi hasil kerja AI yang siap dilanjutkan.";
+  const idTitle = "AI Work Studio: Dokumen AI";
+  const idShort = "Ubah catatan, foto, dan file menjadi dokumen rapi yang siap dipakai.";
   assert.ok(idTitle.length <= 30, `id title is ${idTitle.length} chars`);
   assert.ok(idShort.length <= 80, `id short description is ${idShort.length} chars`);
   assert.ok(listing.includes(idTitle), "listing is missing the Indonesian title");

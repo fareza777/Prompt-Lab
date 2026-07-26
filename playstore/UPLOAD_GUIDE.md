@@ -1,4 +1,4 @@
-# Upload PromptLab ke Play Console
+# Upload AI Work Studio ke Play Console
 
 ## File AAB (build lokal)
 
@@ -8,12 +8,12 @@ Setelah `npm run playstore:build`, file ada di:
 android-app/app/build/outputs/bundle/release/app-release.aab
 ```
 
-atau `PromptLab-release-signed.aab` — cek folder di atas.
+atau `AI Work Studio-release-signed.aab` — cek folder di atas.
 
 ## Langkah Play Console
 
 1. https://play.google.com/console → **Create app**
-2. App name: **PromptLab**
+2. App name: **AI Work Studio**
 3. **Production** → **Create new release** → Upload AAB
 4. Isi dari `playstore/STORE_LISTING.md`:
    - Privacy: https://prompt-lab.xyz/privacy

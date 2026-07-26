@@ -64,7 +64,7 @@ function applyKeywordsAndArticleMeta(html, path, route) {
   out = removeMetaById(out, "og-article-modified");
 
   if (path === "/" || path === "/blog") {
-    out = setMetaById(out, "og-image-alt", "content", "PromptLab — AI Work Studio");
+    out = setMetaById(out, "og-image-alt", "content", "AI Work Studio");
   }
 
   return out;
@@ -76,8 +76,8 @@ function blogPostingSchema(route) {
     "@type": "BlogPosting",
     headline: route.headline,
     description: route.description,
-    author: { "@type": "Organization", name: "PromptLab" },
-    publisher: { "@type": "Organization", name: "PromptLab", url: SITE },
+    author: { "@type": "Organization", name: "AI Work Studio" },
+    publisher: { "@type": "Organization", name: "AI Work Studio", url: SITE },
     datePublished: route.datePublished,
     dateModified: route.dateModified,
     mainEntityOfPage: route.canonical,
@@ -127,7 +127,7 @@ function blogItemListSchema() {
     {
       "@context": "https://schema.org",
       "@type": "ItemList",
-      name: "PromptLab Blog Articles",
+      name: "AI Work Studio Blog Articles",
       itemListElement: articles,
     },
     null,

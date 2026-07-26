@@ -7,7 +7,7 @@
 
   var SEO = {
     "/": {
-      title: "PromptLab — AI Work Studio | From Request to Finished Result",
+      title: "AI Work Studio — AI Work Studio | From Request to Finished Result",
       description: "Turn ideas, notes, photos, and files directly into finished AI work. Create reports, content, analysis, slide outlines, and code in one focused workspace.",
       canonical: "https://prompt-lab.xyz/",
       h1: "landing",
@@ -15,7 +15,7 @@
       ogType: "website",
     },
     "/blog": {
-      title: "PromptLab Blog — AI Prompt Engineering Tips, Guides & Best Prompts",
+      title: "AI Work Studio Blog — AI Prompt Engineering Tips, Guides & Best Prompts",
       description: "How to create effective AI prompts. Best prompt templates for ChatGPT, Claude, Gemini, marketers, students, and developers. Tutorials, comparisons, and copy-paste templates.",
       canonical: "https://prompt-lab.xyz/blog",
       h1: "blog",
@@ -23,7 +23,7 @@
       ogType: "website",
     },
     "/blog/prompt-engineering-guide": {
-      title: "The Complete Guide to Prompt Engineering in 2026 | PromptLab",
+      title: "The Complete Guide to Prompt Engineering in 2026 | AI Work Studio",
       description: "How to create a prompt that works: the 5-part prompt structure (Role, Context, Task, Constraints, Format), advanced techniques, and 8 common mistakes. Best prompt guide 2026.",
       canonical: "https://prompt-lab.xyz/blog/prompt-engineering-guide",
       h1: "article-guide",
@@ -35,7 +35,7 @@
       dateModified: "2026-05-28",
     },
     "/blog/chatgpt-vs-claude-prompts": {
-      title: "ChatGPT vs Claude: How to Write Prompts for Each | PromptLab",
+      title: "ChatGPT vs Claude: How to Write Prompts for Each | AI Work Studio",
       description: "Side-by-side comparison of how to create the best prompt for ChatGPT vs Claude. Tone, XML tags, system prompts, and real examples for marketing, coding, and research.",
       canonical: "https://prompt-lab.xyz/blog/chatgpt-vs-claude-prompts",
       h1: "article-chatgpt",
@@ -47,7 +47,7 @@
       dateModified: "2026-06-02",
     },
     "/blog/prompt-templates-marketing": {
-      title: "10 Prompt Templates Every Marketer Needs | Best AI Prompts 2026 | PromptLab",
+      title: "10 Prompt Templates Every Marketer Needs | Best AI Prompts 2026 | AI Work Studio",
       description: "How to create the best prompt for marketing: 10 copy-paste AI templates for social media, email, ads, blogs, and product copy. Optimized for ChatGPT, Claude, and Gemini.",
       canonical: "https://prompt-lab.xyz/blog/prompt-templates-marketing",
       h1: "article-marketing",
@@ -59,7 +59,7 @@
       dateModified: "2026-05-28",
     },
     "/blog/9-tips-claude-prompts": {
-      title: "9 Tips to Write a Claude Prompt That Actually Works | Best Claude Prompts | PromptLab",
+      title: "9 Tips to Write a Claude Prompt That Actually Works | Best Claude Prompts | AI Work Studio",
       description: "How to create the best Claude prompt: 9 practical rules from Anthropic with bad/good examples and a copy-paste template. Master Claude prompts in 7 minutes.",
       canonical: "https://prompt-lab.xyz/blog/9-tips-claude-prompts",
       h1: "article-9-tips",
@@ -71,7 +71,7 @@
       dateModified: "2026-06-07",
     },
     "/blog/how-to-create-prompt-for-chatgpt": {
-      title: "How to Create a Prompt for ChatGPT That Gets 10x Better Results | PromptLab",
+      title: "How to Create a Prompt for ChatGPT That Gets 10x Better Results | AI Work Studio",
       description: "How to create the best prompt for ChatGPT: the CRISPE 6-part framework, 12 copy-paste prompts, before/after scoring, and the 6 mistakes that kill ChatGPT output quality.",
       canonical: "https://prompt-lab.xyz/blog/how-to-create-prompt-for-chatgpt",
       h1: "article-how-to-create-prompt-for-chatgpt",
@@ -83,7 +83,7 @@
       dateModified: "2026-06-08",
     },
     "/blog/cara-buat-prompt-chatgpt": {
-      title: "Cara Buat Prompt ChatGPT yang Bagus: Panduan Praktis Bahasa Indonesia (2026) | PromptLab",
+      title: "Cara Buat Prompt ChatGPT yang Bagus: Panduan Praktis Bahasa Indonesia (2026) | AI Work Studio",
       description: "Cara buat prompt ChatGPT yang bagus: framework CRISPE 6-bagian dalam bahasa Indonesia, 8 template siap copy-paste, dan 5 kesalahan yang sering bunuh kualitas output.",
       canonical: "https://prompt-lab.xyz/blog/cara-buat-prompt-chatgpt",
       h1: "article-cara-buat-prompt-chatgpt",
@@ -95,7 +95,7 @@
       dateModified: "2026-06-08",
     },
     "/blog/best-prompt-for-marketing": {
-      title: "Best Prompt for Marketing: 7 Templates That Convert in 2026 | PromptLab",
+      title: "Best Prompt for Marketing: 7 Templates That Convert in 2026 | AI Work Studio",
       description: "How to create the best prompt for marketing: 7 copy-paste AI templates for LinkedIn ads, email subject lines, landing pages, Facebook/Instagram ads, blog outlines, and product copy.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-marketing",
       h1: "article-best-prompt-for-marketing",
@@ -107,7 +107,7 @@
       dateModified: "2026-06-09",
     },
     "/blog/claude-vs-gpt5-vs-gemini-prompting": {
-      title: "Claude vs GPT-5 vs Gemini: Best Prompting Practices for Each | PromptLab",
+      title: "Claude vs GPT-5 vs Gemini: Best Prompting Practices for Each | AI Work Studio",
       description: "How to write the best prompt for Claude, GPT-5, and Gemini: model-specific techniques, side-by-side tests, and one unified template that works on all three.",
       canonical: "https://prompt-lab.xyz/blog/claude-vs-gpt5-vs-gemini-prompting",
       h1: "article-claude-vs-gpt5-vs-gemini-prompting",
@@ -119,7 +119,7 @@
       dateModified: "2026-06-10",
     },
     "/blog/best-prompt-for-image-generation": {
-      title: "How to Write a Prompt for Image Generation (Midjourney, DALL-E, Flux) | PromptLab",
+      title: "How to Write a Prompt for Image Generation (Midjourney, DALL-E, Flux) | AI Work Studio",
       description: "How to write the best prompt for image generation: the 6-part image prompt formula with model-specific tuning for Midjourney, DALL-E, and Flux.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-image-generation",
       h1: "article-best-prompt-for-image-generation",
@@ -131,7 +131,7 @@
       dateModified: "2026-06-11",
     },
     "/blog/best-prompt-for-email-writing": {
-      title: "AI Prompt for Email Writing: 5 Templates That Get Replies | PromptLab",
+      title: "AI Prompt for Email Writing: 5 Templates That Get Replies | AI Work Studio",
       description: "How to write the best prompt for email writing: 5 copy-paste AI templates for cold outreach, follow-ups, internal updates, sales proposals, and customer support.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-email-writing",
       h1: "article-best-prompt-for-email-writing",
@@ -143,7 +143,7 @@
       dateModified: "2026-06-12",
     },
     "/blog/how-to-create-system-prompt": {
-      title: "How to Create a System Prompt for Custom GPTs (Complete Guide) | PromptLab",
+      title: "How to Create a System Prompt for Custom GPTs (Complete Guide) | AI Work Studio",
       description: "How to create a system prompt for Custom GPTs: persona, scope, output contract, anti-patterns, with a full copy-paste example and model-specific tweaks.",
       canonical: "https://prompt-lab.xyz/blog/how-to-create-system-prompt",
       h1: "article-how-to-create-system-prompt",
@@ -155,7 +155,7 @@
       dateModified: "2026-06-13",
     },
     "/blog/best-prompt-for-excel-analysis": {
-      title: "Best Prompt for Excel Analysis: Formulas, Pivot Logic, and Insights | PromptLab",
+      title: "Best Prompt for Excel Analysis: Formulas, Pivot Logic, and Insights | AI Work Studio",
       description: "Learn the best prompt for Excel analysis with copy-paste templates for formulas, PivotTable logic, data quality checks, and evidence-based insights.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-excel-analysis",
       h1: "article-best-prompt-for-excel-analysis",
@@ -167,7 +167,7 @@
       dateModified: "2026-07-25",
     },
     "/blog/best-prompt-for-coding": {
-      title: "Best Prompt for Coding: Debug Faster and Ship More with AI | PromptLab",
+      title: "Best Prompt for Coding: Debug Faster and Ship More with AI | AI Work Studio",
       description: "How to write the best prompt for coding: 4 copy-paste AI templates (write, debug, review, refactor) built on the 5-part framework, tested on Claude Code, Cursor, GitHub Copilot, ChatGPT, and Gemini.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-coding",
       h1: "article-best-prompt-for-coding",
@@ -203,7 +203,7 @@
       dateModified: "2026-07-02",
     },
     "/blog/best-prompt-for-resume": {
-      title: "Best Prompt for Resume Writing: Stand Out in 2026 ATS | PromptLab",
+      title: "Best Prompt for Resume Writing: Stand Out in 2026 ATS | AI Work Studio",
       description: "The best prompt for resume writing uses the 5-part framework to turn a thin job history into an ATS-optimized 1-pager that lands interviews. 4 copy-paste templates (from-scratch, bullet polish, cover letter, ATS audit) tested on ChatGPT, Claude, and Gemini, plus 3 mistakes that ship a resume straight to the rejection pile — including the LLM-fabricated metric trap that gets caught in the phone screen.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-resume",
       h1: "article-best-prompt-for-resume",
@@ -215,7 +215,7 @@
       dateModified: "2026-06-16",
     },
     "/blog/best-prompt-for-social-media": {
-      title: "Best Prompt for Social Media: 8 Templates That Drive Engagement | PromptLab",
+      title: "Best Prompt for Social Media: 8 Templates That Drive Engagement | AI Work Studio",
       description: "8 drop-in prompts for Instagram captions, LinkedIn posts, Twitter threads, and TikTok scripts.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-social-media",
       h1: "article-best-prompt-for-social-media",
@@ -227,7 +227,7 @@
       dateModified: "2026-06-15",
     },
     "/blog/best-prompt-for-storytelling": {
-      title: "Best Prompt for Storytelling: 6 Frameworks That Hook Readers | PromptLab",
+      title: "Best Prompt for Storytelling: 6 Frameworks That Hook Readers | AI Work Studio",
       description: "How to write the best prompt for storytelling: 6 copy-paste AI frameworks (Save the Cat, Fichtean, Hero's Journey, In Medias Res, Seven-Point, and Pixar's 4-sentence) that turn a one-line idea into a 5-page short story with a hook and payoff. Tested on Claude, ChatGPT, and Gemini.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-storytelling",
       h1: "article-best-prompt-for-storytelling",
@@ -239,7 +239,7 @@
       dateModified: "2026-06-17",
     },
     "/blog/best-prompt-for-translation": {
-      title: "Best Prompt for Translation: Preserve Tone, Not Just Words | PromptLab",
+      title: "Best Prompt for Translation: Preserve Tone, Not Just Words | AI Work Studio",
       description: "The best prompt for translation is a localization brief, not a word-swap: 4-part structure (role, scope, input, output) with glossary, tone, and cultural constraints. 4 copy-paste templates for marketing, technical, conversational, and long-form translation tested on Claude, ChatGPT, and Gemini.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-translation",
       h1: "article-best-prompt-for-translation",
@@ -251,7 +251,7 @@
       dateModified: "2026-06-18",
     },
     "/blog/best-prompt-for-product-description": {
-      title: "Best Prompt for Product Description: Convert Browsers to Buyers | PromptLab",
+      title: "Best Prompt for Product Description: Convert Browsers to Buyers | AI Work Studio",
       description: "The best prompt for product description turns a 3-bullet spec sheet into a 200-word conversion-focused page. 5 copy-paste templates built on AIDA, PAS, and FAB frameworks with 4 common-mistake fixes for ecommerce copy.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-product-description",
       h1: "article-best-prompt-for-product-description",
@@ -263,7 +263,7 @@
       dateModified: "2026-06-19",
     },
     "/blog/best-prompt-for-business-plan": {
-      title: "Best Prompt for Business Plan: From Idea to Investor-Ready | PromptLab",
+      title: "Best Prompt for Business Plan: From Idea to Investor-Ready | AI Work Studio",
       description: "The best prompt for business plan generation turns a half-formed idea into a 10-page investor-ready document. 7-section framework, 4 copy-paste prompts (discovery, master, financials, polish), and the 3 mistakes that kill AI-generated plans in 2026.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-business-plan",
       h1: "article-best-prompt-for-business-plan",
@@ -275,7 +275,7 @@
       dateModified: "2026-06-20",
     },
     "/blog/best-prompt-for-cover-letter": {
-      title: "Best Prompt for Cover Letter: Get Past the ATS Robot | PromptLab",
+      title: "Best Prompt for Cover Letter: Get Past the ATS Robot | AI Work Studio",
       description: "The best prompt for cover letter uses the A.R.C.S. framework (Audience, Role, Context, Shape) to turn a 1-line job description into a 3-paragraph letter that passes ATS and gets callbacks. 4 copy-paste templates (entry-level, mid-career, career-changer, executive) tested on ChatGPT, Claude, and Gemini, plus 3 mistakes that get AI cover letters rejected by recruiters.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-cover-letter",
       h1: "article-best-prompt-for-cover-letter",
@@ -287,7 +287,7 @@
       dateModified: "2026-06-21",
     },
     "/blog/best-prompt-for-seo": {
-      title: "Best Prompt for SEO: Rank on Page 1 in 2026 | PromptLab",
+      title: "Best Prompt for SEO: Rank on Page 1 in 2026 | AI Work Studio",
       description: "The best prompt for SEO uses the 5-part S.E.A.R.C.H. framework to turn a single target keyword into a search-intent-matched, AI-Overview-citation-ready article. 4 copy-paste templates (master prompt, rewriter, meta description, content audit) plus the 3 mistakes that get AI SEO content filtered out by the Google Helpful Content Update.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-seo",
       h1: "article-best-prompt-for-seo",
@@ -299,7 +299,7 @@
       dateModified: "2026-06-22",
     },
     "/blog/best-prompt-for-youtube-script": {
-      title: "Best Prompt for YouTube Script: Hook + Payoff in 8 Minutes | PromptLab",
+      title: "Best Prompt for YouTube Script: Hook + Payoff in 8 Minutes | AI Work Studio",
       description: "The best prompt for YouTube script uses the Hook-Promise-Payoff framework to turn a topic into a 6-12 minute video that holds past the 41.9% average view duration. 4 copy-paste templates (tutorial, story, comparison, listicle), a separate 4-part Shorts prompt, and the 3 mistakes that make AI scripts sound generic.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-youtube-script",
       h1: "article-best-prompt-for-youtube-script",
@@ -311,7 +311,7 @@
       dateModified: "2026-06-23",
     },
     "/blog/best-prompt-for-podcast": {
-      title: "Best Prompt for Podcast: Prep, Prompts, and Shownotes | PromptLab",
+      title: "Best Prompt for Podcast: Prep, Prompts, and Shownotes | AI Work Studio",
       description: "5 prompt templates for podcast prep, guest question research, and 200-word shownotes that boost discoverability — built on a 20-min weekly workflow that replaces 3 hours of work.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-podcast",
       h1: "article-best-prompt-for-podcast",
@@ -323,7 +323,7 @@
       dateModified: "2026-06-24",
     },
     "/blog/best-prompt-for-blog-outline": {
-      title: "Best Prompt for Blog Outline: 5-Minute Article Blueprint | PromptLab",
+      title: "Best Prompt for Blog Outline: 5-Minute Article Blueprint | AI Work Studio",
       description: "How to write the best prompt for blog outline: the 4-part master prompt that turns a 1-line topic into a 12-section blog outline with H2/H3 hierarchy, FAQ, and CTA placement. Includes skyscraper + repurposing variants.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-blog-outline",
       h1: "article-best-prompt-for-blog-outline",
@@ -335,7 +335,7 @@
       dateModified: "2026-06-25",
     },
     "/blog/best-prompt-for-summarization": {
-      title: "Best Prompt for Summarization: Compress Without Losing Meaning | PromptLab",
+      title: "Best Prompt for Summarization: Compress Without Losing Meaning | AI Work Studio",
       description: "The best prompt for summarization: a 4-part framework (Role, Source, Compression target, Output format) that turns a 50-page document into a 150-word executive brief that preserves footnotes, hedges, and decision-relevant caveats. Includes Chain of Density.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-summarization",
       h1: "article-best-prompt-for-summarization",
@@ -347,7 +347,7 @@
       dateModified: "2026-06-26",
     },
     "/blog/best-prompt-for-debugging-code": {
-      title: "Best Prompt for Debugging Code: Find Bugs in 5 Minutes | PromptLab",
+      title: "Best Prompt for Debugging Code: Find Bugs in 5 Minutes | AI Work Studio",
       description: "The best prompt for debugging code is the 5-part structure: Goal, Symptom, Reproduction, Context, Diagnosis. 4 copy-paste templates (stack trace triage, repro, cryptic-error translator, test-driven debugging) that turn a 50-line stack trace into a 3-step fix.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-debugging-code",
       h1: "article-best-prompt-for-debugging-code",
@@ -359,7 +359,7 @@
       dateModified: "2026-06-27",
     },
     "/blog/best-prompt-for-code-review": {
-      title: "Best Prompt for Code Review: Catch Bugs Before They Ship | PromptLab",
+      title: "Best Prompt for Code Review: Catch Bugs Before They Ship | AI Work Studio",
       description: "The best prompt for code review is a 4-part structure: Context, Diff, Priority list, Output cap. 3 copy-paste diffs (SQL injection, N+1, tautology tests) and the 4 mistakes that make AI reviews worse than none.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-code-review",
       h1: "article-best-prompt-for-code-review",
@@ -371,7 +371,7 @@
       dateModified: "2026-06-28",
     },
     "/blog/best-prompt-for-content-rewrite": {
-      title: "Best Prompt for Content Rewrite: Refresh Without Losing Voice | PromptLab",
+      title: "Best Prompt for Content Rewrite: Refresh Without Losing Voice | AI Work Studio",
       description: "The best prompt for content rewrite is a 3-part structure (Original, Voice brief, Protected elements) that turns a stale 2023 article into a 2026-relevant version while keeping the original voice. Includes 4 variants (stat-swap, append, localize) and the 3 mistakes that make AI rewrites sound generic.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-content-rewrite",
       h1: "article-best-prompt-for-content-rewrite",
@@ -383,7 +383,7 @@
       dateModified: "2026-06-29",
     },
     "/blog/best-prompt-for-sop": {
-      title: "Best Prompt for SOP: Standard Operating Procedure in 30 Minutes | PromptLab",
+      title: "Best Prompt for SOP: Standard Operating Procedure in 30 Minutes | AI Work Studio",
       description: "The best prompt for SOP uses the 5-part R.O.L.E.S. framework to turn a 90-minute process-owner interview into a working SOP. 4 copy-paste templates (blank-slate, rewrite, decision tree, exception pass) tested on Claude, ChatGPT, and Gemini, plus 3 mistakes that flatten AI-generated procedures into shelf documents.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-sop",
       h1: "article-best-prompt-for-sop",
@@ -395,7 +395,7 @@
       dateModified: "2026-06-30",
     },
     "/blog/best-prompt-for-meeting-notes": {
-      title: "Best Prompt for Meeting Notes: From Transcript to Action Items | PromptLab",
+      title: "Best Prompt for Meeting Notes: From Transcript to Action Items | AI Work Studio",
       description: "The best prompt for meeting notes is a 3-part structure (Role + Transcript + Schema) that turns a 1-hour transcript into a 1-page summary with owners, deadlines, and a parking lot. Includes 3 variants (1:1, sprint planning, client calls) and the 4 mistakes that turn transcripts into vague prose.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-meeting-notes",
       h1: "article-best-prompt-for-meeting-notes",
@@ -407,7 +407,7 @@
       dateModified: "2026-07-01",
     },
     "/blog/best-prompt-for-linkedin": {
-      title: "Best Prompt for LinkedIn: Posts That Get 10K Impressions | PromptLab",
+      title: "Best Prompt for LinkedIn: Posts That Get 10K Impressions | AI Work Studio",
       description: "The best prompt for LinkedIn is a 5-part structure (Hook + POV + Story + Lesson + CTA) that turns a one-line idea into a post that gets 10K+ impressions. Includes 5 copy-paste templates (founders, B2B sales, job seekers, personal brand, carousel) and the 3 mistakes that get you scrolled past.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-linkedin",
       h1: "article-best-prompt-for-linkedin",
@@ -419,7 +419,7 @@
       dateModified: "2026-07-03",
     },
     "/blog/best-prompt-for-customer-support": {
-      title: "Best Prompt for Customer Support: Faster Replies, Happier Customers | PromptLab",
+      title: "Best Prompt for Customer Support: Faster Replies, Happier Customers | AI Work Studio",
       description: "The best prompt for customer support combines a tight base system prompt with 5 ticket-type templates (first reply, billing dispute, de-escalation, proactive outreach, handoff summary). Includes the 4 ingredients every support prompt needs and the 5 mistakes that ruin replies in production.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-customer-support",
       h1: "article-best-prompt-for-customer-support",
@@ -431,7 +431,7 @@
       dateModified: "2026-07-04",
     },
     "/blog/best-prompt-for-productivity": {
-      title: "Best Prompt for Productivity: 10 Daily AI Workflows | PromptLab",
+      title: "Best Prompt for Productivity: 10 Daily AI Workflows | AI Work Studio",
       description: "The best prompt for productivity is a small library of structured templates, not one mega-prompt. Includes 10 copy-paste daily AI workflows (inbox triage, daily plan, meeting prep, research digest, shutdown), the Role + Raw Material + Output Shape recipe, and the 3 mistakes that derail productivity prompts.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-productivity",
       h1: "article-best-prompt-for-productivity",
@@ -443,7 +443,7 @@
       dateModified: "2026-07-05",
     },
     "/blog/best-prompt-for-tutoring": {
-      title: "Best Prompt for Tutoring: Learn Anything in 30 Days | PromptLab",
+      title: "Best Prompt for Tutoring: Learn Anything in 30 Days | AI Work Studio",
       description: "The best prompt for tutoring is a 4-part structure (Role + Learner State + Pedagogical Method + Session Contract) that turns an LLM into a 30-day personal tutor for any subject. Includes a base tutor system prompt, daily session template, 30-day curriculum scaffold, Feynman teach-back prompt, and the 3 mistakes that flatten a tutor into a Google replacement.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-tutoring",
       h1: "article-best-prompt-for-tutoring",
@@ -455,7 +455,7 @@
       dateModified: "2026-07-06",
     },
     "/blog/best-prompt-for-negotiation": {
-      title: "Best Prompt for Negotiation: Get the Deal Without the Back-and-Forth | PromptLab",
+      title: "Best Prompt for Negotiation: Get the Deal Without the Back-and-Forth | AI Work Studio",
       description: "The best prompt for negotiation uses a 4-part framework (Context, Ask, Constraints, Output Format) to turn a counter-offer email, vendor renewal, scope-creep request, or partnership split into a 3-step script with walk-away anchors. 4 copy-paste templates + 3 mistakes that make AI sound recruiter-oblivious.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-negotiation",
       h1: "article-best-prompt-for-negotiation",
@@ -467,7 +467,7 @@
       dateModified: "2026-07-07",
     },
     "/blog/best-prompt-for-research": {
-      title: "Best Prompt for Research: Turn AI Into a Literature Scout | PromptLab",
+      title: "Best Prompt for Research: Turn AI Into a Literature Scout | AI Work Studio",
       description: "The best prompt for research is a 4-part structure (Role + Scope + Sources + Output) that turns vague questions into a sourced literature note with gaps, counterpoints, and follow-up queries. 3 worked examples (academic, market, policy) + 3 mistakes that make AI invent citations.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-research",
       h1: "article-best-prompt-for-research",
@@ -479,7 +479,7 @@
       dateModified: "2026-07-10",
     },
     "/blog/best-prompt-for-interview-prep": {
-      title: "Best Prompt for Interview Prep: Practice Answers That Sound Like You | PromptLab",
+      title: "Best Prompt for Interview Prep: Practice Answers That Sound Like You | AI Work Studio",
       description: "The best prompt for interview prep uses a 4-part framework (Role, Context, Task, Output) to turn AI into a mock interviewer, STAR story builder, and weak-answer stress test. 5 copy-paste templates + 3 mistakes that keep your prep generic.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-interview-prep",
       h1: "article-best-prompt-for-interview-prep",
@@ -491,7 +491,7 @@
       dateModified: "2026-07-11",
     },
     "/blog/best-prompt-for-contract-review": {
-      title: "Best Prompt for Contract Review: Spot Risk Clauses Before You Sign | PromptLab",
+      title: "Best Prompt for Contract Review: Spot Risk Clauses Before You Sign | AI Work Studio",
       description: "The best prompt for contract review uses a 5-section framework (Role, Document, Focus Areas, Output Format, Escalation Rules) to turn AI into a skeptical counterparty reviewer. 4 copy-paste templates (general, NDA, vendor, employment) plus 3 mistakes that make AI reviews useless.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-contract-review",
       h1: "article-best-prompt-for-contract-review",
@@ -503,7 +503,7 @@
       dateModified: "2026-07-12",
     },
     "/blog/best-prompt-for-financial-analysis": {
-      title: "Best Prompt for Financial Analysis: Read a 10-K in One Pass | PromptLab",
+      title: "Best Prompt for Financial Analysis: Read a 10-K in One Pass | AI Work Studio",
       description: "The best prompt for financial analysis uses a 5-part framework (Role, Document, Focus, Output, Rules) to turn a 10-K, earnings call, or peer set into a one-page memo with thesis, risks, multiples, and red flags. 4 copy-paste templates + 3 mistakes that make AI finance output untrustworthy.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-financial-analysis",
       h1: "article-best-prompt-for-financial-analysis",
@@ -515,7 +515,7 @@
       dateModified: "2026-07-13",
     },
     "/blog/best-prompt-for-teaching": {
-      title: "Best Prompt for Teaching: Lesson Plans That Actually Stick | PromptLab",
+      title: "Best Prompt for Teaching: Lesson Plans That Actually Stick | AI Work Studio",
       description: "The best prompt for teaching isn't one sentence — it's a 4-prompt framework (objectives, activities, assessment, differentiated explanation) that produces Bloom-aligned, UDL-tagged, standards-anchored lesson plans. 4 copy-paste templates + 3 mistakes that make AI lesson plans useless.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-teaching",
       h1: "article-best-prompt-for-teaching",
@@ -527,7 +527,7 @@
       dateModified: "2026-07-15",
     },
     "/blog/best-prompt-for-presentations": {
-      title: "Best Prompt for Presentations: Slides With a Clear Story Arc | PromptLab",
+      title: "Best Prompt for Presentations: Slides With a Clear Story Arc | AI Work Studio",
       description: "The best prompt for presentations turns a topic into a 12-slide story arc: hook, problem, proof, demo, and ask. Includes pitch deck, executive proposal, product demo, and workshop templates with speaker notes.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-presentations",
       h1: "article-best-prompt-for-presentations",
@@ -539,7 +539,7 @@
       dateModified: "2026-07-17",
     },
     "/blog/best-prompt-for-swot-analysis": {
-      title: "Best Prompt for SWOT Analysis: Strategy in 15 Minutes | PromptLab",
+      title: "Best Prompt for SWOT Analysis: Strategy in 15 Minutes | AI Work Studio",
       description: "The best prompt for SWOT analysis is one that forces the model to reason from each quadrant into a prioritized set of moves you can execute this week. 4 copy-paste templates (personal, product, competitive, AI startup) plus the framework + 3 mistakes that turn SWOT into procrastination.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-swot-analysis",
       h1: "article-best-prompt-for-swot-analysis",
@@ -551,7 +551,7 @@
       dateModified: "2026-07-18",
     },
     "/blog/best-prompt-for-user-stories": {
-      title: "Best Prompt for User Stories: From Idea to Sprint-Ready Tickets | PromptLab",
+      title: "Best Prompt for User Stories: From Idea to Sprint-Ready Tickets | AI Work Studio",
       description: "The best prompt for user stories turns a feature brief into 10 INVEST stories with Given/When/Then acceptance criteria, edge cases, and test ideas. 4 copy-paste templates + 3 mistakes to avoid.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-user-stories",
       h1: "article-best-prompt-for-user-stories",
@@ -563,7 +563,7 @@
       dateModified: "2026-07-19",
     },
     "/blog/best-prompt-for-api-documentation": {
-      title: "Best Prompt for API Documentation: Docs Developers Actually Read | PromptLab",
+      title: "Best Prompt for API Documentation: Docs Developers Actually Read | AI Work Studio",
       description: "The best prompt for API documentation turns OpenAPI, code, and examples into a grounded overview, authentication guide, endpoint reference, error catalog, and tested quickstart. 4 copy-paste templates plus 3 mistakes to avoid.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-api-documentation",
       h1: "article-best-prompt-for-api-documentation",
@@ -575,7 +575,7 @@
       dateModified: "2026-07-20",
     },
     "/blog/best-prompt-for-test-cases": {
-      title: "Best Prompt for Test Cases: Coverage Without the Spreadsheet Pain | PromptLab",
+      title: "Best Prompt for Test Cases: Coverage Without the Spreadsheet Pain | AI Work Studio",
       description: "The best prompt for test cases gives the model a 4-part brief (role, context, coverage matrix, format) and turns a user story into a table of prioritized cases with concrete expected results. 4 copy-paste templates (happy path, edge, security, regression) plus 5 mistakes to avoid.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-test-cases",
       h1: "article-best-prompt-for-test-cases",
@@ -587,7 +587,7 @@
       dateModified: "2026-07-21",
     },
     "/blog/best-prompt-for-refactoring-code": {
-      title: "Best Prompt for Refactoring Code: Safer Diffs, Same Behavior | PromptLab",
+      title: "Best Prompt for Refactoring Code: Safer Diffs, Same Behavior | AI Work Studio",
       description: "The best prompt for refactoring code makes behavior preservation explicit: establish a test baseline, name the code smells, propose small reversible steps, and verify every diff. Includes 4 copy-paste templates for legacy code, safe cleanup, modernization, and review.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-refactoring-code",
       h1: "article-best-prompt-for-refactoring-code",
@@ -599,7 +599,7 @@
       dateModified: "2026-07-23",
     },
     "/blog/best-prompt-for-sql-queries": {
-      title: "Best Prompt for SQL Queries: From English to Optimized SQL | PromptLab",
+      title: "Best Prompt for SQL Queries: From English to Optimized SQL | AI Work Studio",
       description: "The best prompt for SQL queries is a 5-part schema-aware brief: role, schema (CREATE TABLE), sample rows, question, output contract. 3 copy-paste templates (SELECT, JOIN, window functions) plus the 5 mistakes that corrupt AI-generated SQL and an EXPLAIN-friendly optimization checklist for PostgreSQL, MySQL, and SQLite.",
       canonical: "https://prompt-lab.xyz/blog/best-prompt-for-sql-queries",
       h1: "article-best-prompt-for-sql-queries",
@@ -746,7 +746,7 @@
 
     if (published) published.remove();
     if (modified) modified.remove();
-    setMetaContent("og-image-alt", "PromptLab — AI Work Studio");
+    setMetaContent("og-image-alt", "AI Work Studio");
   }
 
   function applySeoMeta(meta, path) {

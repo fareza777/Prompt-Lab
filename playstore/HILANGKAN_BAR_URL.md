@@ -8,7 +8,7 @@ Play Store memakai **App signing key** (sertifikat Google), sedangkan `assetlink
 
 ## Langkah perbaikan
 
-1. Buka [Google Play Console](https://play.google.com/console) → app **PromptLab**
+1. Buka [Google Play Console](https://play.google.com/console) → app **AI Work Studio**
 2. **Setup** → **App integrity** → **App signing**
 3. Salin **SHA-256 certificate fingerprint** dari bagian **App signing key certificate** (bukan upload key saja)
 4. Edit `public/.well-known/assetlinks.json` — tambahkan fingerprint itu ke array `sha256_cert_fingerprints` (biarkan fingerprint upload key tetap ada jika masih dipakai untuk testing lokal)
@@ -28,7 +28,7 @@ Script ini juga memanggil API Google Digital Asset Links dan memberi tahu apakah
 ## Setelah berhasil
 
 - Bar URL hilang (mode fullscreen TWA)
-- Splash native Android tetap sebentar, lalu splash animasi web PromptLab
+- Splash native Android tetap sebentar, lalu splash animasi web AI Work Studio
 
 ## Rebuild AAB (opsional)
 

@@ -24,15 +24,15 @@ def twaManifest = [
     applicationId: 'app.promptlab.twa',
     hostName: 'prompt-lab.xyz', // The domain being opened in the TWA.
     launchUrl: '/app', // The start path for the TWA. Must be relative to the domain.
-    name: 'PromptLab', // The application name.
-    launcherName: 'PromptLab', // The name shown on the Android Launcher.
-    themeColor: '#061011', // The color used for the status bar.
-    themeColorDark: '#000000', // The color used for the dark status bar.
-    navigationColor: '#000000', // The color used for the navigation bar.
-    navigationColorDark: '#000000', // The color used for the dark navbar.
+    name: 'AI Work Studio', // The application name.
+    launcherName: 'AI Work Studio', // The name shown on the Android Launcher.
+    themeColor: '#f7f3eb', // The color used for the status bar.
+    themeColorDark: '#f7f3eb', // Keep the native shell aligned with the light-first app.
+    navigationColor: '#f7f3eb', // The color used for the navigation bar.
+    navigationColorDark: '#f7f3eb', // Keep system chrome calm and consistent.
     navigationDividerColor: '#000000', // The navbar divider color.
     navigationDividerColorDark: '#000000', // The dark navbar divider color.
-    backgroundColor: '#061011', // The color used for the splash screen background.
+    backgroundColor: '#f7f3eb', // The color used for the splash screen background.
     enableNotifications: true, // Set to true to enable notification delegation.
     // Every shortcut must include the following fields:
     // - name: String that will show up in the shortcut.

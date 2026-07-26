@@ -1,4 +1,4 @@
-# Lemon Squeezy — Web billing PromptLab
+# Lemon Squeezy — Web billing AI Work Studio
 
 Pembayaran **web** (browser desktop / mobile web) via Lemon Squeezy.  
 Pembayaran **Android Play Store app** tetap pakai Google Play Billing — jangan link checkout eksternal di dalam TWA.
@@ -44,8 +44,8 @@ Dari screenshot kamu, menu **Setup** masih pending (ikon jam). Kerjakan dulu:
 
 | Produk | Harga disarankan | Interval |
 |--------|------------------|----------|
-| PromptLab Pro | Rp 49.000 | Monthly |
-| PromptLab Business | Rp 199.000 | Monthly |
+| AI Work Studio Pro | Rp 49.000 | Monthly |
+| AI Work Studio Business | Rp 199.000 | Monthly |
 
 Samakan dengan Play Console (`playstore/MONETIZATION_SETUP.md`).
 
@@ -123,7 +123,7 @@ ngrok http 8787
 
 1. Aktifkan **Test mode** (toggle kiri bawah dashboard)  
 2. Buat produk test atau gunakan test card Lemon Squeezy  
-3. Di PromptLab web: login → **Settings → Membership** → **Pro**  
+3. Di AI Work Studio web: login → **Settings → Membership** → **Pro**
 4. Checkout terbuka dengan email & `user_id` terisi  
 5. Selesaikan pembayaran test  
 6. Tap **Refresh membership** — plan harus `Pro`, quota 500k  

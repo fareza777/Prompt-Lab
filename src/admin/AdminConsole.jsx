@@ -356,7 +356,7 @@ function V2AdminSettings(props) {
         <div className="v2-card-head">
           <div>
             <h2>Generation Mode</h2>
-            <p>Choose how aggressively PromptLab waits before using fallback models.</p>
+            <p>Choose how aggressively AI Work Studio waits before using fallback models.</p>
           </div>
           <Gauge size={20} />
         </div>
@@ -414,7 +414,7 @@ function V2AdminSettings(props) {
         <div className="v2-card-head">
           <div>
             <h2>Fallback Chain</h2>
-            <p>PromptLab tries these models when the primary route fails or times out.</p>
+            <p>AI Work Studio tries these models when the primary route fails or times out.</p>
           </div>
           <span className="v2-score-badge hot">{fallbackModels.length}</span>
         </div>

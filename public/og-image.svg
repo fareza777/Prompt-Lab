@@ -33,7 +33,7 @@
   </g>
   
   <!-- Title -->
-  <text x="600" y="280" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="bold" fill="white">PromptLab</text>
+  <text x="600" y="280" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="68" font-weight="bold" fill="white">AI Work Studio</text>
   
   <!-- Subtitle -->
   <text x="600" y="340" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="#94a3b8">AI Prompt Workspace</text>

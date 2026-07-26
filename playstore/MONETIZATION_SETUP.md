@@ -1,4 +1,4 @@
-# Monetization setup — PromptLab (poin 3–5)
+# Monetization setup — AI Work Studio (poin 3–5)
 
 ## Status subscription (sudah)
 
@@ -22,7 +22,7 @@
 ### Cara uji nanti (setelah billing di app aktif)
 
 1. Install app dari **closed testing** (bukan APK sideload)
-2. Login PromptLab dengan Gmail yang ada di license testers
+2. Login AI Work Studio dengan Gmail yang ada di license testers
 3. Settings → Membership → tap **Upgrade Pro** / **Business**
 4. Play menampilkan dialog subscription **test** — tidak dicharge sungguhan
 5. Setelah sukses, plan & quota di app harus naik

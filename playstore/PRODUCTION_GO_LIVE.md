@@ -1,4 +1,4 @@
-# Production Go-Live — PromptLab
+# Production Go-Live — AI Work Studio
 
 Domain production: **https://prompt-lab.xyz/**
 
@@ -58,7 +58,7 @@ Atau dari root: `npm run playstore:build` (setelah `bubblewrap update`).
 
 Upload AAB baru ke **Production** (bukan hanya closed test):
 
-`android-app/app/build/outputs/bundle/release/PromptLab-release-signed.aab`
+`android-app/app/build/outputs/bundle/release/AI Work Studio-release-signed.aab`
 
 Naikkan `appVersionCode` di `twa-manifest.json` jika Play menolak versi duplikat.
 

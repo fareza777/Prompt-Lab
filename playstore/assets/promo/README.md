@@ -1,7 +1,7 @@
-# PromptLab promotional video
+# AI Work Studio promotional video
 
 ## File
-- `PromptLab-promo-1080p.mp4` — 1920×1080, H.264, silent
+- `AI Work Studio-promo-1080p.mp4` — 1920×1080, H.264, silent
 
 ## Play Console
 1. Upload the MP4 to **YouTube** (unlisted is fine)

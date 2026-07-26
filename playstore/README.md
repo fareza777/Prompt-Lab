@@ -1,14 +1,14 @@
-# PromptLab Play Store Migration
+# AI Work Studio Play Store Migration
 
-This folder tracks the Android / Google Play migration work for PromptLab.
+This folder tracks the Android / Google Play migration work for AI Work Studio.
 
 ## Current Route
 
-Use Trusted Web Activity (TWA) first because PromptLab is already deployed as a responsive web app:
+Use Trusted Web Activity (TWA) first because AI Work Studio is already deployed as a responsive web app:
 
 - Production URL: `https://prompt-lab.xyz/`
 - Android package: `app.promptlab.twa`
-- App name: `PromptLab`
+- App name: `AI Work Studio`
 - Display mode: standalone / fullscreen browser surface
 
 ## Production domain
@@ -31,8 +31,8 @@ Custom domain: **https://prompt-lab.xyz/** — checklist lengkap sebelum Product
      - Android SDK: `C:\Users\USER\promptlab-android-tools\android-sdk`
      - Bubblewrap CLI: `@bubblewrap/cli`
    - Android project source: `android-app/` (tracked by Git).
-   - Signed APK: `android-app/app/build/outputs/apk/release/PromptLab-release-signed.apk`
-   - Signed AAB: `android-app/app/build/outputs/bundle/release/PromptLab-release-signed.aab`
+   - Signed APK: `android-app/app/build/outputs/apk/release/AI Work Studio-release-signed.apk`
+   - Signed AAB: `android-app/app/build/outputs/bundle/release/AI Work Studio-release-signed.aab`
 
 3. Configure Digital Asset Links.
    - Build/sign the Android app.

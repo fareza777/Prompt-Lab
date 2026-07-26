@@ -136,13 +136,13 @@ function translateAccountDeletion() {
   if (lang === "en") {
     return {
       warning:
-        "Delete your PromptLab account permanently? This removes your profile, synced history, and membership record.\n\nImportant: this does NOT cancel a Google Play subscription. Manage that in Google Play → Payments & subscriptions.",
+        "Delete your AI Work Studio account permanently? This removes your profile, synced history, and membership record.\n\nImportant: this does NOT cancel a Google Play subscription. Manage that in Google Play → Payments & subscriptions.",
       typeToConfirm: "Type DELETE to confirm account deletion:",
     };
   }
   return {
     warning:
-      "Hapus akun PromptLab secara permanen? Tindakan ini menghapus profil, riwayat tersinkron, dan catatan keanggotaan.\n\nPenting: ini TIDAK membatalkan langganan Google Play. Batalkan langganan lewat Google Play → Pembayaran & langganan.",
+      "Hapus akun AI Work Studio secara permanen? Tindakan ini menghapus profil, riwayat tersinkron, dan catatan keanggotaan.\n\nPenting: ini TIDAK membatalkan langganan Google Play. Batalkan langganan lewat Google Play → Pembayaran & langganan.",
     typeToConfirm: 'Ketik DELETE untuk mengonfirmasi penghapusan akun:',
   };
 }
@@ -847,7 +847,7 @@ async function readApiJson(response) {
   } catch {
     const shortText = text.replace(/\s+/g, " ").trim().slice(0, 180);
     if (/request entity too large|payload too large/i.test(shortText)) {
-      throw new Error("The upload is too large for the Vercel server. PromptLab will send file metadata only, or use a local backend for full extraction.");
+      throw new Error("The upload is too large for the server. AI Work Studio will send file metadata only.");
     }
     throw new Error(shortText || "Server returned a non-JSON response.");
   }
@@ -1180,7 +1180,7 @@ class AppErrorBoundary extends Component {
             fontFamily: "system-ui, sans-serif",
           }}
         >
-          <h1 style={{ fontSize: 22, marginBottom: 8 }}>PromptLab failed to load</h1>
+          <h1 style={{ fontSize: 22, marginBottom: 8 }}>AI Work Studio failed to load</h1>
           <p style={{ opacity: 0.85, lineHeight: 1.5 }}>{this.state.error.message}</p>
           <button
             type="button"
@@ -1922,7 +1922,7 @@ function App() {
     if (!isPlayBillingAvailable()) {
       if (isLikelyAndroidTwa()) {
         setBillingMessage(
-          "Play Billing is not ready in this install. Reinstall PromptLab from Google Play, then try again. Web checkout is disabled inside the Android app."
+          "Play Billing is not ready in this install. Reinstall AI Work Studio from Google Play, then try again. Web checkout is disabled inside the Android app."
         );
         return;
       }
@@ -2067,7 +2067,7 @@ function App() {
     }
 
     const supportEmail = import.meta.env.VITE_WEB_MEMBERSHIP_EMAIL || "support@prompt-lab.xyz";
-    const subject = `PromptLab ${planName} web membership request`;
+    const subject = `AI Work Studio ${planName} web membership request`;
     const body = [
       `Requested plan: ${planName}`,
       `Current plan: ${accountState.plan}`,
@@ -2957,7 +2957,7 @@ function mountPromptLab() {
     dismissStartupSplash();
   } catch (error) {
     console.error("PromptLab mount failed", error);
-    root.innerHTML = `<main class="v2-boot-error" data-theme="v2" style="min-height:100vh;padding:24px;color:#e8f4f6;background:#061011;font-family:system-ui,sans-serif"><h1>PromptLab failed to load</h1><p>${error?.message || "Unknown error"}</p><button type="button" onclick="location.reload()" style="margin-top:16px;padding:10px 16px;cursor:pointer">Reload</button></main>`;
+    root.innerHTML = `<main class="v2-boot-error" data-theme="v2" style="min-height:100vh;padding:24px;color:#242a27;background:#f7f3eb;font-family:system-ui,sans-serif"><h1>AI Work Studio failed to load</h1><p>${error?.message || "Unknown error"}</p><button type="button" onclick="location.reload()" style="margin-top:16px;padding:10px 16px;cursor:pointer">Reload</button></main>`;
     dismissStartupSplash();
   }
 }

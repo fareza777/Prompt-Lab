@@ -131,7 +131,7 @@ ${hreflangEntries}
 
     if (published) published.remove();
     if (modified) modified.remove();
-    setMetaContent("og-image-alt", "PromptLab — AI Work Studio");
+    setMetaContent("og-image-alt", "AI Work Studio");
   }
 
   function applySeoMeta(meta, path) {

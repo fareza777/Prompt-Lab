@@ -2,8 +2,8 @@
 
 ## App Setup
 
-- App name: `PromptLab`
-- Public title: `Prompt Lab: AI Work Studio`
+- App name: `AI Work Studio`
+- Public title: `AI Work Studio: Documents`
 - Package name: `app.promptlab.twa`
 - Default language: English
 - App/category: Productivity
@@ -14,7 +14,7 @@
 
 Short description:
 
-`Turn ideas, photos, and files directly into finished AI work you can continue.`
+`Turn notes, photos, and files into polished documents ready to use.`
 
 Full description:
 

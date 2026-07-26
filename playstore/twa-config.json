@@ -1,12 +1,12 @@
 {
-  "appName": "PromptLab",
-  "launcherName": "PromptLab",
+  "appName": "AI Work Studio",
+  "launcherName": "AI Work Studio",
   "packageId": "app.promptlab.twa",
   "host": "prompt-lab.xyz",
   "startUrl": "/app",
-  "themeColor": "#061011",
-  "navigationColor": "#061011",
-  "backgroundColor": "#061011",
+  "themeColor": "#f7f3eb",
+  "navigationColor": "#f7f3eb",
+  "backgroundColor": "#f7f3eb",
   "displayMode": "standalone",
   "orientation": "portrait-primary",
   "signing": {
