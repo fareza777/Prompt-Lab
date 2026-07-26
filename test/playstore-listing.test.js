@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const title = "Prompt Lab: AI Work Studio";
-const shortDescription = "Turn ideas, photos, and files into finished AI drafts—prompt handled for you.";
+const shortDescription = "Turn ideas, photos, and files directly into finished AI work you can continue.";
 
 const listing = await readFile(new URL("../playstore/STORE_LISTING.md", import.meta.url), "utf8");
 const checklist = await readFile(new URL("../playstore/play-console-checklist.md", import.meta.url), "utf8");
@@ -21,6 +21,15 @@ test("canonical listing avoids unsupported or overbroad product claims", () => {
   for (const claim of ["Microsoft 365 Integration", "PDF export", "real time synchronization", "Even offline"] ) {
     assert.ok(!listing.includes(claim), `listing must not claim: ${claim}`);
   }
+});
+
+test("store narrative sells finished work rather than prompt creation", () => {
+  const customerCopy = listing
+    .slice(0, listing.indexOf("## Data Safety"))
+    .replaceAll(/Prompt[-\s]*Lab/gi, "");
+  assert.doesNotMatch(customerCopy, /\b(prompt|prompts|prompting)\b/i);
+  assert.match(customerCopy, /directly into finished AI work/i);
+  assert.match(customerCopy, /LANGSUNG MENJADI HASIL/i);
 });
 
 test("listing documents benefit-led screenshots and the no-AAB metadata path", () => {

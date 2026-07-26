@@ -17,6 +17,19 @@ const tokensCss = await read("../src/ui/tokens.css");
 const i18nSource = await read("../src/ui/i18n.js");
 const indexSource = await read("../index.html");
 
+const visibleResultKeys = [
+  "canvas.hero",
+  "canvas.subtitle",
+  "canvas.generate",
+  "result.viewPrompt",
+  "result.runHint",
+  "result.runWorkingHint",
+  "result.runFailed",
+  "result.workingHint",
+  "firstrun.build.body",
+  "firstrun.build.point1",
+];
+
 test("readiness is presented as an estimate, never as a guarantee", () => {
   assert.match(resultSource, /result\.readiness/);
   assert.match(resultSource, /result\.readinessHelp/);
@@ -60,6 +73,15 @@ test("a skip link precedes the main landmark", () => {
 test("the request textarea is programmatically labelled", () => {
   assert.match(composerSource, /<label className="pl-composer-label" htmlFor=\{requestId\}>/);
   assert.match(composerSource, /<textarea\s+id=\{requestId\}/);
+});
+
+test("customer-facing workflow copy describes requests and results, not prompt creation", async () => {
+  const { translate } = await import("../src/ui/i18n.js");
+  for (const lang of ["id", "en"]) {
+    for (const key of visibleResultKeys) {
+      assert.doesNotMatch(translate(lang, key), /\bprompt(s|ing)?\b/i, `${lang}:${key}`);
+    }
+  }
 });
 
 test("every advanced select is labelled and keeps canonical English values", () => {

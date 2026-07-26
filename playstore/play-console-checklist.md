@@ -14,7 +14,7 @@
 
 Short description:
 
-`Turn ideas, photos, and files into finished AI drafts—prompt handled for you.`
+`Turn ideas, photos, and files directly into finished AI work you can continue.`
 
 Full description:
 
@@ -24,7 +24,7 @@ Metadata and creative updates are a **no new AAB required** release. Upload a ne
 
 ## Required Screenshots
 
-- Phone screenshots: use Builder, Optimizer, Templates, Library, Settings.
+- Phone screenshots: use Workspace, Result, Advanced controls, History, Account, Guide.
 - Feature graphic: 1024 x 500.
 - App icon: 512 x 512.
 

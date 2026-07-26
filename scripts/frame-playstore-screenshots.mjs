@@ -26,8 +26,8 @@ const SCREENS = [
     lines: ["See the usable result", "first"],
   },
   {
-    key: "prompt-tools",
-    lines: ["Reveal prompt tools", "only when needed"],
+    key: "advanced-controls",
+    lines: ["Useful controls", "stay out of the way"],
   },
   {
     key: "history",

@@ -11,7 +11,7 @@ test("Play Store graphics have the required dimensions", async () => {
   const expected = new Map([
     ["app-icon-512.png", [512, 512]],
     ["feature-graphic-1024x500.png", [1024, 500]],
-    ...["workspace", "result", "prompt-tools", "history", "account", "guide"]
+    ...["workspace", "result", "advanced-controls", "history", "account", "guide"]
       .map((screen) => [`screenshot-phone-${screen}.png`, [1080, 1920]]),
   ]);
 
@@ -30,10 +30,10 @@ test("feature graphic copy stays inside the 64px safe padding", async () => {
 
 test("capture script targets the current result-first workspace and all six surfaces", async () => {
   const source = await readFile(join(root, "scripts", "capture-playstore-screenshots.mjs"), "utf8");
-  assert.match(source, /const screens = \["workspace", "result", "prompt-tools", "history", "account", "guide"\];/);
+  assert.match(source, /const screens = \["workspace", "result", "advanced-controls", "history", "account", "guide"\];/);
   assert.match(source, /promptlab-library/);
   assert.match(source, /pl-workbench/);
-  assert.match(source, /result\.viewPrompt|Lihat prompt/);
+  assert.match(source, /Pengaturan lanjutan/);
   assert.doesNotMatch(source, /MOBILE_TABS|v2-bottom-nav/);
 });
 

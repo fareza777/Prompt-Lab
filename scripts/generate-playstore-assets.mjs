@@ -68,7 +68,7 @@ if (false && await exists(featureSourcePng)) {
   <text x="236" y="288" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="148" font-weight="700" fill="#FFFDF8">P</text>
   <text x="472" y="202" font-family="Georgia, 'Times New Roman', serif" font-size="70" fill="#1F241F">PromptLab</text>
   <text x="472" y="254" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="19" font-weight="700" fill="#2F5A46" letter-spacing="3">AI WORK STUDIO</text>
-  <text x="472" y="302" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="20" fill="#414940">Result first · Prompt tools when needed</text>
+  <text x="472" y="302" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="20" fill="#414940">Your request · Finished work · One focused flow</text>
   ${wrapSvgText(["Turn ideas, photos, and files into finished", "AI work in one focused studio."], { x: 472, y: 350, lineHeight: 28, fontSize: 18, fill: "#667067", right: FEATURE_TEXT_RIGHT })}
 </svg>`;
 

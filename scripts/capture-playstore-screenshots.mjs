@@ -10,11 +10,11 @@ const outDir = join(root, "playstore", "assets");
 const rawDir = join(outDir, "raw");
 const port = 4173;
 const baseUrl = `http://127.0.0.1:${port}`;
-const screens = ["workspace", "result", "prompt-tools", "history", "account", "guide"];
+const screens = ["workspace", "result", "advanced-controls", "history", "account", "guide"];
 const SURFACE_EXPECTATIONS = {
   workspace: ".pl-workbench .pl-composer",
   result: ".pl-doc--output",
-  "prompt-tools": ".pl-prompt-panel",
+  "advanced-controls": ".pl-advanced-body",
   history: '[role="dialog"]',
   account: '[role="dialog"]',
   guide: '[role="dialog"]',
@@ -97,12 +97,12 @@ async function openSavedResult(page) {
 }
 
 async function navigateToSurface(page, name) {
-  if (name === "result" || name === "prompt-tools") {
+  if (name === "result") {
     await openSavedResult(page);
-    if (name === "prompt-tools") {
-      await page.getByRole("button", { name: /Lihat prompt/i }).click();
-    }
     await page.locator(".pl-result-tray").scrollIntoViewIfNeeded();
+  } else if (name === "advanced-controls") {
+    await page.getByRole("button", { name: "Pengaturan lanjutan" }).click();
+    await page.locator(".pl-advanced").scrollIntoViewIfNeeded();
   } else if (name === "history") {
     await page.getByRole("button", { name: "Riwayat" }).click();
   } else if (name === "account") {
@@ -110,7 +110,7 @@ async function navigateToSurface(page, name) {
   } else if (name === "guide") {
     await page.getByRole("button", { name: "Panduan" }).click();
   }
-  if (name !== "result" && name !== "prompt-tools") {
+  if (name !== "result" && name !== "advanced-controls") {
     await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
   }
 }
