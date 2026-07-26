@@ -69,10 +69,22 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return undefined;
+          // Never dump the rest of node_modules into a shared "vendor" chunk.
+          // That folded dynamically imported packages (e.g. mermaid) into the
+          // initial graph and blew the 700 KiB budget on Vercel.
           if (id.includes("lucide-react")) return "icons";
           if (id.includes("@supabase")) return "supabase";
-          if (id.includes("react") || id.includes("react-dom")) return "react";
-          return "vendor";
+          if (
+            id.includes("node_modules/react-dom") ||
+            id.includes("node_modules\\react-dom") ||
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules\\react\\") ||
+            id.includes("node_modules/scheduler") ||
+            id.includes("node_modules\\scheduler")
+          ) {
+            return "react";
+          }
+          return undefined;
         },
       },
     },
