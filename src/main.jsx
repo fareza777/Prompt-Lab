@@ -2310,6 +2310,7 @@ function App() {
 
     setIsRunning(true);
     setRunError("");
+    const resultId = globalThis.crypto?.randomUUID?.() || `result-${Date.now()}`;
     try {
       const response = await fetch(`${apiBase}/api/run-prompt`, {
         method: "POST",
@@ -2320,6 +2321,7 @@ function App() {
           outputType,
           category,
           generationMode,
+          resultId,
         }),
       });
       const data = await readApiJson(response);

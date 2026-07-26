@@ -82,6 +82,10 @@ import {
 import { persistReservedUsage, quotaFailureStatus } from "./quotaReservation.js";
 import { buildDocxBuffer, buildPptxBuffer } from "./officeExport.js";
 import {
+  releaseWeeklyFreeResult,
+  reserveWeeklyFreeResult,
+} from "./weeklyResultQuota.js";
+import {
   handleLemonSqueezyWebhook,
   parseLemonSqueezyWebhook,
   verifyLemonSqueezySignature,
@@ -1151,6 +1155,7 @@ function sanitizeRunOutput(text) {
 }
 
 app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json({ limit: "256kb" }), async (req, res) => {
+  let weeklyReservation = null;
   try {
     const prompt = String(req.body?.prompt || "").trim();
     if (!prompt) {
@@ -1182,6 +1187,25 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
     if (!runtime.client) {
       res.status(503).json({ error: API_MSG.apiKeyInactive });
       return;
+    }
+
+    if (normalizePlanName(membership.plan) === "Free") {
+      const resultId = String(req.body?.resultId || "").trim() || randomUUID();
+      weeklyReservation = {
+        client: quotaSession.client,
+        key: resultId,
+        ...(await reserveWeeklyFreeResult(quotaSession.client, {
+          userId: quotaSession.user?.id,
+          idempotencyKey: resultId,
+        })),
+      };
+      if (!weeklyReservation.ok) {
+        const message =
+          weeklyReservation.reason === "weekly_limit"
+            ? "Free weekly limit reached. Upgrade or wait until Monday."
+            : "Weekly allowance is temporarily unavailable.";
+        throw publicApiError(message, weeklyReservation.reason === "weekly_limit" ? 402 : 503);
+      }
     }
 
     // The generated prompt is written as a brief for a human to hand over with
@@ -1276,9 +1300,19 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
         model: usedModel,
         prompt: content,
         content,
+        weeklyResults: weeklyReservation
+          ? {
+              limit: 5,
+              remaining: weeklyReservation.remaining,
+              resetAt: weeklyReservation.resetAt,
+            }
+          : null,
       }
     );
   } catch (error) {
+    if (weeklyReservation?.ok && weeklyReservation?.client && weeklyReservation?.key) {
+      await releaseWeeklyFreeResult(weeklyReservation.client, weeklyReservation.key);
+    }
     console.error("run-prompt failed", error.message);
     // A timeout here means the document was too big to finish inside the
     // platform's function limit, which the user can act on — unlike a generic
