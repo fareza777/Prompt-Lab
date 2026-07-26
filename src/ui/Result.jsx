@@ -140,12 +140,25 @@ function BlockView({ block, index, t }) {
 }
 
 function SectionCards({ sections, t }) {
-  const [openIds, setOpenIds] = useState(() =>
-    new Set(sections.slice(0, 1).map((section) => section.id))
-  );
+  const [openIds, setOpenIds] = useState(() => {
+    const withDiagram = sections
+      .filter((section) =>
+        section.blocks.some((block) => block.type === "code" && block.lang === "mermaid")
+      )
+      .map((section) => section.id);
+    if (withDiagram.length) return new Set(withDiagram);
+    return new Set(sections.slice(0, 1).map((section) => section.id));
+  });
 
   useEffect(() => {
-    setOpenIds(new Set(sections.slice(0, 1).map((section) => section.id)));
+    const withDiagram = sections
+      .filter((section) =>
+        section.blocks.some((block) => block.type === "code" && block.lang === "mermaid")
+      )
+      .map((section) => section.id);
+    setOpenIds(
+      new Set(withDiagram.length ? withDiagram : sections.slice(0, 1).map((section) => section.id))
+    );
   }, [sections]);
 
   function toggle(id) {

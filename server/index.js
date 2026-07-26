@@ -553,6 +553,48 @@ app.post("/api/export/pptx", express.json({ limit: "2mb" }), async (req, res) =>
   }
 });
 
+/** Rasterize a client-rendered Mermaid SVG to PNG (Android WebViews cannot reliably do this). */
+app.post("/api/export/diagram-png", express.json({ limit: "4mb" }), async (req, res) => {
+  try {
+    const title = String(req.body?.title || "Diagram").slice(0, 120);
+    const rawSvg = String(req.body?.svg || "").trim();
+    if (!rawSvg || !/<svg[\s>]/i.test(rawSvg)) {
+      res.status(400).json({ error: "Missing diagram SVG." });
+      return;
+    }
+    if (rawSvg.length > 3_500_000) {
+      res.status(413).json({ error: "Diagram SVG too large." });
+      return;
+    }
+
+    const prepared = prepareDiagramSvgForRaster(rawSvg);
+    const sharp = (await import("sharp")).default;
+    const png = await sharp(Buffer.from(prepared.svg, "utf8"), {
+      density: 192,
+      limitInputPixels: 40_000_000,
+    })
+      .resize({
+        width: Math.min(4096, prepared.width * 2),
+        height: Math.min(4096, prepared.height * 2),
+        fit: "inside",
+        withoutEnlargement: false,
+      })
+      .png({ compressionLevel: 8 })
+      .toBuffer();
+
+    if (!png?.length || png[0] !== 0x89) {
+      throw new Error("PNG encode produced empty output.");
+    }
+
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeFilename(title)}.png"`);
+    res.send(png);
+  } catch (error) {
+    console.error("diagram-png export failed", error.message);
+    res.status(500).json({ error: error?.message || "PNG export failed." });
+  }
+});
+
 app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), async (req, res) => {
   try {
     const productId = String(req.body?.productId || "").trim();
@@ -4444,6 +4486,54 @@ function normalizeExportPayload(body) {
   return {
     title: String(body.title || "AI Work Studio Export").slice(0, 120),
     content: String(body.content || "").slice(0, 50000),
+  };
+}
+
+/** Sanitize Mermaid SVG so sharp can rasterize it reliably. */
+function prepareDiagramSvgForRaster(svgString) {
+  let svg = String(svgString || "").trim();
+  svg = svg
+    .replace(/<\?xml[^>]*>/i, "")
+    .replace(/<!DOCTYPE[\s\S]*?>/i, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, "")
+    .trim();
+
+  if (!/\sxmlns\s*=/.test(svg)) {
+    svg = svg.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+
+  const viewBox = svg.match(/\bviewBox\s*=\s*["']([^"']+)["']/i)?.[1];
+  const parts = viewBox ? viewBox.trim().split(/[\s,]+/).map(Number) : [];
+  let width = Number(svg.match(/\bwidth\s*=\s*["']([0-9.]+)/i)?.[1]);
+  let height = Number(svg.match(/\bheight\s*=\s*["']([0-9.]+)/i)?.[1]);
+  if (!Number.isFinite(width) || width <= 0) width = parts.length === 4 ? parts[2] : 960;
+  if (!Number.isFinite(height) || height <= 0) height = parts.length === 4 ? parts[3] : 540;
+  width = Math.max(1, Math.ceil(width));
+  height = Math.max(1, Math.ceil(height));
+
+  if (/\swidth\s*=/.test(svg)) {
+    svg = svg.replace(/\swidth\s*=\s*["'][^"']*["']/i, ` width="${width}"`);
+  } else {
+    svg = svg.replace(/<svg\b/i, `<svg width="${width}"`);
+  }
+  if (/\sheight\s*=/.test(svg)) {
+    svg = svg.replace(/\sheight\s*=\s*["'][^"']*["']/i, ` height="${height}"`);
+  } else {
+    svg = svg.replace(/<svg\b/i, `<svg height="${height}"`);
+  }
+
+  if (!/<rect[^>]*data-pl-bg=/i.test(svg)) {
+    svg = svg.replace(
+      /<svg([^>]*)>/i,
+      `<svg$1><rect data-pl-bg="1" x="0" y="0" width="${width}" height="${height}" fill="#FBF8F1"/>`
+    );
+  }
+
+  return {
+    svg: `<?xml version="1.0" encoding="UTF-8"?>\n${svg}`,
+    width,
+    height,
   };
 }
 

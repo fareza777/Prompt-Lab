@@ -2,9 +2,9 @@
  * Client-side Mermaid diagram export (SVG / PNG).
  *
  * PNG strategy (in order):
- * 1. Draw prepared SVG onto a canvas via data URL (works when htmlLabels=false)
- * 2. Paint SVG in a near-invisible on-screen host, then canvas-draw that Image
- * 3. Fall back to SVG file download if PNG truly cannot be produced
+ * 1. Server sharp rasterize (/api/export/diagram-png) — reliable on Android TWA
+ * 2. Client canvas from SVG data/blob URL
+ * 3. Fall back to SVG download so the user still gets a file
  */
 
 import { MERMAID_INIT } from "./mermaidConfig.js";
@@ -14,7 +14,6 @@ export { MERMAID_INIT } from "./mermaidConfig.js";
 export function extractMermaidCode(output = "") {
   const fenced = String(output).match(/```mermaid\s*([\s\S]*?)```/i);
   if (fenced?.[1]?.trim()) return fenced[1].trim();
-  // Tolerate missing fence language / trailing prose after a fence.
   const loose = String(output).match(/```(?:mermaid)?\s*\n([\s\S]*?)```/i);
   if (loose?.[1] && /^(flowchart|sequenceDiagram|classDiagram|erDiagram|mindmap|graph)\b/m.test(loose[1])) {
     return loose[1].trim();
@@ -36,20 +35,23 @@ function parseViewBox(svg) {
   return { width: parts[2], height: parts[3] };
 }
 
-function prepareSvgMarkup(svgString) {
+export function prepareSvgMarkup(svgString) {
   let svg = String(svgString || "").trim();
   if (!svg) throw new Error("Empty diagram SVG.");
   svg = svg
+    .replace(/<\?xml[^>]*>/i, "")
+    .replace(/<!DOCTYPE[\s\S]*?>/i, "")
     .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, "");
+    .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, "")
+    .trim();
 
   if (!/\sxmlns\s*=/.test(svg)) {
     svg = svg.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
   }
 
   const box = parseViewBox(svg);
-  const width = Math.max(1, Math.ceil(box?.width || 960));
-  const height = Math.max(1, Math.ceil(box?.height || 540));
+  const width = Math.max(1, Math.ceil(box?.width || Number(svg.match(/\bwidth\s*=\s*["']([0-9.]+)/i)?.[1]) || 960));
+  const height = Math.max(1, Math.ceil(box?.height || Number(svg.match(/\bheight\s*=\s*["']([0-9.]+)/i)?.[1]) || 540));
 
   if (/\swidth\s*=/.test(svg)) {
     svg = svg.replace(/\swidth\s*=\s*["'][^"']*["']/i, ` width="${width}"`);
@@ -76,6 +78,20 @@ function prepareSvgMarkup(svgString) {
   };
 }
 
+/** Prefer the already-painted diagram on screen (avoids a second Mermaid render). */
+export function captureOnScreenDiagramSvg() {
+  if (typeof document === "undefined") return "";
+  const svgEl =
+    document.querySelector(".pl-mermaid__canvas svg") ||
+    document.querySelector("figure.pl-mermaid svg");
+  if (!svgEl) return "";
+  try {
+    return new XMLSerializer().serializeToString(svgEl);
+  } catch {
+    return "";
+  }
+}
+
 async function renderMermaidSvgMarkup(code) {
   const mermaid = (await import("mermaid")).default;
   mermaid.initialize(MERMAID_INIT);
@@ -87,6 +103,21 @@ async function renderMermaidSvgMarkup(code) {
     document.getElementById(id)?.remove();
     document.getElementById(`d${id}`)?.remove();
   }
+}
+
+async function resolvePreparedSvg(output) {
+  const fromDom = captureOnScreenDiagramSvg();
+  if (fromDom) {
+    try {
+      return prepareSvgMarkup(fromDom);
+    } catch {
+      /* fall through */
+    }
+  }
+
+  const code = extractMermaidCode(output);
+  if (!code) throw new Error("No Mermaid diagram found in this result.");
+  return renderMermaidSvgMarkup(code);
 }
 
 function loadImage(src) {
@@ -158,50 +189,43 @@ async function drawSvgToPngBlob(svgText, width, height, scale = 2) {
   return canvasToPngBlob(canvas);
 }
 
-/**
- * Some WebViews refuse to decode off-screen / data-URL SVG. Paint it in-viewport
- * (invisible) first, then snapshot via canvas Image from an object URL.
- */
-async function drawViaVisibleHost(svgText, width, height) {
-  const host = document.createElement("div");
-  host.setAttribute("data-pl-diagram-export", "1");
-  host.style.cssText = [
-    "position:fixed",
-    "left:0",
-    "top:0",
-    `width:${Math.max(320, width)}px`,
-    `height:${Math.max(180, height)}px`,
-    "opacity:0.01",
-    "pointer-events:none",
-    "z-index:2147483646",
-    "overflow:hidden",
-    "background:#FBF8F1",
-  ].join(";");
-  host.innerHTML = svgText.replace(/^<\?xml[^>]*>\s*/i, "");
-  document.body.appendChild(host);
+async function rasterizeViaServer(prepared, { apiBase = "", authHeaders = {}, title = "Diagram" } = {}) {
+  const response = await fetch(`${apiBase}/api/export/diagram-png`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+    },
+    body: JSON.stringify({
+      title,
+      svg: prepared.svg,
+    }),
+  });
 
-  try {
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-    const svgEl = host.querySelector("svg");
-    if (!svgEl) throw new Error("Export host missing SVG.");
-    const serialized = new XMLSerializer().serializeToString(svgEl);
-    const prepared = prepareSvgMarkup(serialized);
-    return drawSvgToPngBlob(prepared.svg, prepared.width, prepared.height, 2);
-  } finally {
-    host.remove();
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error || `Server PNG failed (${response.status}).`);
   }
+
+  const blob = await response.blob();
+  if (!blob || blob.size < 64 || blob.type.includes("json")) {
+    throw new Error("Server returned an empty PNG.");
+  }
+  // Ensure type is image/png even if the response omitted it.
+  if (blob.type && blob.type !== "image/png") {
+    return new Blob([await blob.arrayBuffer()], { type: "image/png" });
+  }
+  return blob.type === "image/png" ? blob : new Blob([await blob.arrayBuffer()], { type: "image/png" });
 }
 
 /**
  * @param {string} output finished markdown/mermaid text
  * @param {"svg"|"png"} format
+ * @param {{ apiBase?: string, authHeaders?: Record<string,string>, title?: string }} [options]
  * @returns {Promise<{ blob: Blob, extension: string, note?: string }>}
  */
-export async function buildDiagramExportBlob(output, format = "png") {
-  const code = extractMermaidCode(output);
-  if (!code) throw new Error("No Mermaid diagram found in this result.");
-
-  const prepared = await renderMermaidSvgMarkup(code);
+export async function buildDiagramExportBlob(output, format = "png", options = {}) {
+  const prepared = await resolvePreparedSvg(output);
 
   if (format === "svg") {
     return {
@@ -214,7 +238,7 @@ export async function buildDiagramExportBlob(output, format = "png") {
 
   try {
     return {
-      blob: await drawSvgToPngBlob(prepared.svg, prepared.width, prepared.height, 2),
+      blob: await rasterizeViaServer(prepared, options),
       extension: "png",
     };
   } catch (error) {
@@ -223,14 +247,13 @@ export async function buildDiagramExportBlob(output, format = "png") {
 
   try {
     return {
-      blob: await drawViaVisibleHost(prepared.svg, prepared.width, prepared.height),
+      blob: await drawSvgToPngBlob(prepared.svg, prepared.width, prepared.height, 2),
       extension: "png",
     };
   } catch (error) {
     errors.push(error?.message || String(error));
   }
 
-  // Last resort: give the user a usable file (SVG) instead of a hard failure.
   return {
     blob: new Blob([prepared.svg], { type: "image/svg+xml;charset=utf-8" }),
     extension: "svg",

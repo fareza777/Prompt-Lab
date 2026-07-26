@@ -37,11 +37,11 @@
     "pptxgenjs": "^4.0.1",
     "react": "19.2.7",
     "react-dom": "19.2.7",
+    "sharp": "^0.34.5",
     "vite": "8.1.4"
   },
   "devDependencies": {
     "@bubblewrap/cli": "^1.24.1",
-    "playwright": "^1.59.1",
-    "sharp": "^0.34.5"
+    "playwright": "^1.59.1"
   }
 }

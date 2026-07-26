@@ -2764,7 +2764,11 @@ function App() {
             narrative: titleSeed || narrative,
             attachmentNames: attachments.map((file) => file.name),
           }) || "Diagram";
-        const { blob, extension, note } = await buildDiagramExportBlob(content, format);
+        const { blob, extension, note } = await buildDiagramExportBlob(content, format, {
+          apiBase,
+          authHeaders: await getAuthHeaders(),
+          title,
+        });
         const filename = toDownloadFilename(title, extension);
         const result = await triggerBrowserDownload(blob, filename);
         if (note) {
@@ -2773,10 +2777,10 @@ function App() {
         const label = extension.toUpperCase();
         setExportStatus(
           result?.method === "share" || result?.method === "share-abort"
-            ? `${label} ready to save/share`
+            ? `${label} ready — pilih Save / Download di share sheet`
             : `${label} downloaded`
         );
-        window.setTimeout(() => setExportStatus(""), 3200);
+        window.setTimeout(() => setExportStatus(""), 4500);
       } catch (error) {
         console.error("[diagram-export]", error);
         setErrorMessage(error?.message || "Diagram export failed.");

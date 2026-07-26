@@ -84,14 +84,22 @@ export function toDownloadFilename(title, extension) {
 
 export async function triggerBrowserDownload(blob, filename) {
   const type = blob.type || "application/octet-stream";
-  const file = new File([blob], filename, { type });
+  let file = null;
+  try {
+    if (typeof File !== "undefined") {
+      file = new File([blob], filename, { type });
+    }
+  } catch {
+    file = null;
+  }
 
   // Android TWA / many mobile browsers ignore <a download> for blobs.
   // Web Share with a File is the reliable "save/share" path there.
   const preferShare =
     typeof navigator !== "undefined" &&
     /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent || "") &&
-    typeof navigator.canShare === "function";
+    typeof navigator.canShare === "function" &&
+    file;
 
   if (preferShare) {
     try {
@@ -112,7 +120,10 @@ export async function triggerBrowserDownload(blob, filename) {
     link.href = url;
     link.download = filename;
     link.rel = "noopener";
-    link.target = "_blank";
+    // Don't force _blank on Android — it often opens a blank tab and looks like failure.
+    if (!/Android/i.test(navigator.userAgent || "")) {
+      link.target = "_blank";
+    }
     link.style.display = "none";
     document.body.appendChild(link);
     link.click();
