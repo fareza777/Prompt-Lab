@@ -41,4 +41,4 @@ The production build enforces raw initial asset budgets of 700 KiB JavaScript an
 
 1. Store listing → **App icon** → `app-icon-512.png`
 2. **Feature graphic** → `feature-graphic-1024x500.png`
-3. **Phone screenshots** → upload the six current surfaces: `builder`, `optimizer`, `templates`, `library`, `compare`, and `settings`
+3. **Phone screenshots** → upload the six result-first surfaces: `workspace`, `result`, `prompt-tools`, `history`, `account`, and `guide`

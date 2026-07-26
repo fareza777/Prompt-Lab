@@ -2,15 +2,15 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const title = "Prompt generator: Prompt Lab";
-const shortDescription = "Build, optimize, compare, and save AI prompts from ideas, images, and files.";
+const title = "Prompt Lab: AI Work Studio";
+const shortDescription = "Turn ideas, photos, and files into finished AI drafts—prompt handled for you.";
 
 const listing = await readFile(new URL("../playstore/STORE_LISTING.md", import.meta.url), "utf8");
 const checklist = await readFile(new URL("../playstore/play-console-checklist.md", import.meta.url), "utf8");
 
 test("Play Store source files use the approved English metadata", () => {
-  assert.equal(title.length, 28);
-  assert.equal(shortDescription.length, 76);
+  assert.ok(title.length <= 30, `title is ${title.length} chars`);
+  assert.ok(shortDescription.length <= 80, `short description is ${shortDescription.length} chars`);
   for (const source of [listing, checklist]) {
     assert.match(source, new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(source, new RegExp(shortDescription.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
@@ -24,13 +24,13 @@ test("canonical listing avoids unsupported or overbroad product claims", () => {
 });
 
 test("listing documents benefit-led screenshots and the no-AAB metadata path", () => {
-  assert.match(listing, /Turn rough ideas into structured AI prompts/);
+  assert.match(listing, /From rough input to a finished AI draft/);
   assert.match(listing, /No new AAB required/i);
 });
 
 test("Indonesian listing fits Play's metadata limits", () => {
-  const idTitle = "Prompt Lab: Prompt & Dokumen";
-  const idShort = "Ubah catatan, foto, dan file jadi prompt AI, laporan Word, dan slide PPT.";
+  const idTitle = "Prompt Lab: Studio Kerja AI";
+  const idShort = "Ubah ide, foto, dan file langsung jadi hasil kerja AI yang siap dilanjutkan.";
   assert.ok(idTitle.length <= 30, `id title is ${idTitle.length} chars`);
   assert.ok(idShort.length <= 80, `id short description is ${idShort.length} chars`);
   assert.ok(listing.includes(idTitle), "listing is missing the Indonesian title");

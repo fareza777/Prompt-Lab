@@ -4,7 +4,7 @@
  *
  * Specs: 1920x1080, H.264, ~30fps, ~28s, silent (add music on YouTube if desired)
  */
-import { mkdir, copyFile, access, rm, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
@@ -59,15 +59,6 @@ function run(bin, args) {
   });
 }
 
-async function exists(path) {
-  try {
-    await access(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function escapeXml(s) {
   return String(s)
     .replaceAll("&", "&amp;")
@@ -79,24 +70,10 @@ function escapeXml(s) {
 async function makeBackground() {
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#050a0c"/>
-      <stop offset="50%" stop-color="#0a161c"/>
-      <stop offset="100%" stop-color="#061014"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="82%" cy="18%" r="42%">
-      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.22"/>
-      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="glow2" cx="20%" cy="90%" r="35%">
-      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.10"/>
-      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
-    </radialGradient>
-  </defs>
-  <rect width="${W}" height="${H}" fill="url(#bg)"/>
-  <rect width="${W}" height="${H}" fill="url(#glow)"/>
-  <rect width="${W}" height="${H}" fill="url(#glow2)"/>
+  <rect width="${W}" height="${H}" fill="#F7F3EB"/>
+  <circle cx="1830" cy="80" r="470" fill="#DFE9E1"/>
+  <circle cx="80" cy="1050" r="390" fill="#E8E0D2"/>
+  <path d="M0 330 C420 220 690 440 1040 330 C1380 220 1600 390 1920 290" fill="none" stroke="#C8BEAD" stroke-width="3"/>
 </svg>`;
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
@@ -120,7 +97,7 @@ async function makeFeatureScene({ screenshot, label, caption, outPath }) {
       width: phoneW + platePad * 2,
       height: phoneH + platePad * 2,
       channels: 4,
-      background: { r: 12, g: 28, b: 34, alpha: 1 },
+      background: { r: 47, g: 90, b: 70, alpha: 1 },
     },
   })
     .png()
@@ -129,9 +106,9 @@ async function makeFeatureScene({ screenshot, label, caption, outPath }) {
   const textX = 980;
   const textSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
-  <text x="${textX}" y="430" font-family="Georgia, 'Times New Roman', serif" font-size="72" fill="#eef7f9">${escapeXml(label)}</text>
-  <text x="${textX}" y="500" font-family="system-ui, Segoe UI, sans-serif" font-size="28" fill="#5eb8ff" letter-spacing="3">${escapeXml(caption)}</text>
-  <rect x="${textX}" y="540" width="72" height="3" fill="#38bdf8"/>
+  <text x="${textX}" y="430" font-family="Georgia, 'Times New Roman', serif" font-size="72" fill="#1F241F">${escapeXml(label)}</text>
+  <text x="${textX}" y="500" font-family="system-ui, Segoe UI, sans-serif" font-size="28" fill="#2F5A46" letter-spacing="3">${escapeXml(caption)}</text>
+  <rect x="${textX}" y="540" width="72" height="3" fill="#2F5A46"/>
 </svg>`;
 
   await sharp(bg)
@@ -145,32 +122,26 @@ async function makeFeatureScene({ screenshot, label, caption, outPath }) {
 }
 
 async function prepareCards() {
-  const titleSrcCandidates = [
-    join(promoDir, "sources", "promo-title-card.png"),
-    "C:/Users/FAJAR/.cursor/projects/e-apps-promptlab/assets/promo-title-card.png",
-  ];
-  const endSrcCandidates = [
-    join(promoDir, "sources", "promo-end-card.png"),
-    "C:/Users/FAJAR/.cursor/projects/e-apps-promptlab/assets/promo-end-card.png",
-  ];
+  const card = (eyebrow, headline, body) => Buffer.from(`<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+  <rect width="${W}" height="${H}" fill="#F7F3EB"/>
+  <circle cx="1770" cy="60" r="430" fill="#DFE9E1"/>
+  <circle cx="90" cy="1060" r="350" fill="#E8E0D2"/>
+  <rect x="220" y="210" width="250" height="250" rx="68" fill="#2F5A46"/>
+  <text x="345" y="398" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="170" font-weight="700" fill="#FFFDF8">P</text>
+  <text x="560" y="295" font-family="system-ui, Segoe UI, sans-serif" font-size="26" font-weight="700" fill="#2F5A46" letter-spacing="6">${escapeXml(eyebrow)}</text>
+  <text x="560" y="405" font-family="Georgia, 'Times New Roman', serif" font-size="92" fill="#1F241F">${escapeXml(headline)}</text>
+  <text x="560" y="485" font-family="system-ui, Segoe UI, sans-serif" font-size="30" fill="#667067">${escapeXml(body)}</text>
+</svg>`);
 
-  let titleSrc = null;
-  let endSrc = null;
-  for (const p of titleSrcCandidates) if (await exists(p)) { titleSrc = p; break; }
-  for (const p of endSrcCandidates) if (await exists(p)) { endSrc = p; break; }
-  if (!titleSrc || !endSrc) throw new Error("Missing promo title/end cards");
+  const titleCard = card("AI WORK STUDIO", "PromptLab", "From a rough idea to a finished AI draft.");
+  const endCard = card("RESULT FIRST", "Ready to continue", "prompt-lab.xyz");
 
-  await mkdir(join(promoDir, "sources"), { recursive: true });
-  await copyFile(titleSrc, join(promoDir, "sources", "promo-title-card.png"));
-  await copyFile(endSrc, join(promoDir, "sources", "promo-end-card.png"));
-
-  await sharp(titleSrc)
-    .resize(W, H, { fit: "cover", position: "centre" })
+  await sharp(titleCard)
     .jpeg({ quality: 93, mozjpeg: true })
     .toFile(join(framesDir, "00-title.jpg"));
 
-  await sharp(endSrc)
-    .resize(W, H, { fit: "cover", position: "centre" })
+  await sharp(endCard)
     .jpeg({ quality: 93, mozjpeg: true })
     .toFile(join(framesDir, "06-end.jpg"));
 }
@@ -217,42 +188,42 @@ async function main() {
 
   const features = [
     {
-      file: "01-builder.jpg",
-      shot: "screenshot-phone-builder.png",
-      label: "Builder",
-      caption: "TURN ROUGH IDEAS INTO STRUCTURED PROMPTS",
+      file: "01-workspace.jpg",
+      shot: "screenshot-phone-workspace.png",
+      label: "Workspace",
+      caption: "TURN ROUGH INPUT INTO A FINISHED AI DRAFT",
       dur: 4.2,
       zoom: 1.05,
     },
     {
-      file: "02-optimizer.jpg",
-      shot: "screenshot-phone-optimizer.png",
-      label: "Optimizer",
-      caption: "REFINE FOR CLARITY AND STRONGER RESULTS",
+      file: "02-result.jpg",
+      shot: "screenshot-phone-result.png",
+      label: "Result",
+      caption: "SEE THE USABLE RESULT FIRST",
       dur: 4.0,
       zoom: 1.055,
     },
     {
-      file: "03-templates.jpg",
-      shot: "screenshot-phone-templates.png",
-      label: "Templates",
-      caption: "START FASTER WITH PROVEN PATTERNS",
+      file: "03-prompt-tools.jpg",
+      shot: "screenshot-phone-prompt-tools.png",
+      label: "Prompt tools",
+      caption: "REVEAL THE PROMPT ONLY WHEN NEEDED",
       dur: 3.8,
       zoom: 1.05,
     },
     {
-      file: "04-library.jpg",
-      shot: "screenshot-phone-library.png",
-      label: "Library",
-      caption: "SAVE AND REUSE YOUR BEST PROMPTS",
+      file: "04-history.jpg",
+      shot: "screenshot-phone-history.png",
+      label: "History",
+      caption: "SAVE AND REOPEN FINISHED WORK",
       dur: 3.8,
       zoom: 1.05,
     },
     {
-      file: "05-compare.jpg",
-      shot: "screenshot-phone-compare.png",
-      label: "Compare",
-      caption: "EVALUATE VERSIONS SIDE BY SIDE",
+      file: "05-account.jpg",
+      shot: "screenshot-phone-account.png",
+      label: "Account",
+      caption: "MANAGE PLAN, SYNC, AND APPEARANCE",
       dur: 4.0,
       zoom: 1.055,
     },

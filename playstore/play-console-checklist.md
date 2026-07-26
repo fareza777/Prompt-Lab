@@ -3,7 +3,7 @@
 ## App Setup
 
 - App name: `PromptLab`
-- Public title: `Prompt generator: Prompt Lab`
+- Public title: `Prompt Lab: AI Work Studio`
 - Package name: `app.promptlab.twa`
 - Default language: English
 - App/category: Productivity
@@ -14,7 +14,7 @@
 
 Short description:
 
-`Build, optimize, compare, and save AI prompts from ideas, images, and files.`
+`Turn ideas, photos, and files into finished AI drafts—prompt handled for you.`
 
 Full description:
 

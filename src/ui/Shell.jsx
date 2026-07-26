@@ -306,7 +306,9 @@ export default function Shell(props) {
       </header>
 
       <main className="pl-main" id="pl-main">
-        <div className="pl-workbench">
+        <div
+          className={`pl-workbench${hasResult || isGenerating || isRunning ? " is-result-mode" : ""}`}
+        >
           <aside className="pl-intro">
             <p className="pl-eyebrow">{t("canvas.eyebrow")}</p>
             <div className="pl-lede">

@@ -10,19 +10,45 @@ const outDir = join(root, "playstore", "assets");
 const rawDir = join(outDir, "raw");
 const port = 4173;
 const baseUrl = `http://127.0.0.1:${port}`;
-
-const MOBILE_TABS = ["Builder", "Optimizer", "Templates", "Library", "Compare"];
-const screens = [...MOBILE_TABS, "Settings"];
-const SURFACE_EXPECTATIONS = Object.fromEntries(screens.map((name) => [name, `PromptLab / ${name}`]));
+const screens = ["workspace", "result", "prompt-tools", "history", "account", "guide"];
+const SURFACE_EXPECTATIONS = {
+  workspace: ".pl-workbench .pl-composer",
+  result: ".pl-doc--output",
+  "prompt-tools": ".pl-prompt-panel",
+  history: '[role="dialog"]',
+  account: '[role="dialog"]',
+  guide: '[role="dialog"]',
+};
 const PHONE_WIDTH = 1080;
 const PHONE_HEIGHT = 1920;
 
-const mobileChromeCss = `
-  *, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }
-  * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-  .v2-shell::before { display: none !important; }
+const captureCss = `
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    caret-color: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
   #app-splash { display: none !important; }
+  .pl-top { background: var(--paper-raised) !important; }
 `;
+
+const savedOutput = {
+  id: "playstore-result",
+  title: "Peluncuran produk — ringkasan eksekutif",
+  contentType: "output",
+  request: "Buat ringkasan eksekutif untuk peluncuran produk baru.",
+  prompt:
+    "Tulis ringkasan eksekutif peluncuran produk untuk pemimpin bisnis. Sertakan tujuan, audiens, pesan utama, rencana 30 hari, risiko, dan langkah berikutnya.",
+  output:
+    "Ringkasan Eksekutif\n\nPeluncuran ini memosisikan produk sebagai cara paling sederhana bagi tim kecil untuk mengubah pekerjaan berulang menjadi alur yang terukur.\n\nFokus 30 Hari\n• Minggu 1: validasi pesan dengan pelanggan awal.\n• Minggu 2: siapkan materi penjualan dan demo.\n• Minggu 3: jalankan peluncuran terbatas.\n• Minggu 4: ukur aktivasi, retensi, dan umpan balik.\n\nLangkah Berikutnya\nTetapkan pemilik untuk setiap metrik, jadwalkan tinjauan mingguan, dan prioritaskan perbaikan berdasarkan dampak pelanggan.",
+  content:
+    "Ringkasan Eksekutif\n\nPeluncuran ini memosisikan produk sebagai cara paling sederhana bagi tim kecil untuk mengubah pekerjaan berulang menjadi alur yang terukur.",
+  folder: "Pekerjaan",
+  createdAt: Date.UTC(2026, 6, 26),
+  updatedAt: Date.UTC(2026, 6, 26),
+};
 
 async function waitForStableRender(page) {
   await page.waitForLoadState("networkidle");
@@ -30,7 +56,7 @@ async function waitForStableRender(page) {
     await document.fonts.ready;
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   });
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(200);
 }
 
 async function captureStableScreenshot(page, name) {
@@ -40,120 +66,66 @@ async function captureStableScreenshot(page, name) {
     const hash = createHash("sha256").update(buffer).digest("hex");
     if (hash === previousHash) return buffer;
     previousHash = hash;
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(200);
   }
   throw new Error(`${name}: raster output did not stabilize after five captures`);
 }
 
 async function assertSurfaceReady(page, name) {
-  const expectedBreadcrumb = SURFACE_EXPECTATIONS[name];
-  const breadcrumb = page.locator(".v2-headerbar .v2-eyebrow");
-  await breadcrumb.filter({ hasText: expectedBreadcrumb }).waitFor({ state: "visible" });
-  const heading = page.locator(".v2-main h1").first();
-  if (!(await heading.isVisible()) || !(await heading.innerText()).trim()) {
-    throw new Error(`${name}: page heading is missing or empty`);
-  }
-  const headerState = await page.locator(".v2-headerbar").evaluate((header) => ({
-    avatar: (header.querySelector(".v2-avatar")?.textContent || "").trim(),
-    visibleSvgs: [...header.querySelectorAll("svg")].filter((svg) => {
-      const rect = svg.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0 && getComputedStyle(svg).visibility !== "hidden";
-    }).length,
-  }));
-  if (!headerState.avatar || headerState.visibleSvgs < 2) {
-    throw new Error(`${name}: incomplete header controls: ${JSON.stringify(headerState)}`);
-  }
+  await page.locator(".pl-shell").waitFor({ state: "visible" });
+  const expected = SURFACE_EXPECTATIONS[name];
+  await page.locator(expected).waitFor({ state: "visible" });
 
   const layout = await page.evaluate(() => ({
+    bodyClass: document.body.className,
+    theme: document.documentElement.dataset.uiTheme,
     viewportWidth: innerWidth,
     documentWidth: document.documentElement.scrollWidth,
-    mainRight: document.querySelector(".v2-main")?.getBoundingClientRect().right,
   }));
-  if (layout.documentWidth > layout.viewportWidth || layout.mainRight > layout.viewportWidth + 0.5) {
+  if (!layout.bodyClass.includes("pl") || layout.theme !== "light") {
+    throw new Error(`${name}: premium light app shell is not active: ${JSON.stringify(layout)}`);
+  }
+  if (layout.documentWidth > layout.viewportWidth) {
     throw new Error(`${name}: horizontal overflow detected: ${JSON.stringify(layout)}`);
   }
+}
 
-  const navState = await page.locator(".v2-bottom-nav button").evaluateAll((buttons) => {
-    const colorToRgba = (color) => {
-      const values = color.match(/[\d.]+/g)?.map(Number) || [];
-      if (color.startsWith("rgb")) return [values[0], values[1], values[2], values[3] ?? 1];
-      if (color.startsWith("oklch")) {
-        const [lightness, chroma, hue, alpha = 1] = values;
-        const radians = hue * Math.PI / 180;
-        const a = chroma * Math.cos(radians);
-        const b = chroma * Math.sin(radians);
-        const l = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3;
-        const m = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3;
-        const s = (lightness - 0.0894841775 * a - 1.291485548 * b) ** 3;
-        const gamma = (value) => 255 * (value <= 0.0031308 ? 12.92 * value : 1.055 * value ** (1 / 2.4) - 0.055);
-        return [
-          gamma(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
-          gamma(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
-          gamma(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
-          alpha,
-        ];
-      }
-      throw new Error(`Unsupported computed color: ${color}`);
-    };
-    const luminance = ([r, g, b]) => {
-      const channels = [r, g, b].map((value) => {
-        const normalized = value / 255;
-        return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
-      });
-      return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
-    };
-    const contrastRatio = (foreground, background, parentBackground) => {
-      const alpha = background[3] ?? 1;
-      const effectiveBackground = background.slice(0, 3).map((value, index) => value * alpha + parentBackground[index] * (1 - alpha));
-      const lighter = Math.max(luminance(foreground), luminance(effectiveBackground));
-      const darker = Math.min(luminance(foreground), luminance(effectiveBackground));
-      return (lighter + 0.05) / (darker + 0.05);
-    };
+async function openSavedResult(page) {
+  await page.getByRole("button", { name: "Riwayat" }).click();
+  await page.getByRole("button", { name: /^Peluncuran produk/ }).click();
+  await page.locator(".pl-doc--output").waitFor({ state: "visible" });
+}
 
-    return buttons.map((button) => {
-      const style = getComputedStyle(button);
-      const parentStyle = getComputedStyle(button.parentElement);
-      const rect = button.getBoundingClientRect();
-      const icon = button.querySelector("svg");
-      const label = button.querySelector("span");
-      const iconRect = icon?.getBoundingClientRect();
-      const labelRect = label?.getBoundingClientRect();
-      const accessibleName = (button.getAttribute("aria-label") || button.innerText || "").trim();
-      const iconVisible = Boolean(icon && getComputedStyle(icon).visibility !== "hidden" && iconRect?.width && iconRect?.height);
-      const insideViewport = rect.width > 0 && rect.height > 0 && rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight;
-      const topElement = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-      const receivesPointer = Boolean(topElement && (topElement === button || button.contains(topElement)));
-      const labelInsideButton = Boolean(labelRect && labelRect.left >= rect.left && labelRect.right <= rect.right && labelRect.top >= rect.top && labelRect.bottom <= rect.bottom);
-      return {
-        accessibleName,
-        iconVisible,
-        insideViewport,
-        receivesPointer,
-        labelInsideButton,
-        contrastRatio: contrastRatio(colorToRgba(style.color), colorToRgba(style.backgroundColor), colorToRgba(parentStyle.backgroundColor)),
-      };
-    });
-  });
-
-  if (navState.length !== MOBILE_TABS.length) throw new Error(`${name}: expected five bottom navigation buttons`);
-  for (const [index, state] of navState.entries()) {
-    if (!state.accessibleName || !state.iconVisible || !state.insideViewport || !state.receivesPointer || !state.labelInsideButton || state.contrastRatio < 3) {
-      throw new Error(`${name}: invalid bottom navigation button ${index + 1}: ${JSON.stringify(state)}`);
+async function navigateToSurface(page, name) {
+  if (name === "result" || name === "prompt-tools") {
+    await openSavedResult(page);
+    if (name === "prompt-tools") {
+      await page.getByRole("button", { name: /Lihat prompt/i }).click();
     }
+    await page.locator(".pl-result-tray").scrollIntoViewIfNeeded();
+  } else if (name === "history") {
+    await page.getByRole("button", { name: "Riwayat" }).click();
+  } else if (name === "account") {
+    await page.getByRole("button", { name: "Akun" }).click();
+  } else if (name === "guide") {
+    await page.getByRole("button", { name: "Panduan" }).click();
+  }
+  if (name !== "result" && name !== "prompt-tools") {
+    await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
   }
 }
 
 function waitForServer(url, timeoutMs = 60000) {
-  const start = Date.now();
+  const started = Date.now();
   return new Promise((resolve, reject) => {
     const tick = async () => {
       try {
         const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
         if (response.ok) return resolve();
       } catch {
-        // retry
+        // Preview is still starting.
       }
-      if (Date.now() - start > timeoutMs) return reject(new Error(`Server not ready: ${url}`));
+      if (Date.now() - started > timeoutMs) return reject(new Error(`Server not ready: ${url}`));
       setTimeout(tick, 500);
     };
     tick();
@@ -174,63 +146,44 @@ async function exportPhoneScreenshot(rawBuffer, file) {
     .png({ compressionLevel: 9 })
     .toBuffer();
   await writeFile(file, optimized);
-  const meta = await sharp(optimized).metadata();
-  console.log("wrote", file, `${meta.width}x${meta.height}`, `${Math.round(optimized.length / 1024)} KB`);
 }
 
 await mkdir(outDir, { recursive: true });
+await mkdir(rawDir, { recursive: true });
 
 const preview = startPreview();
 try {
-  await waitForServer(baseUrl);
-
+  await waitForServer(`${baseUrl}/app`);
   const browser = await chromium.launch({ channel: "chrome" });
   for (const name of screens) {
     const context = await browser.newContext({
-      viewport: { width: 360, height: 640 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true,
+      viewport: { width: 360, height: 640 },
+      deviceScaleFactor: 1,
+      isMobile: true,
+      hasTouch: true,
     });
-    await context.addInitScript(() => {
+    await context.addInitScript((record) => {
       localStorage.setItem("promptlab-onboarded", "1");
-      localStorage.removeItem("promptlab-guest");
-      localStorage.removeItem("promptlab-auth-intent");
-    });
+      localStorage.setItem("promptlab-ui-lang", "id");
+      localStorage.setItem("promptlab-ui-theme", "light");
+      localStorage.setItem("promptlab-library", JSON.stringify([record]));
+      localStorage.setItem("promptlab-trial-used", "0");
+    }, savedOutput);
     const page = await context.newPage();
     await page.goto(`${baseUrl}/app`, { waitUntil: "networkidle" });
-    if (await page.getByRole("button", { name: /Continue as Guest/i }).count()) {
-      await page.getByRole("button", { name: /Continue as Guest/i }).click();
-    }
-    await page.waitForSelector(".v2-shell", { timeout: 30000 });
-    await page.addStyleTag({ content: mobileChromeCss });
-    await waitForStableRender(page);
-    const bottom = page.locator(".v2-bottom-nav button").filter({ hasText: name });
-    const header = page.locator(".v2-icon-btn[title='Settings']");
-    if (name === "Settings" && (await header.count())) {
-      await header.first().click({ timeout: 15000 });
-    } else if (await bottom.count()) {
-      // A fixed mobile nav is already validated with elementFromPoint below.
-      // Dispatch in-page so Playwright does not auto-scroll the page beneath it
-      // and move a content chip under the pointer between actionability checks.
-      await bottom.first().evaluate((button) => button.click());
-    } else {
-      const side = page.locator(".v2-nav button").filter({ hasText: name });
-      await side.first().click({ timeout: 15000 });
-    }
-    await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
+    await page.addStyleTag({ content: captureCss });
+    await navigateToSurface(page, name);
     await waitForStableRender(page);
     await assertSurfaceReady(page, name);
     const rawCapture = await captureStableScreenshot(page, name);
-    await writeFile(join(outDir, `.native-${name.toLowerCase()}.png`), rawCapture);
-    // Raw UI shot for marketing frames (headline + phone mockup).
-    await mkdir(rawDir, { recursive: true });
-    const rawPhone = join(rawDir, `screenshot-phone-${name.toLowerCase()}.png`);
-    await exportPhoneScreenshot(rawCapture, rawPhone);
+    await writeFile(join(outDir, `.native-${name}.png`), rawCapture);
+    await exportPhoneScreenshot(rawCapture, join(rawDir, `screenshot-phone-${name}.png`));
     await context.close();
   }
-
   await browser.close();
 } finally {
   preview.kill("SIGTERM");
 }
 
-console.log(`\nRaw phone screenshots: ${PHONE_WIDTH}x${PHONE_HEIGHT} (9:16) in ${rawDir}`);
-console.log(`Frame for Play Console with: npm run playstore:frame`);
+console.log(`Raw phone screenshots: ${PHONE_WIDTH}x${PHONE_HEIGHT} in ${rawDir}`);
+console.log("Frame for Play Console with: npm run playstore:frame");

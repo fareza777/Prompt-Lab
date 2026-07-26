@@ -11,7 +11,7 @@ test("Play Store graphics have the required dimensions", async () => {
   const expected = new Map([
     ["app-icon-512.png", [512, 512]],
     ["feature-graphic-1024x500.png", [1024, 500]],
-    ...["builder", "optimizer", "templates", "library", "compare", "settings"]
+    ...["workspace", "result", "prompt-tools", "history", "account", "guide"]
       .map((screen) => [`screenshot-phone-${screen}.png`, [1080, 1920]]),
   ]);
 
@@ -28,35 +28,29 @@ test("feature graphic copy stays inside the 64px safe padding", async () => {
   assert.doesNotMatch(source, /Turn ideas and files into structured prompts for ChatGPT, Claude, Gemini, and more\./);
 });
 
-test("capture script targets the current five-tab V2 navigation and all six surfaces", async () => {
+test("capture script targets the current result-first workspace and all six surfaces", async () => {
   const source = await readFile(join(root, "scripts", "capture-playstore-screenshots.mjs"), "utf8");
-  assert.match(source, /const MOBILE_TABS = \["Builder", "Optimizer", "Templates", "Library", "Compare"\];/);
-  assert.match(source, /const screens = \[\.\.\.MOBILE_TABS, "Settings"\];/);
-  assert.match(source, /\.v2-bottom-nav/);
-  assert.doesNotMatch(source, /\.bottom-nav(?![\w-])/);
+  assert.match(source, /const screens = \["workspace", "result", "prompt-tools", "history", "account", "guide"\];/);
+  assert.match(source, /promptlab-library/);
+  assert.match(source, /pl-workbench/);
+  assert.match(source, /result\.viewPrompt|Lihat prompt/);
+  assert.doesNotMatch(source, /MOBILE_TABS|v2-bottom-nav/);
 });
 
-test("capture validates every surface and bottom navigation before writing PNGs", async () => {
+test("capture validates every result-first surface before writing PNGs", async () => {
   const source = await readFile(join(root, "scripts", "capture-playstore-screenshots.mjs"), "utf8");
   assert.match(source, /const SURFACE_EXPECTATIONS =/);
   assert.match(source, /async function assertSurfaceReady/);
   assert.match(source, /await assertSurfaceReady\(page, name\)/);
   assert.match(source, /document\.fonts\.ready/);
   assert.match(source, /requestAnimationFrame/);
-  assert.match(source, /contrastRatio/);
-  assert.match(source, /accessibleName/);
-  assert.match(source, /iconVisible/);
-  assert.match(source, /insideViewport/);
-  assert.match(source, /receivesPointer/);
-  assert.match(source, /labelInsideButton/);
   assert.match(source, /document\.documentElement\.scrollWidth/);
   assert.match(source, /async function captureStableScreenshot/);
   assert.match(source, /browser\.newContext/);
   assert.match(source, /await context\.close\(\)/);
-  assert.match(source, /incomplete header controls/);
   assert.match(source, /createHash\("sha256"\)/);
   assert.match(source, /backdrop-filter: none !important/);
-  assert.match(source, /\.v2-shell::before \{ display: none !important; \}/);
+  assert.match(source, /\.pl-top/);
 });
 
 test("capture uses natural responsive CSS at a 1080x1920 device viewport", async () => {
@@ -65,8 +59,14 @@ test("capture uses natural responsive CSS at a 1080x1920 device viewport", async
   assert.match(source, /deviceScaleFactor: 1/);
   assert.match(source, /kernel: sharp\.kernel\.lanczos3/);
   assert.match(source, /resize\(PHONE_WIDTH, PHONE_HEIGHT, \{ fit: "fill"/);
-  assert.doesNotMatch(source, /\.v2-shell \{/);
-  assert.doesNotMatch(source, /grid-template-columns: repeat\(5/);
+  assert.doesNotMatch(source, /\.v2-shell|grid-template-columns: repeat\(5/);
+});
+
+test("promo pipeline uses the warm result-first release identity", async () => {
+  const source = await readFile(join(root, "scripts", "create-promo-video.mjs"), "utf8");
+  assert.match(source, /AI WORK STUDIO/);
+  assert.match(source, /#F7F3EB/i);
+  assert.doesNotMatch(source, /#050a0c|FROM IDEA TO PROMPT/);
 });
 
 test("production CSS gives bottom navigation buttons explicit V2 styling", async () => {

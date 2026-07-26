@@ -18,28 +18,28 @@ const H = 1920;
 
 const SCREENS = [
   {
-    key: "builder",
-    lines: ["Turn rough ideas into", "structured AI prompts"],
+    key: "workspace",
+    lines: ["From rough input to", "a finished AI draft"],
   },
   {
-    key: "optimizer",
-    lines: ["Refine weak prompts into", "stronger instructions"],
+    key: "result",
+    lines: ["See the usable result", "first"],
   },
   {
-    key: "templates",
-    lines: ["Start faster with", "proven prompt patterns"],
+    key: "prompt-tools",
+    lines: ["Reveal prompt tools", "only when needed"],
   },
   {
-    key: "library",
-    lines: ["Save and reuse", "your best prompts"],
+    key: "history",
+    lines: ["Save and reopen", "finished work"],
   },
   {
-    key: "compare",
-    lines: ["Compare prompt versions", "side by side"],
+    key: "account",
+    lines: ["Manage plan, sync,", "and appearance"],
   },
   {
-    key: "settings",
-    lines: ["Manage plan, quota,", "and account in one place"],
+    key: "guide",
+    lines: ["Clear help stays", "one tap away"],
   },
 ];
 
@@ -64,29 +64,11 @@ function escapeXml(s) {
 function makeBackdropSvg() {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="paper" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#F4F1EA"/>
-      <stop offset="55%" stop-color="#F7F5F0"/>
-      <stop offset="100%" stop-color="#EFEBE3"/>
-    </linearGradient>
-    <linearGradient id="waveA" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#5EEAD4" stop-opacity="0.18"/>
-      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0.08"/>
-    </linearGradient>
-    <linearGradient id="waveB" x1="100%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#67E8F9" stop-opacity="0.14"/>
-      <stop offset="100%" stop-color="#99F6E4" stop-opacity="0.06"/>
-    </linearGradient>
-  </defs>
-  <rect width="${W}" height="${H}" fill="url(#paper)"/>
-  <!-- organic waves (reference-style decoration) -->
-  <path fill="url(#waveA)" d="M-40,220 C180,120 320,340 520,260 C740,170 900,320 1120,210 L1120,0 L-40,0 Z"/>
-  <path fill="url(#waveB)" d="M-40,420 C160,520 360,300 560,390 C780,490 940,330 1120,430 L1120,1920 L-40,1920 Z"/>
-  <path fill="#38BDF8" fill-opacity="0.06" d="M-40,1100 C200,980 380,1220 600,1120 C820,1020 980,1240 1120,1140 L1120,1920 L-40,1920 Z"/>
-  <!-- soft corner glow -->
-  <circle cx="980" cy="160" r="220" fill="#22D3EE" fill-opacity="0.07"/>
-  <circle cx="80" cy="1680" r="260" fill="#2DD4BF" fill-opacity="0.08"/>
+  <rect width="${W}" height="${H}" fill="#F7F3EB"/>
+  <circle cx="1010" cy="120" r="340" fill="#DFE9E1"/>
+  <circle cx="50" cy="1740" r="330" fill="#E8E0D2"/>
+  <path d="M0 360 C240 290 370 430 590 365 C790 305 925 380 1080 335" fill="none" stroke="#C8BEAD" stroke-width="2"/>
+  <path d="M0 1160 C240 1080 390 1220 630 1140 C830 1075 950 1140 1080 1100" fill="none" stroke="#D8D0C2" stroke-width="2"/>
 </svg>`;
 }
 
@@ -103,7 +85,7 @@ function makeHeadlineSvg(lines) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
   ${tspans}
-  <rect x="492" y="${startY + lines.length * lineHeight + 8}" width="96" height="5" rx="2.5" fill="#14B8A6"/>
+  <rect x="492" y="${startY + lines.length * lineHeight + 8}" width="96" height="5" rx="2.5" fill="#2F5A46"/>
 </svg>`;
 }
 
