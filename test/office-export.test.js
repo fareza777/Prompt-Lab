@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import JSZip from "jszip";
 import {
   buildDocxBuffer,
@@ -12,6 +13,13 @@ test("semantic parser retains headings, bullets, and markdown tables", () => {
     "# Laporan\n\n- Satu\n- Dua\n\n| PIC | Aksi |\n|---|---|\n| Sari | Survei |",
   );
   assert.deepEqual(blocks.map((block) => block.type), ["heading", "list", "table"]);
+});
+
+test("exportFile uses detectLanguage instead of an undefined App lang binding", async () => {
+  const source = await readFile(new URL("../src/main.jsx", import.meta.url), "utf8");
+  assert.match(source, /const documentLanguage = detectLanguage\(\) === "en" \? "en" : "id"/);
+  assert.match(source, /language: documentLanguage/);
+  assert.doesNotMatch(source, /language:\s*lang\b/);
 });
 
 test("DOCX contains professional document parts and new branding", async () => {

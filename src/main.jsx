@@ -2700,13 +2700,16 @@ function App() {
     try {
       setExportStatus(`Preparing ${formatLabel}...`);
       const authHeaders = await getAuthHeaders();
+      // Document language follows UI locale (owned by Shell via detectLanguage).
+      // Do not reference a free `lang` binding here — App no longer owns that state.
+      const documentLanguage = detectLanguage() === "en" ? "en" : "id";
       const response = await fetch(`${apiBase}/api/export/${format}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({
           title: titleSeed.trim().split(/\s+/).slice(0, 10).join(" ") || "AI Work Studio Export",
           content,
-          language: lang,
+          language: documentLanguage,
         }),
       });
       if (!response.ok) {
