@@ -2749,8 +2749,32 @@ function App() {
     setProviderTestStatus("Draft saved in this browser only.");
   }
 
-  async function exportFile(format, content = prompt, titleSeed = narrative) {
+  async function exportFile(format, content = prompt, titleSeed = "") {
     const formatLabel = format.toUpperCase();
+    if (format === "png" || format === "svg") {
+      try {
+        setExportStatus(`Preparing ${formatLabel}...`);
+        const { buildDiagramExportBlob } = await import("./exportDiagram.js");
+        const { deriveExportTitle, toDownloadFilename, triggerBrowserDownload } = await import(
+          "./exportNaming.js"
+        );
+        const title =
+          deriveExportTitle({
+            content,
+            narrative: titleSeed || narrative,
+            attachmentNames: attachments.map((file) => file.name),
+          }) || "Diagram";
+        const { blob, extension } = await buildDiagramExportBlob(content, format);
+        triggerBrowserDownload(blob, toDownloadFilename(title, extension));
+        setExportStatus(`${formatLabel} downloaded`);
+        window.setTimeout(() => setExportStatus(""), 2200);
+      } catch (error) {
+        setErrorMessage(error.message || "Diagram export failed.");
+        setExportStatus(`${formatLabel} failed`);
+      }
+      return;
+    }
+
     const feature = format === "pptx" ? "pptxExport" : "docxExport";
     if (!canExportFormat(accountState.plan, format)) {
       const message = upgradeMessageForFeature(feature);
@@ -2766,11 +2790,19 @@ function App() {
       // Document language follows UI locale (owned by Shell via detectLanguage).
       // Do not reference a free `lang` binding here — App no longer owns that state.
       const documentLanguage = detectLanguage() === "en" ? "en" : "id";
+      const { deriveExportTitle, toDownloadFilename, triggerBrowserDownload } = await import(
+        "./exportNaming.js"
+      );
+      const title = deriveExportTitle({
+        content,
+        narrative: titleSeed || narrative,
+        attachmentNames: attachments.map((file) => file.name),
+      });
       const response = await fetch(`${apiBase}/api/export/${format}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({
-          title: titleSeed.trim().split(/\s+/).slice(0, 10).join(" ") || "AI Work Studio Export",
+          title,
           content,
           language: documentLanguage,
         }),
@@ -2783,14 +2815,7 @@ function App() {
       if (!blob || blob.size < 64) {
         throw new Error(`Failed to export ${formatLabel}: empty file.`);
       }
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `ai-work-studio.${format}`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      triggerBrowserDownload(blob, toDownloadFilename(title, format));
       setExportStatus(`${formatLabel} downloaded`);
       window.setTimeout(() => setExportStatus(""), 2200);
     } catch (error) {

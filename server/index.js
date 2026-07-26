@@ -4448,11 +4448,13 @@ function normalizeExportPayload(body) {
 }
 
 function safeFilename(title) {
-  const cleaned = title
+  const cleaned = String(title || "")
     .replace(/[<>:"/\\|?*\x00-\x1f]/g, "")
     .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
     .slice(0, 80);
-  return cleaned || "ai-work-studio-export";
+  return cleaned || "AI-Work-Studio-Export";
 }
 
 function cleanMarkdown(line) {

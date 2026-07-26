@@ -516,7 +516,9 @@ export default function Shell(props) {
                     runOutput={runOutput}
                     isRunning={isRunning}
                     runError={humanizeApiError(runError, t)}
-                    onExport={(format, text) => exportFile(format, text ?? prompt, narrative)}
+                    onExport={(format, text) =>
+                      exportFile(format, text ?? runOutput ?? prompt, narrative)
+                    }
                     canExportWord={Boolean(entitlements?.docxExport)}
                     canExportPpt={Boolean(entitlements?.pptxExport)}
                     exportStatus={exportStatus}

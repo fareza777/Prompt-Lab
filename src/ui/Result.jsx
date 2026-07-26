@@ -258,6 +258,7 @@ function ResultActions({
   canExportWord,
   canExportPpt,
   exportStatus,
+  hasDiagram,
 }) {
   return (
     <div className="pl-result-toolbar">
@@ -276,8 +277,29 @@ function ResultActions({
           {saved ? t("result.saved") : t("result.save")}
         </button>
 
+        {hasDiagram && (
+          <>
+            <button
+              type="button"
+              className="pl-btn pl-btn--primary"
+              onClick={() => onExport("png", output)}
+            >
+              <Download size={17} aria-hidden="true" />
+              {t("result.exportPng")}
+            </button>
+            <button type="button" className="pl-btn" onClick={() => onExport("svg", output)}>
+              <Download size={17} aria-hidden="true" />
+              {t("result.exportSvg")}
+            </button>
+          </>
+        )}
+
         {canExportWord && (
-          <button type="button" className="pl-btn pl-btn--primary" onClick={() => onExport("docx", output)}>
+          <button
+            type="button"
+            className={`pl-btn${hasDiagram ? "" : " pl-btn--primary"}`}
+            onClick={() => onExport("docx", output)}
+          >
             <Download size={17} aria-hidden="true" />
             {t("result.exportWord")}
           </button>
@@ -290,6 +312,7 @@ function ResultActions({
           </button>
         )}
       </div>
+      {hasDiagram && <p className="pl-meta">{t("result.exportDiagramHint")}</p>}
       {exportStatus && (
         <p className="pl-meta" role="status">
           {exportStatus}
@@ -318,6 +341,10 @@ export default function Result({
   const output = String(runOutput || "").trim();
   const sections = useMemo(
     () => groupDocumentSections(parseMarkdownBlocks(output)),
+    [output]
+  );
+  const hasDiagram = useMemo(
+    () => /```mermaid/i.test(output) || /^(flowchart|sequenceDiagram|classDiagram|erDiagram|mindmap|graph)\b/m.test(output),
     [output]
   );
 
@@ -353,6 +380,7 @@ export default function Result({
           canExportWord={canExportWord}
           canExportPpt={canExportPpt}
           exportStatus={exportStatus}
+          hasDiagram={hasDiagram}
         />
       )}
 
