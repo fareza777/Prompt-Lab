@@ -568,22 +568,26 @@ app.post("/api/export/diagram-png", express.json({ limit: "4mb" }), async (req, 
     }
 
     const prepared = prepareDiagramSvgForRaster(rawSvg);
+    if (prepared.width < 80 || prepared.height < 80) {
+      res.status(400).json({ error: "Diagram SVG too small (likely not a Mermaid diagram)." });
+      return;
+    }
     const sharp = (await import("sharp")).default;
     const png = await sharp(Buffer.from(prepared.svg, "utf8"), {
       density: 192,
       limitInputPixels: 40_000_000,
     })
       .resize({
-        width: Math.min(4096, prepared.width * 2),
-        height: Math.min(4096, prepared.height * 2),
+        width: Math.min(4096, Math.max(640, prepared.width * 2)),
+        height: Math.min(4096, Math.max(360, prepared.height * 2)),
         fit: "inside",
         withoutEnlargement: false,
       })
       .png({ compressionLevel: 8 })
       .toBuffer();
 
-    if (!png?.length || png[0] !== 0x89) {
-      throw new Error("PNG encode produced empty output.");
+    if (!png?.length || png[0] !== 0x89 || png.length < 1500) {
+      throw new Error("PNG encode produced empty/invalid output.");
     }
 
     res.setHeader("Content-Type", "image/png");

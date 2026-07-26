@@ -39,3 +39,11 @@ test("extractMermaidCode strips accidental fence wrappers and prose", async () =
   assert.doesNotMatch(cleaned, /```/);
 });
 
+test("isLikelyUiIconSvg rejects Lucide-sized icons", async () => {
+  const { isLikelyUiIconSvg } = await import("../src/exportDiagram.js");
+  const icon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>`;
+  assert.equal(isLikelyUiIconSvg(icon), true);
+  const diagram = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400"><rect width="100" height="40"/><path d="M0 0"/><text>A</text><rect width="100" height="40"/></svg>`;
+  assert.equal(isLikelyUiIconSvg(diagram), false);
+});
+

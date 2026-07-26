@@ -80,6 +80,27 @@ function parseViewBox(svg) {
   return { width: parts[2], height: parts[3] };
 }
 
+/** True when this SVG looks like a UI icon (Lucide), not a Mermaid diagram. */
+export function isLikelyUiIconSvg(svgString = "") {
+  const svg = String(svgString || "");
+  if (!svg) return true;
+  if (/\blucide\b/i.test(svg) || /\bpl-doc-card__chevron\b/i.test(svg)) return true;
+  if (/\bclass="[^"]*lucide/i.test(svg)) return true;
+
+  const box = parseViewBox(svg);
+  const width = Number(svg.match(/\bwidth\s*=\s*["']([0-9.]+)/i)?.[1]) || box?.width || 0;
+  const height = Number(svg.match(/\bheight\s*=\s*["']([0-9.]+)/i)?.[1]) || box?.height || 0;
+  // Lucide icons are typically 24×24; Mermaid diagrams are much larger.
+  if (width > 0 && height > 0 && width <= 48 && height <= 48) return true;
+
+  // Real Mermaid diagrams contain many drawing nodes; icons are a single path/polyline.
+  const drawOps = (svg.match(/<(path|polygon|polyline|rect|circle|ellipse|line|text)\b/gi) || [])
+    .length;
+  if (drawOps > 0 && drawOps < 4 && width <= 64 && height <= 64) return true;
+
+  return false;
+}
+
 export function prepareSvgMarkup(svgString) {
   let svg = String(svgString || "").trim();
   if (!svg) throw new Error("Empty diagram SVG.");
@@ -95,6 +116,9 @@ export function prepareSvgMarkup(svgString) {
     .trim();
 
   if (!/<svg\b/i.test(svg)) throw new Error("Empty diagram SVG.");
+  if (isLikelyUiIconSvg(svg)) {
+    throw new Error("Captured a UI icon instead of the diagram SVG.");
+  }
 
   if (!/\sxmlns\s*=/.test(svg)) {
     svg = svg.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
@@ -107,6 +131,10 @@ export function prepareSvgMarkup(svgString) {
   if (!Number.isFinite(height) || height <= 0) height = box?.height || 540;
   width = Math.max(1, Math.ceil(width));
   height = Math.max(1, Math.ceil(height));
+
+  if (width < 80 || height < 80) {
+    throw new Error("Diagram SVG is too small to export.");
+  }
 
   if (/\swidth\s*=/.test(svg)) {
     svg = svg.replace(/\swidth\s*=\s*["'][^"']*["']/i, ` width="${width}"`);
@@ -133,21 +161,45 @@ export function prepareSvgMarkup(svgString) {
   };
 }
 
+function readSvgFromMermaidDom() {
+  if (typeof document === "undefined") return "";
+  const nodes = [
+    ...document.querySelectorAll('[data-pl-diagram="1"] > svg'),
+    ...document.querySelectorAll(".pl-mermaid__canvas > svg"),
+    ...document.querySelectorAll("figure.pl-mermaid .pl-mermaid__canvas svg"),
+  ];
+  for (const svgEl of nodes) {
+    try {
+      const serialized = new XMLSerializer().serializeToString(svgEl);
+      if (!isLikelyUiIconSvg(serialized)) return serialized;
+    } catch {
+      /* try next */
+    }
+  }
+  return "";
+}
+
 export function captureOnScreenDiagramSvg() {
   const remembered = readRenderedDiagramSvg();
-  if (remembered) return remembered;
+  if (remembered && !isLikelyUiIconSvg(remembered)) return remembered;
 
-  if (typeof document === "undefined") return "";
-  const svgEl =
-    document.querySelector(".pl-mermaid__canvas svg") ||
-    document.querySelector("figure.pl-mermaid svg") ||
-    document.querySelector(".pl-doc-card svg");
-  if (!svgEl) return "";
-  try {
-    return new XMLSerializer().serializeToString(svgEl);
-  } catch {
-    return "";
+  return readSvgFromMermaidDom();
+}
+
+async function waitForPaintedDiagramSvg(timeoutMs = 4000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const svg = captureOnScreenDiagramSvg();
+    if (svg) {
+      try {
+        return prepareSvgMarkup(svg);
+      } catch {
+        /* keep waiting */
+      }
+    }
+    await new Promise((r) => setTimeout(r, 150));
   }
+  return null;
 }
 
 async function renderMermaidSvgMarkup(code) {
@@ -168,17 +220,11 @@ async function renderMermaidSvgMarkup(code) {
 }
 
 async function resolvePreparedSvg(output) {
-  // 1) Always prefer the SVG already shown to the user.
-  const fromScreen = captureOnScreenDiagramSvg();
-  if (fromScreen) {
-    try {
-      return prepareSvgMarkup(fromScreen);
-    } catch (error) {
-      console.warn("[diagram-export] prepare painted SVG failed", error);
-    }
-  }
+  // 1) Prefer the SVG already painted in the Mermaid canvas (never Lucide icons).
+  const painted = await waitForPaintedDiagramSvg(2500);
+  if (painted) return painted;
 
-  // 2) Re-render using the exact code MermaidBlock already used (not regex from markdown).
+  // 2) Re-render using the exact code MermaidBlock already used.
   const paintedCode = sanitizeMermaidCode(readRenderedDiagramCode());
   if (paintedCode) {
     try {
@@ -192,7 +238,7 @@ async function resolvePreparedSvg(output) {
   const code = extractMermaidCode(output);
   if (!code) {
     throw new Error(
-      "Diagram SVG belum siap. Buka section Diagram, tunggu sampai gambar muncul, lalu Unduh PNG lagi."
+      "Diagram belum siap diekspor. Buka section Diagram, tunggu sampai bagan terlihat jelas, lalu Unduh PNG lagi."
     );
   }
 
@@ -201,7 +247,7 @@ async function resolvePreparedSvg(output) {
   } catch (error) {
     const msg = error?.message || String(error);
     throw new Error(
-      `Gagal render ulang diagram (${msg}). Pastikan diagram sudah tampil di layar, lalu coba Unduh PNG lagi.`
+      `Gagal mengambil diagram (${msg}). Pastikan bagan sudah tampil di layar, lalu coba lagi.`
     );
   }
 }
@@ -294,8 +340,8 @@ async function rasterizeViaServer(prepared, { apiBase = "", authHeaders = {}, ti
   }
 
   const blob = await response.blob();
-  if (!blob || blob.size < 64 || (blob.type && blob.type.includes("json"))) {
-    throw new Error("Server returned an empty PNG.");
+  if (!blob || blob.size < 1500 || (blob.type && blob.type.includes("json"))) {
+    throw new Error("Server returned an empty/invalid PNG.");
   }
   if (blob.type === "image/png") return blob;
   return new Blob([await blob.arrayBuffer()], { type: "image/png" });

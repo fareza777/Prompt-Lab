@@ -64,7 +64,11 @@ function MermaidBlock({ code, t }) {
   return (
     <figure className="pl-mermaid">
       {svg ? (
-        <div className="pl-mermaid__canvas" dangerouslySetInnerHTML={{ __html: svg }} />
+        <div
+          className="pl-mermaid__canvas"
+          data-pl-diagram="1"
+          dangerouslySetInnerHTML={{ __html: svg }}
+        />
       ) : !error ? (
         <p className="pl-meta">{t("result.runWorking")}</p>
       ) : null}
