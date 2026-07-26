@@ -89,21 +89,36 @@ purgeLegacyServiceWorkers();
  * refused every AI call until the user signed up, so nobody could see what the
  * app did before being asked to commit.
  */
-const TRIAL_LIMIT = 3;
+const TRIAL_LIMIT = 5;
 const TRIAL_KEY = "promptlab-trial-used";
+
+function currentTrialWeekStart(now = new Date()) {
+  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() - day + 1);
+  return date.toISOString().slice(0, 10);
+}
 
 function readTrialUsed() {
   try {
-    const raw = Number(localStorage.getItem(TRIAL_KEY));
-    return Number.isFinite(raw) && raw > 0 ? Math.min(raw, TRIAL_LIMIT) : 0;
+    const stored = localStorage.getItem(TRIAL_KEY);
+    if (!stored) return 0;
+    const parsed = JSON.parse(stored);
+    if (typeof parsed === "number") return Math.min(Math.max(0, parsed), TRIAL_LIMIT);
+    if (parsed?.weekStart !== currentTrialWeekStart()) return 0;
+    return Math.min(Math.max(0, Number(parsed?.used) || 0), TRIAL_LIMIT);
   } catch {
-    return 0;
+    const legacy = Number(localStorage.getItem(TRIAL_KEY));
+    return Number.isFinite(legacy) ? Math.min(Math.max(0, legacy), TRIAL_LIMIT) : 0;
   }
 }
 
 function writeTrialUsed(value) {
   try {
-    localStorage.setItem(TRIAL_KEY, String(value));
+    localStorage.setItem(
+      TRIAL_KEY,
+      JSON.stringify({ weekStart: currentTrialWeekStart(), used: Math.min(TRIAL_LIMIT, value) }),
+    );
   } catch {
     /* ignore */
   }
@@ -1318,6 +1333,7 @@ function App() {
    */
   const [isAnonymousSession, setIsAnonymousSession] = useState(false);
   const [trialUsed, setTrialUsed] = useState(readTrialUsed);
+  const [weeklyResults, setWeeklyResults] = useState(null);
   /** Cleared once we learn the project cannot issue anonymous sessions. */
   const [trialAvailable, setTrialAvailable] = useState(true);
   const allTemplates = useMemo(() => [...customTemplates, ...templates], [customTemplates]);
@@ -2236,7 +2252,6 @@ function App() {
         setEvalDelta(data.evalDelta || null);
         setPiiFindings(Array.isArray(data.piiFindings) ? data.piiFindings : []);
         setGenerationPhase("done");
-        if (onTrial) countTrialUse();
         return data.prompt || localPrompt;
       }
 
@@ -2253,7 +2268,6 @@ function App() {
       setEvalDelta(data.evalDelta || null);
       setPiiFindings(Array.isArray(data.piiFindings) ? data.piiFindings : []);
       setGenerationPhase("done");
-      if (onTrial) countTrialUse();
       return data.prompt || localPrompt;
     } catch (error) {
       const message = error.message || API_MSG.backendUnavailableLocalPrompt;
@@ -2332,6 +2346,8 @@ function App() {
       const content = checked.content;
       setRunOutput(content);
       applyServerQuota(data.quota);
+      if (data.weeklyResults) setWeeklyResults(data.weeklyResults);
+      if (isAnonymousSession) countTrialUse();
       return content;
     } catch (error) {
       setRunError(error.message || "Failed to run the prompt.");
@@ -2874,7 +2890,11 @@ function App() {
     runError,
     getAuthHeaders,
     googleEnabled: isGoogleAuthEnabled,
-    quotaSummary: formatQuotaSummary(accountState),
+    quotaSummary:
+      accountState.plan === "Free" && weeklyResults
+        ? `${weeklyResults.remaining} / ${weeklyResults.limit} results left this week`
+        : formatQuotaSummary(accountState),
+    weeklyAllowance: weeklyResults,
     // An anonymous trial session is not an account, and must not be presented
     // as one.
     hasAuthSession: hasAuthSession && !isAnonymousSession,

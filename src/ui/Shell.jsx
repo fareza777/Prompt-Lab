@@ -119,6 +119,7 @@ export default function Shell(props) {
     apiBase,
     getAuthHeaders,
     trialRemaining,
+    weeklyAllowance,
     isAdmin,
     onOpenAdmin,
   } = props;
@@ -228,13 +229,15 @@ export default function Shell(props) {
   );
 
   const trialNotice = useMemo(() => {
-    if (hasAuthSession || trialRemaining == null) return null;
-    if (trialRemaining <= 0) return { tone: "warn", text: t("trial.over"), hint: t("trial.overHint") };
-    if (trialRemaining === 1) return { tone: "warn", text: t("trial.lastOne") };
-    return { tone: "plain", text: t("trial.left", { n: trialRemaining }) };
-  }, [hasAuthSession, trialRemaining, t]);
+    const remaining = hasAuthSession ? weeklyAllowance?.remaining : trialRemaining;
+    if (remaining == null) return null;
+    if (remaining <= 0) return { tone: "warn", text: t("trial.over"), hint: t("trial.overHint") };
+    if (remaining === 1) return { tone: "warn", text: t("trial.lastOne") };
+    return { tone: "plain", text: t("trial.left", { n: remaining }) };
+  }, [hasAuthSession, trialRemaining, weeklyAllowance, t]);
 
-  const trialExhausted = !hasAuthSession && trialRemaining != null && trialRemaining <= 0;
+  const allowanceRemaining = hasAuthSession ? weeklyAllowance?.remaining : trialRemaining;
+  const trialExhausted = allowanceRemaining != null && allowanceRemaining <= 0;
 
   const finishFirstRun = useCallback(() => {
     writeFirstRunDone(true);
