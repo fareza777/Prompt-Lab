@@ -96,3 +96,36 @@ export function parseMarkdownBlocks(markdown) {
 
   return blocks;
 }
+
+/**
+ * Group a flat markdown block list into top-level report sections.
+ * H1/H2 start a new card; deeper headings stay inside the open section.
+ */
+export function groupDocumentSections(blocks = []) {
+  const sections = [];
+  let current = null;
+
+  const startSection = (title, level) => {
+    current = {
+      id: `section-${sections.length + 1}`,
+      title: String(title || "").trim(),
+      level: level || 2,
+      blocks: [],
+    };
+    sections.push(current);
+  };
+
+  for (const block of blocks) {
+    if (block.type === "heading" && block.level <= 2) {
+      startSection(block.text, block.level);
+      continue;
+    }
+    if (!current) startSection("", 1);
+    current.blocks.push(block);
+  }
+
+  if (!sections.length) {
+    return [{ id: "section-1", title: "", level: 1, blocks: [] }];
+  }
+  return sections;
+}

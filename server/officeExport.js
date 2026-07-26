@@ -118,6 +118,7 @@ function docxHeading(block) {
   return new Paragraph({
     heading: levels[Math.max(0, block.level - 1)],
     keepNext: true,
+    alignment: AlignmentType.LEFT,
     spacing: { before: block.level === 1 ? 280 : 220, after: 100 },
     children: [new TextRun({ text: block.text, bold: true, color: COLORS.ink })],
   });
@@ -164,18 +165,20 @@ function blocksToDocx(blocks) {
     if (block.type === "paragraph") {
       children.push(
         new Paragraph({
-          spacing: { after: 150, line: 300 },
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { after: 160, line: 312, lineRule: "auto" },
           children: [new TextRun({ text: block.text, color: COLORS.ink, size: 22 })],
         }),
       );
     }
     if (block.type === "list") {
-      block.items.forEach((item, index) =>
+      block.items.forEach((item) =>
         children.push(
           new Paragraph({
             bullet: block.ordered ? undefined : { level: 0 },
             numbering: block.ordered ? { reference: "ordered-list", level: 0 } : undefined,
-            spacing: { after: 70 },
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: { after: 80, line: 300 },
             children: [new TextRun({ text: item, size: 22, color: COLORS.ink })],
           }),
         ),
@@ -183,13 +186,13 @@ function blocksToDocx(blocks) {
     }
     if (block.type === "table") {
       children.push(docxTable(block));
-      children.push(new Paragraph({ text: "", spacing: { after: 80 } }));
+      children.push(new Paragraph({ text: "", spacing: { after: 100 } }));
     }
     if (block.type === "divider") {
       children.push(
         new Paragraph({
           border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: COLORS.rule } },
-          spacing: { after: 160 },
+          spacing: { after: 180 },
         }),
       );
     }
@@ -347,9 +350,9 @@ export async function buildPptxBuffer({
   });
   titleSlide.addText(title, {
     x: 0.9,
-    y: 2.15,
+    y: 2.05,
     w: 11.2,
-    h: 1.25,
+    h: 1.15,
     fontFace: "Aptos Display",
     fontSize: 34,
     bold: true,
@@ -358,9 +361,21 @@ export async function buildPptxBuffer({
     breakLine: false,
     fit: "shrink",
   });
+  const subtitle =
+    language === "en" ? "Professional presentation" : "Presentasi kerja profesional";
+  titleSlide.addText(subtitle, {
+    x: 0.92,
+    y: 3.35,
+    w: 10,
+    h: 0.35,
+    fontFace: "Aptos",
+    fontSize: 14,
+    color: COLORS.muted,
+    margin: 0,
+  });
   titleSlide.addText(BRAND, {
     x: 0.92,
-    y: 3.62,
+    y: 3.85,
     w: 5,
     h: 0.35,
     fontFace: "Aptos",
@@ -370,16 +385,31 @@ export async function buildPptxBuffer({
   });
 
   const sections = splitForSlides(parseStructuredContent(content, title)).slice(0, 30);
+  if (!sections.length) {
+    sections.push({
+      title: language === "en" ? "Overview" : "Ringkasan",
+      items: [language === "en" ? "No slide content was available." : "Konten slide belum tersedia."],
+    });
+  }
+
   sections.forEach((section, index) => {
     const slide = pptx.addSlide();
     slide.background = { color: COLORS.paper };
+    slide.addShape(pptx.ShapeType.rect, {
+      x: 0,
+      y: 0,
+      w: 0.18,
+      h: 7.5,
+      line: { color: COLORS.accent, transparency: 100 },
+      fill: { color: COLORS.accent },
+    });
     slide.addText(section.title, {
       x: 0.7,
-      y: 0.48,
+      y: 0.42,
       w: 11.5,
-      h: 0.58,
+      h: 0.62,
       fontFace: "Aptos Display",
-      fontSize: 25,
+      fontSize: 24,
       bold: true,
       color: COLORS.ink,
       margin: 0,
@@ -387,31 +417,31 @@ export async function buildPptxBuffer({
     });
     slide.addShape(pptx.ShapeType.line, {
       x: 0.7,
-      y: 1.18,
-      w: 1.15,
+      y: 1.12,
+      w: 1.35,
       h: 0,
       line: { color: COLORS.accent, width: 3 },
     });
-    const runs = section.items.map((text) => ({
-      text,
-      options: { bullet: { indent: 18 }, breakLine: true, hanging: 4 },
+    const runs = (section.items.length ? section.items : ["—"]).map((text) => ({
+      text: String(text).trim(),
+      options: { bullet: { indent: 18 }, breakLine: true, paraSpaceAfter: 10 },
     }));
     slide.addText(runs, {
-      x: 0.92,
-      y: 1.55,
-      w: 11.25,
-      h: 4.85,
+      x: 0.88,
+      y: 1.42,
+      w: 11.3,
+      h: 5.05,
       fontFace: "Aptos",
-      fontSize: 21,
+      fontSize: 18,
       color: COLORS.ink,
-      margin: 0.05,
-      breakLine: false,
+      margin: 0.04,
       valign: "top",
+      paraSpaceAfter: 8,
     });
     slide.addText(`${BRAND}   ·   ${index + 2}`, {
-      x: 9.3,
-      y: 7.0,
-      w: 3.25,
+      x: 9.2,
+      y: 7.05,
+      w: 3.35,
       h: 0.22,
       align: "right",
       fontFace: "Aptos",

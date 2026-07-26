@@ -1,14 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Check,
+  ChevronDown,
   Copy,
   Download,
   Flag,
   Star,
 } from "lucide-react";
 import { createContentActionPayload } from "./contentRecord.js";
-import { parseMarkdownBlocks } from "./markdownBlocks.js";
+import { groupDocumentSections, parseMarkdownBlocks } from "./markdownBlocks.js";
 
 function renderInline(text) {
   return String(text)
@@ -25,54 +26,109 @@ function renderInline(text) {
     });
 }
 
-function DocumentOutput({ content }) {
-  const blocks = parseMarkdownBlocks(content);
-
-  return blocks.map((block, index) => {
-    const key = `${block.type}-${index}`;
-    if (block.type === "heading") {
-      const Heading = `h${Math.min(4, block.level)}`;
-      return <Heading key={key}>{renderInline(block.text)}</Heading>;
-    }
-    if (block.type === "list") {
-      const List = block.ordered ? "ol" : "ul";
-      return (
-        <List key={key}>
-          {block.items.map((item, itemIndex) => (
-            <li key={`${key}-${itemIndex}`}>{renderInline(item)}</li>
-          ))}
-        </List>
-      );
-    }
-    if (block.type === "table") {
-      return (
-        <div className="pl-doc-table-wrap" key={key}>
-          <table>
-            <thead>
-              <tr>
-                {block.headers.map((header, cellIndex) => (
-                  <th key={`${key}-head-${cellIndex}`}>{renderInline(header)}</th>
+function BlockView({ block, index }) {
+  const key = `${block.type}-${index}`;
+  if (block.type === "heading") {
+    const Heading = `h${Math.min(4, Math.max(3, block.level))}`;
+    return <Heading key={key}>{renderInline(block.text)}</Heading>;
+  }
+  if (block.type === "list") {
+    const List = block.ordered ? "ol" : "ul";
+    return (
+      <List key={key}>
+        {block.items.map((item, itemIndex) => (
+          <li key={`${key}-${itemIndex}`}>{renderInline(item)}</li>
+        ))}
+      </List>
+    );
+  }
+  if (block.type === "table") {
+    return (
+      <div className="pl-doc-table-wrap" key={key}>
+        <table>
+          <thead>
+            <tr>
+              {block.headers.map((header, cellIndex) => (
+                <th key={`${key}-head-${cellIndex}`}>{renderInline(header)}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {block.rows.map((row, rowIndex) => (
+              <tr key={`${key}-row-${rowIndex}`}>
+                {row.map((cell, cellIndex) => (
+                  <td key={`${key}-${rowIndex}-${cellIndex}`}>{renderInline(cell)}</td>
                 ))}
               </tr>
-            </thead>
-            <tbody>
-              {block.rows.map((row, rowIndex) => (
-                <tr key={`${key}-row-${rowIndex}`}>
-                  {row.map((cell, cellIndex) => (
-                    <td key={`${key}-${rowIndex}-${cellIndex}`}>{renderInline(cell)}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
-    }
-    if (block.type === "quote") {
-      return <blockquote key={key}>{renderInline(block.text)}</blockquote>;
-    }
-    return <p key={key}>{renderInline(block.text)}</p>;
-  });
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+  if (block.type === "quote") {
+    return <blockquote key={key}>{renderInline(block.text)}</blockquote>;
+  }
+  return <p key={key}>{renderInline(block.text)}</p>;
+}
+
+function SectionCards({ sections, t }) {
+  const [openIds, setOpenIds] = useState(() =>
+    new Set(sections.slice(0, 1).map((section) => section.id))
+  );
+
+  useEffect(() => {
+    setOpenIds(new Set(sections.slice(0, 1).map((section) => section.id)));
+  }, [sections]);
+
+  function toggle(id) {
+    setOpenIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  return (
+    <div className="pl-doc-sections" aria-label={t("result.sections")}>
+      {sections.map((section, index) => {
+        const open = openIds.has(section.id);
+        const title = section.title || t("result.untitledSection");
+        return (
+          <section
+            key={section.id}
+            className={`pl-doc-card${open ? " is-open" : ""}`}
+          >
+            <h3 className="pl-doc-card__title">
+              <button
+                type="button"
+                className="pl-doc-card__toggle"
+                aria-expanded={open}
+                aria-controls={`${section.id}-body`}
+                onClick={() => toggle(section.id)}
+              >
+                <span className="pl-doc-card__index">{index + 1}</span>
+                <span className="pl-doc-card__label">{renderInline(title)}</span>
+                <ChevronDown size={18} aria-hidden="true" className="pl-doc-card__chevron" />
+              </button>
+            </h3>
+            {open && (
+              <div className="pl-doc-card__body pl-doc pl-doc--output" id={`${section.id}-body`}>
+                {section.blocks.length ? (
+                  section.blocks.map((block, blockIndex) => (
+                    <BlockView key={`${section.id}-${blockIndex}`} block={block} index={blockIndex} />
+                  ))
+                ) : (
+                  <p className="pl-meta">{t("result.emptySection")}</p>
+                )}
+              </div>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
 }
 
 function Elapsed() {
@@ -112,6 +168,58 @@ function Working({ title, hint }) {
   );
 }
 
+function ResultActions({
+  t,
+  output,
+  copied,
+  onCopy,
+  onSave,
+  saved,
+  onExport,
+  canExportWord,
+  canExportPpt,
+  exportStatus,
+}) {
+  return (
+    <div className="pl-result-toolbar">
+      <div className="pl-actions pl-actions--primary">
+        <button type="button" className="pl-btn" onClick={() => onCopy(output)}>
+          {copied ? <Check size={17} aria-hidden="true" /> : <Copy size={17} aria-hidden="true" />}
+          {copied ? t("result.copied") : t("result.copy")}
+        </button>
+
+        <button
+          type="button"
+          className="pl-btn"
+          onClick={() => onSave(createContentActionPayload("output", output))}
+        >
+          <Star size={17} aria-hidden="true" />
+          {saved ? t("result.saved") : t("result.save")}
+        </button>
+
+        {canExportWord && (
+          <button type="button" className="pl-btn pl-btn--primary" onClick={() => onExport("docx", output)}>
+            <Download size={17} aria-hidden="true" />
+            {t("result.exportWord")}
+          </button>
+        )}
+
+        {canExportPpt && (
+          <button type="button" className="pl-btn" onClick={() => onExport("pptx", output)}>
+            <Download size={17} aria-hidden="true" />
+            {t("result.exportPpt")}
+          </button>
+        )}
+      </div>
+      {exportStatus && (
+        <p className="pl-meta" role="status">
+          {exportStatus}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function Result({
   t,
   isGenerating,
@@ -129,6 +237,10 @@ export default function Result({
   runError,
 }) {
   const output = String(runOutput || "").trim();
+  const sections = useMemo(
+    () => groupDocumentSections(parseMarkdownBlocks(output)),
+    [output]
+  );
 
   if (isGenerating) {
     return <Working title={t("result.working")} hint={t("result.workingHint")} />;
@@ -151,9 +263,18 @@ export default function Result({
       </header>
 
       {output && (
-        <article className="pl-doc pl-doc--output" aria-live="polite">
-          <DocumentOutput content={output} />
-        </article>
+        <ResultActions
+          t={t}
+          output={output}
+          copied={copied}
+          onCopy={onCopy}
+          onSave={onSave}
+          saved={saved}
+          onExport={onExport}
+          canExportWord={canExportWord}
+          canExportPpt={canExportPpt}
+          exportStatus={exportStatus}
+        />
       )}
 
       {runError && (
@@ -168,43 +289,8 @@ export default function Result({
             <AlertTriangle size={16} aria-hidden="true" />
             <span>{t("result.aiNotice")}</span>
           </p>
-
-          <div className="pl-actions pl-actions--primary">
-            <button type="button" className="pl-btn" onClick={() => onCopy(output)}>
-              {copied ? <Check size={17} aria-hidden="true" /> : <Copy size={17} aria-hidden="true" />}
-              {copied ? t("result.copied") : t("result.copy")}
-            </button>
-
-            <button
-              type="button"
-              className="pl-btn"
-              onClick={() => onSave(createContentActionPayload("output", output))}
-            >
-              <Star size={17} aria-hidden="true" />
-              {saved ? t("result.saved") : t("result.save")}
-            </button>
-
-            {canExportWord && (
-              <button type="button" className="pl-btn" onClick={() => onExport("docx", output)}>
-                <Download size={17} aria-hidden="true" />
-                {t("result.exportWord")}
-              </button>
-            )}
-
-            {canExportPpt && (
-              <button type="button" className="pl-btn" onClick={() => onExport("pptx", output)}>
-                <Download size={17} aria-hidden="true" />
-                {t("result.exportPpt")}
-              </button>
-            )}
-          </div>
+          <SectionCards sections={sections} t={t} />
         </>
-      )}
-
-      {exportStatus && (
-        <p className="pl-meta" role="status">
-          {exportStatus}
-        </p>
       )}
 
       <button

@@ -32,6 +32,8 @@ test("DOCX contains professional document parts and new branding", async () => {
   const zip = await JSZip.loadAsync(buffer);
   assert.ok(zip.file("word/document.xml"));
   assert.ok(zip.file("word/footer1.xml"));
+  const documentXml = await zip.file("word/document.xml").async("string");
+  assert.match(documentXml, /w:jc[^>]*w:val="both"/);
   const footer = await zip.file("word/footer1.xml").async("string");
   assert.match(footer, /AI Work Studio/);
   assert.doesNotMatch(footer, /PromptLab/);

@@ -46,4 +46,6 @@ test("finished result never exposes the internal prompt workflow", () => {
   );
   assert.match(resultSource, /onExport\("docx", output\)/);
   assert.match(resultSource, /createContentActionPayload\("output", output\)/);
+  assert.match(resultSource, /pl-doc-card|SectionCards|groupDocumentSections/);
+  assert.match(resultSource, /pl-result-toolbar/);
 });
