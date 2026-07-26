@@ -10,8 +10,6 @@ import Sheet from "./Sheet.jsx";
  * user has started writing.
  */
 
-const PREVIEW_COUNT = 6;
-
 function starterSummary(template) {
   const text = String(template.prompt || "").trim();
   return text.length > 96 ? `${text.slice(0, 93)}…` : text;
@@ -39,7 +37,7 @@ export default function Starters({ t, templates, onPick }) {
 
   const translateCategory = (value) => t(`opt.category.${value}`);
 
-  const preview = useMemo(() => templates.slice(0, PREVIEW_COUNT), [templates]);
+  const preview = useMemo(() => templates.slice(0, 3), [templates]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();

@@ -68,7 +68,7 @@ export default function Composer({
   return (
     <div className="pl-stack">
       <div className="pl-composer">
-        <label className="pl-sr" htmlFor={requestId}>
+        <label className="pl-composer-label" htmlFor={requestId}>
           {t("canvas.title")}
         </label>
         <textarea

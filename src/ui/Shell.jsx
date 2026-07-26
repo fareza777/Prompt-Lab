@@ -13,6 +13,7 @@ import Account from "./Account.jsx";
 import Improve from "./Improve.jsx";
 import Compare from "./Compare.jsx";
 import Report from "./Report.jsx";
+import { getRecordRestoreState } from "./contentRecord.js";
 
 /**
  * The application shell — one canvas, with everything secondary arriving as a
@@ -51,7 +52,7 @@ export default function Shell(props) {
     addAttachments,
     removeAttachment,
     maxAttachments,
-    generatePrompt,
+    createFinishedResult,
     isGenerating,
     errorMessage,
     warningMessage,
@@ -97,7 +98,6 @@ export default function Shell(props) {
     billingBusy,
     googleEnabled,
     quotaSummary,
-    runPrompt,
     runOutput,
     setRunOutput,
     isRunning,
@@ -132,6 +132,7 @@ export default function Shell(props) {
   const [languageChosen, setLanguageChosen] = useState(hasStoredLanguage);
   const [previousPrompt, setPreviousPrompt] = useState("");
   const [saved, setSaved] = useState(false);
+  const [reportContent, setReportContent] = useState("");
 
   const t = useMemo(() => makeTranslator(lang), [lang]);
 
@@ -159,23 +160,22 @@ export default function Shell(props) {
   // A fresh result invalidates the "saved" affordance.
   useEffect(() => {
     setSaved(false);
-  }, [prompt]);
+  }, [runOutput]);
 
-  const hasResult = Boolean(String(prompt || "").trim());
+  const hasResult = Boolean(String(runOutput || "").trim());
   const isLocalOnly = !hasAuthSession || !accountState?.userId;
 
-  const handleGenerate = useCallback(() => {
+  const handleGenerate = useCallback(async () => {
     setPreviousPrompt("");
-    // A new prompt invalidates the output of the previous one.
     setRunOutput?.("");
-    generatePrompt();
-  }, [generatePrompt, setRunOutput]);
+    await createFinishedResult?.();
+  }, [createFinishedResult, setRunOutput]);
 
   const handleSave = useCallback(
-    (text) => {
-      if (savePrompt(text ?? prompt, narrative)) setSaved(true);
+    (payload) => {
+      if (savePrompt(payload, narrative)) setSaved(true);
     },
-    [savePrompt, prompt, narrative]
+    [savePrompt, narrative]
   );
 
   const openImprove = useCallback(() => {
@@ -207,13 +207,15 @@ export default function Shell(props) {
 
   const openHistoryItem = useCallback(
     (item) => {
+      const restored = getRecordRestoreState(item);
       setSelectedLibraryId?.(item.id);
-      setPrompt(item.content || "");
+      setPrompt(restored.prompt);
+      setRunOutput?.(restored.output);
       setPreviousPrompt("");
       clearMessages();
       setSheet(null);
     },
-    [setSelectedLibraryId, setPrompt, clearMessages]
+    [setSelectedLibraryId, setPrompt, setRunOutput, clearMessages]
   );
 
   const pickStarter = useCallback(
@@ -304,86 +306,100 @@ export default function Shell(props) {
       </header>
 
       <main className="pl-main" id="pl-main">
-        <div className="pl-stack">
-          {!hasResult && !isGenerating && (
+        <div className="pl-workbench">
+          <aside className="pl-intro">
+            <p className="pl-eyebrow">{t("canvas.eyebrow")}</p>
             <div className="pl-lede">
-              <h1>{t("canvas.title")}</h1>
+              <h1>{t("canvas.hero")}</h1>
               <p>{t("canvas.subtitle")}</p>
             </div>
-          )}
+            {!hasResult && !isGenerating && (
+              <Starters t={t} templates={templates} onPick={pickStarter} />
+            )}
+          </aside>
 
-          {trialNotice && (
-            <div
-              className={trialNotice.tone === "warn" ? "pl-notice pl-notice--warn" : "pl-notice"}
-              role="status"
-            >
-              <span>
-                {trialNotice.text}
-                {trialNotice.hint ? ` ${trialNotice.hint}` : ""}
-              </span>
+          <section className="pl-work-column" aria-label={t("canvas.title")}>
+            {trialNotice && (
+              <div
+                className={trialNotice.tone === "warn" ? "pl-notice pl-notice--warn" : "pl-notice"}
+                role="status"
+              >
+                <span>
+                  {trialNotice.text}
+                  {trialNotice.hint ? ` ${trialNotice.hint}` : ""}
+                </span>
+              </div>
+            )}
+
+            <div className="pl-composer-tray">
+              <div className="pl-tray-core">
+                <Composer
+                  t={t}
+                  narrative={narrative}
+                  setNarrative={setNarrative}
+                  attachments={attachments}
+                  addAttachments={addAttachments}
+                  removeAttachment={removeAttachment}
+                  maxAttachments={maxAttachments}
+                  onGenerate={handleGenerate}
+                  isGenerating={isGenerating || isRunning}
+                  category={category}
+                  setCategory={setCategory}
+                  tone={tone}
+                  setTone={setTone}
+                  model={model}
+                  setModel={setModel}
+                  outputType={outputType}
+                  setOutputType={setOutputType}
+                  errorMessage={humanizeApiError(errorMessage, t)}
+                  warningMessage={humanizeApiError(warningMessage, t)}
+                  disabled={trialExhausted}
+                  disabledReason={trialExhausted ? t("trial.overHint") : ""}
+                />
+              </div>
             </div>
-          )}
 
-          <Composer
-            t={t}
-            narrative={narrative}
-            setNarrative={setNarrative}
-            attachments={attachments}
-            addAttachments={addAttachments}
-            removeAttachment={removeAttachment}
-            maxAttachments={maxAttachments}
-            onGenerate={handleGenerate}
-            isGenerating={isGenerating}
-            category={category}
-            setCategory={setCategory}
-            tone={tone}
-            setTone={setTone}
-            model={model}
-            setModel={setModel}
-            outputType={outputType}
-            setOutputType={setOutputType}
-            errorMessage={humanizeApiError(errorMessage, t)}
-            warningMessage={humanizeApiError(warningMessage, t)}
-            disabled={trialExhausted}
-            disabledReason={trialExhausted ? t("trial.overHint") : ""}
-          />
+            {trialExhausted && (
+              <button
+                type="button"
+                className="pl-btn pl-btn--primary pl-btn--block"
+                onClick={() => setSheet("account")}
+              >
+                {t("trial.cta")}
+              </button>
+            )}
 
-          {trialExhausted && (
-            <button
-              type="button"
-              className="pl-btn pl-btn--primary pl-btn--block"
-              onClick={() => setSheet("account")}
-            >
-              {t("trial.cta")}
-            </button>
-          )}
-
-          <Result
-            t={t}
-            prompt={prompt}
-            metrics={metrics}
-            isGenerating={isGenerating}
-            copied={copied}
-            onCopy={(text) => copyText(text ?? prompt)}
-            onSave={handleSave}
-            saved={saved}
-            onImprove={openImprove}
-            onCompare={openCompare}
-            canCompare={Boolean(previousPrompt)}
-            onRun={() => runPrompt?.(prompt)}
-            runOutput={runOutput}
-            isRunning={isRunning}
-            runError={humanizeApiError(runError, t)}
-            onExport={(format, text) => exportFile(format, text ?? prompt, narrative)}
-            canExportWord={Boolean(entitlements?.docxExport)}
-            canExportPpt={Boolean(entitlements?.pptxExport)}
-            exportStatus={exportStatus}
-            onReport={() => setSheet("report")}
-          />
-
-          {!hasResult && !isGenerating && (
-            <Starters t={t} templates={templates} onPick={pickStarter} />
-          )}
+            {(isGenerating || isRunning || hasResult || runError) && (
+              <div className="pl-result-tray">
+                <div className="pl-tray-core">
+                  <Result
+                    t={t}
+                    prompt={prompt}
+                    metrics={metrics}
+                    isGenerating={isGenerating}
+                    copied={copied}
+                    onCopy={(text) => copyText(text ?? prompt)}
+                    onSave={handleSave}
+                    saved={saved}
+                    onImprove={openImprove}
+                    onCompare={openCompare}
+                    canCompare={Boolean(previousPrompt)}
+                    runOutput={runOutput}
+                    isRunning={isRunning}
+                    runError={humanizeApiError(runError, t)}
+                    onExport={(format, text) => exportFile(format, text ?? prompt, narrative)}
+                    canExportWord={Boolean(entitlements?.docxExport)}
+                    canExportPpt={Boolean(entitlements?.pptxExport)}
+                    exportStatus={exportStatus}
+                    onReport={(payload) => {
+                      setReportContent(payload?.content || "");
+                      setSheet("report");
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </section>
         </div>
       </main>
 
@@ -466,7 +482,7 @@ export default function Shell(props) {
         t={t}
         open={sheet === "report"}
         onClose={closeSheet}
-        content={prompt}
+          content={reportContent}
         apiBase={apiBase}
         getAuthHeaders={getAuthHeaders}
       />

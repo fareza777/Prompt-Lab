@@ -46,21 +46,23 @@ test("the client keeps the prompt and its output separate", () => {
   assert.match(shell, /setRunOutput\?\.\(""\)/);
 });
 
-test("the result offers running as the next step, then shows both views", () => {
-  assert.match(result, /result\.run/);
-  assert.match(result, /result\.tabPrompt/);
-  assert.match(result, /result\.tabOutput/);
-  assert.match(result, /aria-pressed=\{showingOutput\}/);
-  // Copy, save, and export must act on whichever view is on screen.
-  assert.match(result, /const visibleText = showingOutput \? runOutput : prompt/);
-  assert.match(result, /onCopy\(visibleText\)/);
-  assert.match(result, /onExport\("docx", visibleText\)/);
+test("one action creates a finished result and keeps the prompt secondary", () => {
+  assert.match(main, /createFinishedResult as runResultFirst/);
+  assert.match(main, /async function createFinishedResult/);
+  assert.match(shell, /await createFinishedResult\?\.\(\)/);
+  assert.match(result, /const output = String\(runOutput/);
+  assert.match(result, /onCopy\(output\)/);
+  assert.match(result, /onExport\("docx", output\)/);
+  assert.match(result, /result\.viewPrompt/);
+  assert.match(result, /aria-expanded=\{promptOpen\}/);
+  assert.doesNotMatch(result, /result\.tabPrompt|result\.tabOutput/);
 });
 
-test("Improve and Compare stay attached to the prompt", () => {
-  // They rewrite the prompt, so they are meaningless while viewing the output.
-  assert.match(result, /\{!showingOutput && \(\s*<button[\s\S]{0,200}onImprove/);
-  assert.match(result, /\{!showingOutput && canCompare/);
+test("Improve and Compare stay inside the hidden prompt tools", () => {
+  const promptPanel = result.slice(result.indexOf('{promptOpen && ('), result.indexOf("{exportStatus &&"));
+  assert.match(promptPanel, /onClick=\{onImprove\}/);
+  assert.match(promptPanel, /\{canCompare &&/);
+  assert.match(promptPanel, /onClick=\{onCompare\}/);
 });
 
 test("the run wait states its own longer duration", () => {

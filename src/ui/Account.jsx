@@ -230,10 +230,18 @@ export default function Account({
             <button
               type="button"
               className="pl-btn pl-btn--primary"
-              onClick={onUpgrade}
+              onClick={() => onUpgrade("Pro")}
               disabled={billingBusy}
             >
-              {t("account.upgrade")}
+              {t("account.upgradePro")}
+            </button>
+            <button
+              type="button"
+              className="pl-btn"
+              onClick={() => onUpgrade("Business")}
+              disabled={billingBusy}
+            >
+              {t("account.upgradeBusiness")}
             </button>
             <button type="button" className="pl-btn" onClick={onRestore} disabled={billingBusy}>
               {t("account.restore")}

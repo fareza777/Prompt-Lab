@@ -1,6 +1,5 @@
 import { Check, FileText, Sparkles, Wand2, Download, RotateCcw, AlertTriangle } from "lucide-react";
 import Sheet from "./Sheet.jsx";
-import { FIRST_RUN_STEPS } from "./FirstRun.jsx";
 
 /**
  * The permanent home for the detailed explanation.
@@ -11,6 +10,7 @@ import { FIRST_RUN_STEPS } from "./FirstRun.jsx";
  */
 
 const ICONS = { input: FileText, build: Sparkles, improve: Wand2, output: Download };
+const GUIDE_STEPS = [{ id: "input" }, { id: "build" }, { id: "output" }];
 
 export default function Guide({ t, open, onClose, onReplay }) {
   return (
@@ -22,7 +22,7 @@ export default function Guide({ t, open, onClose, onReplay }) {
           {t("guide.section.workflow")}
         </h3>
         <ol className="pl-guide-steps">
-          {FIRST_RUN_STEPS.map((step, i) => {
+          {GUIDE_STEPS.map((step, i) => {
             const Icon = ICONS[step.id] || FileText;
             return (
               <li key={step.id}>

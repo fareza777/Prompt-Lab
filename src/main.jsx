@@ -7,6 +7,8 @@ import "./ui/base.css";
 import "./ui/shell.css";
 import Shell from "./ui/Shell.jsx";
 import { detectLanguage } from "./ui/i18n.js";
+import { createContentRecord, normalizeContentRecord } from "./ui/contentRecord.js";
+import { createFinishedResult as runResultFirst } from "./ui/resultFlow.js";
 /* Admin-only; kept out of the initial bundle along with the legacy stylesheet. */
 const AdminConsole = React.lazy(() => import("./admin/AdminConsole.jsx"));
 import {
@@ -857,26 +859,29 @@ function buildAttachmentManifestForApi(attachments) {
 
 function normalizeLibrary(raw) {
   if (!Array.isArray(raw)) return defaultLibrary;
-  return raw.map((item, index) =>
-    typeof item === "string"
-      ? {
-          id: `legacy-${index}-${Date.now()}`,
-          title: item,
-          content: item,
-          folder: "General",
-          tag: "Legacy",
-          createdAt: Date.now() - index,
-        }
-      : {
-          id: item.id || `item-${index}-${Date.now()}`,
-          title: item.title || "Untitled prompt",
-          content: item.content || item.title || "",
-          folder: item.folder || "General",
-          tag: item.tag || "Prompt",
-          createdAt: item.createdAt || Date.now(),
-          updatedAt: item.updatedAt || item.createdAt || Date.now(),
-        }
-  );
+  return raw.map((item, index) => {
+    const source =
+      typeof item === "string"
+        ? {
+            id: `legacy-${index}-${Date.now()}`,
+            title: item,
+            content: item,
+            folder: "General",
+            tag: "Legacy",
+            createdAt: Date.now() - index,
+          }
+        : {
+            ...item,
+            id: item.id || `item-${index}-${Date.now()}`,
+            title: item.title || "Untitled prompt",
+            content: item.content || item.title || "",
+            folder: item.folder || "General",
+            tag: item.tag || "Prompt",
+            createdAt: item.createdAt || Date.now(),
+            updatedAt: item.updatedAt || item.createdAt || Date.now(),
+          };
+    return normalizeContentRecord(source, index);
+  });
 }
 
 function normalizeCustomTemplates(raw) {
@@ -1569,8 +1574,41 @@ function App() {
     return ok;
   }
 
-  function savePrompt(content = prompt, titleSeed = narrative, meta = {}) {
+  function savePrompt(contentOrPayload = prompt, titleSeed = narrative, meta = {}) {
+    const payload =
+      contentOrPayload && typeof contentOrPayload === "object"
+        ? contentOrPayload
+        : { contentType: "prompt", content: contentOrPayload };
+    const contentType = payload.contentType === "output" ? "output" : "prompt";
+    const content = String(payload.content || "").trim();
+    if (!content) return false;
     const title = titleSeed.trim().split(/\s+/).slice(0, 8).join(" ") || "New prompt";
+
+    if (contentType === "output") {
+      const now = Date.now();
+      const item = createContentRecord({
+        id: globalThis.crypto?.randomUUID?.() || `${now}`,
+        title,
+        contentType: "output",
+        request: narrative,
+        prompt: generatedPrompt,
+        output: content,
+        folder: outputType,
+        tag: category,
+        score: scorePrompt(generatedPrompt).score,
+        createdAt: now,
+        updatedAt: now,
+        meta: {
+          source: generationSource || "server",
+          model: generationModel || "",
+        },
+      });
+      setLibrary((items) => [item, ...items].slice(0, libraryLimit));
+      setSelectedLibraryId(item.id);
+      flashAction("Saved to library");
+      return true;
+    }
+
     const existing = library.find((item) => item.id === selectedLibraryId);
     if (existing && String(existing.content || "").trim() !== String(content || "").trim()) {
       const updated = appendPromptVersion(existing, content, {
@@ -2293,6 +2331,14 @@ function App() {
     }
   }
 
+  async function createFinishedResult() {
+    setRunOutput("");
+    return runResultFirst({
+      generatePrompt: () => generatePrompt(),
+      runPrompt,
+    });
+  }
+
   async function optimizePrompt(rawPrompt, mode) {
     setIsOptimizing(true);
     setOptimizerError("");
@@ -2694,6 +2740,7 @@ function App() {
     copyText,
     savePrompt,
     generatePrompt,
+    createFinishedResult,
     isGenerating,
     library,
     libraryLimit,

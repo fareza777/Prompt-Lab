@@ -57,7 +57,7 @@ test("a skip link precedes the main landmark", () => {
 });
 
 test("the request textarea is programmatically labelled", () => {
-  assert.match(composerSource, /<label className="pl-sr" htmlFor=\{requestId\}>/);
+  assert.match(composerSource, /<label className="pl-composer-label" htmlFor=\{requestId\}>/);
   assert.match(composerSource, /<textarea\s+id=\{requestId\}/);
 });
 
@@ -101,9 +101,8 @@ test("interactive controls have a visible keyboard focus treatment", () => {
   assert.match(baseCss, /outline:\s*2px solid var\(--focus\)/);
 });
 
-test("light is the default scheme and dark is reachable both ways", () => {
-  assert.match(tokensCss, /@media \(prefers-color-scheme: dark\)/);
-  assert.match(tokensCss, /:root:not\(\[data-ui-theme="light"\]\)/);
+test("light is the default scheme and dark requires an explicit choice", () => {
+  assert.doesNotMatch(tokensCss, /@media \(prefers-color-scheme: dark\)/);
   assert.match(tokensCss, /:root\[data-ui-theme="dark"\]/);
   assert.match(tokensCss, /color-scheme: light/);
 });

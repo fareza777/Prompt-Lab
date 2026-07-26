@@ -10,7 +10,7 @@ const STORE_KEY = "promptlab-ui-theme";
 const MODES = ["system", "light", "dark"];
 
 /** Matches --paper in tokens.css for each scheme. */
-const BAR_COLOR = { light: "#fcfcfa", dark: "#16191b" };
+const BAR_COLOR = { light: "#f7f3eb", dark: "#16191b" };
 
 export function readThemeMode() {
   try {
@@ -19,7 +19,7 @@ export function readThemeMode() {
   } catch {
     /* ignore */
   }
-  return "system";
+  return "light";
 }
 
 function prefersDark() {
@@ -36,7 +36,7 @@ export function resolveScheme(mode) {
 }
 
 export function applyThemeMode(mode) {
-  const safeMode = MODES.includes(mode) ? mode : "system";
+  const safeMode = MODES.includes(mode) ? mode : "light";
   const root = document.documentElement;
 
   if (safeMode === "system") root.removeAttribute("data-ui-theme");
