@@ -2418,6 +2418,18 @@ html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !impor
       html[data-route="article-marketing"] #article-page-best-prompt-for-contract-review { display: none !important; }
       html.boot-app #article-page-best-prompt-for-contract-review { display: none !important; }
 </style>
+    <style>
+      /*
+       * The legacy marketing document contains a few historical fragments that
+       * sit directly under <body>. On the installed /app route, isolate the
+       * product shell completely so none of that content can appear before the
+       * React workspace on mobile.
+       */
+      html.boot-app body > :not(#app-root):not(script):not(style),
+      html[data-route="app"] body > :not(#app-root):not(script):not(style) {
+        display: none !important;
+      }
+    </style>
   </head>
   <body>
     <!-- ============================== LANDING PAGE ============================== -->
@@ -12615,8 +12627,8 @@ Hint: events are deduplicated; use
         <!-- ============================== ROUTE SWITCHER (UI polish; SEO in /seo-route.js) ============================== -->
     <script>
       (function () {
-        if (window.AI Work StudioRoute) {
-          window.AI Work StudioRoute.syncRouteUi();
+        if (window.PromptLabRoute) {
+          window.PromptLabRoute.syncRouteUi();
         }
 
         var observer = new IntersectionObserver(function (entries) {

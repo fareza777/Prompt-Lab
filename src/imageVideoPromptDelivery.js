@@ -1,5 +1,5 @@
 /**
- * Image & video generation prompt frameworks for PromptLab builder/optimizer.
+ * Image & video generation instruction frameworks for the internal builder/optimizer.
  */
 
 export function detectImageVideoIntent(payload = {}) {

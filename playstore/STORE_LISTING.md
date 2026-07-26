@@ -110,7 +110,7 @@ Everyone / general audience. Complete Google's questionnaire honestly.
 | Data type | Collected | Shared | Purpose |
 |---|---|---|---|
 | Email, name | Yes | Supabase | Account |
-| User-generated content (requests, prompts, files, outputs) | Yes | AI providers | App functionality |
+| User-generated content (requests, files, and finished results) | Yes | AI providers | App functionality |
 | App activity (usage/quota) | Yes | Supabase | Analytics / account |
 
 Encrypted in transit: Yes. Users can request deletion via support email.

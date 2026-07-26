@@ -9,7 +9,7 @@ export const SUPPORT_EMAIL = "support@prompt-lab.xyz";
 export const SETTINGS_SECTION_NAMES = Object.freeze([
   "Account",
   "Membership",
-  "Prompt Defaults",
+  "Workspace Defaults",
   "Data & Privacy",
   "Support",
   "About",

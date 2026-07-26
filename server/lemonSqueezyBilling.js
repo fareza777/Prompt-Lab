@@ -22,7 +22,7 @@ function variantMatchesEnv(variantId, envKey) {
 }
 
 /**
- * Map Lemon Squeezy variant ID (numeric or checkout UUID) → PromptLab plan.
+ * Map Lemon Squeezy variant ID (numeric or checkout UUID) to an app plan.
  * Env may be a numeric variant id or full checkout URL from Share link.
  */
 export function getPlanForVariantId(variantId) {
@@ -299,7 +299,7 @@ export async function handleLemonSqueezyWebhook(admin, payload, eventName) {
     userId = await resolveUserIdByEmail(admin, identity.email);
   }
   if (!userId) {
-    return { ok: false, error: "Could not match webhook to a PromptLab user (set checkout custom user_id)." };
+    return { ok: false, error: "Could not match webhook to an app user (set checkout custom user_id)." };
   }
 
   const action = resolveSubscriptionAction(payload, eventName);

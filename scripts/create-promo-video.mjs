@@ -1,6 +1,6 @@
 /**
- * PromptLab promotional video (YouTube / Play Console)
- * Output: playstore/assets/promo/PromptLab-promo-1080p.mp4
+ * AI Work Studio promotional video (YouTube / Play Console)
+ * Output: playstore/assets/promo/AI-Work-Studio-promo-1080p.mp4
  *
  * Specs: 1920x1080, H.264, ~30fps, ~28s, silent (add music on YouTube if desired)
  */
@@ -134,7 +134,7 @@ async function prepareCards() {
   <text x="560" y="485" font-family="system-ui, Segoe UI, sans-serif" font-size="30" fill="#667067">${escapeXml(body)}</text>
 </svg>`);
 
-  const titleCard = card("AI WORK STUDIO", "PromptLab", "From a rough idea to a finished AI draft.");
+  const titleCard = card("AI WORK STUDIO", "Finished work", "From rough input to a polished document.");
   const endCard = card("RESULT FIRST", "Ready to continue", "prompt-lab.xyz");
 
   await sharp(titleCard)
@@ -281,7 +281,7 @@ async function main() {
   // remove trailing semicolon
   filter = filter.replace(/;$/, "");
 
-  const outMp4 = join(promoDir, "PromptLab-promo-1080p.mp4");
+  const outMp4 = join(promoDir, "AI-Work-Studio-promo-1080p.mp4");
   await run(ffmpeg, [
     "-y",
     ...inputs,
@@ -305,10 +305,10 @@ async function main() {
 
   // Also write a short portrait-friendly vertical teaser? Skip — Play promo is landscape YouTube.
 
-  const readme = `# PromptLab promotional video
+  const readme = `# AI Work Studio promotional video
 
 ## File
-- \`PromptLab-promo-1080p.mp4\` — 1920×1080, H.264, silent
+- \`AI-Work-Studio-promo-1080p.mp4\` — 1920×1080, H.264, silent
 
 ## Play Console
 1. Upload the MP4 to **YouTube** (unlisted is fine)

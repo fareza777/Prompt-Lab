@@ -127,7 +127,7 @@ export function shouldRecoverStream({ remainingBudgetMs, fallbackModels } = {}) 
 }
 
 /**
- * PromptLab Prompt Engine v2
+ * Internal instruction engine v2
  * --------------------------------------------------------------------------
  * Implementasi 10 optimasi engine prompt:
  *   1. System prompt restructure → XML/section tags
@@ -160,7 +160,7 @@ export function buildIntentSystemPromptXml(payload = {}) {
   const langCode = payload.outputLanguage || "id";
   const meta = getLanguageMeta(langCode);
   return [
-    `<role>PromptLab Intent Engine — ${meta.architectLabel}.</role>`,
+    `<role>Internal Intent Engine — ${meta.architectLabel}.</role>`,
     `<objective>Decompose user intent → expand domain knowledge → lock deliverable → render ONE ready-to-use prompt in ${meta.label}, no chatty preface.</objective>`,
     "<deliverable_lock priority=\"critical\">",
     `  Selected deliverable: ${deliverable}`,
@@ -225,7 +225,7 @@ export function buildLeanIntentSystemPrompt(payload = {}) {
   const meta = getLanguageMeta(langCode);
   const media = buildImageVideoPromptAddon({ ...payload, outputLanguage: langCode });
   const blocks = [
-    `<role>PromptLab — ${meta.architectLabel}.</role>`,
+    `<role>Internal Workspace — ${meta.architectLabel}.</role>`,
     `<objective>Render ONE copy-paste-ready prompt in ${meta.label}. No chatty preface.</objective>`,
     `<deliverable_lock>Deliverable: ${deliverable}. Never swap deliverable type.</deliverable_lock>`,
     `<target_ai>${target}</target_ai>`,
@@ -249,7 +249,7 @@ export function buildOptimizerSystemPromptXml(payload = {}) {
   const langCode = payload.outputLanguage || "id";
   const meta = getLanguageMeta(langCode);
   return [
-    `<role>PromptLab Optimizer Engine — ${meta.architectLabel}.</role>`,
+    `<role>Internal Optimizer Engine — ${meta.architectLabel}.</role>`,
     `<objective>Improve an existing prompt using optimization mode as a meta-prompt layer. Preserve original intent, deliverable, and ${meta.label} language. Return only the final optimized prompt.</objective>`,
     `<optimization_mode>${mode}</optimization_mode>`,
     `<target_ai>${target}</target_ai>`,
@@ -260,7 +260,7 @@ export function buildOptimizerSystemPromptXml(payload = {}) {
     "  - Tambahkan role/context/output format/constraints/acceptance jika belum ada.",
     "  - Pertahankan fakta yang sudah ada di prompt lama.",
     "</rules>",
-    "<forbidden>preface, engine brief, meta-komentar, judul \"PromptLab Optimizer Engine\", language switch</forbidden>",
+    "<forbidden>preface, engine brief, meta-komentar, judul engine internal, language switch</forbidden>",
     `<language>${getLanguageLockInstruction(langCode).replace(/\n/g, "\n  ")}</language>`,
     "<output>final optimized prompt only, ready to copy.</output>",
   ].join("\n");
@@ -273,7 +273,7 @@ export function buildOptimizerSystemPromptXml(payload = {}) {
 export function buildCompareSystemPromptXml(payload = {}) {
   const target = payload.targetModel || "General";
   return [
-    "<role>PromptLab Compare Judge — neutral prompt evaluator.</role>",
+    "<role>Internal Compare Judge — neutral instruction evaluator.</role>",
     "<objective>Evaluate two prompts AS prompts (jangan eksekusi). Score on 6 dimensions and pick a winner.</objective>",
     `<target_ai>${target}</target_ai>`,
     "<bias_guard>",
@@ -818,7 +818,7 @@ export function localPromptScore(prompt) {
 }
 
 /**
- * Eval delta: bandingkan baseline (raw user input) vs PromptLab output.
+ * Eval delta: bandingkan baseline (raw user input) vs internal output.
  * Hasil dapat dikirim ke logging/telemetry untuk dashboard "win rate".
  * @param {string} rawInput
  * @param {string} promptLabOutput

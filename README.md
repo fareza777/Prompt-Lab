@@ -1,6 +1,6 @@
-# PromptLab
+# AI Work Studio
 
-PromptLab adalah aplikasi mobile-first untuk mengubah catatan, foto, screenshot, dan file menjadi dokumen kerja: prompt AI terstruktur, laporan Word, dan slide PowerPoint.
+AI Work Studio adalah aplikasi mobile-first untuk mengubah catatan, foto, screenshot, dan file menjadi hasil kerja siap pakai seperti laporan Word, notulen, dan slide PowerPoint.
 
 ## Wajib dilakukan setelah rilis ini
 
@@ -108,7 +108,7 @@ Jika API key override dikosongkan, backend memakai Environment Variables Vercel.
 
 ## Login dan Membership
 
-PromptLab memakai Supabase Auth untuk login email/password. Setup tahap 1:
+AI Work Studio memakai Supabase Auth untuk login email/password. Setup tahap 1:
 
 1. Buka Supabase SQL Editor.
 2. Jalankan isi file `supabase/phase-1-auth.sql`.

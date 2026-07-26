@@ -20,7 +20,7 @@ export const PLAN_ENTITLEMENTS = {
     ocrPriority: false,
     aiCompare: false,
     /**
-     * Free users get the Improve action. It is what distinguishes PromptLab
+     * Free users get the Improve action. It distinguishes the workspace
      * from pasting straight into a chat app, and locking it meant nobody could
      * experience the difference before being asked to pay. Cost stays bounded
      * by the token quota, which Improve draws from like any other call.

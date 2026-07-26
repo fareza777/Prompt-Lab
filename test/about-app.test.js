@@ -31,7 +31,7 @@ test("Settings keyboard traversal includes About as the sixth destination", () =
   assert.deepEqual(SETTINGS_SECTION_NAMES, [
     "Account",
     "Membership",
-    "Prompt Defaults",
+    "Workspace Defaults",
     "Data & Privacy",
     "Support",
     "About",

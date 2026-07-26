@@ -1125,7 +1125,7 @@ function buildLocalOptimizedPrompt(rawPrompt, mode, targetModel, tone) {
 **Context:** The user's original prompt is:
 ${source}
 
-**PromptLab Optimizer Engine:** Apply ${optimizerBlueprint.domain}. Use this only as internal rewrite logic: ${optimizerBlueprint.archetype}.
+**Internal Optimizer Engine:** Apply ${optimizerBlueprint.domain}. Use this only as internal rewrite logic: ${optimizerBlueprint.archetype}.
 
 **Objective:** Optimize the prompt using "${mode}" mode for ${targetModel}. Preserve the original intent and requested output type. Do not turn an app request into a document, a PPT request into Word, or a Word request into PPT unless the user explicitly asks for it.
 
@@ -1162,7 +1162,7 @@ class AppErrorBoundary extends Component {
   }
 
   componentDidCatch(error) {
-    console.error("PromptLab render error", error);
+    console.error("AI Work Studio render error", error);
     dismissStartupSplash();
   }
 
@@ -2956,7 +2956,7 @@ function mountPromptLab() {
     }
     dismissStartupSplash();
   } catch (error) {
-    console.error("PromptLab mount failed", error);
+    console.error("AI Work Studio mount failed", error);
     root.innerHTML = `<main class="v2-boot-error" data-theme="v2" style="min-height:100vh;padding:24px;color:#242a27;background:#f7f3eb;font-family:system-ui,sans-serif"><h1>AI Work Studio failed to load</h1><p>${error?.message || "Unknown error"}</p><button type="button" onclick="location.reload()" style="margin-top:16px;padding:10px 16px;cursor:pointer">Reload</button></main>`;
     dismissStartupSplash();
   }

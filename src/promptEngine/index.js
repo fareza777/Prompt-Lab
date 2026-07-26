@@ -1,5 +1,5 @@
 /**
- * PromptLab unified prompt engine — single import surface for client + server.
+ * Unified instruction engine — single import surface for client + server.
  */
 export { scorePrompt, scoreOptimizedPrompt } from "../promptScore.js";
 export { scorePromptForCompare, getLocalPromptRisks } from "./scoreCompare.js";

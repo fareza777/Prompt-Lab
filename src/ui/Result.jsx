@@ -8,6 +8,72 @@ import {
   Star,
 } from "lucide-react";
 import { createContentActionPayload } from "./contentRecord.js";
+import { parseMarkdownBlocks } from "./markdownBlocks.js";
+
+function renderInline(text) {
+  return String(text)
+    .split(/(\*\*[^*]+\*\*|`[^`]+`)/g)
+    .filter(Boolean)
+    .map((part, index) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return <strong key={`${index}-${part}`}>{part.slice(2, -2)}</strong>;
+      }
+      if (part.startsWith("`") && part.endsWith("`")) {
+        return <code key={`${index}-${part}`}>{part.slice(1, -1)}</code>;
+      }
+      return part;
+    });
+}
+
+function DocumentOutput({ content }) {
+  const blocks = parseMarkdownBlocks(content);
+
+  return blocks.map((block, index) => {
+    const key = `${block.type}-${index}`;
+    if (block.type === "heading") {
+      const Heading = `h${Math.min(4, block.level)}`;
+      return <Heading key={key}>{renderInline(block.text)}</Heading>;
+    }
+    if (block.type === "list") {
+      const List = block.ordered ? "ol" : "ul";
+      return (
+        <List key={key}>
+          {block.items.map((item, itemIndex) => (
+            <li key={`${key}-${itemIndex}`}>{renderInline(item)}</li>
+          ))}
+        </List>
+      );
+    }
+    if (block.type === "table") {
+      return (
+        <div className="pl-doc-table-wrap" key={key}>
+          <table>
+            <thead>
+              <tr>
+                {block.headers.map((header, cellIndex) => (
+                  <th key={`${key}-head-${cellIndex}`}>{renderInline(header)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {block.rows.map((row, rowIndex) => (
+                <tr key={`${key}-row-${rowIndex}`}>
+                  {row.map((cell, cellIndex) => (
+                    <td key={`${key}-${rowIndex}-${cellIndex}`}>{renderInline(cell)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+    if (block.type === "quote") {
+      return <blockquote key={key}>{renderInline(block.text)}</blockquote>;
+    }
+    return <p key={key}>{renderInline(block.text)}</p>;
+  });
+}
 
 function Elapsed() {
   const [seconds, setSeconds] = useState(0);
@@ -86,7 +152,7 @@ export default function Result({
 
       {output && (
         <article className="pl-doc pl-doc--output" aria-live="polite">
-          {output}
+          <DocumentOutput content={output} />
         </article>
       )}
 

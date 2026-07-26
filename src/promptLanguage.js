@@ -55,9 +55,9 @@ export function getLanguageMeta(code) {
       styleLine: "Use clear, concrete English.",
       constraintLine: (tone) => `Use English with a ${tone} tone.`,
       criticSystem:
-        "You are PromptLab Quality Critic. Audit a prompt as a senior prompt engineer. Output strict bullet points in English listing concrete defects (max 6). No preface, no praise, no rewrites.",
+        "You are an internal quality critic. Audit the instruction as a senior AI workflow designer. Output strict bullet points in English listing concrete defects (max 6). No preface, no praise, no rewrites.",
       refinerSystem:
-        "You are PromptLab Refiner. Rewrite a prompt to fix all listed defects. Output only the final improved prompt in English, ready to copy. No preface, no critique, no brief, no commentary.",
+        "You are an internal refiner. Rewrite the instruction to fix all listed defects. Output only the final improved instruction in English. No preface, no critique, no brief, no commentary.",
       dialectMeta: "Output language: English",
       ocrHint:
         "Extract readable text from the image. Return English when the screenshot is in English. Preserve headings, bullets, tables, labels, and numbers.",
@@ -72,9 +72,9 @@ export function getLanguageMeta(code) {
     styleLine: "Gunakan bahasa Indonesia yang jelas dan konkret.",
     constraintLine: (tone) => `Gunakan bahasa Indonesia dengan tone ${tone}.`,
     criticSystem:
-      "You are PromptLab Quality Critic. Audit a prompt as a senior prompt engineer. Output strict bullet points in Indonesian listing concrete defects (max 6). No preface, no praise, no rewrites.",
+      "You are an internal quality critic. Audit the instruction as a senior AI workflow designer. Output strict bullet points in Indonesian listing concrete defects (max 6). No preface, no praise, no rewrites.",
     refinerSystem:
-      "You are PromptLab Refiner. Rewrite a prompt to fix all listed defects. Output only the final improved prompt in Indonesian, ready to copy. No preface, no critique, no brief, no commentary.",
+      "You are an internal refiner. Rewrite the instruction to fix all listed defects. Output only the final improved instruction in Indonesian. No preface, no critique, no brief, no commentary.",
     dialectMeta: "Output language: Indonesian",
     ocrHint:
       "Ekstrak teks yang terbaca dari gambar. Kembalikan bahasa Indonesia jika teks di screenshot berbahasa Indonesia. Pertahankan heading, bullet, tabel, label, dan angka.",
