@@ -2,27 +2,24 @@
 
 Generated assets for Google Play **Store listing**.
 
-## Files
+## Upload these
 
-| File | Use in Play Console |
-|------|---------------------|
-| `app-icon-512.png` | **App icon** (512×512 PNG, full-bleed) |
-| `feature-graphic-1024x500.png` | **Feature graphic** (1024×500) |
-| `screenshot-phone-*.png` | **Phone screenshots** — 1080×1920 3D marketing frames |
-| `raw/screenshot-phone-*.png` | Raw UI captures used as framing source |
+| File | Play Console field |
+|------|--------------------|
+| `app-icon-512.png` | App icon (512×512) |
+| `feature-graphic-1024x500.png` | Feature graphic (1024×500) |
+| `screenshot-01.png` … `screenshot-08.png` | Phone screenshots (1080×1920), upload in order |
 
-## Current phone set (8)
+## Screenshot story (1 → 8)
 
-Fresh captures from the current GUI, framed with side-angle 3D + Indonesian promo copy:
-
-1. `screenshot-phone-language.png` — pilih bahasa
-2. `screenshot-phone-auth.png` — masuk / tamu
-3. `screenshot-phone-tour.png` — onboarding workflow
-4. `screenshot-phone-workspace.png` — composer / buat hasil
-5. `screenshot-phone-result.png` — hasil kartu buka-tutup + export
-6. `screenshot-phone-history.png` — riwayat
-7. `screenshot-phone-account.png` — akun & tampilan
-8. `screenshot-phone-guide.png` — panduan
+1. Pilih bahasa tampilan  
+2. Masuk, atau coba sebagai tamu  
+3. Pelajari alur kerjanya  
+4. Tulis kebutuhanmu, lalu buat hasil  
+5. Dokumen jadi langsung di layar  
+6. Simpan, lalu buka lagi kapan saja  
+7. Atur akun, tema, dan kuota  
+8. Butuh bantuan? Buka Panduan  
 
 ## Regenerate
 
@@ -31,14 +28,10 @@ npm run build
 npm run playstore:assets
 ```
 
-Or frame only (from `raw/`):
+Or separately:
 
 ```bash
-npm run playstore:frame
+node scripts/generate-playstore-assets.mjs   # icon + feature graphic
+node scripts/capture-playstore-screenshots.mjs
+node scripts/frame-playstore-screenshots.mjs # 2D frames → screenshot-01…08
 ```
-
-## Upload order
-
-1. Store listing → **App icon** → `app-icon-512.png`
-2. **Feature graphic** → `feature-graphic-1024x500.png`
-3. **Phone screenshots** → upload the eight current surfaces above (skip stale `advanced-controls` if still present)
