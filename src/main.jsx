@@ -9,6 +9,10 @@ import Shell from "./ui/Shell.jsx";
 import { detectLanguage } from "./ui/i18n.js";
 import { createContentRecord, normalizeContentRecord } from "./ui/contentRecord.js";
 import { createFinishedResult as runResultFirst } from "./ui/resultFlow.js";
+import {
+  detectDeliverableProfile,
+  validateFinishedOutput,
+} from "./deliverableProfiles.js";
 /* Admin-only; kept out of the initial bundle along with the legacy stylesheet. */
 const AdminConsole = React.lazy(() => import("./admin/AdminConsole.jsx"));
 import {
@@ -2312,6 +2316,7 @@ function App() {
         headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
         body: JSON.stringify({
           prompt: text,
+          narrative,
           outputType,
           category,
           generationMode,
@@ -2319,7 +2324,10 @@ function App() {
       });
       const data = await readApiJson(response);
       if (!response.ok) throw new Error(data.error || "Failed to run the prompt.");
-      const content = data.content || data.prompt || "";
+      const rawContent = data.content || data.prompt || "";
+      const profile = detectDeliverableProfile({ narrative, outputType, content: rawContent });
+      const checked = validateFinishedOutput(rawContent, profile);
+      const content = checked.content;
       setRunOutput(content);
       applyServerQuota(data.quota);
       return content;

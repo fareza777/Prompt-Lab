@@ -18,6 +18,11 @@ import { createClient } from "@supabase/supabase-js";
 import { buildPhasedAppDeliveryInstruction } from "../src/phasedAppDelivery.js";
 import { buildStructuredAuditInstruction } from "../src/structuredAuditDelivery.js";
 import {
+  buildDeliverableInstruction,
+  detectDeliverableProfile,
+  validateFinishedOutput,
+} from "../src/deliverableProfiles.js";
+import {
   buildGrokVideoFrameworkInstruction,
   buildImageVideoPromptAddon,
   detectImageVideoIntent,
@@ -1175,7 +1180,7 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
       prompt,
       outputType: String(req.body?.outputType || ""),
       category: String(req.body?.category || ""),
-      narrative: prompt,
+      narrative: String(req.body?.narrative || prompt),
       generationMode: String(req.body?.generationMode || "Balanced"),
       modelSettings,
     };
@@ -1196,9 +1201,14 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
     // real data attached, so run cold a model reasonably replies "send me the
     // details first". A system message loses to 5,000 characters of user
     // instruction; repeating the directive as the last thing read does not.
+    const deliverableProfile = detectDeliverableProfile(payload);
+    const deliverableInstruction = buildDeliverableInstruction({
+      profile: deliverableProfile,
+      language: resolveOutputLanguage(payload.narrative || prompt),
+    });
     const messages = [
       { role: "system", content: RUN_SYSTEM_PROMPT },
-      { role: "user", content: `${prompt}\n\n${RUN_FINAL_DIRECTIVE}` },
+      { role: "user", content: `${prompt}${deliverableInstruction}\n\n${RUN_FINAL_DIRECTIVE}` },
     ];
     const primaryModel = modelSettings?.primaryModel || runtime.defaultModel;
     const fallbackModels = getOpenRouterFallbackModels(
@@ -1259,7 +1269,9 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
     }
 
     const raw = String(completion?.choices?.[0]?.message?.content || "");
-    const content = sanitizeRunOutput(raw);
+    const sanitized = sanitizeRunOutput(raw);
+    const checked = validateFinishedOutput(sanitized, deliverableProfile);
+    const content = checked.content;
     if (!content) throw new Error("The model returned an empty result.");
 
     await finishGenerateResponse(

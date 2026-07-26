@@ -86,7 +86,10 @@ test("the anti-stalling directive is repeated after the prompt", () => {
   assert.match(server, /Do NOT list what is missing/i);
   assert.match(server, /square\s*\n?\s*"?brackets/i);
   // It must be appended to the user turn, not left in the system slot.
-  assert.match(server, /content: `\$\{prompt\}\\n\\n\$\{RUN_FINAL_DIRECTIVE\}`/);
+  assert.match(
+    server,
+    /content: `\$\{prompt\}\$\{deliverableInstruction\}\\n\\n\$\{RUN_FINAL_DIRECTIVE\}`/,
+  );
 });
 
 test("the run instruction forbids stalling for more detail", () => {

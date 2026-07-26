@@ -46,23 +46,19 @@ test("the client keeps the prompt and its output separate", () => {
   assert.match(shell, /setRunOutput\?\.\(""\)/);
 });
 
-test("one action creates a finished result and keeps the prompt secondary", () => {
+test("one action creates a finished result and keeps the prompt internal", () => {
   assert.match(main, /createFinishedResult as runResultFirst/);
   assert.match(main, /async function createFinishedResult/);
   assert.match(shell, /await createFinishedResult\?\.\(\)/);
   assert.match(result, /const output = String\(runOutput/);
   assert.match(result, /onCopy\(output\)/);
   assert.match(result, /onExport\("docx", output\)/);
-  assert.match(result, /result\.viewPrompt/);
-  assert.match(result, /aria-expanded=\{promptOpen\}/);
+  assert.doesNotMatch(result, /viewPrompt|promptOpen|copyPrompt/);
   assert.doesNotMatch(result, /result\.tabPrompt|result\.tabOutput/);
 });
 
-test("Improve and Compare stay inside the hidden prompt tools", () => {
-  const promptPanel = result.slice(result.indexOf('{promptOpen && ('), result.indexOf("{exportStatus &&"));
-  assert.match(promptPanel, /onClick=\{onImprove\}/);
-  assert.match(promptPanel, /\{canCompare &&/);
-  assert.match(promptPanel, /onClick=\{onCompare\}/);
+test("prompt-only Improve and Compare controls are absent from results", () => {
+  assert.doesNotMatch(result, /onClick=\{onImprove\}|onClick=\{onCompare\}|canCompare/);
 });
 
 test("the run wait states its own longer duration", () => {
@@ -89,10 +85,8 @@ test("run copy exists in both languages", () => {
   }
 });
 
-test("product copy does not claim finished documents the app cannot deliver", async () => {
+test("product copy describes finished documents the app now delivers", async () => {
   const landing = await read("../src/LandingPage.jsx");
-  // The tagline described output the engine does not produce on its own.
-  assert.doesNotMatch(translate("id", "app.tagline"), /jadi dokumen/i);
-  assert.doesNotMatch(translate("en", "app.tagline"), /to documents/i);
-  assert.doesNotMatch(landing, /into work you can send/);
+  assert.match(translate("id", "canvas.subtitle"), /dokumen kerja/i);
+  assert.match(landing, /finished work/i);
 });
