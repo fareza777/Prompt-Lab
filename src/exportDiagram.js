@@ -1,11 +1,12 @@
 /**
  * Client-side Mermaid diagram export (SVG / PNG).
  *
- * PNG is captured from a real DOM render via html-to-image. Image()+SVG raster
- * fails for Mermaid foreignObject labels and is unreliable in Android TWA.
+ * PNG strategy (in order):
+ * 1. Draw prepared SVG onto a canvas via data URL (works when htmlLabels=false)
+ * 2. Paint SVG in a near-invisible on-screen host, then canvas-draw that Image
+ * 3. Fall back to SVG file download if PNG truly cannot be produced
  */
 
-import { toBlob, toPng } from "html-to-image";
 import { MERMAID_INIT } from "./mermaidConfig.js";
 
 export { MERMAID_INIT } from "./mermaidConfig.js";
@@ -13,8 +14,16 @@ export { MERMAID_INIT } from "./mermaidConfig.js";
 export function extractMermaidCode(output = "") {
   const fenced = String(output).match(/```mermaid\s*([\s\S]*?)```/i);
   if (fenced?.[1]?.trim()) return fenced[1].trim();
+  // Tolerate missing fence language / trailing prose after a fence.
+  const loose = String(output).match(/```(?:mermaid)?\s*\n([\s\S]*?)```/i);
+  if (loose?.[1] && /^(flowchart|sequenceDiagram|classDiagram|erDiagram|mindmap|graph)\b/m.test(loose[1])) {
+    return loose[1].trim();
+  }
   if (/^(flowchart|sequenceDiagram|classDiagram|erDiagram|mindmap|graph)\b/m.test(output)) {
-    return String(output).trim();
+    return String(output)
+      .replace(/^[\s\S]*?((?:flowchart|sequenceDiagram|classDiagram|erDiagram|mindmap|graph)\b[\s\S]*)$/m, "$1")
+      .replace(/\n```[\s\S]*$/, "")
+      .trim();
   }
   return "";
 }
@@ -30,13 +39,18 @@ function parseViewBox(svg) {
 function prepareSvgMarkup(svgString) {
   let svg = String(svgString || "").trim();
   if (!svg) throw new Error("Empty diagram SVG.");
-  svg = svg.replace(/<script[\s\S]*?<\/script>/gi, "");
+  svg = svg
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, "");
+
   if (!/\sxmlns\s*=/.test(svg)) {
     svg = svg.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
   }
+
   const box = parseViewBox(svg);
   const width = Math.max(1, Math.ceil(box?.width || 960));
   const height = Math.max(1, Math.ceil(box?.height || 540));
+
   if (/\swidth\s*=/.test(svg)) {
     svg = svg.replace(/\swidth\s*=\s*["'][^"']*["']/i, ` width="${width}"`);
   } else {
@@ -47,12 +61,14 @@ function prepareSvgMarkup(svgString) {
   } else {
     svg = svg.replace(/<svg\b/i, `<svg height="${height}"`);
   }
+
   if (!/<rect[^>]*data-pl-bg=/i.test(svg)) {
     svg = svg.replace(
       /<svg([^>]*)>/i,
-      `<svg$1><rect data-pl-bg="1" width="100%" height="100%" fill="#FBF8F1"/>`
+      `<svg$1><rect data-pl-bg="1" x="0" y="0" width="${width}" height="${height}" fill="#FBF8F1"/>`
     );
   }
+
   return {
     svg: `<?xml version="1.0" encoding="UTF-8"?>\n${svg}`,
     width,
@@ -64,91 +80,122 @@ async function renderMermaidSvgMarkup(code) {
   const mermaid = (await import("mermaid")).default;
   mermaid.initialize(MERMAID_INIT);
   const id = `pl-export-mmd-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-  const { svg } = await mermaid.render(id, String(code || "").trim());
-  document.getElementById(id)?.remove();
-  document.querySelector(`[id="${id}"]`)?.remove();
-  // Mermaid may inject a helper node named d{id}
-  document.getElementById(`d${id}`)?.remove();
-  return prepareSvgMarkup(svg);
+  try {
+    const { svg } = await mermaid.render(id, String(code || "").trim());
+    return prepareSvgMarkup(svg);
+  } finally {
+    document.getElementById(id)?.remove();
+    document.getElementById(`d${id}`)?.remove();
+  }
 }
 
-function waitFrames(count = 2) {
-  return new Promise((resolve) => {
-    const step = (left) => {
-      if (left <= 0) resolve();
-      else requestAnimationFrame(() => step(left - 1));
-    };
-    step(count);
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.decoding = "sync";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Could not decode diagram image."));
+    img.src = src;
   });
 }
 
-async function captureNodePng(node) {
-  const options = {
-    backgroundColor: "#FBF8F1",
-    pixelRatio: Math.min(2, window.devicePixelRatio || 2),
-    cacheBust: true,
-    // Avoid copying stylesheets that break in TWA/offline caches.
-    skipFonts: true,
-  };
+function canvasToPngBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    if (canvas.toBlob) {
+      canvas.toBlob((blob) => {
+        if (blob && blob.size > 32) resolve(blob);
+        else {
+          try {
+            const dataUrl = canvas.toDataURL("image/png");
+            fetch(dataUrl)
+              .then((r) => r.blob())
+              .then((b) => (b?.size > 32 ? resolve(b) : reject(new Error("PNG encode failed."))))
+              .catch(reject);
+          } catch (error) {
+            reject(error);
+          }
+        }
+      }, "image/png");
+      return;
+    }
+    try {
+      const dataUrl = canvas.toDataURL("image/png");
+      fetch(dataUrl)
+        .then((r) => r.blob())
+        .then((b) => (b?.size > 32 ? resolve(b) : reject(new Error("PNG encode failed."))))
+        .catch(reject);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
 
+async function drawSvgToPngBlob(svgText, width, height, scale = 2) {
+  const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`;
+  let img;
   try {
-    const blob = await toBlob(node, options);
-    if (blob && blob.size > 32) return blob;
+    img = await loadImage(dataUrl);
   } catch {
-    /* fall through to data-URL path */
+    const blobUrl = URL.createObjectURL(new Blob([svgText], { type: "image/svg+xml;charset=utf-8" }));
+    try {
+      img = await loadImage(blobUrl);
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
   }
 
-  const dataUrl = await toPng(node, options);
-  const response = await fetch(dataUrl);
-  const blob = await response.blob();
-  if (!blob || blob.size < 32) throw new Error("PNG capture produced an empty file.");
-  return blob;
+  const w = Math.max(1, img.naturalWidth || width || 960);
+  const h = Math.max(1, img.naturalHeight || height || 540);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(w * scale);
+  canvas.height = Math.round(h * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas unavailable.");
+  ctx.fillStyle = "#FBF8F1";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  ctx.drawImage(img, 0, 0, w, h);
+  return canvasToPngBlob(canvas);
 }
 
 /**
- * Mount SVG off-screen, let the browser paint it, capture pixels.
+ * Some WebViews refuse to decode off-screen / data-URL SVG. Paint it in-viewport
+ * (invisible) first, then snapshot via canvas Image from an object URL.
  */
-async function captureSvgMarkupAsPng(svgMarkup, width, height) {
+async function drawViaVisibleHost(svgText, width, height) {
   const host = document.createElement("div");
   host.setAttribute("data-pl-diagram-export", "1");
   host.style.cssText = [
     "position:fixed",
-    "left:-10000px",
+    "left:0",
     "top:0",
     `width:${Math.max(320, width)}px`,
     `height:${Math.max(180, height)}px`,
-    "padding:16px",
-    "background:#FBF8F1",
-    "z-index:-1",
-    "overflow:visible",
+    "opacity:0.01",
     "pointer-events:none",
+    "z-index:2147483646",
+    "overflow:hidden",
+    "background:#FBF8F1",
   ].join(";");
-  host.innerHTML = svgMarkup.replace(/^<\?xml[^>]*>\s*/i, "");
+  host.innerHTML = svgText.replace(/^<\?xml[^>]*>\s*/i, "");
   document.body.appendChild(host);
 
   try {
-    await waitFrames(3);
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     const svgEl = host.querySelector("svg");
-    const target = svgEl || host;
-    return await captureNodePng(target);
+    if (!svgEl) throw new Error("Export host missing SVG.");
+    const serialized = new XMLSerializer().serializeToString(svgEl);
+    const prepared = prepareSvgMarkup(serialized);
+    return drawSvgToPngBlob(prepared.svg, prepared.width, prepared.height, 2);
   } finally {
     host.remove();
   }
 }
 
-async function captureDomDiagramPng() {
-  const canvas = document.querySelector(".pl-mermaid__canvas");
-  const svg = canvas?.querySelector("svg");
-  if (!canvas || !svg) return null;
-  const rect = canvas.getBoundingClientRect();
-  if (rect.width < 8 || rect.height < 8) return null;
-  return captureNodePng(canvas);
-}
-
 /**
  * @param {string} output finished markdown/mermaid text
  * @param {"svg"|"png"} format
- * @returns {Promise<{ blob: Blob, extension: string }>}
+ * @returns {Promise<{ blob: Blob, extension: string, note?: string }>}
  */
 export async function buildDiagramExportBlob(output, format = "png") {
   const code = extractMermaidCode(output);
@@ -163,17 +210,30 @@ export async function buildDiagramExportBlob(output, format = "png") {
     };
   }
 
-  // 1) Prefer the painted on-screen diagram when the section is open.
+  const errors = [];
+
   try {
-    const fromDom = await captureDomDiagramPng();
-    if (fromDom) return { blob: fromDom, extension: "png" };
-  } catch {
-    /* continue */
+    return {
+      blob: await drawSvgToPngBlob(prepared.svg, prepared.width, prepared.height, 2),
+      extension: "png",
+    };
+  } catch (error) {
+    errors.push(error?.message || String(error));
   }
 
-  // 2) Off-screen DOM capture (works with foreignObject / Android WebView).
+  try {
+    return {
+      blob: await drawViaVisibleHost(prepared.svg, prepared.width, prepared.height),
+      extension: "png",
+    };
+  } catch (error) {
+    errors.push(error?.message || String(error));
+  }
+
+  // Last resort: give the user a usable file (SVG) instead of a hard failure.
   return {
-    blob: await captureSvgMarkupAsPng(prepared.svg, prepared.width, prepared.height),
-    extension: "png",
+    blob: new Blob([prepared.svg], { type: "image/svg+xml;charset=utf-8" }),
+    extension: "svg",
+    note: `PNG unavailable (${errors.filter(Boolean).join("; ") || "raster failed"}). Saved SVG instead.`,
   };
 }

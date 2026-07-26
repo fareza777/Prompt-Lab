@@ -28,7 +28,6 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "google-auth-library": "10.9.0",
-    "html-to-image": "^1.11.13",
     "jszip": "^3.10.1",
     "lucide-react": "1.24.0",
     "mammoth": "^1.12.0",

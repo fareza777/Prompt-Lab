@@ -88,14 +88,22 @@ export async function triggerBrowserDownload(blob, filename) {
 
   // Android TWA / many mobile browsers ignore <a download> for blobs.
   // Web Share with a File is the reliable "save/share" path there.
-  try {
-    if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: filename });
-      return { method: "share" };
+  const preferShare =
+    typeof navigator !== "undefined" &&
+    /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent || "") &&
+    typeof navigator.canShare === "function";
+
+  if (preferShare) {
+    try {
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: filename });
+        return { method: "share" };
+      }
+    } catch (error) {
+      // User cancelled share — treat as handled, not a hard failure.
+      if (error?.name === "AbortError") return { method: "share-abort" };
+      // Fall through to anchor / open if share rejected for other reasons.
     }
-  } catch (error) {
-    // User cancelled share — treat as handled, not a hard failure.
-    if (error?.name === "AbortError") return { method: "share-abort" };
   }
 
   const url = URL.createObjectURL(blob);
@@ -104,6 +112,7 @@ export async function triggerBrowserDownload(blob, filename) {
     link.href = url;
     link.download = filename;
     link.rel = "noopener";
+    link.target = "_blank";
     link.style.display = "none";
     document.body.appendChild(link);
     link.click();

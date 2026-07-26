@@ -2764,21 +2764,22 @@ function App() {
             narrative: titleSeed || narrative,
             attachmentNames: attachments.map((file) => file.name),
           }) || "Diagram";
-        const { blob, extension } = await buildDiagramExportBlob(content, format);
+        const { blob, extension, note } = await buildDiagramExportBlob(content, format);
         const filename = toDownloadFilename(title, extension);
         const result = await triggerBrowserDownload(blob, filename);
+        if (note) {
+          setWarningMessage(note);
+        }
+        const label = extension.toUpperCase();
         setExportStatus(
           result?.method === "share" || result?.method === "share-abort"
-            ? `${formatLabel} ready to save/share`
-            : `${formatLabel} downloaded`
+            ? `${label} ready to save/share`
+            : `${label} downloaded`
         );
-        window.setTimeout(() => setExportStatus(""), 2800);
+        window.setTimeout(() => setExportStatus(""), 3200);
       } catch (error) {
-        const message =
-          format === "png"
-            ? "PNG download failed. Try SVG, or regenerate the result."
-            : error.message || "Diagram export failed.";
-        setErrorMessage(message);
+        console.error("[diagram-export]", error);
+        setErrorMessage(error?.message || "Diagram export failed.");
         setExportStatus(`${formatLabel} failed`);
       }
       return;
