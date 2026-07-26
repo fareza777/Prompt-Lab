@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#fcfcfa" />
+    <meta name="theme-color" content="#f7f3eb" />
     <meta name="color-scheme" content="light dark" />
     <script>
       /* Apply the saved appearance before first paint so the launch screen and
@@ -14,11 +14,9 @@
           if (mode === "light" || mode === "dark") {
             document.documentElement.setAttribute("data-ui-theme", mode);
           }
-          var dark =
-            mode === "dark" ||
-            (mode !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          var dark = mode === "dark";
           var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute("content", dark ? "#16191b" : "#fcfcfa");
+          if (meta) meta.setAttribute("content", dark ? "#16191b" : "#f7f3eb");
         } catch (e) {}
       })();
     </script>
@@ -2208,15 +2206,12 @@ html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !impor
         z-index: 99999;
         display: none;
         place-items: center;
-        background: #fcfcfa;
+        background: #f7f3eb;
         padding-top: env(safe-area-inset-top, 0px);
         padding-bottom: env(safe-area-inset-bottom, 0px);
       }
-      @media (prefers-color-scheme: dark) {
-        html:not([data-ui-theme='light']) #app-splash { background: #16191b; }
-      }
       html[data-ui-theme='dark'] #app-splash { background: #16191b; }
-      html[data-ui-theme='light'] #app-splash { background: #fcfcfa; }
+      html[data-ui-theme='light'] #app-splash { background: #f7f3eb; }
       #app-splash.is-exiting {
         opacity: 0;
         transition: opacity 0.28s ease;
@@ -2247,9 +2242,6 @@ html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !impor
         border: 1px solid rgba(15, 107, 92, 0.22);
         animation: splash-ring 2.2s ease-in-out infinite;
       }
-      @media (prefers-color-scheme: dark) {
-        html:not([data-ui-theme='light']) .app-splash__logo::after { border-color: rgba(95, 201, 180, 0.28); }
-      }
       html[data-ui-theme='dark'] .app-splash__logo::after { border-color: rgba(95, 201, 180, 0.28); }
       @keyframes splash-ring {
         0%, 100% { transform: scale(1); opacity: 0.75; }
@@ -2267,9 +2259,6 @@ html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !impor
         letter-spacing: -0.02em;
         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
       }
-      @media (prefers-color-scheme: dark) {
-        html:not([data-ui-theme='light']) .app-splash__brand strong { color: #ecefec; }
-      }
       html[data-ui-theme='dark'] .app-splash__brand strong { color: #ecefec; }
       .app-splash__bar {
         position: absolute;
@@ -2282,9 +2271,6 @@ html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !impor
         background: rgba(26, 29, 27, 0.10);
         overflow: hidden;
       }
-      @media (prefers-color-scheme: dark) {
-        html:not([data-ui-theme='light']) .app-splash__bar { background: rgba(236, 239, 236, 0.12); }
-      }
       html[data-ui-theme='dark'] .app-splash__bar { background: rgba(236, 239, 236, 0.12); }
       .app-splash__bar i {
         display: block;
@@ -2293,9 +2279,6 @@ html.boot-app #article-page-best-prompt-for-meeting-notes { display: none !impor
         border-radius: inherit;
         background: #0f6b5c;
         animation: splash-bar 1.15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-      }
-      @media (prefers-color-scheme: dark) {
-        html:not([data-ui-theme='light']) .app-splash__bar i { background: #5fc9b4; }
       }
       html[data-ui-theme='dark'] .app-splash__bar i { background: #5fc9b4; }
       @keyframes splash-bar {

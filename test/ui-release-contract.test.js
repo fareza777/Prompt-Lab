@@ -15,6 +15,7 @@ const adminSource = await read("../src/admin/AdminConsole.jsx");
 const baseCss = await read("../src/ui/base.css");
 const tokensCss = await read("../src/ui/tokens.css");
 const i18nSource = await read("../src/ui/i18n.js");
+const indexSource = await read("../index.html");
 
 test("readiness is presented as an estimate, never as a guarantee", () => {
   assert.match(resultSource, /result\.readiness/);
@@ -105,6 +106,15 @@ test("light is the default scheme and dark requires an explicit choice", () => {
   assert.doesNotMatch(tokensCss, /@media \(prefers-color-scheme: dark\)/);
   assert.match(tokensCss, /:root\[data-ui-theme="dark"\]/);
   assert.match(tokensCss, /color-scheme: light/);
+});
+
+test("the launch screen is light before React mounts unless dark was explicitly saved", () => {
+  assert.match(indexSource, /<meta name="theme-color" content="#f7f3eb"/);
+  assert.match(indexSource, /var dark = mode === "dark";/);
+  assert.doesNotMatch(
+    indexSource,
+    /@media \(prefers-color-scheme: dark\) \{\s*html:not\(\[data-ui-theme='light'\]\) #app-splash/
+  );
 });
 
 test("reduced motion is honoured", () => {
