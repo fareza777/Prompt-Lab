@@ -40,10 +40,12 @@ export function findClosingDiv(html, openIndex) {
 
 /** `/app` shell must not ship landing/blog/article DOM — prevents footer overlap with React auth gate. */
 export function stripMarketingForApp(html) {
-  const bodyTagMatch = html.match(/<body[^>]*>/i);
+  const headEndMatch = /<\/head\s*>/i.exec(html);
+  const bodySearchStart = headEndMatch ? headEndMatch.index + headEndMatch[0].length : 0;
+  const bodyTagMatch = /<body[^>]*>/i.exec(html.slice(bodySearchStart));
   if (!bodyTagMatch) return html;
 
-  const bodyContentStart = html.indexOf(bodyTagMatch[0]) + bodyTagMatch[0].length;
+  const bodyContentStart = bodySearchStart + bodyTagMatch.index + bodyTagMatch[0].length;
   const appStart = html.indexOf(APP_MARKER);
   if (appStart === -1) return html;
 

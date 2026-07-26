@@ -16,6 +16,9 @@ test("findClosingDiv matches nested app-root container", () => {
 
 test("stripMarketingForApp keeps only app shell and route scripts", () => {
   const stripped = stripMarketingForApp(indexHtml);
+  const headEnd = stripped.indexOf("</head>");
+  const bodyStart = stripped.indexOf("<body>");
+  assert.ok(headEnd !== -1 && bodyStart > headEnd, "app shell must preserve real head and body tags");
   assert.ok(!stripped.includes('id="landing-page"'), "landing page must be removed from app shell");
   assert.ok(!stripped.includes('id="blog-page"'), "blog page must be removed from app shell");
   assert.ok(!stripped.includes('id="article-page-marketing"'), "article pages must be removed from app shell");
