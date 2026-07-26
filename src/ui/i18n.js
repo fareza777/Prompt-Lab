@@ -170,10 +170,21 @@ const id = {
   "account.terms": "Ketentuan layanan",
   "account.help": "Bantuan",
 
+  "auth.gate.title": "Masuk untuk mulai",
+  "auth.gate.lede":
+    "Pakai akun agar riwayat tersimpan, atau lanjut sebagai tamu tanpa email.",
+  "auth.gate.guest": "Lanjut sebagai tamu",
+  "auth.gate.guestBusy": "Menyiapkan mode tamu…",
+  "auth.gate.guestHint": "Tanpa email. 5 hasil gratis per minggu. Bisa daftar nanti.",
+
+  "nav.home": "Beranda",
+  "brand.homeAria": "Kembali ke beranda AI Work Studio",
+
   "firstrun.skip": "Lewati",
   "firstrun.next": "Lanjut",
-  "firstrun.start": "Mulai",
-  "firstrun.startNow": "Langsung coba saja",
+  "firstrun.start": "Mulai bekerja",
+  "firstrun.startNow": "Lewati saja, langsung coba",
+  "firstrun.stepOf": "Langkah {n} dari {total}",
 
   "firstrun.input.title": "Mulai dari bahan yang sudah ada",
   "firstrun.input.body":
@@ -182,9 +193,9 @@ const id = {
   "firstrun.input.point2": "PDF, Word, Excel, PowerPoint — teksnya dibaca otomatis",
   "firstrun.input.point3": "Boleh bahasa campur; hasil mengikuti bahasa yang kamu pakai",
 
-  "firstrun.build.title": "Disusun jadi dokumen terstruktur",
+  "firstrun.build.title": "Satu tombol, hasil jadi",
   "firstrun.build.body":
-    "AI Work Studio membaca konteks, mengerjakan permintaanmu, lalu menampilkan hasil lengkap dalam satu alur.",
+    "Tekan Buat hasil. Di belakang layar AI menyusun lalu mengerjakan permintaanmu — yang muncul adalah dokumen siap pakai, bukan draf mentah.",
   "firstrun.build.point1": "Hasil langsung muncul tanpa perlu pindah aplikasi",
   "firstrun.build.point2": "Permintaan dan lampiran dipakai sebagai konteks",
   "firstrun.build.point3": "Proses biasanya butuh 30–60 detik; hasilnya muncul sekaligus",
@@ -196,12 +207,19 @@ const id = {
   "firstrun.improve.point2": "Bandingkan versi lama dan baru berdampingan",
   "firstrun.improve.point3": "Versi lama tidak hilang sampai kamu memilih",
 
+  "firstrun.menus.title": "Menu yang sering dipakai",
+  "firstrun.menus.body":
+    "Semua alat sekunder ada di atas — tidak mengganggu kanvas utama.",
+  "firstrun.menus.point1": "Bantuan: panduan singkat kapan saja",
+  "firstrun.menus.point2": "Riwayat: buka ulang hasil yang sudah disimpan",
+  "firstrun.menus.point3": "Akun: bahasa, tema, kuota, dan langganan",
+
   "firstrun.output.title": "Simpan dan bawa keluar",
   "firstrun.output.body":
-    "Hasil yang bagus disimpan ke riwayat supaya bisa dipakai lagi, atau diunduh sebagai berkas yang siap dikirim.",
+    "Hasil yang bagus disimpan ke riwayat, diunduh Word, atau diklik judul AI Work Studio di atas untuk kembali ke beranda.",
   "firstrun.output.point1": "Riwayat tersinkron antar perangkat setelah punya akun",
   "firstrun.output.point2": "Export Word tersedia di paket Free; PowerPoint di paket berbayar",
-  "firstrun.output.point3": "5 hasil gratis per minggu",
+  "firstrun.output.point3": "5 hasil gratis per minggu untuk tamu",
 
   "guide.title": "Panduan",
   "guide.intro":
@@ -448,10 +466,21 @@ const en = {
   "account.terms": "Terms of service",
   "account.help": "Help",
 
+  "auth.gate.title": "Sign in to get started",
+  "auth.gate.lede":
+    "Use an account to keep history synced, or continue as a guest without email.",
+  "auth.gate.guest": "Continue as guest",
+  "auth.gate.guestBusy": "Preparing guest mode…",
+  "auth.gate.guestHint": "No email needed. 5 free results per week. You can sign up later.",
+
+  "nav.home": "Home",
+  "brand.homeAria": "Back to AI Work Studio home",
+
   "firstrun.skip": "Skip",
   "firstrun.next": "Next",
-  "firstrun.start": "Start",
-  "firstrun.startNow": "Just let me try it",
+  "firstrun.start": "Start working",
+  "firstrun.startNow": "Skip and try it now",
+  "firstrun.stepOf": "Step {n} of {total}",
 
   "firstrun.input.title": "Start from what you already have",
   "firstrun.input.body":
@@ -460,9 +489,9 @@ const en = {
   "firstrun.input.point2": "PDF, Word, Excel, PowerPoint — the text is read for you",
   "firstrun.input.point3": "Mixed languages are fine; the result follows the one you used",
 
-  "firstrun.build.title": "Turned into a structured document",
+  "firstrun.build.title": "One button, finished work",
   "firstrun.build.body":
-    "AI Work Studio reads the context, completes your request, and shows the finished work in one flow.",
+    "Tap Create result. Behind the scenes AI drafts then completes your request — what you see is a finished document, not a raw draft.",
   "firstrun.build.point1": "The result appears directly—no app switching",
   "firstrun.build.point2": "Your request and attachments provide the context",
   "firstrun.build.point3": "It usually takes 30–60 seconds; the result arrives at once",
@@ -474,12 +503,19 @@ const en = {
   "firstrun.improve.point2": "Put the old and new versions side by side",
   "firstrun.improve.point3": "The original stays until you choose",
 
+  "firstrun.menus.title": "Menus you will use often",
+  "firstrun.menus.body":
+    "Secondary tools live up top — they stay out of the way of the main canvas.",
+  "firstrun.menus.point1": "Help: a short guide whenever you need it",
+  "firstrun.menus.point2": "History: reopen results you already saved",
+  "firstrun.menus.point3": "Account: language, theme, quota, and membership",
+
   "firstrun.output.title": "Save it and take it with you",
   "firstrun.output.body":
-    "Good results go to your history so you can reuse them, or download as a file you can send.",
+    "Good results go to history, download as Word, or tap the AI Work Studio title above to return home.",
   "firstrun.output.point1": "History syncs across devices once you have an account",
   "firstrun.output.point2": "Word export is included on Free; PowerPoint is paid",
-  "firstrun.output.point3": "5 free results per week",
+  "firstrun.output.point3": "5 free results per week for guests",
 
   "guide.title": "Guide",
   "guide.intro": "Everything you need to use AI Work Studio, open any time.",

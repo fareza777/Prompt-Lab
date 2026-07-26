@@ -38,11 +38,28 @@
   display: flex;
   align-items: baseline;
   gap: var(--s-2);
+  margin: 0;
   margin-right: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
   font-size: var(--t-md);
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.pl-brand:hover {
+  color: var(--accent, var(--ink));
+}
+
+.pl-brand:focus-visible {
+  outline: 2px solid var(--focus-ring, currentColor);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 .pl-brand span {
@@ -774,6 +791,18 @@
 }
 
 /* Language gate */
+
+.pl-authgate-guest {
+  display: grid;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--rule);
+}
+
+.pl-authgate .pl-btn--primary {
+  gap: var(--s-2);
+}
 
 .pl-firstrun-langs {
   display: flex;

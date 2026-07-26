@@ -6,31 +6,68 @@ import { translate, LANGUAGES, hasStoredLanguage } from "../src/ui/i18n.js";
 const read = (p) => readFile(new URL(p, import.meta.url), "utf8");
 
 const firstRun = await read("../src/ui/FirstRun.jsx");
-
+const authGate = await read("../src/ui/AuthGate.jsx");
 const guide = await read("../src/ui/Guide.jsx");
 const shell = await read("../src/ui/Shell.jsx");
 const shellCss = await read("../src/ui/shell.css");
 const resultSource = await read("../src/ui/Result.jsx");
 
-test("first run is only a language choice and finishes immediately", () => {
-  assert.match(firstRun, /LANGUAGES\.map/);
-  assert.match(firstRun, /onPickLanguage\(code\)/);
-  assert.match(firstRun, /onFinish/, "no completion handler");
-  assert.doesNotMatch(firstRun, /nextStep|FIRST_RUN_STEPS|walkthrough/);
+test("boot order is language, then auth/guest, then skippable tour", () => {
+  assert.match(shell, /Boot order: language → login\/guest → skippable tour → canvas/);
+  assert.match(shell, /const AUTH_GATE_KEY = "promptlab-auth-gate"/);
+  assert.match(shell, /const GUEST_KEY = "promptlab-guest"/);
+  assert.match(shell, /needsAuthGate/);
+  assert.match(shell, /needsTour/);
+  assert.match(shell, /continueAsGuest/);
+  assert.match(shell, /<AuthGate/);
 });
 
-test("first run is shown once and remembered", () => {
+test("first run language stage finishes into the next boot step", () => {
+  assert.match(firstRun, /LANGUAGES\.map/);
+  assert.match(firstRun, /onPickLanguage\(item\.code\)/);
+  assert.match(firstRun, /data-stage="language"/);
+  assert.match(shell, /hasStoredLanguage/);
+  assert.equal(typeof hasStoredLanguage, "function");
+});
+
+test("onboarding tour is detailed, skippable, and covers menus", () => {
+  assert.match(firstRun, /const TOUR_STEPS/);
+  assert.match(firstRun, /data-stage="tour"/);
+  assert.match(firstRun, /id: "menus"/);
+  assert.match(firstRun, /firstrun\.menus\.title/);
+  assert.match(firstRun, /onSkipTour/);
+  assert.match(firstRun, /firstrun\.skip/);
+  assert.match(firstRun, /firstrun\.startNow/);
+  for (const lang of ["id", "en"]) {
+    assert.notEqual(translate(lang, "firstrun.menus.point1"), "firstrun.menus.point1");
+    assert.notEqual(translate(lang, "firstrun.stepOf"), "firstrun.stepOf");
+  }
+});
+
+test("auth gate offers guest continue without email", () => {
+  assert.match(authGate, /data-stage="auth"/);
+  assert.match(authGate, /auth\.gate\.guest/);
+  assert.match(authGate, /onGuest/);
+  assert.match(authGate, /UserRound/);
+  for (const lang of ["id", "en"]) {
+    assert.match(translate(lang, "auth.gate.guestHint"), /email/i);
+  }
+});
+
+test("first run / auth choices are remembered", () => {
   assert.match(shell, /const FIRST_RUN_KEY = "promptlab-onboarded"/);
-  assert.match(shell, /if \(!firstRunDone\)/);
+  assert.match(shell, /writeFirstRunDone\(true\)/);
+  assert.match(shell, /writeAuthGateDone\(true\)/);
   // Storage failure must not trap someone on a screen we cannot dismiss.
   assert.match(shell, /return true; \/\/ No storage/);
 });
 
-test("language is chosen explicitly on first run and persisted", () => {
-  assert.match(firstRun, /data-stage="language"/);
-  assert.match(firstRun, /onPickLanguage/);
-  assert.match(shell, /hasStoredLanguage/);
-  assert.equal(typeof hasStoredLanguage, "function");
+test("brand title is a home control", () => {
+  assert.match(shell, /className="pl-brand"/);
+  assert.match(shell, /onClick=\{goHome\}/);
+  assert.match(shell, /brand\.homeAria/);
+  assert.match(shell, /clearComposer/);
+  assert.match(shellCss, /\.pl-brand:hover/);
 });
 
 test("each language names itself in the picker", () => {
@@ -58,7 +95,6 @@ test("the detailed guide stays reachable after first run", () => {
 });
 
 test("the guide states the AI-accuracy and timing caveats", () => {
-  // These are the two things a first-time user is most likely to be caught by.
   assert.match(translate("id", "guide.limit1"), /AI|periksa/i);
   assert.match(translate("en", "guide.limit1"), /AI|check/i);
   assert.match(translate("id", "guide.limit2"), /detik/);
@@ -77,12 +113,9 @@ test("the wait sets an expectation instead of showing a bare spinner", () => {
 });
 
 test("first-run motion respects reduced-motion", async () => {
-  // The blanket rule in base.css neutralises every animation, including the
-  // first-run and launch-screen ones defined elsewhere.
   const baseCss = await read("../src/ui/base.css");
   assert.match(baseCss, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(baseCss, /animation-duration: 0\.01ms !important/);
-  // The launch screen sits outside the bundle, so it opts out on its own.
   const indexHtml = await read("../index.html");
   assert.match(
     indexHtml,

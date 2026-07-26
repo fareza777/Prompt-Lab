@@ -1,8 +1,8 @@
 /**
- * Hold the launch screen only long enough to avoid a flash. The previous 900ms
- * floor made every start feel slow even when the app was ready sooner.
+ * Hold the launch screen long enough for a deliberate brand beat, then hand
+ * off to language → login → onboarding.
  */
-const MIN_VISIBLE_MS = 150;
+const MIN_VISIBLE_MS = 2600;
 
 function splashElement() {
   return document.getElementById("app-splash");

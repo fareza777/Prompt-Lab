@@ -185,6 +185,7 @@ export default function Account({
   onClose,
   accountState,
   hasAuthSession,
+  isGuest = false,
   isAuthBusy,
   authStatus,
   authError,
@@ -249,17 +250,27 @@ export default function Account({
           </div>
         </>
       ) : (
-        <AuthForm
-          t={t}
-          isBusy={isAuthBusy}
-          status={authStatus}
-          error={authError}
-          googleEnabled={googleEnabled}
-          onSignIn={signInWithPassword}
-          onSignUp={signUpWithPassword}
-          onGoogle={signInWithGoogle}
-          onForgot={resetPasswordForEmail}
-        />
+        <>
+          {isGuest && (
+            <div className="pl-notice" role="status">
+              <strong>{t("account.guest")}</strong>
+              <p className="pl-hint" style={{ margin: "6px 0 0" }}>
+                {t("account.guestNote")}
+              </p>
+            </div>
+          )}
+          <AuthForm
+            t={t}
+            isBusy={isAuthBusy}
+            status={authStatus}
+            error={authError}
+            googleEnabled={googleEnabled}
+            onSignIn={signInWithPassword}
+            onSignUp={signUpWithPassword}
+            onGoogle={signInWithGoogle}
+            onForgot={resetPasswordForEmail}
+          />
+        </>
       )}
 
       <hr style={{ border: "none", borderTop: "1px solid var(--rule)" }} />

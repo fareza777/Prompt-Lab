@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Clock, User, HelpCircle } from "lucide-react";
 import { makeTranslator, detectLanguage, persistLanguage, hasStoredLanguage } from "./i18n.js";
 import FirstRun from "./FirstRun.jsx";
+import AuthGate from "./AuthGate.jsx";
 import Guide from "./Guide.jsx";
 import { humanizeApiError } from "./errors.js";
 import { readThemeMode, applyThemeMode, watchSystemScheme, resolveScheme } from "./theme.js";
@@ -17,12 +18,12 @@ import { getRecordRestoreState } from "./contentRecord.js";
 
 /**
  * The application shell — one canvas, with everything secondary arriving as a
- * sheet. This replaces the previous five-destination layout (Builder,
- * Optimizer, Templates, Library, Compare), which split a single job across
- * five screens and made the user carry text between them by hand.
+ * sheet. Boot order: language → login/guest → skippable tour → canvas.
  */
 
 const FIRST_RUN_KEY = "promptlab-onboarded";
+const AUTH_GATE_KEY = "promptlab-auth-gate";
+const GUEST_KEY = "promptlab-guest";
 
 function readFirstRunDone() {
   try {
@@ -38,6 +39,40 @@ function writeFirstRunDone(done) {
     else localStorage.removeItem(FIRST_RUN_KEY);
   } catch {
     /* ignore */
+  }
+}
+
+function readAuthGateDone() {
+  try {
+    return localStorage.getItem(AUTH_GATE_KEY) === "1";
+  } catch {
+    return true;
+  }
+}
+
+function writeAuthGateDone(done) {
+  try {
+    if (done) localStorage.setItem(AUTH_GATE_KEY, "1");
+    else localStorage.removeItem(AUTH_GATE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function writeGuestFlag(isGuest) {
+  try {
+    if (isGuest) localStorage.setItem(GUEST_KEY, "1");
+    else localStorage.removeItem(GUEST_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function readGuestFlag() {
+  try {
+    return localStorage.getItem(GUEST_KEY) === "1";
+  } catch {
+    return false;
   }
 }
 
@@ -122,12 +157,17 @@ export default function Shell(props) {
     weeklyAllowance,
     isAdmin,
     onOpenAdmin,
+    authSessionReady,
+    continueAsGuest,
+    clearComposer,
   } = props;
 
   const [lang, setLangState] = useState(detectLanguage);
   const [themeMode, setThemeModeState] = useState(readThemeMode);
   const [sheet, setSheet] = useState(null);
   const [firstRunDone, setFirstRunDone] = useState(readFirstRunDone);
+  const [authGateDone, setAuthGateDone] = useState(readAuthGateDone);
+  const [isGuest, setIsGuest] = useState(readGuestFlag);
   // The language screen only appears when nothing has been chosen or detected
   // before; a returning user is never asked again.
   const [languageChosen, setLanguageChosen] = useState(hasStoredLanguage);
@@ -146,6 +186,19 @@ export default function Shell(props) {
     if (themeMode !== "system") return undefined;
     return watchSystemScheme(() => applyThemeMode("system"));
   }, [themeMode]);
+
+  // A real signed-in session (or a previous guest choice) clears the auth gate.
+  useEffect(() => {
+    if (hasAuthSession) {
+      writeAuthGateDone(true);
+      setAuthGateDone(true);
+      writeGuestFlag(false);
+      setIsGuest(false);
+    } else if (isGuest) {
+      writeAuthGateDone(true);
+      setAuthGateDone(true);
+    }
+  }, [hasAuthSession, isGuest]);
 
   const setLang = useCallback((next) => {
     persistLanguage(next);
@@ -245,22 +298,93 @@ export default function Shell(props) {
     setLanguageChosen(true);
   }, []);
 
+  const finishAuthGate = useCallback(() => {
+    writeAuthGateDone(true);
+    setAuthGateDone(true);
+  }, []);
+
+  const handleGuest = useCallback(async () => {
+    const ok = await continueAsGuest?.();
+    writeGuestFlag(true);
+    setIsGuest(true);
+    finishAuthGate();
+    return ok;
+  }, [continueAsGuest, finishAuthGate]);
+
   const replayFirstRun = useCallback(() => {
     setSheet(null);
     writeFirstRunDone(false);
     setFirstRunDone(false);
   }, []);
 
-  if (!firstRunDone) {
+  const goHome = useCallback(() => {
+    clearComposer?.();
+    setPreviousPrompt("");
+    clearMessages();
+    setSheet(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [clearComposer, clearMessages]);
+
+  const languageReady = languageChosen || hasStoredLanguage();
+  const sessionReady = authSessionReady !== false;
+  const needsAuthGate = languageReady && sessionReady && !authGateDone && !hasAuthSession && !isGuest;
+  const needsTour = languageReady && !needsAuthGate && !firstRunDone;
+
+  if (!languageReady) {
     return (
       <FirstRun
-        t={t}
-        lang={languageChosen ? lang : null}
+        stage="language"
         onPickLanguage={(code) => {
           setLang(code);
           setLanguageChosen(true);
         }}
+      />
+    );
+  }
+
+  if (!sessionReady) {
+    return (
+      <main className="pl-firstrun" data-stage="session">
+        <section className="pl-firstrun-card">
+          <p className="pl-eyebrow">{t("app.name")}</p>
+          <h1>{t("auth.gate.title")}</h1>
+          <p className="pl-firstrun-lede">{t("result.workingHint")}</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (needsAuthGate) {
+    return (
+      <AuthGate
+        t={t}
+        isBusy={isAuthBusy}
+        status={authStatus}
+        error={authError}
+        onSignIn={async (...args) => {
+          await signInWithPassword?.(...args);
+        }}
+        onSignUp={async (...args) => {
+          await signUpWithPassword?.(...args);
+        }}
+        onGoogle={async () => {
+          await signInWithGoogle?.();
+        }}
+        onForgot={resetPasswordForEmail}
+        onGuest={handleGuest}
+        googleEnabled={googleEnabled}
+      />
+    );
+  }
+
+  if (needsTour) {
+    return (
+      <FirstRun
+        stage="tour"
+        t={t}
+        lang={lang}
         onFinish={finishFirstRun}
+        onSkipTour={finishFirstRun}
       />
     );
   }
@@ -272,9 +396,9 @@ export default function Shell(props) {
       </a>
 
       <header className="pl-top">
-        <p className="pl-brand">
+        <button type="button" className="pl-brand" onClick={goHome} aria-label={t("brand.homeAria")}>
           {t("app.name")} <span>{t("app.tagline")}</span>
-        </p>
+        </button>
         <div className="pl-top-actions">
           {isAdmin && (
             <button type="button" className="pl-btn pl-btn--quiet pl-btn--sm" onClick={onOpenAdmin}>
@@ -433,6 +557,7 @@ export default function Shell(props) {
         onClose={closeSheet}
         accountState={accountState}
         hasAuthSession={hasAuthSession}
+        isGuest={isGuest}
         isAuthBusy={isAuthBusy}
         authStatus={authStatus}
         authError={authError}

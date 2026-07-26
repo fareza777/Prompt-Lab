@@ -1887,13 +1887,40 @@ function App() {
     localStorage.removeItem("promptlab-guest");
     localStorage.removeItem("promptlab-onboarded");
     localStorage.removeItem("promptlab-auth-intent");
+    localStorage.removeItem("promptlab-auth-gate");
     libraryPulledForUser.current = "";
     libraryPushEnabled.current = false;
     setLibrarySyncStatus("");
     setHasAuthSession(false);
+    setIsAnonymousSession(false);
     setAuthSessionReady(true);
     setAccountState(createDefaultAccountState());
     setAuthStatus("Signed out");
+  }
+
+  async function continueAsGuest() {
+    writeGuestFlagSafe(true);
+    const ready = await ensureTrialSession();
+    return ready;
+  }
+
+  function clearComposer() {
+    setNarrative("");
+    setGeneratedPrompt("");
+    setRunOutput("");
+    setAttachments([]);
+    setErrorMessage("");
+    setWarningMessage("");
+    setExportStatus("");
+  }
+
+  function writeGuestFlagSafe(isGuest) {
+    try {
+      if (isGuest) localStorage.setItem("promptlab-guest", "1");
+      else localStorage.removeItem("promptlab-guest");
+    } catch {
+      /* ignore */
+    }
   }
 
   async function getAuthHeaders() {
@@ -2905,6 +2932,9 @@ function App() {
     // grant trials, so the UI never advertises a free try it cannot deliver.
     trialRemaining: trialAvailable ? Math.max(0, TRIAL_LIMIT - trialUsed) : null,
     isAdmin: accountState.role === "admin",
+    authSessionReady,
+    continueAsGuest,
+    clearComposer,
   };
 
   // The admin console keeps the legacy layout: it is internal-only, and
