@@ -1,13 +1,10 @@
 /**
- * Frame raw captures into premium 3D side-angle Play Store screenshots.
+ * Frame raw captures into premium 3D-looking Play Store screenshots.
  *
- * Uses Playwright + CSS perspective so the phone reads as a real product shot
- * with Indonesian promo headlines matching AI Work Studio.
- *
- * Input:  playstore/assets/raw/screenshot-phone-*.png
- * Output: playstore/assets/screenshot-phone-*.png (1080×1920)
+ * Thickness = a dedicated side slab (always wide on screen), not a foreshortened
+ * CSS-3D edge. Screen fills an exact 9:16 glass. Copy is clear Indonesian.
  */
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { chromium } from "playwright";
 import sharp from "sharp";
@@ -18,62 +15,67 @@ const rawDir = join(assets, "raw");
 const W = 1080;
 const H = 1920;
 
+const PHONE_W = 500;
+const PHONE_H = Math.round((PHONE_W * 1920) / 1080); // ≈ 889
+const BEZEL = 12;
+const SIDE = 78;
+
 const SCREENS = [
   {
     key: "language",
-    eyebrow: "AI Work Studio",
-    lines: ["Mulai dengan", "bahasa kamu"],
-    sub: "Antarmuka Indonesia atau English — hasil tetap bisa bahasa apa pun.",
-    angle: -26,
+    eyebrow: "Mulai",
+    lines: ["Pilih bahasa", "yang nyaman dipakai"],
+    sub: "Antarmuka Indonesia atau English. Bahasa untuk hasil kerja tetap bisa kamu tentukan sendiri.",
+    side: "right",
   },
   {
     key: "auth",
-    eyebrow: "Masuk cepat",
-    lines: ["Punya akun,", "atau lanjut tamu"],
-    sub: "Tanpa email pun bisa coba. Daftar nanti saat butuh sync.",
-    angle: 24,
+    eyebrow: "Masuk",
+    lines: ["Masuk dengan akun,", "atau coba dulu sebagai tamu"],
+    sub: "Tidak wajib daftar sekarang. Mode tamu tanpa email, cocok untuk mencoba aplikasi.",
+    side: "left",
   },
   {
     key: "tour",
-    eyebrow: "Onboarding jelas",
-    lines: ["Dari input", "sampai output"],
-    sub: "Alur kerja dijelaskan langkah demi langkah — bisa dilewati kapan saja.",
-    angle: -22,
+    eyebrow: "Pengenalan",
+    lines: ["Ikuti panduan singkat", "sebelum mulai bekerja"],
+    sub: "Kami jelaskan alur dari input sampai hasil jadi. Lewati saja jika sudah paham.",
+    side: "right",
   },
   {
     key: "workspace",
-    eyebrow: "Satu ruang kerja",
-    lines: ["Tulis apa adanya.", "AI yang merapikan"],
-    sub: "Lampirkan foto, PDF, atau Word. Konteks dibaca otomatis.",
-    angle: 28,
+    eyebrow: "Buat hasil",
+    lines: ["Tulis apa yang kamu butuhkan,", "lalu tekan Buat hasil"],
+    sub: "Lampirkan foto, PDF, atau Word bila perlu. AI memakai isinya sebagai konteks.",
+    side: "left",
   },
   {
     key: "result",
-    eyebrow: "Hasil final dulu",
-    lines: ["Dokumen siap pakai,", "bukan draf mentah"],
-    sub: "Kartu bisa dibuka-tutup. Salin, simpan, atau ekspor dari atas.",
-    angle: -24,
+    eyebrow: "Hasil",
+    lines: ["Dokumen jadi muncul", "langsung di layar"],
+    sub: "Buka atau tutup tiap bagian. Salin, simpan, atau unduh sebagai Word dan PowerPoint.",
+    side: "right",
   },
   {
     key: "history",
-    eyebrow: "Riwayat kerja",
-    lines: ["Simpan hasil.", "Buka lagi kapan saja"],
-    sub: "Kerjaan terbaik tidak hilang — siap dilanjutkan besok.",
-    angle: 22,
+    eyebrow: "Riwayat",
+    lines: ["Simpan hasil kerja,", "buka kembali kapan saja"],
+    sub: "Pekerjaan sebelumnya tetap tersimpan di Riwayat dan siap dilanjutkan.",
+    side: "left",
   },
   {
     key: "account",
-    eyebrow: "Akun & tampilan",
-    lines: ["Kuota, tema,", "dan paketmu"],
-    sub: "Atur bahasa, dark mode, dan langganan di satu tempat.",
-    angle: -28,
+    eyebrow: "Pengaturan",
+    lines: ["Atur akun, tampilan,", "dan sisa kuota"],
+    sub: "Ganti bahasa, aktifkan dark mode, lihat kuota mingguan, dan kelola paket langganan.",
+    side: "right",
   },
   {
     key: "guide",
-    eyebrow: "Bantuan singkat",
-    lines: ["Panduan selalu", "satu ketuk jauh"],
-    sub: "Workflow, tips, dan batas AI — tanpa keluar dari aplikasi.",
-    angle: 26,
+    eyebrow: "Bantuan",
+    lines: ["Butuh penjelasan?", "Buka menu Panduan"],
+    sub: "Tips praktis, alur kerja, dan batasan AI tersedia tanpa keluar dari aplikasi.",
+    side: "left",
   },
 ];
 
@@ -96,143 +98,148 @@ function escapeHtml(s) {
 
 function frameHtml({ screen, imageUrl }) {
   const headline = screen.lines.map((line) => `<span>${escapeHtml(line)}</span>`).join("<br/>");
-  const yaw = screen.angle;
+  const sideRight = screen.side === "right";
+  const lean = sideRight ? -7 : 7; // whole mock leans like a real product shot
+
   return `<!doctype html>
 <html lang="id">
 <head>
 <meta charset="utf-8"/>
 <style>
-  @font-face {
-    font-family: "Segoe UI";
-    src: local("Segoe UI"), local("Segoe UI Variable");
-  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
-    width: ${W}px;
-    height: ${H}px;
-    overflow: hidden;
-    background: #F7F3EB;
+    width: ${W}px; height: ${H}px; overflow: hidden;
     font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-    color: #1F241F;
+    background: #F7F3EB; color: #1F241F;
   }
   .stage {
-    position: relative;
-    width: ${W}px;
-    height: ${H}px;
+    position: relative; width: ${W}px; height: ${H}px;
     background:
-      radial-gradient(ellipse 70% 42% at 86% 8%, rgba(47, 90, 70, 0.14), transparent 58%),
-      radial-gradient(ellipse 60% 40% at 8% 92%, rgba(232, 224, 210, 0.95), transparent 55%),
-      linear-gradient(165deg, #FBF8F1 0%, #F7F3EB 48%, #EFE8DB 100%);
+      radial-gradient(ellipse 70% 42% at 90% 0%, rgba(47,90,70,0.13), transparent 55%),
+      radial-gradient(ellipse 48% 32% at 0% 100%, rgba(232,224,210,0.95), transparent 50%),
+      linear-gradient(170deg, #FCFAF5 0%, #F7F3EB 55%, #EFE8DB 100%);
   }
-  .stage::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(circle at 20% 30%, rgba(255,255,255,0.35), transparent 28%),
-      radial-gradient(circle at 78% 68%, rgba(47,90,70,0.05), transparent 30%);
-    pointer-events: none;
-  }
-  .copy {
-    position: absolute;
-    left: 72px;
-    right: 72px;
-    top: 96px;
-    z-index: 3;
-    text-align: left;
-  }
+  .copy { position: absolute; left: 56px; right: 56px; top: 78px; z-index: 4; }
   .eyebrow {
-    display: inline-block;
-    margin-bottom: 18px;
-    padding: 8px 14px;
-    border-radius: 999px;
-    background: rgba(47, 90, 70, 0.10);
-    color: #2F5A46;
-    font-size: 22px;
-    font-weight: 650;
-    letter-spacing: 0.02em;
+    display: inline-block; margin-bottom: 14px; padding: 7px 14px;
+    border-radius: 999px; background: rgba(47,90,70,0.12);
+    color: #2F5A46; font-size: 20px; font-weight: 650;
   }
   h1 {
-    font-size: 64px;
-    line-height: 1.08;
-    font-weight: 800;
-    letter-spacing: -0.035em;
-    color: #1A2330;
+    font-size: 52px; line-height: 1.16; font-weight: 780;
+    letter-spacing: -0.028em; color: #172029;
   }
   h1 span { display: block; }
   .rule {
-    width: 88px;
-    height: 6px;
-    margin: 22px 0 20px;
-    border-radius: 999px;
-    background: #2F5A46;
+    width: 64px; height: 5px; margin: 16px 0 14px;
+    border-radius: 999px; background: #2F5A46;
   }
   .sub {
-    max-width: 780px;
-    font-size: 28px;
-    line-height: 1.45;
-    font-weight: 500;
-    color: #555E56;
+    max-width: 900px; font-size: 26px; line-height: 1.4;
+    font-weight: 500; color: #4A534C;
   }
   .scene {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 1280px;
-    display: grid;
-    place-items: end center;
-    perspective: 1800px;
-    perspective-origin: 50% 40%;
-    overflow: visible;
+    position: absolute; left: 0; right: 0; bottom: 40px; height: 1160px;
+    display: grid; place-items: end center;
   }
-  .phone-wrap {
+
+  /* Assembly: front + thick side. Leans as one object. */
+  .mock {
     position: relative;
-    transform-style: preserve-3d;
-    transform:
-      translate3d(0, 36px, 0)
-      rotateY(${yaw}deg)
-      rotateX(8deg)
-      rotateZ(${yaw > 0 ? -2.5 : 2.5}deg);
-    filter: drop-shadow(0 42px 48px rgba(26, 35, 48, 0.28))
-            drop-shadow(0 8px 16px rgba(26, 35, 48, 0.16));
+    width: ${PHONE_W + SIDE - 8}px;
+    height: ${PHONE_H + 24}px;
+    transform: rotate(${lean}deg);
+    filter:
+      drop-shadow(${sideRight ? 26 : -26}px 40px 34px rgba(14,20,18,0.30))
+      drop-shadow(0 8px 14px rgba(14,20,18,0.14));
   }
+
   .phone {
-    position: relative;
-    width: 620px;
-    height: 1240px;
-    border-radius: 54px;
-    padding: 14px;
-    background: linear-gradient(160deg, #2A3038 0%, #11151B 55%, #0B0E12 100%);
-    box-shadow:
-      inset 0 0 0 2px rgba(255,255,255,0.08),
-      inset 0 1px 0 rgba(255,255,255,0.18);
-  }
-  .phone::after {
-    content: "";
     position: absolute;
-    inset: 10px;
-    border-radius: 46px;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
-    pointer-events: none;
+    top: 0;
+    ${sideRight ? "left: 0;" : `left: ${SIDE - 8}px;`}
+    width: ${PHONE_W}px;
+    height: ${PHONE_H}px;
+    border-radius: 42px;
+    background: linear-gradient(155deg, #404954 0%, #1B2027 42%, #0A0C10 100%);
+    box-shadow:
+      inset 0 0 0 1.5px rgba(255,255,255,0.18),
+      inset 0 1px 0 rgba(255,255,255,0.26);
+    overflow: hidden;
+    z-index: 2;
+  }
+  .glass {
+    position: absolute;
+    inset: ${BEZEL}px;
+    border-radius: 32px;
+    overflow: hidden;
+    background: #000;
   }
   .screen {
+    display: block;
     width: 100%;
     height: 100%;
-    border-radius: 42px;
-    object-fit: cover;
-    background: #fffdf8;
-    display: block;
+    object-fit: fill;
+    background: #FFFDF8;
   }
-  .brand {
+  .sheen {
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(118deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.04) 20%, transparent 42%);
+  }
+
+  /* Thick chassis edge — stays wide on the canvas (not foreshortened). */
+  .side {
     position: absolute;
-    left: 72px;
-    bottom: 48px;
-    z-index: 4;
-    font-size: 20px;
-    font-weight: 650;
-    letter-spacing: 0.04em;
-    color: rgba(47, 90, 70, 0.72);
+    top: 18px;
+    height: ${PHONE_H - 36}px;
+    width: ${SIDE}px;
+    ${sideRight ? `left: ${PHONE_W - 10}px;` : "left: 0;"}
+    z-index: 1;
+    border-radius: ${sideRight ? "8px 18px 18px 8px" : "18px 8px 8px 18px"};
+    background: linear-gradient(
+      ${sideRight ? "90deg" : "270deg"},
+      #6A7480 0%,
+      #3E4854 14%,
+      #252C35 42%,
+      #14191F 72%,
+      #07090C 100%
+    );
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,0.12),
+      inset ${sideRight ? -12 : 12}px 0 18px rgba(0,0,0,0.4);
+    /* Trapezoid so it reads as perspective depth */
+    clip-path: ${
+      sideRight
+        ? "polygon(0 0, 100% 14px, 100% calc(100% - 14px), 0 100%)"
+        : "polygon(0 14px, 100% 0, 100% 100%, 0 calc(100% - 14px))"
+    };
+  }
+  .side::before {
+    content: "";
+    position: absolute;
+    top: 16%;
+    ${sideRight ? "right: 24%;" : "left: 24%;"}
+    width: 36%;
+    height: 78px;
+    border-radius: 5px;
+    background: rgba(0,0,0,0.5);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+  }
+  .side::after {
+    content: "";
+    position: absolute;
+    top: 40%;
+    ${sideRight ? "right: 30%;" : "left: 30%;"}
+    width: 28%;
+    height: 48px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.1);
+  }
+
+  .brand {
+    position: absolute; left: 56px; bottom: 32px; z-index: 5;
+    font-size: 18px; font-weight: 650; letter-spacing: 0.07em;
+    color: rgba(47, 90, 70, 0.7);
   }
 </style>
 </head>
@@ -245,9 +252,13 @@ function frameHtml({ screen, imageUrl }) {
       <p class="sub">${escapeHtml(screen.sub)}</p>
     </div>
     <div class="scene">
-      <div class="phone-wrap">
+      <div class="mock">
+        <div class="side" aria-hidden="true"></div>
         <div class="phone">
-          <img class="screen" src="${imageUrl}" alt="" />
+          <div class="glass">
+            <img class="screen" src="${imageUrl}" alt="" />
+            <div class="sheen"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -288,41 +299,22 @@ async function main() {
   for (const screen of SCREENS) {
     const rawPath = join(rawDir, `screenshot-phone-${screen.key}.png`);
     const outPath = join(assets, `screenshot-phone-${screen.key}.png`);
-    const rawBuffer = await readFile(rawPath);
-    const imageUrl = `data:image/png;base64,${rawBuffer.toString("base64")}`;
-    const html = frameHtml({ screen, imageUrl });
+    const imageUrl = `data:image/png;base64,${(await readFile(rawPath)).toString("base64")}`;
     const page = await context.newPage();
-    await page.setContent(html, { waitUntil: "load" });
+    await page.setContent(frameHtml({ screen, imageUrl }), { waitUntil: "load" });
     await page.waitForFunction(() => {
       const img = document.querySelector(".screen");
       return img && img.complete && img.naturalWidth > 0;
     }, { timeout: 15000 });
-    await page.waitForTimeout(120);
+    await page.waitForTimeout(140);
     const buffer = await page.screenshot({ type: "png", animations: "disabled" });
     await page.close();
-
-    await sharp(buffer)
-      .resize(W, H, { fit: "fill" })
-      .png({ compressionLevel: 9 })
-      .toFile(outPath);
-
-    console.log(`framed 3D ${screen.key}`);
+    await sharp(buffer).resize(W, H, { fit: "fill" }).png({ compressionLevel: 9 }).toFile(outPath);
+    console.log(`framed ${screen.key}`);
   }
 
   await browser.close();
-
-  // Keep README upload list in sync.
-  const readmePath = join(assets, "README.md");
-  if (await exists(readmePath)) {
-    let readme = await readFile(readmePath, "utf8");
-    readme = readme.replace(
-      /upload the six result-first surfaces:.*?$/m,
-      "upload the eight current surfaces: `language`, `auth`, `tour`, `workspace`, `result`, `history`, `account`, and `guide`",
-    );
-    await writeFile(readmePath, readme);
-  }
-
-  console.log(`\nUpload the framed files from:\n  ${assets}`);
+  console.log(`\nUpload from:\n  ${assets}`);
 }
 
 main().catch((err) => {
