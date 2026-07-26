@@ -274,8 +274,8 @@ export default function Account({
 
       <hr style={{ border: "none", borderTop: "1px solid var(--rule)" }} />
 
-      <section aria-labelledby="about-promptlab-title">
-        <h3 className="pl-eyebrow" id="about-promptlab-title">
+      <section aria-labelledby="about-ai-work-studio-title">
+        <h3 className="pl-eyebrow" id="about-ai-work-studio-title">
           {t("about.title")}
         </h3>
         <div
@@ -288,7 +288,7 @@ export default function Account({
         >
           <img
             src="/icons/icon-512.png"
-            alt="PromptLab app icon"
+            alt="AI Work Studio app icon"
             width="40"
             height="40"
             style={{ borderRadius: "var(--r-sm)" }}

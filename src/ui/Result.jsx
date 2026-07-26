@@ -1,14 +1,11 @@
 import { useEffect, useState } from "react";
 import {
   AlertTriangle,
-  ArrowRightLeft,
   Check,
-  ChevronDown,
   Copy,
   Download,
   Flag,
   Star,
-  Wand2,
 } from "lucide-react";
 import { createContentActionPayload } from "./contentRecord.js";
 
@@ -51,16 +48,11 @@ function Working({ title, hint }) {
 
 export default function Result({
   t,
-  prompt,
-  metrics,
   isGenerating,
   copied,
   onCopy,
   onSave,
   saved,
-  onImprove,
-  onCompare,
-  canCompare,
   onExport,
   canExportWord,
   canExportPpt,
@@ -70,14 +62,7 @@ export default function Result({
   isRunning,
   runError,
 }) {
-  const [promptOpen, setPromptOpen] = useState(false);
   const output = String(runOutput || "").trim();
-  const generatedPrompt = String(prompt || "").trim();
-  const score = Number(metrics?.score) || 0;
-
-  useEffect(() => {
-    setPromptOpen(false);
-  }, [output]);
 
   if (isGenerating) {
     return <Working title={t("result.working")} hint={t("result.workingHint")} />;
@@ -150,53 +135,6 @@ export default function Result({
         </>
       )}
 
-      {generatedPrompt && (
-        <div className="pl-prompt-disclosure">
-          <button
-            type="button"
-            className="pl-text-action"
-            aria-expanded={promptOpen}
-            onClick={() => setPromptOpen((open) => !open)}
-          >
-            {t("result.viewPrompt")}
-            <ChevronDown size={16} aria-hidden="true" />
-          </button>
-
-          {promptOpen && (
-            <div className="pl-prompt-panel">
-              <div className="pl-prompt-meta">
-                <p className="pl-readiness" title={t("result.readinessHelp")}>
-                  <span>{t("result.readiness")}</span>
-                  <strong>{score}</strong>
-                </p>
-                <span className="pl-bar" aria-hidden="true">
-                  <i style={{ width: `${Math.max(0, Math.min(100, score * 10))}%` }} />
-                </span>
-              </div>
-
-              <article className="pl-doc pl-doc--prompt">{generatedPrompt}</article>
-
-              <div className="pl-actions">
-                <button type="button" className="pl-btn" onClick={() => onCopy(generatedPrompt)}>
-                  <Copy size={17} aria-hidden="true" />
-                  {t("result.copyPrompt")}
-                </button>
-                <button type="button" className="pl-btn" onClick={onImprove}>
-                  <Wand2 size={17} aria-hidden="true" />
-                  {t("result.improvePrompt")}
-                </button>
-                {canCompare && (
-                  <button type="button" className="pl-btn" onClick={onCompare}>
-                    <ArrowRightLeft size={17} aria-hidden="true" />
-                    {t("result.comparePrompt")}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {exportStatus && (
         <p className="pl-meta" role="status">
           {exportStatus}
@@ -206,7 +144,7 @@ export default function Result({
       <button
         type="button"
         className="pl-btn pl-btn--quiet pl-btn--sm pl-report-action"
-        onClick={() => onReport(createContentActionPayload("output", output || generatedPrompt))}
+        onClick={() => onReport(createContentActionPayload("output", output))}
       >
         <Flag size={15} aria-hidden="true" />
         {t("result.report")}

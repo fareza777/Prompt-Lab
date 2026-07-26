@@ -10,7 +10,7 @@ import {
 } from "../src/aboutApp.js";
 import { getTabTargetIndex } from "../src/accessibilityInteractions.js";
 
-test("About uses the canonical PromptLab Google Play listing", () => {
+test("About preserves the canonical Google Play package", () => {
   assert.equal(PLAY_STORE_PACKAGE_ID, "app.promptlab.twa");
   assert.equal(
     PLAY_STORE_LISTING_URL,
@@ -22,7 +22,7 @@ test("About uses the canonical PromptLab Google Play listing", () => {
 test("About teaches the product workflow in order", () => {
   assert.deepEqual(
     ABOUT_WORKFLOW.map(({ label }) => label),
-    ["Build", "Improve", "Compare", "Reuse"],
+    ["Create", "Improve", "Review", "Export"],
   );
   assert.ok(ABOUT_WORKFLOW.every(({ description }) => description.trim().length > 0));
 });
@@ -47,10 +47,10 @@ test("Settings keyboard traversal includes About as the sixth destination", () =
 test("Account sheet exposes product, rating, and trust destinations", () => {
   const source = fs.readFileSync(new URL("../src/ui/Account.jsx", import.meta.url), "utf8");
 
-  assert.match(source, /aria-labelledby="about-promptlab-title"/);
-  assert.match(source, /id="about-promptlab-title"/);
+  assert.match(source, /aria-labelledby="about-ai-work-studio-title"/);
+  assert.match(source, /id="about-ai-work-studio-title"/);
   assert.match(source, /\/icons\/icon-512\.png/);
-  assert.match(source, /alt="PromptLab app icon"/);
+  assert.match(source, /alt="AI Work Studio app icon"/);
   assert.match(source, /href=\{PLAY_STORE_LISTING_URL\}/);
   assert.match(source, /target="_blank"/);
   assert.match(source, /rel="noreferrer"/);

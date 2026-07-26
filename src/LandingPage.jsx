@@ -72,7 +72,7 @@ const WHAT_IT_DOES = [
   },
   {
     title: "Get the finished work",
-    desc: "PromptLab reads the request and its context, then writes the report, content, analysis, slide outline, or code directly in the app.",
+    desc: "AI Work Studio reads the request and its context, then writes the report, content, analysis, slide outline, or code directly in the app.",
   },
   {
     title: "Stay in one workspace",
@@ -162,12 +162,12 @@ export default function LandingPage() {
             to a finished draft
           </h1>
           <p style={{ ...S.lede, fontSize: "1.15rem", marginBottom: 36 }}>
-            PromptLab turns your idea, photos, and files directly into written work you can review,
+            AI Work Studio turns your idea, photos, and files directly into written work you can review,
             save, and continue without leaving the app.
           </p>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center" }}>
             <a href="/app" style={S.primary}>
-              Open PromptLab
+              Open AI Work Studio
             </a>
             <a href="#what" style={S.secondary}>
               See what it does
@@ -300,7 +300,7 @@ export default function LandingPage() {
             The first few results are free, and you do not need an account to see one.
           </p>
           <a href="/app" style={S.primary}>
-            Open PromptLab
+            Open AI Work Studio
           </a>
         </div>
       </section>
@@ -315,7 +315,7 @@ export default function LandingPage() {
         }}
       >
         <p>
-          © 2026 PromptLab ·{" "}
+          © 2026 AI Work Studio ·{" "}
           <a href="/privacy" style={{ color: "var(--accent)" }}>
             Privacy
           </a>{" "}

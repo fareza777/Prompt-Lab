@@ -21,7 +21,6 @@ const visibleResultKeys = [
   "canvas.hero",
   "canvas.subtitle",
   "canvas.generate",
-  "result.viewPrompt",
   "result.runHint",
   "result.runWorkingHint",
   "result.runFailed",
@@ -30,12 +29,9 @@ const visibleResultKeys = [
   "firstrun.build.point1",
 ];
 
-test("readiness is presented as an estimate, never as a guarantee", () => {
-  assert.match(resultSource, /result\.readiness/);
-  assert.match(resultSource, /result\.readinessHelp/);
-  // Both languages must disclaim it.
-  assert.match(i18nSource, /automated score, not a quality guarantee/i);
-  assert.match(i18nSource, /penilaian otomatis, bukan jaminan kualitas/i);
+test("visible product branding is AI Work Studio", () => {
+  assert.match(i18nSource, /AI Work Studio/);
+  assert.doesNotMatch(resultSource, /viewPrompt|copyPrompt|improvePrompt|comparePrompt/);
 });
 
 test("local compare fallback keeps measured dimensions and is not labelled as provider scoring", () => {

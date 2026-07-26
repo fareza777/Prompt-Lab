@@ -13,7 +13,7 @@ export default function FirstRun({ onPickLanguage, onFinish }) {
         <span className="pl-firstrun-mark" aria-hidden="true">
           <Languages size={22} />
         </span>
-        <p className="pl-eyebrow">PromptLab</p>
+        <p className="pl-eyebrow">AI Work Studio</p>
         <h1 id="lang-title">Pilih bahasa · Choose language</h1>
         <p className="pl-firstrun-lede">
           Bahasa tampilan saja. Kamu tetap bisa meminta hasil dalam bahasa apa pun.

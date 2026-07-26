@@ -17,19 +17,19 @@ export const SETTINGS_SECTION_NAMES = Object.freeze([
 
 export const ABOUT_WORKFLOW = Object.freeze([
   Object.freeze({
-    label: "Build",
-    description: "Turn an idea or file into a structured prompt.",
+    label: "Create",
+    description: "Turn an idea, photo, or file into finished work.",
   }),
   Object.freeze({
     label: "Improve",
-    description: "Refine clarity, detail, constraints, and output format.",
+    description: "Refine clarity, detail, structure, and tone.",
   }),
   Object.freeze({
-    label: "Compare",
-    description: "Check two prompt versions before choosing one.",
+    label: "Review",
+    description: "Check facts, names, dates, and recommendations.",
   }),
   Object.freeze({
-    label: "Reuse",
-    description: "Save templates and successful prompts in Library.",
+    label: "Export",
+    description: "Save the result or download a polished Office file.",
   }),
 ]);
