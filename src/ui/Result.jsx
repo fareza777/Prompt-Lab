@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { createContentActionPayload } from "./contentRecord.js";
 import { groupDocumentSections, parseMarkdownBlocks } from "./markdownBlocks.js";
+import { MERMAID_INIT } from "../mermaidConfig.js";
+import { rememberRenderedDiagramSvg } from "../diagramSvgStore.js";
 
 function renderInline(text) {
   return String(text)
@@ -39,13 +41,13 @@ function MermaidBlock({ code, t }) {
 
     (async () => {
       try {
-        const [{ default: mermaid }, { MERMAID_INIT }] = await Promise.all([
-          import("mermaid"),
-          import("../mermaidConfig.js"),
-        ]);
+        const { default: mermaid } = await import("mermaid");
         mermaid.initialize(MERMAID_INIT);
         const { svg: rendered } = await mermaid.render(`pl-mmd-${reactId}`, code);
-        if (!cancelled) setSvg(rendered);
+        if (!cancelled) {
+          setSvg(rendered);
+          rememberRenderedDiagramSvg(rendered, code);
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err?.message || "render_failed");

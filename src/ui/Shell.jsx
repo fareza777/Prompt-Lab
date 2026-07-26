@@ -14,6 +14,7 @@ import Account from "./Account.jsx";
 import Improve from "./Improve.jsx";
 import Compare from "./Compare.jsx";
 import Report from "./Report.jsx";
+import DiagramSaveSheet from "./DiagramSaveSheet.jsx";
 import { getRecordRestoreState } from "./contentRecord.js";
 
 /**
@@ -115,6 +116,9 @@ export default function Shell(props) {
     savePrompt,
     exportFile,
     exportStatus,
+    diagramExportOffer,
+    closeDiagramExportOffer,
+    confirmDiagramExportShare,
     entitlements,
     accountState,
     hasAuthSession,
@@ -617,6 +621,13 @@ export default function Shell(props) {
           content={reportContent}
         apiBase={apiBase}
         getAuthHeaders={getAuthHeaders}
+      />
+
+      <DiagramSaveSheet
+        t={t}
+        offer={diagramExportOffer}
+        onClose={closeDiagramExportOffer}
+        onShared={confirmDiagramExportShare}
       />
 
       {actionToast && (

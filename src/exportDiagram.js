@@ -1,27 +1,35 @@
 /**
  * Client-side Mermaid diagram export (SVG / PNG).
  *
- * PNG strategy (in order):
- * 1. Server sharp rasterize (/api/export/diagram-png) — reliable on Android TWA
- * 2. Client canvas from SVG data/blob URL
- * 3. Fall back to SVG download so the user still gets a file
+ * PNG strategy:
+ * 1. Prefer the SVG already painted on screen (stored + DOM)
+ * 2. Server sharp rasterize (/api/export/diagram-png)
+ * 3. Client canvas fallback
+ * 4. SVG file if PNG cannot be produced
  */
 
 import { MERMAID_INIT } from "./mermaidConfig.js";
+import { readRenderedDiagramSvg } from "./diagramSvgStore.js";
 
 export { MERMAID_INIT } from "./mermaidConfig.js";
 
 export function extractMermaidCode(output = "") {
-  const fenced = String(output).match(/```mermaid\s*([\s\S]*?)```/i);
+  const text = String(output || "");
+  const fenced = text.match(/```mermaid\s*([\s\S]*?)```/i);
   if (fenced?.[1]?.trim()) return fenced[1].trim();
-  const loose = String(output).match(/```(?:mermaid)?\s*\n([\s\S]*?)```/i);
+
+  const tilde = text.match(/~~~mermaid\s*([\s\S]*?)~~~/i);
+  if (tilde?.[1]?.trim()) return tilde[1].trim();
+
+  const loose = text.match(/```(?:mermaid)?\s*\n([\s\S]*?)```/i);
   if (loose?.[1] && /^(flowchart|sequenceDiagram|classDiagram|erDiagram|mindmap|graph)\b/m.test(loose[1])) {
     return loose[1].trim();
   }
-  if (/^(flowchart|sequenceDiagram|classDiagram|erDiagram|mindmap|graph)\b/m.test(output)) {
-    return String(output)
+  if (/^(flowchart|sequenceDiagram|classDiagram|erDiagram|mindmap|graph)\b/m.test(text)) {
+    return text
       .replace(/^[\s\S]*?((?:flowchart|sequenceDiagram|classDiagram|erDiagram|mindmap|graph)\b[\s\S]*)$/m, "$1")
       .replace(/\n```[\s\S]*$/, "")
+      .replace(/\n~~~[\s\S]*$/, "")
       .trim();
   }
   return "";
@@ -50,8 +58,14 @@ export function prepareSvgMarkup(svgString) {
   }
 
   const box = parseViewBox(svg);
-  const width = Math.max(1, Math.ceil(box?.width || Number(svg.match(/\bwidth\s*=\s*["']([0-9.]+)/i)?.[1]) || 960));
-  const height = Math.max(1, Math.ceil(box?.height || Number(svg.match(/\bheight\s*=\s*["']([0-9.]+)/i)?.[1]) || 540));
+  const width = Math.max(
+    1,
+    Math.ceil(box?.width || Number(svg.match(/\bwidth\s*=\s*["']([0-9.]+)/i)?.[1]) || 960)
+  );
+  const height = Math.max(
+    1,
+    Math.ceil(box?.height || Number(svg.match(/\bheight\s*=\s*["']([0-9.]+)/i)?.[1]) || 540)
+  );
 
   if (/\swidth\s*=/.test(svg)) {
     svg = svg.replace(/\swidth\s*=\s*["'][^"']*["']/i, ` width="${width}"`);
@@ -78,8 +92,10 @@ export function prepareSvgMarkup(svgString) {
   };
 }
 
-/** Prefer the already-painted diagram on screen (avoids a second Mermaid render). */
 export function captureOnScreenDiagramSvg() {
+  const remembered = readRenderedDiagramSvg();
+  if (remembered) return remembered;
+
   if (typeof document === "undefined") return "";
   const svgEl =
     document.querySelector(".pl-mermaid__canvas svg") ||
@@ -106,17 +122,21 @@ async function renderMermaidSvgMarkup(code) {
 }
 
 async function resolvePreparedSvg(output) {
-  const fromDom = captureOnScreenDiagramSvg();
-  if (fromDom) {
+  const fromScreen = captureOnScreenDiagramSvg();
+  if (fromScreen) {
     try {
-      return prepareSvgMarkup(fromDom);
+      return prepareSvgMarkup(fromScreen);
     } catch {
       /* fall through */
     }
   }
 
   const code = extractMermaidCode(output);
-  if (!code) throw new Error("No Mermaid diagram found in this result.");
+  if (!code) {
+    throw new Error(
+      "No Mermaid diagram found in this result. Open the Diagram section first, wait until it renders, then try Download PNG again."
+    );
+  }
   return renderMermaidSvgMarkup(code);
 }
 
@@ -208,14 +228,11 @@ async function rasterizeViaServer(prepared, { apiBase = "", authHeaders = {}, ti
   }
 
   const blob = await response.blob();
-  if (!blob || blob.size < 64 || blob.type.includes("json")) {
+  if (!blob || blob.size < 64 || (blob.type && blob.type.includes("json"))) {
     throw new Error("Server returned an empty PNG.");
   }
-  // Ensure type is image/png even if the response omitted it.
-  if (blob.type && blob.type !== "image/png") {
-    return new Blob([await blob.arrayBuffer()], { type: "image/png" });
-  }
-  return blob.type === "image/png" ? blob : new Blob([await blob.arrayBuffer()], { type: "image/png" });
+  if (blob.type === "image/png") return blob;
+  return new Blob([await blob.arrayBuffer()], { type: "image/png" });
 }
 
 /**

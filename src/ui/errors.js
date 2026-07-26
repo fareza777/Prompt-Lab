@@ -27,6 +27,12 @@ const PATTERNS = [
 export function humanizeApiError(message, t) {
   const raw = String(message || "").trim();
   if (!raw) return "";
+  // Keep diagram/export diagnostics readable — hiding them as "generic" made PNG debugging impossible.
+  if (
+    /mermaid|diagram|png|svg|export|raster|canvas|decode|unduhan|unduh|bagikan/i.test(raw)
+  ) {
+    return raw;
+  }
   for (const [pattern, key] of PATTERNS) {
     if (pattern.test(raw)) return t(key);
   }

@@ -1317,6 +1317,7 @@ function App() {
   const [playBillingReady, setPlayBillingReady] = useState(() => isPlayBillingAvailable());
   const playBillingHint = useMemo(() => getPlayBillingHint(), [playBillingReady]);
   const [exportStatus, setExportStatus] = useState("");
+  const [diagramExportOffer, setDiagramExportOffer] = useState(null);
   const [library, setLibrary] = useState(() => {
     try {
       return normalizeLibrary(JSON.parse(localStorage.getItem("promptlab-library")));
@@ -2754,6 +2755,7 @@ function App() {
     if (format === "png" || format === "svg") {
       try {
         setExportStatus(`Preparing ${formatLabel}...`);
+        setErrorMessage("");
         const { buildDiagramExportBlob } = await import("./exportDiagram.js");
         const { deriveExportTitle, toDownloadFilename, triggerBrowserDownload } = await import(
           "./exportNaming.js"
@@ -2764,17 +2766,38 @@ function App() {
             narrative: titleSeed || narrative,
             attachmentNames: attachments.map((file) => file.name),
           }) || "Diagram";
+
+        let authHeaders = {};
+        try {
+          authHeaders = await getAuthHeaders();
+        } catch {
+          authHeaders = {};
+        }
+
         const { blob, extension, note } = await buildDiagramExportBlob(content, format, {
           apiBase,
-          authHeaders: await getAuthHeaders(),
+          authHeaders,
           title,
         });
         const filename = toDownloadFilename(title, extension);
-        const result = await triggerBrowserDownload(blob, filename);
-        if (note) {
-          setWarningMessage(note);
-        }
         const label = extension.toUpperCase();
+
+        if (note) setWarningMessage(note);
+
+        // Android TWA: silent download is a no-op. Show preview + require a fresh Share tap.
+        const needsSaveSheet =
+          isLikelyAndroidTwa() ||
+          (typeof navigator !== "undefined" && /Android|iPhone|iPad/i.test(navigator.userAgent || ""));
+
+        if (needsSaveSheet) {
+          if (diagramExportOffer?.url) URL.revokeObjectURL(diagramExportOffer.url);
+          const url = URL.createObjectURL(blob);
+          setDiagramExportOffer({ blob, filename, extension, url });
+          setExportStatus(`${label} siap — ketuk Bagikan / Simpan`);
+          return;
+        }
+
+        const result = await triggerBrowserDownload(blob, filename);
         setExportStatus(
           result?.method === "share" || result?.method === "share-abort"
             ? `${label} ready — pilih Save / Download di share sheet`
@@ -2783,8 +2806,23 @@ function App() {
         window.setTimeout(() => setExportStatus(""), 4500);
       } catch (error) {
         console.error("[diagram-export]", error);
-        setErrorMessage(error?.message || "Diagram export failed.");
-        setExportStatus(`${formatLabel} failed`);
+        const detail = error?.message || "Diagram export failed.";
+        setErrorMessage(detail);
+        setExportStatus(`${formatLabel} failed: ${detail}`);
+        try {
+          await fetch(`${apiBase}/api/client-log`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              kind: "diagram-export",
+              format,
+              error: detail,
+              ua: typeof navigator !== "undefined" ? navigator.userAgent : "",
+            }),
+          });
+        } catch {
+          /* ignore */
+        }
       }
       return;
     }
@@ -2836,6 +2874,23 @@ function App() {
       setErrorMessage(error.message || "Export failed.");
       setExportStatus(`${formatLabel} failed`);
     }
+  }
+
+  function closeDiagramExportOffer() {
+    setDiagramExportOffer((current) => {
+      if (current?.url) URL.revokeObjectURL(current.url);
+      return null;
+    });
+    setExportStatus("");
+  }
+
+  function confirmDiagramExportShare(method = "share") {
+    setExportStatus(
+      method === "open" || method === "preview"
+        ? "PNG terbuka — tekan lama gambar untuk Simpan"
+        : "PNG dibagikan / siap disimpan"
+    );
+    window.setTimeout(() => setExportStatus(""), 4500);
   }
 
   const filteredLibrary = library.filter((item) =>
@@ -2942,6 +2997,9 @@ function App() {
     grantSuperUser,
     adminActionStatus,
     exportStatus,
+    diagramExportOffer,
+    closeDiagramExportOffer,
+    confirmDiagramExportShare,
     exportFile,
     apiBase,
     accountState,

@@ -595,6 +595,20 @@ app.post("/api/export/diagram-png", express.json({ limit: "4mb" }), async (req, 
   }
 });
 
+/** Lightweight client diagnostics (diagram export failures on Android TWA). */
+app.post("/api/client-log", express.json({ limit: "16kb" }), async (req, res) => {
+  try {
+    const kind = String(req.body?.kind || "client").slice(0, 64);
+    const error = String(req.body?.error || "").slice(0, 500);
+    const format = String(req.body?.format || "").slice(0, 16);
+    const ua = String(req.body?.ua || req.get("user-agent") || "").slice(0, 240);
+    console.error("[client-log]", { kind, format, error, ua });
+    res.status(204).end();
+  } catch {
+    res.status(204).end();
+  }
+});
+
 app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), async (req, res) => {
   try {
     const productId = String(req.body?.productId || "").trim();
