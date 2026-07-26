@@ -19,9 +19,9 @@ export const SEO_ROUTES = {
     h1: "landing",
     lang: "en",
     ogType: "website",
-    title: "PromptLab — AI Prompt Workspace | How to Create the Best Prompt",
+    title: "PromptLab — AI Work Studio | From Request to Finished Result",
     description:
-      "Learn how to create the best AI prompt for ChatGPT, Claude, Gemini & Grok. Free prompt builder with readiness scoring, optimizer, and 50+ templates. Best prompt tool 2026.",
+      "Turn ideas, notes, photos, and files directly into finished AI work. Create reports, content, analysis, slide outlines, and code in one focused workspace.",
     canonical: `${SITE}/`,
   },
   "/blog": {

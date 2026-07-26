@@ -64,7 +64,7 @@ function applyKeywordsAndArticleMeta(html, path, route) {
   out = removeMetaById(out, "og-article-modified");
 
   if (path === "/" || path === "/blog") {
-    out = setMetaById(out, "og-image-alt", "content", "PromptLab — AI Prompt Workspace");
+    out = setMetaById(out, "og-image-alt", "content", "PromptLab — AI Work Studio");
   }
 
   return out;

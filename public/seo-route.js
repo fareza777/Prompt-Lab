@@ -7,8 +7,8 @@
 
   var SEO = {
     "/": {
-      title: "PromptLab — AI Prompt Workspace | How to Create the Best Prompt",
-      description: "Learn how to create the best AI prompt for ChatGPT, Claude, Gemini & Grok. Free prompt builder with readiness scoring, optimizer, and 50+ templates. Best prompt tool 2026.",
+      title: "PromptLab — AI Work Studio | From Request to Finished Result",
+      description: "Turn ideas, notes, photos, and files directly into finished AI work. Create reports, content, analysis, slide outlines, and code in one focused workspace.",
       canonical: "https://prompt-lab.xyz/",
       h1: "landing",
       lang: "en",
@@ -746,7 +746,7 @@
 
     if (published) published.remove();
     if (modified) modified.remove();
-    setMetaContent("og-image-alt", "PromptLab — AI Prompt Workspace");
+    setMetaContent("og-image-alt", "PromptLab — AI Work Studio");
   }
 
   function applySeoMeta(meta, path) {

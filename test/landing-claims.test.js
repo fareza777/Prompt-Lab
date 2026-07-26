@@ -64,3 +64,21 @@ test("landing markup does not promise AI generation only after signup", () => {
     "landing still says AI generation requires an account"
   );
 });
+
+test("homepage product narrative is result-first rather than prompt-first", () => {
+  const productStart = indexHtml.indexOf("<!-- Hero -->");
+  const productEnd = indexHtml.indexOf("<!-- Blog -->");
+  const productCopy = indexHtml
+    .slice(productStart, productEnd)
+    .replaceAll(/Prompt[-\s]*Lab/gi, "");
+
+  assert.doesNotMatch(productCopy, /\b(prompt|prompts|prompting)\b/i);
+  assert.match(productCopy, /From a rough request to/);
+  assert.match(productCopy, /Create Result/);
+
+  const componentCopy = landingComponent
+    .slice(landingComponent.indexOf("const WHAT_IT_DOES"))
+    .replaceAll(/Prompt[-\s]*Lab/gi, "");
+  assert.doesNotMatch(componentCopy, /\bprompt(s|ing)?\b/i);
+  assert.match(componentCopy, /finished work/i);
+});
