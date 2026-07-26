@@ -39,13 +39,11 @@ function MermaidBlock({ code, t }) {
 
     (async () => {
       try {
-        const mermaid = (await import("mermaid")).default;
-        mermaid.initialize({
-          startOnLoad: false,
-          securityLevel: "strict",
-          theme: "neutral",
-          fontFamily: "Georgia, 'Times New Roman', serif",
-        });
+        const [{ default: mermaid }, { MERMAID_INIT }] = await Promise.all([
+          import("mermaid"),
+          import("../exportDiagram.js"),
+        ]);
+        mermaid.initialize(MERMAID_INIT);
         const { svg: rendered } = await mermaid.render(`pl-mmd-${reactId}`, code);
         if (!cancelled) setSvg(rendered);
       } catch (err) {

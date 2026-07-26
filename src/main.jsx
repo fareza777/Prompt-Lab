@@ -2769,7 +2769,11 @@ function App() {
         setExportStatus(`${formatLabel} downloaded`);
         window.setTimeout(() => setExportStatus(""), 2200);
       } catch (error) {
-        setErrorMessage(error.message || "Diagram export failed.");
+        const message =
+          format === "png"
+            ? "PNG download failed. Try SVG, or regenerate the result."
+            : error.message || "Diagram export failed.";
+        setErrorMessage(message);
         setExportStatus(`${formatLabel} failed`);
       }
       return;
