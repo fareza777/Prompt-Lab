@@ -2765,9 +2765,14 @@ function App() {
             attachmentNames: attachments.map((file) => file.name),
           }) || "Diagram";
         const { blob, extension } = await buildDiagramExportBlob(content, format);
-        triggerBrowserDownload(blob, toDownloadFilename(title, extension));
-        setExportStatus(`${formatLabel} downloaded`);
-        window.setTimeout(() => setExportStatus(""), 2200);
+        const filename = toDownloadFilename(title, extension);
+        const result = await triggerBrowserDownload(blob, filename);
+        setExportStatus(
+          result?.method === "share" || result?.method === "share-abort"
+            ? `${formatLabel} ready to save/share`
+            : `${formatLabel} downloaded`
+        );
+        window.setTimeout(() => setExportStatus(""), 2800);
       } catch (error) {
         const message =
           format === "png"
@@ -2819,9 +2824,9 @@ function App() {
       if (!blob || blob.size < 64) {
         throw new Error(`Failed to export ${formatLabel}: empty file.`);
       }
-      triggerBrowserDownload(blob, toDownloadFilename(title, format));
+      await triggerBrowserDownload(blob, toDownloadFilename(title, format));
       setExportStatus(`${formatLabel} downloaded`);
-      window.setTimeout(() => setExportStatus(""), 2200);
+      window.setTimeout(() => setExportStatus(""), 2800);
     } catch (error) {
       setErrorMessage(error.message || "Export failed.");
       setExportStatus(`${formatLabel} failed`);

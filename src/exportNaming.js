@@ -82,13 +82,34 @@ export function toDownloadFilename(title, extension) {
   return `${stem || "AI-Work-Studio-Export"}.${ext || "bin"}`;
 }
 
-export function triggerBrowserDownload(blob, filename) {
+export async function triggerBrowserDownload(blob, filename) {
+  const type = blob.type || "application/octet-stream";
+  const file = new File([blob], filename, { type });
+
+  // Android TWA / many mobile browsers ignore <a download> for blobs.
+  // Web Share with a File is the reliable "save/share" path there.
+  try {
+    if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: filename });
+      return { method: "share" };
+    }
+  } catch (error) {
+    // User cancelled share — treat as handled, not a hard failure.
+    if (error?.name === "AbortError") return { method: "share-abort" };
+  }
+
   const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  try {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.rel = "noopener";
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    return { method: "anchor" };
+  } finally {
+    window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
 }

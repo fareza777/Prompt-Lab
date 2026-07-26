@@ -41,7 +41,7 @@ function MermaidBlock({ code, t }) {
       try {
         const [{ default: mermaid }, { MERMAID_INIT }] = await Promise.all([
           import("mermaid"),
-          import("../exportDiagram.js"),
+          import("../mermaidConfig.js"),
         ]);
         mermaid.initialize(MERMAID_INIT);
         const { svg: rendered } = await mermaid.render(`pl-mmd-${reactId}`, code);
