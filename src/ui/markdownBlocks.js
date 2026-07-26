@@ -16,6 +16,7 @@ function isBlockStart(lines, index) {
   const line = lines[index] || "";
   const next = lines[index + 1] || "";
   return (
+    /^```/.test(line) ||
     /^#{1,6}\s+/.test(line) ||
     /^>\s?/.test(line) ||
     /^[-*+]\s+/.test(line) ||
@@ -29,9 +30,24 @@ export function parseMarkdownBlocks(markdown) {
   const blocks = [];
 
   for (let index = 0; index < lines.length; ) {
-    const line = lines[index].trim();
+    const rawLine = lines[index];
+    const line = rawLine.trim();
     if (!line) {
       index += 1;
+      continue;
+    }
+
+    const fenceOpen = line.match(/^```([\w-]*)\s*$/);
+    if (fenceOpen) {
+      const lang = (fenceOpen[1] || "").toLowerCase();
+      const body = [];
+      index += 1;
+      while (index < lines.length && !/^```\s*$/.test(lines[index].trim())) {
+        body.push(lines[index]);
+        index += 1;
+      }
+      if (index < lines.length) index += 1;
+      blocks.push({ type: "code", lang, text: body.join("\n") });
       continue;
     }
 

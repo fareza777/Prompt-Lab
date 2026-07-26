@@ -315,8 +315,12 @@ const id = {
   "opt.output.Technical Design": "Desain teknis",
   "opt.output.Analysis": "Analisis",
   "opt.output.Content": "Konten",
+  "opt.output.Diagram": "Diagram (Mermaid)",
   "opt.output.Image Prompt": "Arahan gambar AI",
   "opt.output.Video Prompt": "Arahan video AI",
+  "result.diagramTitle": "Diagram",
+  "result.diagramSource": "Kode Mermaid",
+  "result.diagramError": "Diagram tidak bisa digambar. Kode sumber tetap ditampilkan di bawah.",
 };
 
 const en = {
@@ -606,8 +610,12 @@ const en = {
   "opt.output.Technical Design": "Technical design",
   "opt.output.Analysis": "Analysis",
   "opt.output.Content": "Content",
+  "opt.output.Diagram": "Diagram (Mermaid)",
   "opt.output.Image Prompt": "AI image direction",
   "opt.output.Video Prompt": "AI video direction",
+  "result.diagramTitle": "Diagram",
+  "result.diagramSource": "Mermaid source",
+  "result.diagramError": "Could not render the diagram. Source code is shown below.",
 };
 
 const TABLES = { id, en };

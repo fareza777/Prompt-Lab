@@ -27,6 +27,7 @@ export const OUTPUT_TYPES = [
   "Technical Design",
   "Analysis",
   "Content",
+  "Diagram",
   "Image Prompt",
   "Video Prompt",
 ];

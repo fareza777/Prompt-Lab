@@ -420,6 +420,8 @@ function pickLang(code) {
 
 export function shouldUsePhasedAppDelivery(narrative = "", category = "", outputType = "") {
   if (shouldUseStructuredAudit(narrative, category, outputType)) return false;
+  if (/^diagram$/i.test(String(outputType || "").trim())) return false;
+  if (/\b(mermaid|flowchart|diagram|bagan|alur)\b/i.test(outputType || "")) return false;
   const text = `${narrative} ${category} ${outputType}`;
   if (resolvePhasedAppKind(narrative) === "game_platformer") return true;
   if (GAME_BUILD_SIGNAL.test(narrative) && /application code|kode aplikasi/i.test(outputType)) return true;

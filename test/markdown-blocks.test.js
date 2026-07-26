@@ -56,3 +56,18 @@ Isi detail.`),
   assert.equal(sections[2].blocks[1].type, "heading");
   assert.equal(sections[2].blocks[1].level, 3);
 });
+
+test("parses fenced mermaid code blocks", () => {
+  const blocks = parseMarkdownBlocks(`# Alur
+
+\`\`\`mermaid
+flowchart TD
+  A --> B
+\`\`\`
+`);
+
+  assert.equal(blocks[0].type, "heading");
+  assert.equal(blocks[1].type, "code");
+  assert.equal(blocks[1].lang, "mermaid");
+  assert.match(blocks[1].text, /flowchart TD/);
+});

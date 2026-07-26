@@ -1383,6 +1383,36 @@
   font: 0.9em/1.4 var(--font-mono);
 }
 
+.pl-code-block {
+  margin: 1em 0;
+  padding: 0.9em 1em;
+  overflow-x: auto;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--paper-muted);
+  font: 0.86em/1.5 var(--font-mono);
+  white-space: pre;
+}
+
+.pl-mermaid {
+  margin: 1em 0;
+  padding: 0.85rem 1rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+}
+
+.pl-mermaid__canvas {
+  width: 100%;
+  overflow-x: auto;
+  margin-bottom: 0.75rem;
+}
+
+.pl-mermaid__canvas svg {
+  max-width: 100%;
+  height: auto;
+}
+
 .pl-doc-table-wrap {
   max-width: 100%;
   margin: 1em 0;

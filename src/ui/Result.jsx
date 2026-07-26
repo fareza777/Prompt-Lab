@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -26,7 +26,66 @@ function renderInline(text) {
     });
 }
 
-function BlockView({ block, index }) {
+function MermaidBlock({ code, t }) {
+  const reactId = useId().replace(/:/g, "");
+  const [svg, setSvg] = useState("");
+  const [error, setError] = useState("");
+  const [showSource, setShowSource] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSvg("");
+    setError("");
+
+    (async () => {
+      try {
+        const mermaid = (await import("mermaid")).default;
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: "strict",
+          theme: "neutral",
+          fontFamily: "Georgia, 'Times New Roman', serif",
+        });
+        const { svg: rendered } = await mermaid.render(`pl-mmd-${reactId}`, code);
+        if (!cancelled) setSvg(rendered);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || "render_failed");
+          setShowSource(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [code, reactId]);
+
+  return (
+    <figure className="pl-mermaid">
+      {svg ? (
+        <div className="pl-mermaid__canvas" dangerouslySetInnerHTML={{ __html: svg }} />
+      ) : !error ? (
+        <p className="pl-meta">{t("result.runWorking")}</p>
+      ) : null}
+      {error ? <p className="pl-notice pl-notice--quiet">{t("result.diagramError")}</p> : null}
+      <button
+        type="button"
+        className="pl-btn pl-btn--quiet pl-btn--sm"
+        onClick={() => setShowSource((value) => !value)}
+      >
+        {t("result.diagramSource")}
+      </button>
+      {showSource ? (
+        <pre className="pl-code-block">
+          <code>{code}</code>
+        </pre>
+      ) : null}
+    </figure>
+  );
+}
+
+function BlockView({ block, index, t }) {
   const key = `${block.type}-${index}`;
   if (block.type === "heading") {
     const Heading = `h${Math.min(4, Math.max(3, block.level))}`;
@@ -69,6 +128,16 @@ function BlockView({ block, index }) {
   if (block.type === "quote") {
     return <blockquote key={key}>{renderInline(block.text)}</blockquote>;
   }
+  if (block.type === "code") {
+    if (block.lang === "mermaid") {
+      return <MermaidBlock key={key} code={block.text} t={t} />;
+    }
+    return (
+      <pre className="pl-code-block" key={key}>
+        <code>{block.text}</code>
+      </pre>
+    );
+  }
   return <p key={key}>{renderInline(block.text)}</p>;
 }
 
@@ -94,7 +163,12 @@ function SectionCards({ sections, t }) {
     <div className="pl-doc-sections" aria-label={t("result.sections")}>
       {sections.map((section, index) => {
         const open = openIds.has(section.id);
-        const title = section.title || t("result.untitledSection");
+        const hasMermaid = section.blocks.some(
+          (block) => block.type === "code" && block.lang === "mermaid"
+        );
+        const title =
+          section.title ||
+          (hasMermaid ? t("result.diagramTitle") : t("result.untitledSection"));
         return (
           <section
             key={section.id}
@@ -117,7 +191,12 @@ function SectionCards({ sections, t }) {
               <div className="pl-doc-card__body pl-doc pl-doc--output" id={`${section.id}-body`}>
                 {section.blocks.length ? (
                   section.blocks.map((block, blockIndex) => (
-                    <BlockView key={`${section.id}-${blockIndex}`} block={block} index={blockIndex} />
+                    <BlockView
+                      key={`${section.id}-${blockIndex}`}
+                      block={block}
+                      index={blockIndex}
+                      t={t}
+                    />
                   ))
                 ) : (
                   <p className="pl-meta">{t("result.emptySection")}</p>

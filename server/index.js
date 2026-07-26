@@ -28,6 +28,7 @@ import {
   detectImageVideoIntent,
   isGrokTarget,
 } from "../src/imageVideoPromptDelivery.js";
+import { buildMermaidDeliveryAddon, detectDiagramIntent } from "../src/mermaidDelivery.js";
 import {
   buildIntentSystemPromptXml,
   acceptBuilderCandidate,
@@ -1213,13 +1214,17 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
     // details first". A system message loses to 5,000 characters of user
     // instruction; repeating the directive as the last thing read does not.
     const deliverableProfile = detectDeliverableProfile(payload);
+    const outputLang = resolveOutputLanguage(payload.narrative || prompt);
     const deliverableInstruction = buildDeliverableInstruction({
       profile: deliverableProfile,
-      language: resolveOutputLanguage(payload.narrative || prompt),
+      language: outputLang,
     });
+    const diagramAddon = detectDiagramIntent(payload)
+      ? `\n\n${buildMermaidDeliveryAddon({ ...payload, outputLanguage: outputLang })}`
+      : "";
     const messages = [
       { role: "system", content: RUN_SYSTEM_PROMPT },
-      { role: "user", content: `${prompt}${deliverableInstruction}\n\n${RUN_FINAL_DIRECTIVE}` },
+      { role: "user", content: `${prompt}${deliverableInstruction}${diagramAddon}\n\n${RUN_FINAL_DIRECTIVE}` },
     ];
     const primaryModel = modelSettings?.primaryModel || runtime.defaultModel;
     const fallbackModels = getOpenRouterFallbackModels(

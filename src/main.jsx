@@ -57,6 +57,11 @@ import {
 import { buildPhasedAppDeliveryInstruction } from "./phasedAppDelivery.js";
 import { buildStructuredAuditInstruction } from "./structuredAuditDelivery.js";
 import { buildImageVideoPromptAddon } from "./imageVideoPromptDelivery.js";
+import {
+  buildMermaidDeliveryAddon,
+  defaultDiagramNarrative,
+  detectDiagramIntent,
+} from "./mermaidDelivery.js";
 import { API_MSG } from "./apiUserMessages.js";
 import { isSuperAccount, SUPER_QUOTA_LIMIT } from "./superAccounts.js";
 import { clearInstalledAppEntry, markInstalledAppEntered } from "./installedApp.js";
@@ -213,6 +218,15 @@ function createDefaultAccountState() {
 const defaultAccountState = createDefaultAccountState();
 
 const templates = [
+  {
+    title: "Document to Mermaid Diagram",
+    category: "Business",
+    model: "Claude",
+    outputType: "Diagram",
+    tone: "Professional",
+    prompt:
+      "Turn the attached document into a clear Mermaid diagram of the main process or structure, plus a short wiki-style summary.",
+  },
   {
     title: "Web App from Document",
     category: "Coding",
@@ -830,6 +844,8 @@ ${buildPhasedAppDeliveryInstruction(cleanNarrative, category, outputType, langMe
 
 ${buildImageVideoPromptAddon({ narrative: cleanNarrative, category, outputType, modelTarget: model, outputLanguage: langMeta.code })}
 
+${buildMermaidDeliveryAddon({ narrative: cleanNarrative, category, outputType, outputLanguage: langMeta.code })}
+
 ${reasoningLine}`;
 }
 
@@ -1060,7 +1076,9 @@ ${buildStructuredAuditInstruction(cleanNarrative, category, outputType, langMeta
 
 ${buildPhasedAppDeliveryInstruction(cleanNarrative, category, outputType, langMeta.code)}
 
-${buildImageVideoPromptAddon({ narrative: cleanNarrative, category, outputType, modelTarget: model, outputLanguage: langMeta.code })}`;
+${buildImageVideoPromptAddon({ narrative: cleanNarrative, category, outputType, modelTarget: model, outputLanguage: langMeta.code })}
+
+${buildMermaidDeliveryAddon({ narrative: cleanNarrative, category, outputType, outputLanguage: langMeta.code })}`;
 }
 
 function buildLocalCompareResult(promptA, promptB) {
@@ -2210,6 +2228,17 @@ function App() {
       }
     }
 
+    let effectiveOutputType = customOutputType;
+    let effectiveNarrative = String(customNarrative || "").trim();
+    if (detectDiagramIntent({ narrative: effectiveNarrative, outputType: effectiveOutputType })) {
+      effectiveOutputType = "Diagram";
+      if (effectiveOutputType !== outputType) setOutputType("Diagram");
+    }
+    if (effectiveOutputType === "Diagram" && !effectiveNarrative && attachments.length > 0) {
+      effectiveNarrative = defaultDiagramNarrative(detectLanguage() === "en" ? "en" : "id");
+      setNarrative(effectiveNarrative);
+    }
+
     setIsGenerating(true);
     setErrorMessage("");
     setWarningMessage("");
@@ -2218,11 +2247,11 @@ function App() {
 
     try {
       const formData = new FormData();
-      formData.append("narrative", customNarrative);
+      formData.append("narrative", effectiveNarrative);
       formData.append("category", category);
       formData.append("tone", tone);
       formData.append("model", model);
-      formData.append("outputType", customOutputType);
+      formData.append("outputType", effectiveOutputType);
       formData.append("generationMode", generationMode);
       formData.append("qualityMode", qualityMode);
       formData.append("stream", "true");
@@ -2353,13 +2382,16 @@ function App() {
     setRunError("");
     const resultId = globalThis.crypto?.randomUUID?.() || `result-${Date.now()}`;
     try {
+      const effectiveOutputType = detectDiagramIntent({ narrative, outputType })
+        ? "Diagram"
+        : outputType;
       const response = await fetch(`${apiBase}/api/run-prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
         body: JSON.stringify({
           prompt: text,
           narrative,
-          outputType,
+          outputType: effectiveOutputType,
           category,
           generationMode,
           resultId,
@@ -2368,7 +2400,11 @@ function App() {
       const data = await readApiJson(response);
       if (!response.ok) throw new Error(data.error || "Failed to run the prompt.");
       const rawContent = data.content || data.prompt || "";
-      const profile = detectDeliverableProfile({ narrative, outputType, content: rawContent });
+      const profile = detectDeliverableProfile({
+        narrative,
+        outputType: effectiveOutputType,
+        content: rawContent,
+      });
       const checked = validateFinishedOutput(rawContent, profile);
       const content = checked.content;
       setRunOutput(content);

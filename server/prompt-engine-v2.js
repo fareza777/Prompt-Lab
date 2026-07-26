@@ -1,4 +1,5 @@
 import { buildImageVideoPromptAddon } from "../src/imageVideoPromptDelivery.js";
+import { buildMermaidDeliveryAddon } from "../src/mermaidDelivery.js";
 import { getLanguageLockInstruction, getLanguageMeta } from "../src/promptLanguage.js";
 import { buildPhasedAppDeliveryInstruction } from "../src/phasedAppDelivery.js";
 import { buildStructuredAuditInstruction } from "../src/structuredAuditDelivery.js";
@@ -167,6 +168,7 @@ export function buildIntentSystemPromptXml(payload = {}) {
     "  - User minta PPT → output prompt untuk membuat PPT.",
     "  - User minta Word/dokumen → output prompt untuk Word-style report.",
     "  - User minta aplikasi/app/website → output prompt untuk runnable application code.",
+    "  - User minta Diagram → output prompt yang menghasilkan SATU diagram Mermaid (```mermaid) dari dokumen/lampiran.",
     "  - User minta Image Prompt → output prompt text-to-image (main + negative + ratio + model tuning).",
     "  - User minta Video Prompt → output prompt text-to-video dengan durasi, scene list, camera, dan negative prompt.",
     "  - Jangan pernah swap deliverable di tengah render.",
@@ -206,6 +208,8 @@ export function buildIntentSystemPromptXml(payload = {}) {
       if (phased) blocks.push(`<phased_delivery>\n${phased.replace(/\n/g, "\n  ")}\n</phased_delivery>`);
       const media = buildImageVideoPromptAddon({ ...payload, outputLanguage: langCode });
       if (media) blocks.push(media.replace(/\n/g, "\n  "));
+      const diagram = buildMermaidDeliveryAddon({ ...payload, outputLanguage: langCode });
+      if (diagram) blocks.push(diagram.replace(/\n/g, "\n  "));
       return blocks.join("\n");
     })(),
     "<output>Return only the final prompt, langsung copy-paste ready.</output>",
@@ -224,6 +228,7 @@ export function buildLeanIntentSystemPrompt(payload = {}) {
   const langCode = payload.outputLanguage || "id";
   const meta = getLanguageMeta(langCode);
   const media = buildImageVideoPromptAddon({ ...payload, outputLanguage: langCode });
+  const diagram = buildMermaidDeliveryAddon({ ...payload, outputLanguage: langCode });
   const blocks = [
     `<role>Internal Workspace — ${meta.architectLabel}.</role>`,
     `<objective>Render ONE copy-paste-ready prompt in ${meta.label}. No chatty preface.</objective>`,
@@ -233,6 +238,7 @@ export function buildLeanIntentSystemPrompt(payload = {}) {
     getLanguageLockInstruction(langCode),
   ];
   if (media) blocks.push(media);
+  if (diagram) blocks.push(diagram);
   blocks.push(buildDepthDirective(payload));
   blocks.push("<output>Return only the final prompt.</output>");
   return blocks.join("\n");
