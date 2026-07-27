@@ -2260,7 +2260,14 @@ function App() {
       const uploadPlan = getAttachmentUploadPlan(attachments, apiBase);
       formData.append("attachmentManifest", JSON.stringify(buildAttachmentManifestForApi(attachments)));
       if (uploadPlan.sendRawFiles) {
-        attachments.forEach((item) => formData.append("attachments", item.file));
+        let filesToSend = attachments;
+        try {
+          const { compressAttachmentImages } = await import("./compressImage.js");
+          filesToSend = await compressAttachmentImages(attachments);
+        } catch {
+          filesToSend = attachments;
+        }
+        filesToSend.forEach((item) => formData.append("attachments", item.file));
       }
 
       const authHeaders = await getAuthHeaders();
@@ -2387,18 +2394,60 @@ function App() {
       const effectiveOutputType = detectDiagramIntent({ narrative, outputType })
         ? "Diagram"
         : outputType;
-      const response = await fetch(`${apiBase}/api/run-prompt`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
-        body: JSON.stringify({
-          prompt: text,
-          narrative,
-          outputType: effectiveOutputType,
-          category,
-          generationMode,
-          resultId,
-        }),
-      });
+      const authHeaders = await getAuthHeaders();
+      const imageAttachments = attachments.filter(
+        (item) => item?.file && String(item.type || "").startsWith("image/")
+      );
+      let visionFiles = imageAttachments;
+      if (imageAttachments.length) {
+        try {
+          const { compressAttachmentImages } = await import("./compressImage.js");
+          visionFiles = await compressAttachmentImages(imageAttachments);
+        } catch {
+          visionFiles = imageAttachments;
+        }
+      }
+      const uploadPlan = getAttachmentUploadPlan(visionFiles, apiBase);
+
+      let response;
+      if (visionFiles.length && uploadPlan.sendRawFiles) {
+        const formData = new FormData();
+        formData.append("prompt", text);
+        formData.append("narrative", narrative || text);
+        formData.append("outputType", effectiveOutputType);
+        formData.append("category", category);
+        formData.append("generationMode", generationMode);
+        formData.append("resultId", resultId);
+        // Prefer smaller photos first so vision fits serverless limits.
+        [...visionFiles]
+          .sort((a, b) => (a.file?.size || 0) - (b.file?.size || 0))
+          .slice(0, 4)
+          .forEach((item) => formData.append("attachments", item.file));
+        response = await fetch(`${apiBase}/api/run-prompt`, {
+          method: "POST",
+          headers: authHeaders,
+          body: formData,
+        });
+      } else {
+        if (visionFiles.length && !uploadPlan.sendRawFiles) {
+          setWarningMessage(
+            (uploadPlan.warning || "") +
+              " Foto terlalu besar untuk dikirim ulang saat Buat hasil; coba foto lebih kecil."
+          );
+        }
+        response = await fetch(`${apiBase}/api/run-prompt`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders },
+          body: JSON.stringify({
+            prompt: text,
+            narrative,
+            outputType: effectiveOutputType,
+            category,
+            generationMode,
+            resultId,
+          }),
+        });
+      }
       const data = await readApiJson(response);
       if (!response.ok) throw new Error(data.error || "Failed to run the prompt.");
       const rawContent = data.content || data.prompt || "";

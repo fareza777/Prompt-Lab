@@ -108,6 +108,13 @@ import { scorePromptForCompare, getLocalPromptRisks } from "../src/promptEngine/
 import { createAiRateLimiter, createConfiguredRateLimitStore, markPriorityRequest } from "./rateLimit.js";
 import { prepareUntrustedAttachment } from "./safeAttachment.js";
 import { initSse, sendSse, sendSsePhase, consumeOpenRouterStream } from "./sse.js";
+import {
+  buildVisionUserContent,
+  compressImageForVision,
+  imageVisionExtractPrompt,
+  runVisionDirective,
+  toDataUrl,
+} from "./visionAttachments.js";
 
 const app = express();
 
@@ -1162,6 +1169,8 @@ const RUN_SYSTEM_PROMPT =
   "Write the finished document now. Default to a concise, usable version that fits " +
   "in one response (short sections and bullets) unless the user explicitly asked " +
   "for lengkap/detailed/comprehensive. " +
+  "When images are attached, you CAN see them via multimodal vision — read text in " +
+  "the photo and describe/use what is visually present. Never claim you cannot see images. " +
   "Return only the requested content itself — no preamble, no restatement of the " +
   "instructions, no commentary about what you are doing, and no reasoning notes. " +
   "Never ask a question, never ask for more details, and never offer to wait for " +
@@ -1219,10 +1228,57 @@ function sanitizeRunOutput(text) {
   return cleaned.replace(/\n{3,}/g, "\n\n").trim();
 }
 
-app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json({ limit: "256kb" }), async (req, res) => {
+function parseRunPromptBody(req) {
+  return {
+    prompt: String(req.body?.prompt || "").trim(),
+    outputType: String(req.body?.outputType || ""),
+    category: String(req.body?.category || ""),
+    narrative: String(req.body?.narrative || req.body?.prompt || ""),
+    generationMode: String(req.body?.generationMode || "Balanced"),
+    resultId: String(req.body?.resultId || "").trim(),
+  };
+}
+
+async function normalizeRunAttachments(files = [], modelSettings = {}, plan = "Free") {
+  const list = Array.isArray(files) ? files.slice(0, 4) : [];
+  const out = [];
+  for (const file of list) {
+    const mime = file.mimetype || "application/octet-stream";
+    if (!mime.startsWith("image/")) continue;
+    const compressed = await compressImageForVision(file.buffer, mime);
+    out.push({
+      filename: file.originalname || "image.jpg",
+      mime: compressed.mime,
+      dataUrl: toDataUrl(compressed.buffer, compressed.mime),
+      size: compressed.buffer.length,
+      kind: "gambar/screenshot",
+      excerpt: "",
+    });
+  }
+  // Soft cap: keep total vision payload under ~4.5MB base64-ish.
+  let total = 0;
+  const capped = [];
+  for (const item of out) {
+    total += item.dataUrl.length;
+    if (total > 4_500_000) break;
+    capped.push(item);
+  }
+  return capped;
+}
+
+function acceptRunPromptBody(req, res, next) {
+  const contentType = String(req.headers["content-type"] || "");
+  if (contentType.includes("multipart/form-data")) {
+    return upload.array("attachments", 4)(req, res, next);
+  }
+  return express.json({ limit: "256kb" })(req, res, next);
+}
+
+app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPromptBody, async (req, res) => {
   let weeklyReservation = null;
   try {
-    const prompt = String(req.body?.prompt || "").trim();
+    const body = parseRunPromptBody(req);
+    const prompt = body.prompt;
     if (!prompt) {
       res.status(400).json({ error: "No prompt to run." });
       return;
@@ -1230,19 +1286,20 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
 
     const membership = await getMembershipFromRequest(req);
     const modelSettings = applyPriorityRouting(
-      await resolveModelSettings(req, req.body),
+      await resolveModelSettings(req, body),
       membership.plan
     );
     const payload = {
       prompt,
-      outputType: String(req.body?.outputType || ""),
-      category: String(req.body?.category || ""),
-      narrative: String(req.body?.narrative || prompt),
-      generationMode: String(req.body?.generationMode || "Balanced"),
+      outputType: body.outputType,
+      category: body.category,
+      narrative: body.narrative || prompt,
+      generationMode: body.generationMode,
       modelSettings,
     };
 
-    const quotaEstimate = estimateRunTokens(payload, membership.plan);
+    const visionAttachments = await normalizeRunAttachments(req.files || [], modelSettings, membership.plan);
+    const quotaEstimate = estimateRunTokens(payload, membership.plan) + visionAttachments.length * 400;
     const quotaSession = await getQuotaSession(req, quotaEstimate);
     const runtime = getRuntimeProvider(modelSettings);
     // Capped below the plan's prompt allowance: a longer ceiling only makes the
@@ -1255,7 +1312,7 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
     }
 
     if (normalizePlanName(membership.plan) === "Free") {
-      const resultId = String(req.body?.resultId || "").trim() || randomUUID();
+      const resultId = body.resultId || randomUUID();
       weeklyReservation = {
         client: quotaSession.client,
         key: resultId,
@@ -1288,9 +1345,16 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
     const diagramAddon = detectDiagramIntent(payload)
       ? `\n\n${buildMermaidDeliveryAddon({ ...payload, outputLanguage: outputLang })}`
       : "";
+    const visionNote = visionAttachments.length
+      ? `\n\n${runVisionDirective(outputLang)}`
+      : "";
+    const userText = `${prompt}${deliverableInstruction}${diagramAddon}${visionNote}\n\n${RUN_FINAL_DIRECTIVE}`;
     const messages = [
       { role: "system", content: RUN_SYSTEM_PROMPT },
-      { role: "user", content: `${prompt}${deliverableInstruction}${diagramAddon}\n\n${RUN_FINAL_DIRECTIVE}` },
+      {
+        role: "user",
+        content: buildVisionUserContent(userText, visionAttachments),
+      },
     ];
     const primaryModel = modelSettings?.primaryModel || runtime.defaultModel;
     const fallbackModels = getOpenRouterFallbackModels(
@@ -3956,18 +4020,28 @@ async function normalizeFile(file, modelSettings = {}, plan = "Free") {
     excerpt = file.buffer.toString("utf8").replace(/\s+/g, " ").trim().slice(0, 4000);
   } else if (isImage) {
     excerpt = await extractImageText(file, modelSettings, plan).catch((error) => {
-      console.warn("image OCR skipped", file.originalname, error.status || error.code || error.message);
+      console.warn("image vision skipped", file.originalname, error.status || error.code || error.message);
       return "";
     });
   }
 
+  let dataUrl = `data:${mime};base64,${file.buffer.toString("base64")}`;
+  let outMime = mime;
+  let outSize = file.size;
+  if (isImage) {
+    const compressed = await compressImageForVision(file.buffer, mime);
+    outMime = compressed.mime;
+    outSize = compressed.buffer.length;
+    dataUrl = toDataUrl(compressed.buffer, compressed.mime);
+  }
+
   return {
-    dataUrl: `data:${mime};base64,${file.buffer.toString("base64")}`,
+    dataUrl,
     excerpt,
     filename: file.originalname,
     kind: isImage ? "gambar/screenshot" : "file",
-    mime,
-    size: file.size,
+    mime: outMime,
+    size: outSize,
   };
 }
 
@@ -4023,9 +4097,10 @@ function decodePdfHexString(value) {
 async function extractImageText(file, modelSettings = {}, plan = "Free") {
   const runtime = getRuntimeProvider(modelSettings);
   if (!runtime.client || runtime.provider === "openai") return "";
-  const mime = file.mimetype || "image/png";
-  const dataUrl = `data:${mime};base64,${file.buffer.toString("base64")}`;
+  const compressed = await compressImageForVision(file.buffer, file.mimetype || "image/png");
+  const dataUrl = toDataUrl(compressed.buffer, compressed.mime);
   const ocrRuntime = resolveOcrRuntime(plan, modelSettings.ocrModel || getDefaultOcrModel());
+  const langHint = "id";
   const response = await withTimeout(
     runtime.client.chat.completions.create(
       {
@@ -4036,8 +4111,7 @@ async function extractImageText(file, modelSettings = {}, plan = "Free") {
             content: [
               {
                 type: "text",
-                text:
-                  "Extract all readable text from this image or screenshot. Preserve the original language shown in the image. Preserve headings, bullet points, tables, labels, and numbers. If no text is readable, return an empty string.",
+                text: imageVisionExtractPrompt(langHint),
               },
               {
                 type: "image_url",
@@ -4048,14 +4122,14 @@ async function extractImageText(file, modelSettings = {}, plan = "Free") {
             ],
           },
         ],
-        max_tokens: ocrRuntime.maxTokens,
+        max_tokens: Math.max(ocrRuntime.maxTokens, 900),
       },
       { timeout: ocrRuntime.timeoutMs }
     ),
     ocrRuntime.timeoutMs,
     ocrRuntime.model
   );
-  return (response.choices?.[0]?.message?.content || "").replace(/\s+/g, " ").trim().slice(0, 5000);
+  return (response.choices?.[0]?.message?.content || "").replace(/\s+/g, " ").trim().slice(0, 6000);
 }
 
 function buildOpenAIContent(payload, attachments) {
@@ -4098,6 +4172,7 @@ Aturan penting:
 - Output WAJIB langsung berupa prompt final yang siap dicopy. Jangan menyertakan preface seperti "Berikut prompt-nya:", brief internal, atau judul "Intent Engine".
 ${deliverableGuard}
 - Jika isi lampiran tersedia, gunakan isi tersebut sebagai konteks utama.
+- Jika ada foto/gambar: LIHAT isinya (vision multimodal). Gunakan teks + visual yang terlihat. Jangan bilang tidak bisa melihat gambar.
 ${targetGuidance}${conditionalInstructions}${antiGeneric}
 
 ${buildDepthDirective(payload)}
@@ -4158,16 +4233,30 @@ ${deliverableGuard}
 ${targetGuidance}${conditionalInstructions}
 ${buildDepthDirective(payload)}
 Output WAJIB langsung berupa prompt final siap copy-paste. Tanpa preface atau meta brief.
+Jika ada foto terlampir: LIHAT isinya (vision) dan pakai teks + visual sebagai konteks.
+Jangan bilang kamu tidak bisa melihat gambar.
 
 ${getLanguageLockInstruction(payload.outputLanguage || resolveOutputLanguage(payload.narrative))}`;
-    const attachmentText = attachments
+    const textAttachments = attachments
+      .filter((file) => !(file.mime || "").startsWith("image/"))
       .map((file) =>
         file.excerpt
           ? `\n\nLampiran ${file.filename}:\n${prepareUntrustedAttachment(file.excerpt).content}`
           : `\n\nLampiran ${file.filename} (${file.mime}, ${formatBytes(file.size)}).`
       )
       .join("");
-    return `${baseText}${attachmentText}`;
+    const imageNotes = attachments
+      .filter((file) => (file.mime || "").startsWith("image/") && file.excerpt)
+      .map(
+        (file) =>
+          `\n\nCuplikan vision ${file.filename}:\n${prepareUntrustedAttachment(file.excerpt, { maxChars: 2500 }).content}`
+      )
+      .join("");
+    const hasImage = attachments.some((file) => (file.mime || "").startsWith("image/") && file.dataUrl);
+    if (!hasImage) {
+      return `${baseText}${textAttachments}${imageNotes}`;
+    }
+    return buildVisionUserContent(`${baseText}${textAttachments}${imageNotes}`, attachments);
   }
   const intentEngine = getIntentEngineInstruction(payload, attachments);
   const baseText = `Buat prompt terbaik untuk kebutuhan berikut.
@@ -4200,6 +4289,7 @@ Aturan penting:
 - Output WAJIB langsung berupa prompt final yang siap dicopy. Jangan menyertakan preface seperti "Berikut prompt-nya:", brief internal, atau judul "Intent Engine".
 ${deliverableGuard}
 - Jika isi lampiran tersedia, gunakan isi tersebut sebagai konteks utama.
+- Jika ada foto/gambar: LIHAT isinya (vision multimodal). Gunakan teks + visual yang terlihat. Jangan bilang tidak bisa melihat gambar.
 ${targetGuidance}${conditionalInstructions}${antiGeneric}
 
 ${buildDepthDirective(payload)}

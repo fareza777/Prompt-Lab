@@ -88,8 +88,9 @@ test("the anti-stalling directive is repeated after the prompt", () => {
   // It must be appended to the user turn, not left in the system slot.
   assert.match(
     server,
-    /content: `\$\{prompt\}\$\{deliverableInstruction\}\$\{diagramAddon\}\\n\\n\$\{RUN_FINAL_DIRECTIVE\}`/,
+    /buildVisionUserContent\(userText,\s*visionAttachments\)/,
   );
+  assert.match(server, /const userText = `\$\{prompt\}\$\{deliverableInstruction\}\$\{diagramAddon\}\$\{visionNote\}\\n\\n\$\{RUN_FINAL_DIRECTIVE\}`/);
 });
 
 test("the run instruction forbids stalling for more detail", () => {

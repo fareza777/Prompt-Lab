@@ -19,10 +19,22 @@ test("the server exposes an endpoint that runs a prompt", () => {
   assert.match(server, /eventType: "run_prompt"/);
 });
 
-test("execution asks for the deliverable, not commentary about it", () => {
-  assert.match(server, /RUN_SYSTEM_PROMPT/);
-  assert.match(server, /Return only the requested content itself/);
-  assert.match(server, /no restatement of the/);
+test("run-prompt accepts image attachments for multimodal vision", () => {
+  const endpoint = server.slice(
+    server.indexOf('app.post("/api/run-prompt"'),
+    server.indexOf('app.post("/api/optimize-prompt"')
+  );
+  assert.match(endpoint, /acceptRunPromptBody/);
+  assert.match(endpoint, /normalizeRunAttachments/);
+  assert.match(endpoint, /buildVisionUserContent/);
+  assert.match(endpoint, /runVisionDirective/);
+  assert.match(server, /multipart\/form-data/);
+});
+
+test("the client resends photos when running a finished result", () => {
+  assert.match(main, /formData\.append\("attachments"/);
+  assert.match(main, /imageAttachments/);
+  assert.match(main, /\/api\/run-prompt/);
 });
 
 test("execution falls back like the other provider calls", () => {

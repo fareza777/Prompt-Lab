@@ -34,8 +34,8 @@ export function buildMermaidDeliveryInstruction(langCode = "id", { expanded = fa
       ? "Deliverable: INFOGRAFIS ALUR PROSES dari dokumen — siap tampil, bukan prompt, bukan kode Mermaid mentah."
       : "Deliverable: PROCESS-FLOW INFOGRAPHIC from the document — ready to display, not a prompt, not raw Mermaid code.",
     id
-      ? "Sumber: teks lampiran saja. Jangan mengarang langkah yang tidak ada di dokumen."
-      : "Source: attachment text only. Do not invent steps absent from the document.",
+      ? "Sumber: lampiran (termasuk foto yang bisa kamu lihat via vision) saja. Jangan mengarang langkah yang tidak ada di dokumen/foto."
+      : "Source: attachments only (including photos you can see via vision). Do not invent steps absent from the document/photo.",
     id
       ? `DEFAULT RINGKAS: fokus alur utama saja (${stepRange} langkah). Kata seperti "bagus/cantik/profesional" artinya jelas & mudah dibaca — BUKAN diagram rumit atau panjang.`
       : `DEFAULT CONCISE: main workflow only (${stepRange} steps). Words like "nice/good/professional" mean clear & readable — NOT a complex or dense diagram.`,
