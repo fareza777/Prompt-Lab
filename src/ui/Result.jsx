@@ -426,7 +426,9 @@ export default function Result({
     [output]
   );
   const hasDiagram = useMemo(
-    () => /```mermaid/i.test(output) || /^(flowchart|sequenceDiagram|classDiagram|erDiagram|mindmap|graph)\b/m.test(output),
+    () =>
+      /```mermaid/i.test(output) ||
+      /^(flowchart|sequenceDiagram|classDiagram|erDiagram|mindmap|graph)\b/im.test(output),
     [output]
   );
 

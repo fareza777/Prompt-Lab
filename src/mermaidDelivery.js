@@ -39,8 +39,8 @@ export function buildMermaidDeliveryInstruction(langCode = "id") {
       ? "Sintaks Mermaid harus valid: label node pendek (kutip jika ada spasi/kurung), panah jelas, maksimal ~12 node, hindari subgraph bersarang dalam, hindari karakter yang merusak parser."
       : "Mermaid syntax must be valid: short node labels (quote if spaces/parens), clear edges, at most ~12 nodes, avoid deeply nested subgraphs, avoid parser-breaking characters.",
     id
-      ? "Utamakan flowchart TD atau sequenceDiagram sederhana supaya pasti bisa digambar di HP."
-      : "Prefer a simple flowchart TD or sequenceDiagram so it reliably renders on mobile.",
+      ? "Baris PERTAMA di dalam fence WAJIB diawali tipe diagram: flowchart TD (atau sequenceDiagram / mindmap / erDiagram). Jangan keluarkan hanya node/panah tanpa tipe."
+      : "The FIRST line inside the fence MUST start with a diagram type: flowchart TD (or sequenceDiagram / mindmap / erDiagram). Never emit only nodes/arrows without a type.",
     id
       ? "Jika dokumen kosong/tidak terbaca: keluarkan diagram minimal dengan satu node 'Sumber tidak tersedia' — jangan mengarang isi."
       : "If the document is empty/unreadable: emit a minimal diagram with one node 'Source unavailable' — do not invent content.",

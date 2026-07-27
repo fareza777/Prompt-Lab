@@ -2410,6 +2410,7 @@ function App() {
       const checked = validateFinishedOutput(rawContent, profile);
       const content = checked.content;
       setRunOutput(content);
+      setErrorMessage("");
       import("./diagramSvgStore.js").then((m) => m.clearRenderedDiagramSvg()).catch(() => {});
       applyServerQuota(data.quota);
       if (data.weeklyResults) setWeeklyResults(data.weeklyResults);
@@ -2425,6 +2426,8 @@ function App() {
 
   async function createFinishedResult() {
     setRunOutput("");
+    setErrorMessage("");
+    setExportStatus("");
     return runResultFirst({
       generatePrompt: () => generatePrompt(),
       runPrompt,

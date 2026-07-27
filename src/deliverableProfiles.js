@@ -1,3 +1,5 @@
+import { repairMermaidDocument } from "./mermaidRender.js";
+
 const PROFILE_SIGNALS = [
   ["diagram", /\b(diagram|mermaid|flowchart|bagan|mindmap|sequence\s*diagram|alur\s*(kerja|proses|sistem))\b/i],
   ["minutes", /\b(notulen|minutes of meeting|meeting minutes|berita acara rapat|catatan rapat)\b/i],
@@ -63,9 +65,7 @@ export function validateFinishedOutput(content = "", profile = "general") {
     cleaned = cleaned
       .replace(/^(?:Here is|Berikut adalah).{0,80}(?:diagram|mermaid).*?\n+/i, "")
       .trim();
-    if (!/```mermaid/i.test(cleaned) && /^(?:flowchart|sequenceDiagram|classDiagram|erDiagram|mindmap|graph)\b/m.test(cleaned)) {
-      cleaned = `\`\`\`mermaid\n${cleaned}\n\`\`\``;
-    }
+    cleaned = repairMermaidDocument(cleaned);
   }
 
   const headings = cleaned
@@ -78,6 +78,15 @@ export function validateFinishedOutput(content = "", profile = "general") {
   if (/(.{30,})(?:\n+\1){2,}/i.test(cleaned)) warnings.push("repeated_block");
   if (/(?:^|\n)\s*(?:prompt|instruksi internal)\s*:/i.test(cleaned)) warnings.push("prompt_leakage");
   if (profile === "diagram" && !/```mermaid/i.test(cleaned)) warnings.push("missing_mermaid_fence");
+  if (
+    profile === "diagram" &&
+    /```mermaid/i.test(cleaned) &&
+    !/^(?:flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|mindmap|timeline|gitGraph|pie|graph)\b/im.test(
+      String(cleaned.match(/```mermaid\s*([\s\S]*?)```/i)?.[1] || "").trim()
+    )
+  ) {
+    warnings.push("missing_mermaid_type");
+  }
 
   return { content: cleaned, warnings, valid: cleaned.length > 0, profile };
 }

@@ -44,3 +44,16 @@ test("diagram profile wraps bare mermaid source", () => {
   const checked = validateFinishedOutput("flowchart TD\n  A --> B", "diagram");
   assert.match(checked.content, /```mermaid/);
 });
+
+test("diagram profile repairs missing diagram type inside fence", () => {
+  const checked = validateFinishedOutput(
+    "```mermaid\nA[Mulai] --> B[Selesai]\n```",
+    "diagram"
+  );
+  assert.match(checked.content, /```mermaid\nflowchart TD\nA\[Mulai\]/);
+});
+
+test("diagram profile normalizes Flowchart casing", () => {
+  const checked = validateFinishedOutput("```mermaid\nFlowchart LR\n  A --> B\n```", "diagram");
+  assert.match(checked.content, /flowchart LR/);
+});

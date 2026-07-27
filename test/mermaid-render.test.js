@@ -39,3 +39,12 @@ test("withTimeout rejects when promise never settles", async () => {
     /timed out/
   );
 });
+
+test("sanitizeMermaidCode prepends flowchart when type is missing", () => {
+  const code = sanitizeMermaidCode("A[Start] --> B[End]");
+  assert.match(code, /^flowchart TD\nA\[Start\]/);
+});
+
+test("sanitizeMermaidCode accepts Flowchart casing", () => {
+  assert.match(sanitizeMermaidCode("Flowchart TD\n  A --> B"), /^flowchart TD/);
+});

@@ -8,7 +8,9 @@
  */
 
 import {
+  DIAGRAM_START,
   renderMermaidToSvg,
+  repairMermaidDocument,
   sanitizeMermaidCode,
   withTimeout,
 } from "./mermaidRender.js";
@@ -18,13 +20,11 @@ import {
 } from "./diagramSvgStore.js";
 
 export { MERMAID_INIT } from "./mermaidConfig.js";
-export { sanitizeMermaidCode } from "./mermaidRender.js";
-
-const DIAGRAM_START =
-  /^(flowchart|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|mindmap|timeline|gitGraph|pie|quadrantChart|journey|gantt|C4Context|graph)\b/m;
+export { sanitizeMermaidCode, repairMermaidDocument } from "./mermaidRender.js";
 
 export function extractMermaidCode(output = "") {
-  const text = String(output || "");
+  const repaired = repairMermaidDocument(output);
+  const text = String(repaired || output || "");
   const fenced = text.match(/```mermaid\s*([\s\S]*?)```/i);
   if (fenced?.[1]?.trim()) return sanitizeMermaidCode(fenced[1]);
 
@@ -32,17 +32,12 @@ export function extractMermaidCode(output = "") {
   if (tilde?.[1]?.trim()) return sanitizeMermaidCode(tilde[1]);
 
   const loose = text.match(/```(?:mermaid)?\s*\n([\s\S]*?)```/i);
-  if (loose?.[1] && DIAGRAM_START.test(loose[1])) {
+  if (loose?.[1] && (DIAGRAM_START.test(loose[1]) || /(-->|---)/.test(loose[1]))) {
     return sanitizeMermaidCode(loose[1]);
   }
 
-  if (DIAGRAM_START.test(text)) {
-    return sanitizeMermaidCode(
-      text
-        .replace(/^[\s\S]*?((?:flowchart|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|mindmap|timeline|gitGraph|pie|quadrantChart|journey|gantt|C4Context|graph)\b[\s\S]*)$/m, "$1")
-        .replace(/\n```[\s\S]*$/, "")
-        .replace(/\n~~~[\s\S]*$/, "")
-    );
+  if (DIAGRAM_START.test(text) || /(-->|subgraph\b)/i.test(text)) {
+    return sanitizeMermaidCode(text);
   }
   return "";
 }
@@ -226,7 +221,7 @@ async function resolvePreparedSvg(output) {
   const code = sanitizeMermaidCode(readRenderedDiagramCode() || extractMermaidCode(output));
   if (!code) {
     throw new Error(
-      "Buka section Diagram (nomor 1), tunggu sampai bagan terlihat, lalu ketuk Unduh PNG lagi."
+      "Belum ada diagram yang bisa diunduh. Ketuk Buat hasil dulu, tunggu bagan muncul di section Diagram, baru Unduh PNG."
     );
   }
 
@@ -234,12 +229,10 @@ async function resolvePreparedSvg(output) {
     return await renderMermaidSvgMarkup(code);
   } catch (error) {
     const msg = error?.message || String(error);
-    if (/timed out|suitable point|diagram type detected/i.test(msg)) {
-      throw new Error(
-        "Buka section Diagram sampai bagannya terlihat di layar, lalu Unduh PNG. Jangan tutup section saat mengunduh."
-      );
+    if (/timed out|suitable point|diagram type detected|belum lengkap/i.test(msg)) {
+      throw new Error(msg);
     }
-    throw new Error(`Gagal mengambil diagram (${msg}). Buka section Diagram dulu, lalu coba lagi.`);
+    throw new Error(`${msg}`);
   }
 }
 
