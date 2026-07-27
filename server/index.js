@@ -82,6 +82,7 @@ import {
 } from "./playBillingGoogle.js";
 import { persistReservedUsage, quotaFailureStatus } from "./quotaReservation.js";
 import { buildDocxBuffer, buildPptxBuffer } from "./officeExport.js";
+import { attachmentDisposition } from "./exportFilename.js";
 import {
   releaseWeeklyFreeResult,
   reserveWeeklyFreeResult,
@@ -520,7 +521,7 @@ app.post("/api/export/docx", express.json({ limit: "2mb" }), async (req, res) =>
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     );
-    res.setHeader("Content-Disposition", `attachment; filename="${safeFilename(title)}.docx"`);
+    res.setHeader("Content-Disposition", attachmentDisposition(title, "docx"));
     res.send(buffer);
   } catch (error) {
     console.error("docx export failed", error.message);
@@ -545,7 +546,7 @@ app.post("/api/export/pptx", express.json({ limit: "2mb" }), async (req, res) =>
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.presentationml.presentation"
     );
-    res.setHeader("Content-Disposition", `attachment; filename="${safeFilename(title)}.pptx"`);
+    res.setHeader("Content-Disposition", attachmentDisposition(title, "pptx"));
     res.send(Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer));
   } catch (error) {
     console.error("pptx export failed", error.message);
@@ -591,7 +592,7 @@ app.post("/api/export/diagram-png", express.json({ limit: "4mb" }), async (req, 
     }
 
     res.setHeader("Content-Type", "image/png");
-    res.setHeader("Content-Disposition", `attachment; filename="${safeFilename(title)}.png"`);
+    res.setHeader("Content-Disposition", attachmentDisposition(title, "png"));
     res.send(png);
   } catch (error) {
     console.error("diagram-png export failed", error.message);
@@ -4575,15 +4576,13 @@ function prepareDiagramSvgForRaster(svgString) {
   };
 }
 
-function safeFilename(title) {
-  const cleaned = String(title || "")
-    .replace(/[<>:"/\\|?*\x00-\x1f]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 80);
-  return cleaned || "AI-Work-Studio-Export";
-}
+/**
+ * ASCII-only filename for Content-Disposition.
+ * Node rejects non-Latin1 / smart punctuation in header values
+ * ("Invalid character in header content"), which was breaking Word/PPT
+ * exports when titles came from Indonesian attachment names.
+ */
+export { safeFilename, attachmentDisposition } from "./exportFilename.js";
 
 function cleanMarkdown(line) {
   return line

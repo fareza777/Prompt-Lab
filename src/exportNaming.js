@@ -70,9 +70,10 @@ export function deriveExportTitle({ content = "", narrative = "", attachmentName
  * @param {string} extension without dot
  */
 export function toDownloadFilename(title, extension) {
-  const stem = cleanTitle(title)
-    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "")
-    .replace(/\s+/g, "-")
+  const stem = String(title || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w.\-]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 80);
