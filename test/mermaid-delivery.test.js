@@ -13,30 +13,32 @@ import {
 test("detectDiagramIntent triggers on Diagram output type", () => {
   assert.equal(detectDiagramIntent({ outputType: "Diagram" }), true);
   assert.equal(detectDiagramIntent({ narrative: "buat flowchart dari SOP" }), true);
+  assert.equal(detectDiagramIntent({ narrative: "buat infografis alur" }), true);
   assert.equal(detectDiagramIntent({ narrative: "tulis laporan bulanan", outputType: "Word Document" }), false);
 });
 
-test("mermaid addon requires a mermaid fence", () => {
+test("diagram addon requires a process fence", () => {
   const addon = buildMermaidDeliveryAddon({
     outputType: "Diagram",
     outputLanguage: "id",
   });
-  assert.match(addon, /mermaid_diagram/);
-  assert.match(addon, /```mermaid/);
-  assert.match(defaultDiagramNarrative("id"), /dokumen/i);
+  assert.match(addon, /process_diagram/);
+  assert.match(addon, /```process/);
+  assert.match(defaultDiagramNarrative("id"), /dokumen|infografis|alur/i);
 });
 
-test("diagram profile preserves mermaid fence", () => {
+test("diagram profile builds mermaid from process JSON", () => {
   assert.equal(detectDeliverableProfile({ outputType: "Diagram" }), "diagram");
   const raw = `# Alur
 
-\`\`\`mermaid
-flowchart TD
-  A[Mulai] --> B[Selesai]
+\`\`\`process
+{"title":"Alur","steps":[{"id":"S1","label":"Mulai"},{"id":"S2","label":"Selesai"}],"edges":[{"from":"S1","to":"S2"}]}
 \`\`\`
 `;
   const checked = validateFinishedOutput(raw, "diagram");
+  assert.match(checked.content, /```process/);
   assert.match(checked.content, /```mermaid/);
+  assert.match(checked.content, /flowchart TD/);
   assert.equal(checked.warnings.includes("missing_mermaid_fence"), false);
 });
 
@@ -50,7 +52,8 @@ test("diagram profile repairs missing diagram type inside fence", () => {
     "```mermaid\nA[Mulai] --> B[Selesai]\n```",
     "diagram"
   );
-  assert.match(checked.content, /```mermaid\nflowchart TD\nA\[Mulai\]/);
+  assert.match(checked.content, /```mermaid\nflowchart TD/);
+  assert.match(checked.content, /Mulai/);
 });
 
 test("diagram profile normalizes Flowchart casing", () => {

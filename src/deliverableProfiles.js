@@ -1,8 +1,9 @@
 import { repairMermaidDocument } from "./mermaidRender.js";
 import { sanitizeReadyDocument } from "./readyDocumentSanitize.js";
+import { finalizeDiagramDocument } from "./mermaidDelivery.js";
 
 const PROFILE_SIGNALS = [
-  ["diagram", /\b(diagram|mermaid|flowchart|bagan|mindmap|sequence\s*diagram|alur\s*(kerja|proses|sistem))\b/i],
+  ["diagram", /\b(diagram|mermaid|flowchart|bagan|mindmap|sequence\s*diagram|alur\s*(kerja|proses|sistem)|infografis|infographic|process\s*map)\b/i],
   ["minutes", /\b(notulen|minutes of meeting|meeting minutes|berita acara rapat|catatan rapat)\b/i],
   ["presentation", /\b(ppt|powerpoint|presentasi|slide deck|slides?)\b/i],
   ["sop", /\b(sop|standard operating procedure|prosedur operasional)\b/i],
@@ -13,7 +14,7 @@ const PROFILE_SIGNALS = [
 
 const CONTRACTS = {
   id: {
-    diagram: `Ubah dokumen/lampiran menjadi diagram Mermaid yang siap ditampilkan. Pilih jenis diagram yang paling sesuai (flowchart, sequence, class, ER, atau mindmap). Keluarkan tepat satu blok \`\`\`mermaid ... \`\`\` valid. Boleh menambah judul singkat dan beberapa bullet ringkasan gaya wiki di luar fence. Jangan mengarang entitas yang tidak ada di sumber.`,
+    diagram: `Ubah dokumen/lampiran menjadi INFOGRAFIS ALUR PROSES yang siap ditampilkan. WAJIB keluarkan satu blok \`\`\`process berisi JSON {title, steps[{id,label}], edges[{from,to}]} (8–12 langkah, label pendek). Boleh menambah judul singkat dan beberapa bullet ringkasan. Jangan mengarang langkah yang tidak ada di sumber. Jangan tulis baris Tujuan atau checklist.`,
     report: `Tulis laporan profesional yang LANGSUNG SIAP DIPAKAI (boleh dikirim ke atasan tanpa edit). Gunakan hanya bagian yang relevan: judul dan metadata, ringkasan eksekutif, latar belakang dan periode, sumber/metode, temuan berbasis bukti, analisis, rekomendasi, serta lampiran bila perlu. Untuk Poin/Temuan/Rekomendasi pakai bullet Markdown (- ...), bukan nomor yang menyambung antar subbagian. LARANG menulis baris "Tujuan:" / "Section goal:" di bawah heading. LARANG menambah "Daftar Periksa Kualitas", quality checklist, atau catatan Asumsi scaffolding di akhir. Jika data kurang, tulis singkat di badan laporan tanpa blok meta terpisah. Bedakan fakta dari lampiran dan jangan mengarang.`,
     minutes: `Tulis notulen profesional dengan identitas rapat, peserta bila tersedia, agenda, ringkasan pembahasan per agenda, keputusan, tabel tindak lanjut (aksi, penanggung jawab, tenggat, status) hanya jika didukung sumber, hal yang belum selesai, dan tindak lanjut berikutnya. Jangan mengarang nama peserta, tanggal, kutipan, keputusan, penanggung jawab, atau tenggat dari wajah/foto. Gunakan "Belum tersedia" untuk informasi penting yang tidak ada.`,
     presentation: `Tulis deck presentasi sebagai alur cerita: pembuka spesifik, konteks, inti pembahasan, bukti/visual yang relevan, dan penutup berupa keputusan atau rekomendasi. Satu pesan utama per slide, judul slide menyatakan poin, maksimal 6 bullet dan sekitar 45 kata terlihat per slide. Jika panjang tidak ditentukan, targetkan 8–12 slide. Pindahkan detail pendukung ke catatan pembicara.`,
@@ -23,7 +24,7 @@ const CONTRACTS = {
     general: `Hasilkan dokumen profesional yang langsung menjawab pekerjaan pengguna, dengan struktur yang diturunkan dari tujuan, hierarki yang jelas, dan langkah berikutnya yang dapat digunakan.`,
   },
   en: {
-    diagram: `Turn the attached document into a ready-to-render Mermaid diagram. Choose the best type (flowchart, sequence, class, ER, or mindmap). Emit exactly one valid \`\`\`mermaid ... \`\`\` fence. A short title and a few wiki-style summary bullets outside the fence are optional. Do not invent entities missing from the source.`,
+    diagram: `Turn the attached document into a READY process-flow infographic. MUST emit one \`\`\`process fence with JSON {title, steps[{id,label}], edges[{from,to}]} (8–12 short steps). A short title and summary bullets outside the fence are optional. Do not invent steps missing from the source. No Purpose lines or checklists.`,
     report: `Write a professional report that is READY TO SEND. Include only relevant sections: title/metadata, executive summary, background and period, sources/method, evidence-based findings, analysis, recommendations, and appendix when needed. For Points/Findings/Recommendations use Markdown bullets (- ...), not continuous numbered lists. FORBIDDEN: "Purpose:" / "Section goal:" lines under headings; "Quality Checklist" / review checklist sections; trailing scaffolding "Assumptions:" footnotes. If data is missing, note it briefly in-body without a separate meta block. Do not invent facts.`,
     minutes: `Write professional meeting minutes with meeting identity, participants when provided, agenda, discussion summary by item, decisions, and an action table (action, owner, due date, status) only when supported. Include unresolved points and follow-up. Do not invent participant names, dates, quotations, decisions, owners, or deadlines from faces or photos. Use "Not provided" for essential missing details.`,
     presentation: `Write a presentation as a narrative deck: specific opening, context, core argument, relevant evidence or visuals, and a decision/recommendation close. Use one main message per slide, point-led slide titles, no more than six bullets and roughly 45 visible words per slide. If length is unspecified, target 8–12 slides. Put supporting detail in speaker notes.`,
@@ -45,8 +46,8 @@ export function buildDeliverableInstruction({ profile = "general", language = "i
   const universal =
     profile === "diagram"
       ? lang === "en"
-        ? `Return only the finished diagram deliverable. Keep the \`\`\`mermaid fence intact. Do not wrap the whole reply in an outer markdown fence. Do not invent unsupported facts.`
-        : `Kembalikan hanya hasil diagram jadi. Pertahankan fence \`\`\`mermaid utuh. Jangan bungkus seluruh jawaban dalam fence markdown luar. Jangan mengarang fakta yang tidak didukung.`
+        ? `Return only the finished diagram deliverable. Prefer the \`\`\`process JSON fence. Keep any Mermaid fence simple. Do not wrap the whole reply in an outer markdown fence. Do not invent unsupported facts.`
+        : `Kembalikan hanya hasil diagram jadi. Utamakan fence \`\`\`process JSON. Jika ada Mermaid, buat sederhana. Jangan bungkus seluruh jawaban dalam fence markdown luar. Jangan mengarang fakta yang tidak didukung.`
       : lang === "en"
         ? `Return only the finished deliverable, never a prompt, instructions, planning commentary, section-purpose blurbs, quality checklists, or explanation of how to create it. Preserve names, dates, numbers, and terminology consistently. Do not fabricate unsupported facts. Use useful Markdown headings, lists, and tables so Office export retains the document hierarchy.`
         : `Kembalikan hanya hasil jadi, bukan prompt, instruksi, komentar perencanaan, baris tujuan per bagian, quality checklist, atau penjelasan cara membuatnya. Jaga konsistensi nama, tanggal, angka, dan istilah. Jangan mengarang fakta yang tidak didukung. Gunakan heading, daftar, dan tabel Markdown yang berguna agar hierarki dokumen tetap rapi saat diekspor ke Office.`;
@@ -65,8 +66,9 @@ export function validateFinishedOutput(content = "", profile = "general") {
     cleaned = sanitizeReadyDocument(cleaned, profile);
   } else {
     cleaned = cleaned
-      .replace(/^(?:Here is|Berikut adalah).{0,80}(?:diagram|mermaid).*?\n+/i, "")
+      .replace(/^(?:Here is|Berikut adalah).{0,80}(?:diagram|mermaid|process).*?\n+/i, "")
       .trim();
+    cleaned = finalizeDiagramDocument(cleaned, "id");
     cleaned = repairMermaidDocument(cleaned);
   }
 
@@ -79,6 +81,9 @@ export function validateFinishedOutput(content = "", profile = "general") {
   if (/\|\s*\n\s*\|/m.test(cleaned)) warnings.push("malformed_table");
   if (/(.{30,})(?:\n+\1){2,}/i.test(cleaned)) warnings.push("repeated_block");
   if (/(?:^|\n)\s*(?:prompt|instruksi internal)\s*:/i.test(cleaned)) warnings.push("prompt_leakage");
+  if (profile === "diagram" && !/```process/i.test(cleaned) && !/```mermaid/i.test(cleaned)) {
+    warnings.push("missing_process_or_mermaid");
+  }
   if (profile === "diagram" && !/```mermaid/i.test(cleaned)) warnings.push("missing_mermaid_fence");
   if (
     profile === "diagram" &&

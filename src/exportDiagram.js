@@ -18,11 +18,22 @@ import {
   readRenderedDiagramCode,
   readRenderedDiagramSvg,
 } from "./diagramSvgStore.js";
+import {
+  buildProcessFlowSvg,
+  extractProcessFlow,
+  processFlowToMermaid,
+} from "./processFlow.js";
 
 export { MERMAID_INIT } from "./mermaidConfig.js";
 export { sanitizeMermaidCode, repairMermaidDocument } from "./mermaidRender.js";
 
 export function extractMermaidCode(output = "") {
+  const flow = extractProcessFlow(output);
+  if (flow) {
+    const fromProcess = processFlowToMermaid(flow);
+    if (fromProcess) return fromProcess;
+  }
+
   const repaired = repairMermaidDocument(output);
   const text = String(repaired || output || "");
   const fenced = text.match(/```mermaid\s*([\s\S]*?)```/i);
@@ -215,6 +226,16 @@ async function resolvePreparedSvg(output) {
       return prepareSvgMarkup(remembered);
     } catch (error) {
       console.warn("[diagram-export] remembered SVG prepare failed", error);
+    }
+  }
+
+  // Reliable path: build SVG from ```process JSON without Mermaid layout.
+  const flow = extractProcessFlow(output);
+  if (flow) {
+    try {
+      return prepareSvgMarkup(buildProcessFlowSvg(flow));
+    } catch (error) {
+      console.warn("[diagram-export] process SVG prepare failed", error);
     }
   }
 

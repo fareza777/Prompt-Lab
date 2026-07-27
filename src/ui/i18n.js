@@ -327,12 +327,13 @@ const id = {
   "opt.output.Technical Design": "Desain teknis",
   "opt.output.Analysis": "Analisis",
   "opt.output.Content": "Konten",
-  "opt.output.Diagram": "Diagram (Mermaid)",
+  "opt.output.Diagram": "Diagram alur (infografis)",
   "opt.output.Image Prompt": "Arahan gambar AI",
   "opt.output.Video Prompt": "Arahan video AI",
   "result.diagramTitle": "Diagram",
   "result.diagramSource": "Kode Mermaid",
   "result.diagramDrawing": "Sedang menggambar diagram…",
+  "result.diagramInfographicHint": "Infografis alur dari dokumen — unduh PNG untuk menyimpan.",
   "result.diagramError": "Diagram tidak bisa digambar. Kode sumber tetap ditampilkan di bawah.",
 };
 
@@ -635,12 +636,13 @@ const en = {
   "opt.output.Technical Design": "Technical design",
   "opt.output.Analysis": "Analysis",
   "opt.output.Content": "Content",
-  "opt.output.Diagram": "Diagram (Mermaid)",
+  "opt.output.Diagram": "Process diagram (infographic)",
   "opt.output.Image Prompt": "AI image direction",
   "opt.output.Video Prompt": "AI video direction",
   "result.diagramTitle": "Diagram",
   "result.diagramSource": "Mermaid source",
   "result.diagramDrawing": "Drawing diagram…",
+  "result.diagramInfographicHint": "Process infographic from your document — download PNG to save.",
   "result.diagramError": "Could not render the diagram. Source code is shown below.",
 };
 

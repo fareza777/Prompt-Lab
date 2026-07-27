@@ -97,10 +97,11 @@ test("sanitize still recovers a missing diagram type", () => {
   assert.match(out, /^flowchart TD/);
 });
 
-test("the model is shown a concrete quoting example", async () => {
+test("the model is shown a process JSON contract", async () => {
   const { buildMermaidDeliveryInstruction } = await import("../src/mermaidDelivery.js");
   for (const lang of ["id", "en"]) {
     const instruction = buildMermaidDeliveryInstruction(lang);
-    assert.match(instruction, /A\["Sekretaris Daerah \(Sekda\)"\]/);
+    assert.match(instruction, /```process/);
+    assert.match(instruction, /"steps"/);
   }
 });

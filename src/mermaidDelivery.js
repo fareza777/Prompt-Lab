@@ -1,11 +1,13 @@
 /**
- * Document → Mermaid diagram delivery contract.
- * User uploads a file and picks Diagram (or asks for a diagram);
- * the model returns a ready Mermaid fence, not a prompt to craft.
+ * Document → process-flow diagram delivery.
+ * Prefer a ```process JSON fence (reliable infographic). Mermaid is generated
+ * deterministically from those steps so Android layout bugs are avoided.
  */
 
+import { ensureProcessDiagramDocument, extractProcessFlow } from "./processFlow.js";
+
 const DIAGRAM_SIGNAL =
-  /\b(mermaid|flowchart|sequence\s*diagram|class\s*diagram|er\s*diagram|mindmap|diagram|bagan|skema|wiki\s*diagram|peta\s*proses|process\s*map|flow\s*chart|alur\s*(kerja|proses|sistem|bisnis))\b/i;
+  /\b(mermaid|flowchart|sequence\s*diagram|class\s*diagram|er\s*diagram|mindmap|diagram|bagan|skema|infografis|infographic|wiki\s*diagram|peta\s*proses|process\s*map|flow\s*chart|alur\s*(kerja|proses|sistem|bisnis))\b/i;
 
 export function detectDiagramIntent(payload = {}) {
   if (/^diagram$/i.test(String(payload.outputType || "").trim())) return true;
@@ -19,51 +21,45 @@ function section(title, lines) {
 
 export function buildMermaidDeliveryInstruction(langCode = "id") {
   const id = langCode === "id";
-  return section("mermaid_diagram", [
+  return section("process_diagram", [
     id
-      ? "Deliverable: DIAGRAM MERMAID SIAP TAMPIL — bukan prompt, bukan penjelasan cara membuat diagram."
-      : "Deliverable: READY-TO-RENDER MERMAID DIAGRAM — not a prompt, not instructions on how to draw it.",
+      ? "Deliverable: INFOGRAFIS ALUR PROSES dari dokumen — siap tampil, bukan prompt."
+      : "Deliverable: PROCESS-FLOW INFOGRAPHIC from the document — ready to display, not a prompt.",
     id
-      ? "Sumber utama: teks yang diekstrak dari dokumen/lampiran. Jangan mengarang entitas, peran, atau langkah yang tidak ada di sumber."
-      : "Primary source: text extracted from the attached document(s). Do not invent entities, roles, or steps absent from the source.",
+      ? "Sumber: teks lampiran saja. Jangan mengarang langkah yang tidak ada di dokumen."
+      : "Source: attachment text only. Do not invent steps absent from the document.",
     id
-      ? "Pilih jenis diagram yang paling cocok: flowchart (proses), sequence (interaksi), class/ER (struktur data), mindmap (hierarki konsep)."
-      : "Pick the best diagram type: flowchart (process), sequence (interaction), class/ER (data structure), mindmap (concept hierarchy).",
+      ? "WAJIB keluarkan SATU blok ```process berisi JSON valid dengan bentuk: {\"title\":\"...\",\"steps\":[{\"id\":\"S1\",\"label\":\"...\"},{\"id\":\"S2\",\"label\":\"...\"}],\"edges\":[{\"from\":\"S1\",\"to\":\"S2\"}]}. Maksimal 8–12 langkah, label pendek (<=12 kata)."
+      : "MUST emit ONE ```process fence with valid JSON: {\"title\":\"...\",\"steps\":[{\"id\":\"S1\",\"label\":\"...\"}],\"edges\":[{\"from\":\"S1\",\"to\":\"S2\"}]}. At most 8–12 short steps.",
     id
-      ? "WAJIB keluarkan tepat SATU blok fenced code berbahasa mermaid: diawali ```mermaid dan diakhiri ```."
-      : "MUST emit exactly ONE fenced code block with language mermaid: start with ```mermaid and end with ```.",
+      ? "Urutan steps mengikuti alur dokumen (mulai → proses → selesai). edges boleh diisi linear S1→S2→… jika dokumen berurutan."
+      : "Order steps as the document flow (start → process → end). Linear edges S1→S2→… are fine for sequential docs.",
     id
-      ? "Boleh menambah judul Markdown singkat (# ...) dan 2–5 bullet ringkasan wiki di luar fence. Jangan tulis teks lain di dalam fence."
-      : "You may add a short Markdown title (# ...) and 2–5 wiki-style summary bullets outside the fence. No prose inside the fence.",
+      ? "Opsional: judul Markdown (# ...) dan 2–5 bullet ringkasan di luar fence. Jangan tulis 'Tujuan:' atau checklist."
+      : "Optional: Markdown title (# ...) and 2–5 summary bullets outside fences. No 'Purpose:' lines or checklists.",
     id
-      ? "Sintaks Mermaid harus valid: panah jelas, maksimal ~12 node, hindari subgraph bersarang dalam."
-      : "Mermaid syntax must be valid: clear edges, at most ~12 nodes, avoid deeply nested subgraphs.",
-    // Unquoted brackets are the most common cause of an unrenderable diagram
-    // from Indonesian source documents ("Sekretaris Daerah (Sekda)").
+      ? "JANGAN mengandalkan Mermaid mentah yang rumit. Jika menambah ```mermaid, cukup flowchart TD sederhana dengan label dikutip."
+      : "Do NOT rely on complex raw Mermaid. If adding ```mermaid, keep a simple flowchart TD with quoted labels.",
     id
-      ? 'WAJIB kutip label node yang memuat kurung, tanda kutip, atau tanda baca: tulis A["Sekretaris Daerah (Sekda)"], BUKAN A[Sekretaris Daerah (Sekda)]. Label tanpa kutip yang berisi kurung akan gagal dirender.'
-      : 'ALWAYS quote node labels containing brackets, quotes, or punctuation: write A["Sekretaris Daerah (Sekda)"], NOT A[Sekretaris Daerah (Sekda)]. An unquoted label containing brackets will fail to render.',
-    id
-      ? "Baris PERTAMA di dalam fence WAJIB diawali tipe diagram: flowchart TD (atau sequenceDiagram / mindmap / erDiagram). Jangan keluarkan hanya node/panah tanpa tipe."
-      : "The FIRST line inside the fence MUST start with a diagram type: flowchart TD (or sequenceDiagram / mindmap / erDiagram). Never emit only nodes/arrows without a type.",
-    id
-      ? "Jika dokumen kosong/tidak terbaca: keluarkan diagram minimal dengan satu node 'Sumber tidak tersedia' — jangan mengarang isi."
-      : "If the document is empty/unreadable: emit a minimal diagram with one node 'Source unavailable' — do not invent content.",
+      ? "Jika dokumen kosong: process JSON dengan 2 langkah 'Sumber tidak tersedia' → 'Tidak ada alur'."
+      : "If the document is empty: process JSON with 2 steps 'Source unavailable' → 'No flow'.",
   ]);
 }
 
-/**
- * @param {object} payload
- * @returns {string}
- */
 export function buildMermaidDeliveryAddon(payload = {}) {
   if (!detectDiagramIntent(payload)) return "";
   return buildMermaidDeliveryInstruction(payload.outputLanguage || "id");
 }
 
-/** Default ask when user picks Diagram but leaves the request blank. */
 export function defaultDiagramNarrative(langCode = "id") {
   return langCode === "en"
-    ? "Turn the attached document into a clear Mermaid diagram of the main process or structure, plus a short wiki-style summary."
-    : "Ubah dokumen terlampir menjadi diagram Mermaid yang jelas untuk proses atau struktur utamanya, plus ringkasan singkat gaya wiki.";
+    ? "Turn the attached document into a clear process-flow infographic of the main workflow, plus a short summary."
+    : "Ubah dokumen terlampir menjadi infografis alur proses yang jelas untuk alur utamanya, plus ringkasan singkat.";
+}
+
+/** Post-process diagram outputs so process JSON drives a valid Mermaid fence. */
+export function finalizeDiagramDocument(markdown = "", langCode = "id") {
+  const ensured = ensureProcessDiagramDocument(markdown, langCode);
+  if (extractProcessFlow(ensured)) return ensured;
+  return String(markdown || "").trim();
 }

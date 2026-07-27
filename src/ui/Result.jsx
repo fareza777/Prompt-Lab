@@ -13,6 +13,11 @@ import { groupDocumentSections, parseMarkdownBlocks } from "./markdownBlocks.js"
 import { MERMAID_INIT } from "../mermaidConfig.js";
 import { rememberRenderedDiagramSvg } from "../diagramSvgStore.js";
 import { renderMermaidResilient, sanitizeMermaidCode } from "../mermaidRender.js";
+import {
+  buildProcessFlowSvg,
+  parseProcessJson,
+  processFlowToMermaid,
+} from "../processFlow.js";
 
 function renderInline(text) {
   return String(text)
@@ -27,6 +32,35 @@ function renderInline(text) {
       }
       return part;
     });
+}
+
+function ProcessFlowBlock({ code, t }) {
+  const flow = useMemo(() => parseProcessJson(code), [code]);
+  const svg = useMemo(() => (flow ? buildProcessFlowSvg(flow) : ""), [flow]);
+
+  useEffect(() => {
+    if (!flow || !svg) return;
+    rememberRenderedDiagramSvg(svg, processFlowToMermaid(flow));
+  }, [flow, svg]);
+
+  if (!flow || !svg) {
+    return (
+      <pre className="pl-code-block">
+        <code>{code}</code>
+      </pre>
+    );
+  }
+
+  return (
+    <figure className="pl-process-flow">
+      <div
+        className="pl-process-flow__canvas"
+        data-pl-diagram="1"
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+      <p className="pl-meta">{t("result.diagramInfographicHint")}</p>
+    </figure>
+  );
 }
 
 function MermaidBlock({ code, t }) {
@@ -139,6 +173,9 @@ function BlockView({ block, index, t }) {
     return <blockquote key={key}>{renderInline(block.text)}</blockquote>;
   }
   if (block.type === "code") {
+    if (block.lang === "process") {
+      return <ProcessFlowBlock key={key} code={block.text} t={t} />;
+    }
     if (block.lang === "mermaid") {
       return <MermaidBlock key={key} code={block.text} t={t} />;
     }
@@ -155,7 +192,10 @@ function SectionCards({ sections, t }) {
   const [openIds, setOpenIds] = useState(() => {
     const withDiagram = sections
       .filter((section) =>
-        section.blocks.some((block) => block.type === "code" && block.lang === "mermaid")
+        section.blocks.some(
+          (block) =>
+            block.type === "code" && (block.lang === "mermaid" || block.lang === "process")
+        )
       )
       .map((section) => section.id);
     if (withDiagram.length) return new Set(withDiagram);
@@ -165,7 +205,10 @@ function SectionCards({ sections, t }) {
   useEffect(() => {
     const withDiagram = sections
       .filter((section) =>
-        section.blocks.some((block) => block.type === "code" && block.lang === "mermaid")
+        section.blocks.some(
+          (block) =>
+            block.type === "code" && (block.lang === "mermaid" || block.lang === "process")
+        )
       )
       .map((section) => section.id);
     setOpenIds(
@@ -178,7 +221,12 @@ function SectionCards({ sections, t }) {
       setOpenIds((current) => {
         const next = new Set(current);
         for (const section of sections) {
-          if (section.blocks.some((block) => block.type === "code" && block.lang === "mermaid")) {
+          if (
+            section.blocks.some(
+              (block) =>
+                block.type === "code" && (block.lang === "mermaid" || block.lang === "process")
+            )
+          ) {
             next.add(section.id);
           }
         }
@@ -203,7 +251,8 @@ function SectionCards({ sections, t }) {
       {sections.map((section, index) => {
         const open = openIds.has(section.id);
         const hasMermaid = section.blocks.some(
-          (block) => block.type === "code" && block.lang === "mermaid"
+          (block) =>
+            block.type === "code" && (block.lang === "mermaid" || block.lang === "process")
         );
         const title =
           section.title ||
@@ -410,6 +459,7 @@ export default function Result({
   );
   const hasDiagram = useMemo(
     () =>
+      /```process/i.test(output) ||
       /```mermaid/i.test(output) ||
       /^(flowchart|sequenceDiagram|classDiagram|erDiagram|mindmap|graph)\b/im.test(output),
     [output]

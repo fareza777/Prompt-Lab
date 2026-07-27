@@ -1443,6 +1443,25 @@
   height: auto;
 }
 
+.pl-process-flow {
+  margin: 1em 0;
+}
+
+.pl-process-flow__canvas {
+  width: 100%;
+  overflow-x: auto;
+  margin-bottom: 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: #fbf8f1;
+}
+
+.pl-process-flow__canvas svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .pl-doc-table-wrap {
   max-width: 100%;
   margin: 1em 0;
