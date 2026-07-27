@@ -174,8 +174,49 @@ function docxTable(block) {
   });
 }
 
+function isBulletSectionHeading(text = "") {
+  return /\b(poin|penting|temuan|ringkasan|indikator|rekomendasi|highlight|finding|key\s*point|observasi|catatan)\b/i.test(
+    String(text)
+  ) && !/\b(langkah|tahapan?|prosedur|sop|urutan|langkah\s*kerja)\b/i.test(String(text));
+}
+
+function isProcedureHeading(text = "") {
+  return /\b(langkah|tahapan?|prosedur|sop|urutan|langkah\s*kerja|procedure|steps?)\b/i.test(
+    String(text)
+  );
+}
+
+/**
+ * Reports often emit continuous "1. 2. 3." lists under "Poin-Poin Penting".
+ * Those should export as bullets. True procedures keep ordered numbering,
+ * each list with its own restarting sequence.
+ */
+export function normalizeListsForDocx(blocks = []) {
+  let bulletSectionLevel = null;
+  return blocks.map((block) => {
+    if (block.type === "heading") {
+      const level = Number(block.level) || 2;
+      if (bulletSectionLevel != null && level <= bulletSectionLevel) {
+        bulletSectionLevel = null;
+      }
+      if (isBulletSectionHeading(block.text)) {
+        bulletSectionLevel = level;
+      } else if (isProcedureHeading(block.text)) {
+        bulletSectionLevel = null;
+      }
+      return block;
+    }
+    if (block.type !== "list") return block;
+    if (bulletSectionLevel != null && block.ordered) {
+      return { ...block, ordered: false };
+    }
+    return block;
+  });
+}
+
 function blocksToDocx(blocks) {
   const children = [];
+  let orderedListIndex = 0;
   for (const block of blocks) {
     if (block.type === "heading") children.push(docxHeading(block));
     if (block.type === "paragraph") {
@@ -188,11 +229,12 @@ function blocksToDocx(blocks) {
       );
     }
     if (block.type === "list") {
+      const reference = block.ordered ? `ordered-list-${orderedListIndex++}` : null;
       block.items.forEach((item) =>
         children.push(
           new Paragraph({
             bullet: block.ordered ? undefined : { level: 0 },
-            numbering: block.ordered ? { reference: "ordered-list", level: 0 } : undefined,
+            numbering: reference ? { reference, level: 0 } : undefined,
             alignment: AlignmentType.JUSTIFIED,
             spacing: { after: 80, line: 300 },
             children: [new TextRun({ text: item, size: 22, color: COLORS.ink })],
@@ -213,7 +255,7 @@ function blocksToDocx(blocks) {
       );
     }
   }
-  return children;
+  return { children, orderedListCount: orderedListIndex };
 }
 
 export async function buildDocxBuffer({
@@ -222,22 +264,22 @@ export async function buildDocxBuffer({
   language = "id",
   plan = "Free",
 } = {}) {
-  const blocks = parseStructuredContent(content, title);
+  const blocks = normalizeListsForDocx(parseStructuredContent(content, title));
+  const { children, orderedListCount } = blocksToDocx(blocks);
+  const numberingConfig = Array.from({ length: Math.max(1, orderedListCount) }, (_, index) => ({
+    reference: `ordered-list-${index}`,
+    levels: [{ level: 0, format: "decimal", text: "%1.", alignment: AlignmentType.LEFT }],
+  }));
   const footerText = plan === "Free" ? `Created with ${BRAND}  ·  ` : "";
   const doc = new Document({
     creator: BRAND,
     title,
     description: `Professional document created with ${BRAND}`,
     numbering: {
-      config: [
-        {
-          reference: "ordered-list",
-          levels: [{ level: 0, format: "decimal", text: "%1.", alignment: AlignmentType.LEFT }],
-        },
-      ],
+      config: numberingConfig,
     },
     styles: {
-      default: { document: { run: { font: "Aptos", size: 22, color: COLORS.ink } } },
+      default: { document: { run: { font: "Calibri", size: 22, color: COLORS.ink } } },
     },
     sections: [
       {
@@ -286,7 +328,7 @@ export async function buildDocxBuffer({
               }),
             ],
           }),
-          ...blocksToDocx(blocks),
+          ...children,
         ],
       },
     ],
