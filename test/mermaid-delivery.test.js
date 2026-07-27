@@ -24,7 +24,26 @@ test("diagram addon requires a process fence", () => {
   });
   assert.match(addon, /process_diagram/);
   assert.match(addon, /```process/);
-  assert.match(defaultDiagramNarrative("id"), /dokumen|infografis|alur/i);
+  assert.match(addon, /DEFAULT RINGKAS|5–8/);
+  assert.match(addon, /bagus\/cantik\/profesional/);
+  assert.match(defaultDiagramNarrative("id"), /ringkas|dokumen|infografis|alur/i);
+});
+
+test("diagram addon stays concise for bagus and expands only for lengkap", () => {
+  const concise = buildMermaidDeliveryAddon({
+    narrative: "buatkan diagram yang bagus",
+    outputType: "Diagram",
+    outputLanguage: "id",
+  });
+  assert.match(concise, /5–8/);
+  assert.doesNotMatch(concise, /boleh sampai 12 langkah/);
+
+  const expanded = buildMermaidDeliveryAddon({
+    narrative: "buatkan diagram lengkap dan detail",
+    outputType: "Diagram",
+    outputLanguage: "id",
+  });
+  assert.match(expanded, /8–12/);
 });
 
 test("diagram profile builds mermaid from process JSON", () => {

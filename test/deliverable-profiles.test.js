@@ -29,6 +29,17 @@ test("reports and presentations receive different structure contracts", () => {
   assert.match(slides, /8–12 slides/i);
 });
 
+test("diagram defaults concise including when user says bagus", () => {
+  const instruction = buildDeliverableInstruction({
+    profile: "diagram",
+    language: "id",
+    narrative: "buatkan diagram yang bagus",
+  });
+  assert.match(instruction, /RINGKAS|5–8/);
+  assert.match(instruction, /Bagus.*jelas|bukan Mermaid rumit/i);
+  assert.doesNotMatch(instruction, /boleh 8–12 langkah process/);
+});
+
 test("reports default concise unless user asks for lengkap", async () => {
   const { wantsExpandedDeliverable, buildDeliverableInstruction } = await import(
     "../src/deliverableProfiles.js"
