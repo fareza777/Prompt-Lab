@@ -65,6 +65,138 @@ export function ensureMermaidDiagramType(code = "") {
   return text;
 }
 
+/**
+ * Node shapes whose label text is parsed literally, so an unquoted bracket or
+ * parenthesis inside them is a syntax error.
+ *
+ * Indonesian source documents make this the single most common failure: labels
+ * like "Sekretaris Daerah (Sekda)" or "Perangkat Daerah (PD)" are everywhere,
+ * and the model does not reliably quote them however firmly it is asked to.
+ * Quoting them here is deterministic, so it does not depend on that.
+ */
+const NODE_SHAPES = [
+  { open: "[[", close: "]]" },
+  { open: "((", close: "))" },
+  { open: "([", close: "])" },
+  { open: "[(", close: ")]" },
+  { open: "{{", close: "}}" },
+  { open: "[", close: "]" },
+  { open: "(", close: ")" },
+  { open: "{", close: "}" },
+];
+
+const NEEDS_QUOTING = /[()[\]{}<>|#]/;
+
+/**
+ * Finds the delimiter that closes this shape, counting nesting so a label like
+ * "Mulai (awal)" inside a rounded node `A(...)` matches the outer bracket
+ * rather than the first inner one.
+ */
+function findShapeClose(line, from, open, close) {
+  // Doubled shapes such as `((label))` still contain single brackets of the
+  // same family inside the label, so token matching closes too early on
+  // `A((Pusat (inti)))`. Counting the underlying character instead is exact.
+  const doubled = open.length === 2 && open[0] === open[1];
+  if (doubled) {
+    const openChar = open[0];
+    const closeChar = close[0];
+    let depth = 2;
+    for (let index = from; index < line.length; index += 1) {
+      const char = line[index];
+      if (char === openChar) depth += 1;
+      else if (char === closeChar) {
+        depth -= 1;
+        // The shape closes where its final two characters begin.
+        if (depth === 0) return index - 1;
+      }
+    }
+    return -1;
+  }
+
+  let depth = 1;
+  let index = from;
+  while (index < line.length) {
+    if (line.startsWith(close, index)) {
+      depth -= 1;
+      if (depth === 0) return index;
+      index += close.length;
+      continue;
+    }
+    if (line.startsWith(open, index)) {
+      depth += 1;
+      index += open.length;
+      continue;
+    }
+    index += 1;
+  }
+  return -1;
+}
+
+/** True when the label is already wrapped in matching quotes. */
+function isQuoted(label) {
+  const text = label.trim();
+  return (
+    (text.startsWith('"') && text.endsWith('"') && text.length > 1) ||
+    (text.startsWith("`") && text.endsWith("`") && text.length > 1)
+  );
+}
+
+export function quoteUnsafeMermaidLabels(code = "") {
+  const source = String(code || "");
+  if (!source) return "";
+
+  // Only flowchart-family syntax uses these bracket node shapes.
+  if (!/^\s*(flowchart|graph)\b/im.test(source)) return source;
+
+  return source
+    .split(/\r?\n/)
+    .map((line) => {
+      // Leave comments and directives alone.
+      if (/^\s*(%%|click\b|style\b|classDef\b|linkStyle\b)/.test(line)) return line;
+
+      // One left-to-right pass, taking the longest shape that starts here.
+      // Looping shape-by-shape over the whole line reprocessed the inner
+      // brackets of `A[[...]]` and mangled the label into `A["['...']"]`.
+      let out = line;
+      let index = 0;
+      while (index < out.length) {
+        const previous = out[index - 1] || "";
+        const shape =
+          /[\wÀ-￿]/.test(previous) &&
+          NODE_SHAPES.find((candidate) => out.startsWith(candidate.open, index));
+        if (!shape) {
+          index += 1;
+          continue;
+        }
+
+        const from = index + shape.open.length;
+        const end = findShapeClose(out, from, shape.open, shape.close);
+        if (end < 0) {
+          index += shape.open.length;
+          continue;
+        }
+
+        const label = out.slice(from, end);
+        if (label && !isQuoted(label) && NEEDS_QUOTING.test(label)) {
+          const safe = label.replace(/"/g, "'").trim();
+          out = `${out.slice(0, from)}"${safe}"${out.slice(end)}`;
+          index = from + safe.length + 2 + shape.close.length;
+          continue;
+        }
+        index = end + shape.close.length;
+      }
+      return out;
+    })
+    .join("\n");
+}
+
+/** `A -->|| B` and `A -- "" --> B` are parse errors; a plain edge is not. */
+export function dropEmptyEdgeLabels(code = "") {
+  return String(code || "")
+    .replace(/(--+>?|==+>?|-\.-+>?)\s*\|\s*\|/g, "$1")
+    .replace(/\|\s*""\s*\|/g, "|");
+}
+
 export function sanitizeMermaidCode(raw = "") {
   let code = String(raw || "")
     .replace(/^\uFEFF/, "")
@@ -94,7 +226,8 @@ export function sanitizeMermaidCode(raw = "") {
     if (kept.length && /^(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) break;
     kept.push(line);
   }
-  return ensureMermaidDiagramType(kept.join("\n").trim());
+  const typed = ensureMermaidDiagramType(kept.join("\n").trim());
+  return quoteUnsafeMermaidLabels(dropEmptyEdgeLabels(typed));
 }
 
 /**
@@ -159,4 +292,52 @@ export async function renderMermaidToSvg(code, { id, timeoutMs = 12000, init = M
       document.getElementById(`d${renderId}`)?.remove();
     }
   }
+}
+
+/** Edge captions are the only thing this removes; the graph itself survives. */
+export function stripEdgeLabels(code = "") {
+  return String(code || "")
+    .replace(/\|[^|\n]*\|/g, "")
+    .replace(/(--+|==+|-\.-+)\s*"[^"\n]*"\s*(-*>?)/g, "$1$2");
+}
+
+/**
+ * Renders with progressive degradation.
+ *
+ * Mermaid throws "Could not find a suitable point for the given distance" from
+ * its edge-label positioning, and it surfaces on some devices (Android in our
+ * logs) for diagrams that render fine elsewhere. Dropping the edge captions
+ * removes that code path entirely and still yields a correct diagram, which
+ * beats showing the user an error and no picture at all.
+ *
+ * @returns {Promise<{svg: string, degraded: boolean}>}
+ */
+export async function renderMermaidResilient(code, { id, timeoutMs = 14000, init = MERMAID_INIT } = {}) {
+  const attempts = [
+    { code, init, label: "as-is" },
+    {
+      code,
+      init: { ...init, flowchart: { ...(init.flowchart || {}), curve: "basis" } },
+      label: "basis-curve",
+    },
+    { code: stripEdgeLabels(code), init, label: "no-edge-labels" },
+  ];
+
+  let lastError;
+  for (let index = 0; index < attempts.length; index += 1) {
+    const attempt = attempts[index];
+    const clean = sanitizeMermaidCode(attempt.code);
+    if (!clean) continue;
+    try {
+      const svg = await renderMermaidToSvg(clean, {
+        id: id ? `${id}-${index}` : undefined,
+        timeoutMs,
+        init: attempt.init,
+      });
+      return { svg, degraded: attempt.label === "no-edge-labels" };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error("Mermaid render failed.");
 }

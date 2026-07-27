@@ -36,8 +36,13 @@ export function buildMermaidDeliveryInstruction(langCode = "id") {
       ? "Boleh menambah judul Markdown singkat (# ...) dan 2–5 bullet ringkasan wiki di luar fence. Jangan tulis teks lain di dalam fence."
       : "You may add a short Markdown title (# ...) and 2–5 wiki-style summary bullets outside the fence. No prose inside the fence.",
     id
-      ? "Sintaks Mermaid harus valid: label node pendek (kutip jika ada spasi/kurung), panah jelas, maksimal ~12 node, hindari subgraph bersarang dalam, hindari karakter yang merusak parser."
-      : "Mermaid syntax must be valid: short node labels (quote if spaces/parens), clear edges, at most ~12 nodes, avoid deeply nested subgraphs, avoid parser-breaking characters.",
+      ? "Sintaks Mermaid harus valid: panah jelas, maksimal ~12 node, hindari subgraph bersarang dalam."
+      : "Mermaid syntax must be valid: clear edges, at most ~12 nodes, avoid deeply nested subgraphs.",
+    // Unquoted brackets are the most common cause of an unrenderable diagram
+    // from Indonesian source documents ("Sekretaris Daerah (Sekda)").
+    id
+      ? 'WAJIB kutip label node yang memuat kurung, tanda kutip, atau tanda baca: tulis A["Sekretaris Daerah (Sekda)"], BUKAN A[Sekretaris Daerah (Sekda)]. Label tanpa kutip yang berisi kurung akan gagal dirender.'
+      : 'ALWAYS quote node labels containing brackets, quotes, or punctuation: write A["Sekretaris Daerah (Sekda)"], NOT A[Sekretaris Daerah (Sekda)]. An unquoted label containing brackets will fail to render.',
     id
       ? "Baris PERTAMA di dalam fence WAJIB diawali tipe diagram: flowchart TD (atau sequenceDiagram / mindmap / erDiagram). Jangan keluarkan hanya node/panah tanpa tipe."
       : "The FIRST line inside the fence MUST start with a diagram type: flowchart TD (or sequenceDiagram / mindmap / erDiagram). Never emit only nodes/arrows without a type.",

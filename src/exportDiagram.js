@@ -9,7 +9,7 @@
 
 import {
   DIAGRAM_START,
-  renderMermaidToSvg,
+  renderMermaidResilient,
   repairMermaidDocument,
   sanitizeMermaidCode,
   withTimeout,
@@ -195,7 +195,7 @@ async function waitForPaintedDiagramSvg(timeoutMs = 4000) {
 }
 
 async function renderMermaidSvgMarkup(code) {
-  const svg = await renderMermaidToSvg(code, { timeoutMs: 12000 });
+  const { svg } = await renderMermaidResilient(code, { timeoutMs: 12000 });
   return prepareSvgMarkup(svg);
 }
 

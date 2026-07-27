@@ -12,7 +12,7 @@ import { createContentActionPayload } from "./contentRecord.js";
 import { groupDocumentSections, parseMarkdownBlocks } from "./markdownBlocks.js";
 import { MERMAID_INIT } from "../mermaidConfig.js";
 import { rememberRenderedDiagramSvg } from "../diagramSvgStore.js";
-import { renderMermaidToSvg, sanitizeMermaidCode } from "../mermaidRender.js";
+import { renderMermaidResilient, sanitizeMermaidCode } from "../mermaidRender.js";
 
 function renderInline(text) {
   return String(text)
@@ -43,7 +43,9 @@ function MermaidBlock({ code, t }) {
 
     (async () => {
       try {
-        const rendered = await renderMermaidToSvg(clean, {
+        // Degrades through curve and edge-label variants rather than giving up
+        // on the first layout error.
+        const { svg: rendered } = await renderMermaidResilient(clean, {
           id: `pl-mmd-${reactId}`,
           timeoutMs: 14000,
           init: MERMAID_INIT,
@@ -53,25 +55,6 @@ function MermaidBlock({ code, t }) {
           rememberRenderedDiagramSvg(rendered, clean);
         }
       } catch (err) {
-        // Retry once with a more tolerant flowchart curve — some docs hit Mermaid layout bugs.
-        try {
-          const rendered = await renderMermaidToSvg(clean, {
-            id: `pl-mmd-retry-${reactId}`,
-            timeoutMs: 10000,
-            init: {
-              ...MERMAID_INIT,
-              flowchart: { htmlLabels: false, useMaxWidth: false, curve: "basis" },
-            },
-          });
-          if (!cancelled) {
-            setSvg(rendered);
-            rememberRenderedDiagramSvg(rendered, clean);
-            setError("");
-            return;
-          }
-        } catch {
-          /* fall through */
-        }
         if (!cancelled) {
           setError(err?.message || "render_failed");
           setShowSource(true);
