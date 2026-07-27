@@ -80,9 +80,36 @@ function parseViewBox(svg) {
   return { width: parts[2], height: parts[3] };
 }
 
+/**
+ * Mermaid embeds tiny nested <svg> markers inside the root diagram.
+ * A naive /<svg>.*?<\/svg>/ regex grabs the marker — that became the blurry icon PNG.
+ */
+export function extractRootSvg(markup = "") {
+  const html = String(markup || "");
+  const start = html.search(/<svg\b/i);
+  if (start < 0) return "";
+
+  let depth = 0;
+  const tagRe = /<\/?svg\b[^>]*>/gi;
+  tagRe.lastIndex = start;
+  let match;
+  while ((match = tagRe.exec(html))) {
+    const selfClosing = /\/>\s*$/.test(match[0]);
+    if (match[0].startsWith("</")) {
+      depth -= 1;
+      if (depth === 0) {
+        return html.slice(start, match.index + match[0].length);
+      }
+      continue;
+    }
+    if (!selfClosing) depth += 1;
+  }
+  return html.slice(start).trim();
+}
+
 /** True when this SVG looks like a UI icon (Lucide), not a Mermaid diagram. */
 export function isLikelyUiIconSvg(svgString = "") {
-  const svg = String(svgString || "");
+  const svg = extractRootSvg(svgString) || String(svgString || "");
   if (!svg) return true;
   if (/\blucide\b/i.test(svg) || /\bpl-doc-card__chevron\b/i.test(svg)) return true;
   if (/\bclass="[^"]*lucide/i.test(svg)) return true;
@@ -102,11 +129,8 @@ export function isLikelyUiIconSvg(svgString = "") {
 }
 
 export function prepareSvgMarkup(svgString) {
-  let svg = String(svgString || "").trim();
+  let svg = extractRootSvg(svgString) || String(svgString || "").trim();
   if (!svg) throw new Error("Empty diagram SVG.");
-  // Mermaid sometimes returns a full HTML document / div wrapper.
-  const embedded = svg.match(/<svg\b[\s\S]*?<\/svg>/i);
-  if (embedded) svg = embedded[0];
 
   svg = svg
     .replace(/<\?xml[^>]*>/i, "")
@@ -220,25 +244,32 @@ async function renderMermaidSvgMarkup(code) {
 }
 
 async function resolvePreparedSvg(output) {
-  // 1) Prefer the SVG already painted in the Mermaid canvas (never Lucide icons).
-  const painted = await waitForPaintedDiagramSvg(2500);
+  // Ask the result UI to expand diagram sections so the canvas is in the DOM.
+  try {
+    window.dispatchEvent(new CustomEvent("pl:open-diagram-sections"));
+  } catch {
+    /* ignore */
+  }
+
+  // 1) Prefer the SVG already painted (root Mermaid SVG, never nested markers / Lucide).
+  const painted = await waitForPaintedDiagramSvg(5000);
   if (painted) return painted;
 
-  // 2) Re-render using the exact code MermaidBlock already used.
-  const paintedCode = sanitizeMermaidCode(readRenderedDiagramCode());
-  if (paintedCode) {
+  // 2) Try the SVG string MermaidBlock stored (sessionStorage / global) even if DOM is gone.
+  const remembered = readRenderedDiagramSvg();
+  if (remembered && !isLikelyUiIconSvg(remembered)) {
     try {
-      return await renderMermaidSvgMarkup(paintedCode);
+      return prepareSvgMarkup(remembered);
     } catch (error) {
-      console.warn("[diagram-export] re-render painted code failed", error);
+      console.warn("[diagram-export] remembered SVG prepare failed", error);
     }
   }
 
-  // 3) Last resort: extract from markdown output.
-  const code = extractMermaidCode(output);
+  // 3) Re-render is fragile on Android for complex flowcharts — only as last resort.
+  const code = sanitizeMermaidCode(readRenderedDiagramCode() || extractMermaidCode(output));
   if (!code) {
     throw new Error(
-      "Diagram belum siap diekspor. Buka section Diagram, tunggu sampai bagan terlihat jelas, lalu Unduh PNG lagi."
+      "Buka section Diagram (nomor 1), tunggu sampai bagan terlihat, lalu ketuk Unduh PNG lagi."
     );
   }
 
@@ -246,9 +277,12 @@ async function resolvePreparedSvg(output) {
     return await renderMermaidSvgMarkup(code);
   } catch (error) {
     const msg = error?.message || String(error);
-    throw new Error(
-      `Gagal mengambil diagram (${msg}). Pastikan bagan sudah tampil di layar, lalu coba lagi.`
-    );
+    if (/suitable point|diagram type detected/i.test(msg)) {
+      throw new Error(
+        "Buka section Diagram sampai bagannya terlihat di layar, lalu Unduh PNG. Jangan tutup section saat mengunduh."
+      );
+    }
+    throw new Error(`Gagal mengambil diagram (${msg}). Buka section Diagram dulu, lalu coba lagi.`);
   }
 }
 

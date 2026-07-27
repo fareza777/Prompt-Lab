@@ -4508,8 +4508,28 @@ function normalizeExportPayload(body) {
 }
 
 /** Sanitize Mermaid SVG so sharp can rasterize it reliably. */
+function extractRootSvgMarkup(markup = "") {
+  const html = String(markup || "");
+  const start = html.search(/<svg\b/i);
+  if (start < 0) return "";
+  let depth = 0;
+  const tagRe = /<\/?svg\b[^>]*>/gi;
+  tagRe.lastIndex = start;
+  let match;
+  while ((match = tagRe.exec(html))) {
+    const selfClosing = /\/>\s*$/.test(match[0]);
+    if (match[0].startsWith("</")) {
+      depth -= 1;
+      if (depth === 0) return html.slice(start, match.index + match[0].length);
+      continue;
+    }
+    if (!selfClosing) depth += 1;
+  }
+  return html.slice(start).trim();
+}
+
 function prepareDiagramSvgForRaster(svgString) {
-  let svg = String(svgString || "").trim();
+  let svg = extractRootSvgMarkup(svgString) || String(svgString || "").trim();
   svg = svg
     .replace(/<\?xml[^>]*>/i, "")
     .replace(/<!DOCTYPE[\s\S]*?>/i, "")

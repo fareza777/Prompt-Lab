@@ -47,3 +47,20 @@ test("isLikelyUiIconSvg rejects Lucide-sized icons", async () => {
   assert.equal(isLikelyUiIconSvg(diagram), false);
 });
 
+test("extractRootSvg keeps outer Mermaid svg, not nested marker svg", async () => {
+  const { extractRootSvg, prepareSvgMarkup } = await import("../src/exportDiagram.js");
+  const nested = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="900" height="500" viewBox="0 0 900 500">
+      <defs>
+        <marker id="m"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M0 0"/></svg></marker>
+      </defs>
+      <rect width="120" height="40"/><path d="M1 1"/><text>Start</text><rect width="120" height="40"/>
+    </svg>`;
+  const root = extractRootSvg(nested);
+  assert.match(root, /width="900"/);
+  assert.match(root, /marker/);
+  const prepared = prepareSvgMarkup(nested);
+  assert.equal(prepared.width >= 80, true);
+  assert.equal(prepared.height >= 80, true);
+});
+

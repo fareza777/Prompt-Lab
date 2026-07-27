@@ -1931,6 +1931,7 @@ function App() {
     setErrorMessage("");
     setWarningMessage("");
     setExportStatus("");
+    import("./diagramSvgStore.js").then((m) => m.clearRenderedDiagramSvg()).catch(() => {});
   }
 
   function writeGuestFlagSafe(isGuest) {
@@ -2409,6 +2410,7 @@ function App() {
       const checked = validateFinishedOutput(rawContent, profile);
       const content = checked.content;
       setRunOutput(content);
+      import("./diagramSvgStore.js").then((m) => m.clearRenderedDiagramSvg()).catch(() => {});
       applyServerQuota(data.quota);
       if (data.weeklyResults) setWeeklyResults(data.weeklyResults);
       if (isAnonymousSession) countTrialUse();

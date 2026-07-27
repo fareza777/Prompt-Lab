@@ -4,7 +4,7 @@ export const MERMAID_INIT = {
   securityLevel: "strict",
   theme: "neutral",
   fontFamily: "system-ui, Segoe UI, sans-serif",
-  flowchart: { htmlLabels: false, useMaxWidth: false },
+  flowchart: { htmlLabels: false, useMaxWidth: false, curve: "linear" },
   sequence: { useMaxWidth: false },
   er: { useMaxWidth: false },
   class: { useMaxWidth: false },

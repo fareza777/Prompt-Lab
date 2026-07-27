@@ -49,6 +49,23 @@ function MermaidBlock({ code, t }) {
           rememberRenderedDiagramSvg(rendered, code);
         }
       } catch (err) {
+        // Retry once with a more tolerant flowchart curve — some docs hit Mermaid layout bugs.
+        try {
+          const { default: mermaid } = await import("mermaid");
+          mermaid.initialize({
+            ...MERMAID_INIT,
+            flowchart: { htmlLabels: false, useMaxWidth: false, curve: "basis" },
+          });
+          const { svg: rendered } = await mermaid.render(`pl-mmd-retry-${reactId}`, code);
+          if (!cancelled) {
+            setSvg(rendered);
+            rememberRenderedDiagramSvg(rendered, code);
+            setError("");
+            return;
+          }
+        } catch {
+          /* fall through */
+        }
         if (!cancelled) {
           setError(err?.message || "render_failed");
           setShowSource(true);
@@ -165,6 +182,22 @@ function SectionCards({ sections, t }) {
     setOpenIds(
       new Set(withDiagram.length ? withDiagram : sections.slice(0, 1).map((section) => section.id))
     );
+  }, [sections]);
+
+  useEffect(() => {
+    function openDiagramSections() {
+      setOpenIds((current) => {
+        const next = new Set(current);
+        for (const section of sections) {
+          if (section.blocks.some((block) => block.type === "code" && block.lang === "mermaid")) {
+            next.add(section.id);
+          }
+        }
+        return next;
+      });
+    }
+    window.addEventListener("pl:open-diagram-sections", openDiagramSections);
+    return () => window.removeEventListener("pl:open-diagram-sections", openDiagramSections);
   }, [sections]);
 
   function toggle(id) {
@@ -307,12 +340,30 @@ function ResultActions({
             <button
               type="button"
               className="pl-btn pl-btn--primary"
-              onClick={() => onExport("png", output)}
+              onClick={() => {
+                try {
+                  window.dispatchEvent(new CustomEvent("pl:open-diagram-sections"));
+                } catch {
+                  /* ignore */
+                }
+                window.setTimeout(() => onExport("png", output), 80);
+              }}
             >
               <Download size={17} aria-hidden="true" />
               {t("result.exportPng")}
             </button>
-            <button type="button" className="pl-btn" onClick={() => onExport("svg", output)}>
+            <button
+              type="button"
+              className="pl-btn"
+              onClick={() => {
+                try {
+                  window.dispatchEvent(new CustomEvent("pl:open-diagram-sections"));
+                } catch {
+                  /* ignore */
+                }
+                window.setTimeout(() => onExport("svg", output), 80);
+              }}
+            >
               <Download size={17} aria-hidden="true" />
               {t("result.exportSvg")}
             </button>
