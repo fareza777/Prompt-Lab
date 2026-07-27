@@ -15,6 +15,7 @@ import { rememberRenderedDiagramSvg } from "../diagramSvgStore.js";
 import { renderMermaidResilient, sanitizeMermaidCode } from "../mermaidRender.js";
 import {
   buildProcessFlowSvg,
+  getProcessFlowLayout,
   parseProcessJson,
   processFlowToMermaid,
 } from "../processFlow.js";
@@ -36,14 +37,16 @@ function renderInline(text) {
 
 function ProcessFlowBlock({ code, t }) {
   const flow = useMemo(() => parseProcessJson(code), [code]);
+  const layout = useMemo(() => (flow ? getProcessFlowLayout(flow) : null), [flow]);
   const svg = useMemo(() => (flow ? buildProcessFlowSvg(flow) : ""), [flow]);
 
   useEffect(() => {
     if (!flow || !svg) return;
+    // Keep SVG in store for .svg download; PNG uses canvas fillText instead.
     rememberRenderedDiagramSvg(svg, processFlowToMermaid(flow));
   }, [flow, svg]);
 
-  if (!flow || !svg) {
+  if (!flow || !layout) {
     return (
       <pre className="pl-code-block">
         <code>{code}</code>
@@ -53,11 +56,30 @@ function ProcessFlowBlock({ code, t }) {
 
   return (
     <figure className="pl-process-flow">
-      <div
-        className="pl-process-flow__canvas"
-        data-pl-diagram="1"
-        dangerouslySetInnerHTML={{ __html: svg }}
-      />
+      <div className="pl-process-flow__canvas" data-pl-diagram="1" data-pl-process="1">
+        <div className="pl-process-flow__board">
+          <h3 className="pl-process-flow__title">{layout.title}</h3>
+          <ol className="pl-process-flow__steps">
+            {layout.steps.map((step, index) => {
+              const tone =
+                index === 0 ? "start" : index === layout.steps.length - 1 ? "end" : "mid";
+              return (
+                <li key={step.id} className={`pl-process-flow__step pl-process-flow__step--${tone}`}>
+                  <div className="pl-process-flow__box">
+                    <span className="pl-process-flow__label">{step.label}</span>
+                    {step.detail ? (
+                      <span className="pl-process-flow__detail">{step.detail}</span>
+                    ) : null}
+                  </div>
+                  {index < layout.steps.length - 1 ? (
+                    <span className="pl-process-flow__arrow" aria-hidden="true" />
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      </div>
       <p className="pl-meta">{t("result.diagramInfographicHint")}</p>
     </figure>
   );

@@ -21,6 +21,8 @@ import {
 import {
   buildProcessFlowSvg,
   extractProcessFlow,
+  getProcessFlowLayout,
+  paintProcessFlowOnCanvas,
   processFlowToMermaid,
 } from "./processFlow.js";
 
@@ -382,7 +384,53 @@ async function rasterizeViaServer(prepared, { apiBase = "", authHeaders = {}, ti
  * @param {{ apiBase?: string, authHeaders?: Record<string,string>, title?: string }} [options]
  * @returns {Promise<{ blob: Blob, extension: string, note?: string }>}
  */
+/**
+ * Process infographic PNG via Canvas fillText — avoids sharp/SVG <text>
+ * empty-box / tofu failures on Android & Linux hosts.
+ */
+async function rasterizeProcessFlowPng(flow, scale = 2) {
+  const layout = getProcessFlowLayout(flow);
+  if (!layout) throw new Error("Invalid process flow.");
+  if (typeof document === "undefined") {
+    throw new Error("Canvas PNG requires a browser.");
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(layout.width * scale);
+  canvas.height = Math.round(layout.height * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas unavailable.");
+
+  paintProcessFlowOnCanvas(ctx, flow, { scale });
+  return withTimeout(canvasToPngBlob(canvas), 8000, "PNG encode");
+}
+
 export async function buildDiagramExportBlob(output, format = "png", options = {}) {
+  const flow = extractProcessFlow(output);
+
+  // Process diagrams: canvas text first (never trust sharp on SVG <text>).
+  if (flow && format === "png") {
+    try {
+      return {
+        blob: await rasterizeProcessFlowPng(flow, 2),
+        extension: "png",
+      };
+    } catch (error) {
+      console.warn("[diagram-export] process canvas PNG failed", error);
+    }
+  }
+
+  if (flow && format === "svg") {
+    const svg = buildProcessFlowSvg(flow);
+    if (svg) {
+      const prepared = prepareSvgMarkup(svg);
+      return {
+        blob: new Blob([prepared.svg], { type: "image/svg+xml;charset=utf-8" }),
+        extension: "svg",
+      };
+    }
+  }
+
   const prepared = await resolvePreparedSvg(output);
 
   if (format === "svg") {
@@ -394,13 +442,16 @@ export async function buildDiagramExportBlob(output, format = "png", options = {
 
   const errors = [];
 
-  try {
-    return {
-      blob: await rasterizeViaServer(prepared, options),
-      extension: "png",
-    };
-  } catch (error) {
-    errors.push(error?.message || String(error));
+  // Skip server sharp when this is a process diagram — it strips/tofu's <text>.
+  if (!flow) {
+    try {
+      return {
+        blob: await rasterizeViaServer(prepared, options),
+        extension: "png",
+      };
+    } catch (error) {
+      errors.push(error?.message || String(error));
+    }
   }
 
   try {

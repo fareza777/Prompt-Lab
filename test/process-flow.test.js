@@ -34,6 +34,23 @@ test("buildProcessFlowSvg returns root svg", () => {
   assert.match(svg, /Terima instruksi/);
 });
 
+test("normalize accepts Indonesian step field aliases", async () => {
+  const { normalizeProcessFlow, getProcessFlowLayout } = await import("../src/processFlow.js");
+  const flow = normalizeProcessFlow({
+    title: "Alur",
+    steps: [
+      { id: "A", langkah: "Terima surat" },
+      { id: "B", aksi: "Disposisi" },
+      { id: "C", uraian: "Selesai" },
+    ],
+  });
+  assert.equal(flow.steps.length, 3);
+  assert.equal(flow.steps[0].label, "Terima surat");
+  const layout = getProcessFlowLayout(flow);
+  assert.ok(layout.height > 100);
+  assert.equal(layout.steps[1].label, "Disposisi");
+});
+
 test("ensureProcessDiagramDocument injects mermaid from process JSON", () => {
   const markdown = [
     "# Alur",

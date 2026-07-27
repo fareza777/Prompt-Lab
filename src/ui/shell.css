@@ -1456,6 +1456,88 @@
   background: #fbf8f1;
 }
 
+.pl-process-flow__board {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.1rem 1rem 1.25rem;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  color: #1f241f;
+}
+
+.pl-process-flow__title {
+  margin: 0 0 1rem;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.pl-process-flow__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.pl-process-flow__step {
+  width: min(100%, 560px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pl-process-flow__box {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 3.6rem;
+  padding: 0.85rem 1rem;
+  border: 2px solid #2f5a46;
+  border-radius: 14px;
+  background: #fff;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.2rem;
+}
+
+.pl-process-flow__step--start .pl-process-flow__box,
+.pl-process-flow__step--end .pl-process-flow__box {
+  background: #2f5a46;
+  color: #fbf8f1;
+}
+
+.pl-process-flow__step--end .pl-process-flow__box {
+  background: #3a6b54;
+}
+
+.pl-process-flow__label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.pl-process-flow__detail {
+  font-size: 0.78rem;
+  font-weight: 400;
+  opacity: 0.88;
+  line-height: 1.3;
+}
+
+.pl-process-flow__arrow {
+  width: 0;
+  height: 0;
+  margin: 0.35rem 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 10px solid #2f5a46;
+}
+
 .pl-process-flow__canvas svg {
   display: block;
   width: 100%;
