@@ -12,10 +12,11 @@
     "preview": "vite preview --host 0.0.0.0",
     "playstore:check": "node --use-system-ca scripts/check-playstore-readiness.mjs",
     "icons:generate": "node --use-system-ca scripts/generate-pwa-icons.mjs",
+    "icons:android": "node --use-system-ca scripts/sync-android-icons.mjs",
     "playstore:assets": "node --use-system-ca scripts/generate-playstore-assets.mjs && node --use-system-ca scripts/capture-playstore-screenshots.mjs && node --use-system-ca scripts/frame-playstore-screenshots.mjs",
     "playstore:frame": "node --use-system-ca scripts/frame-playstore-screenshots.mjs",
     "playstore:promo": "node --use-system-ca scripts/create-promo-video.mjs",
-    "playstore:build": "cd android-app && gradlew.bat bundleRelease",
+    "playstore:build": "npm run icons:android && cd android-app && gradlew.bat bundleRelease",
     "setup:google-auth": "node scripts/setup-google-auth.mjs",
     "check:supabase": "node --use-system-ca scripts/check-supabase-setup.mjs"
   },
