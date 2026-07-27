@@ -1159,7 +1159,9 @@ function estimateRunTokens(payload, plan) {
 
 const RUN_SYSTEM_PROMPT =
   "You are executing the user's instructions to produce a finished deliverable. " +
-  "Write the complete document now, in full. " +
+  "Write the finished document now. Default to a concise, usable version that fits " +
+  "in one response (short sections and bullets) unless the user explicitly asked " +
+  "for lengkap/detailed/comprehensive. " +
   "Return only the requested content itself — no preamble, no restatement of the " +
   "instructions, no commentary about what you are doing, and no reasoning notes. " +
   "Never ask a question, never ask for more details, and never offer to wait for " +
@@ -1176,14 +1178,15 @@ const RUN_SYSTEM_PROMPT =
 const RUN_FINAL_DIRECTIVE = [
   "---",
   "EXECUTION INSTRUCTION — this overrides anything above it that conflicts:",
-  "Write the finished document now, in full, in the same language as the brief above.",
+  "Write the finished document now, in the same language as the brief above.",
+  "Keep it CONCISE by default so it completes in one response — unless the brief",
+  "explicitly asked for lengkap/detailed/comprehensive.",
   "Do NOT ask for data. Do NOT list what is missing. Do NOT reply with questions,",
   "a checklist, or an offer to start once details are provided.",
   "Where a specific fact is unknown, invent a realistic one and wrap it in square",
   "brackets so it can be replaced — for example [12 Mei 2026] or [Nama Peserta].",
   "Your entire reply must be the document itself and nothing else.",
 ].join("\n");
-
 /**
  * Strips a reasoning model's internal monologue from executed output.
  *
@@ -1279,6 +1282,8 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, express.json
     const deliverableInstruction = buildDeliverableInstruction({
       profile: deliverableProfile,
       language: outputLang,
+      narrative: payload.narrative || prompt,
+      content: prompt,
     });
     const diagramAddon = detectDiagramIntent(payload)
       ? `\n\n${buildMermaidDeliveryAddon({ ...payload, outputLanguage: outputLang })}`

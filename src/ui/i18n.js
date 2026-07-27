@@ -296,7 +296,7 @@ const id = {
   "error.rateLimited": "Terlalu banyak permintaan. Tunggu sebentar, lalu coba lagi.",
   "error.timeout": "AI terlalu lama merespons. Coba lagi sebentar.",
   "error.runTooLong":
-    "Dokumennya terlalu panjang untuk diselesaikan sekali jalan. Persingkat permintaanmu, atau minta satu bagian dulu.",
+    "Dokumennya terlalu berat untuk diselesaikan sekali jalan. Coba Buat hasil lagi — sistem sudah default ke versi ringkas — atau minta satu bagian saja.",
   "error.busy": "AI sedang sibuk. Coba lagi sebentar.",
   "error.notConfigured": "Layanan AI belum dikonfigurasi. Hubungi dukungan.",
   "error.fileTooLarge": "File terlalu besar. Maksimal 8 MB per file.",
@@ -606,7 +606,7 @@ const en = {
   "error.rateLimited": "Too many requests. Wait a moment, then try again.",
   "error.timeout": "The AI took too long to respond. Try again shortly.",
   "error.runTooLong":
-    "That document was too long to finish in one run. Shorten your request, or ask for one section at a time.",
+    "That document was too heavy to finish in one run. Try Create result again — the system now defaults to a concise version — or ask for one section only.",
   "error.busy": "The AI is busy. Try again shortly.",
   "error.notConfigured": "The AI service is not configured. Please contact support.",
   "error.fileTooLarge": "That file is too large. Maximum 8 MB per file.",

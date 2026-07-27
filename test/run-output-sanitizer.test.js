@@ -88,7 +88,7 @@ test("the anti-stalling directive is repeated after the prompt", () => {
   // It must be appended to the user turn, not left in the system slot.
   assert.match(
     server,
-    /content: `\$\{prompt\}\$\{deliverableInstruction\}\\n\\n\$\{RUN_FINAL_DIRECTIVE\}`/,
+    /content: `\$\{prompt\}\$\{deliverableInstruction\}\$\{diagramAddon\}\\n\\n\$\{RUN_FINAL_DIRECTIVE\}`/,
   );
 });
 

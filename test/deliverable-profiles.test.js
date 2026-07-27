@@ -23,8 +23,33 @@ test("reports and presentations receive different structure contracts", () => {
   const slides = buildDeliverableInstruction({ profile: "presentation", language: "en" });
   assert.match(report, /executive summary/i);
   assert.match(report, /findings/i);
+  assert.match(report, /CONCISE|600–900/i);
+  assert.match(report, /LENGTH \(system default\)/i);
   assert.match(slides, /one main message per slide/i);
   assert.match(slides, /8–12 slides/i);
+});
+
+test("reports default concise unless user asks for lengkap", async () => {
+  const { wantsExpandedDeliverable, buildDeliverableInstruction } = await import(
+    "../src/deliverableProfiles.js"
+  );
+  assert.equal(wantsExpandedDeliverable("buat laporan bulanan"), false);
+  assert.equal(wantsExpandedDeliverable("buat laporan lengkap dan detail"), true);
+
+  const concise = buildDeliverableInstruction({
+    profile: "report",
+    language: "id",
+    narrative: "buat laporan dari file ini",
+  });
+  assert.match(concise, /RINGKAS|default sistem/i);
+  assert.doesNotMatch(concise, /User meminta versi lengkap/);
+
+  const expanded = buildDeliverableInstruction({
+    profile: "report",
+    language: "id",
+    narrative: "buat laporan lengkap dari file ini",
+  });
+  assert.match(expanded, /User meminta versi lengkap/);
 });
 
 test("validator removes prompt leakage and flags repeated headings", () => {

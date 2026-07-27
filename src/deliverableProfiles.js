@@ -12,37 +12,64 @@ const PROFILE_SIGNALS = [
   ["report", /\b(laporan|report|reporting)\b/i],
 ];
 
+/** User explicitly asked for a long / exhaustive document. */
+export function wantsExpandedDeliverable(text = "") {
+  return /\b(lengkap|selengkapnya|mendetail|terperinci|rinci|exhaustive|comprehensive|detailed|in[-\s]?depth|full[-\s]?length|panjang|extended|thorough)\b/i.test(
+    String(text || "")
+  );
+}
+
 const CONTRACTS = {
   id: {
     diagram: `Ubah dokumen/lampiran menjadi INFOGRAFIS ALUR PROSES yang siap ditampilkan. WAJIB keluarkan satu blok \`\`\`process berisi JSON {title, steps[{id,label}], edges[{from,to}]} (8–12 langkah, label pendek). Boleh menambah judul singkat dan beberapa bullet ringkasan. Jangan mengarang langkah yang tidak ada di sumber. Jangan tulis baris Tujuan atau checklist.`,
-    report: `Tulis laporan profesional yang LANGSUNG SIAP DIPAKAI (boleh dikirim ke atasan tanpa edit). Gunakan hanya bagian yang relevan: judul dan metadata, ringkasan eksekutif, latar belakang dan periode, sumber/metode, temuan berbasis bukti, analisis, rekomendasi, serta lampiran bila perlu. Untuk Poin/Temuan/Rekomendasi pakai bullet Markdown (- ...), bukan nomor yang menyambung antar subbagian. LARANG menulis baris "Tujuan:" / "Section goal:" di bawah heading. LARANG menambah "Daftar Periksa Kualitas", quality checklist, atau catatan Asumsi scaffolding di akhir. Jika data kurang, tulis singkat di badan laporan tanpa blok meta terpisah. Bedakan fakta dari lampiran dan jangan mengarang.`,
-    minutes: `Tulis notulen profesional dengan identitas rapat, peserta bila tersedia, agenda, ringkasan pembahasan per agenda, keputusan, tabel tindak lanjut (aksi, penanggung jawab, tenggat, status) hanya jika didukung sumber, hal yang belum selesai, dan tindak lanjut berikutnya. Jangan mengarang nama peserta, tanggal, kutipan, keputusan, penanggung jawab, atau tenggat dari wajah/foto. Gunakan "Belum tersedia" untuk informasi penting yang tidak ada.`,
+    report: `Tulis laporan profesional yang LANGSUNG SIAP DIPAKAI (boleh dikirim ke atasan tanpa edit). Default: RINGKAS — ringkasan eksekutif singkat, temuan utama, analisis pendek, rekomendasi actionable (target ±600–900 kata / setara 1–2 halaman). Pakai bagian relevan saja; skip yang kosong. Untuk Poin/Temuan/Rekomendasi pakai bullet Markdown (- ...), bukan nomor yang menyambung antar subbagian. LARANG menulis baris "Tujuan:" / "Section goal:" di bawah heading. LARANG menambah "Daftar Periksa Kualitas", quality checklist, atau catatan Asumsi scaffolding di akhir. Jika data kurang, tulis singkat di badan laporan tanpa blok meta terpisah. Bedakan fakta dari lampiran dan jangan mengarang.`,
+    minutes: `Tulis notulen profesional yang RINGKAS: identitas rapat, peserta bila tersedia, agenda, ringkasan pembahasan per agenda, keputusan, dan tabel tindak lanjut (aksi, penanggung jawab, tenggat, status) hanya jika didukung sumber. Target ±400–700 kata. Jangan mengarang nama peserta, tanggal, kutipan, keputusan, penanggung jawab, atau tenggat dari wajah/foto. Gunakan "Belum tersedia" untuk informasi penting yang tidak ada.`,
     presentation: `Tulis deck presentasi sebagai alur cerita: pembuka spesifik, konteks, inti pembahasan, bukti/visual yang relevan, dan penutup berupa keputusan atau rekomendasi. Satu pesan utama per slide, judul slide menyatakan poin, maksimal 6 bullet dan sekitar 45 kata terlihat per slide. Jika panjang tidak ditentukan, targetkan 8–12 slide. Pindahkan detail pendukung ke catatan pembicara.`,
-    proposal: `Tulis proposal profesional dengan konteks, masalah, tujuan, ruang lingkup, pendekatan, deliverable, jadwal, tanggung jawab, asumsi, risiko, dan bagian komersial hanya jika diminta.`,
-    sop: `Tulis SOP operasional dengan tujuan, ruang lingkup, peran, prasyarat, prosedur bernomor, titik kontrol, pengecualian, rekaman yang disimpan, dan informasi revisi.`,
-    analysis: `Tulis analisis dengan temuan utama, metode, bukti, interpretasi, keterbatasan, kesimpulan, dan rekomendasi yang diprioritaskan.`,
-    general: `Hasilkan dokumen profesional yang langsung menjawab pekerjaan pengguna, dengan struktur yang diturunkan dari tujuan, hierarki yang jelas, dan langkah berikutnya yang dapat digunakan.`,
+    proposal: `Tulis proposal profesional yang RINGKAS (target ±600–900 kata): konteks, masalah, tujuan, ruang lingkup, pendekatan, deliverable, jadwal, tanggung jawab, asumsi/risiko singkat, dan bagian komersial hanya jika diminta.`,
+    sop: `Tulis SOP operasional yang padat: tujuan, ruang lingkup, peran, prasyarat, prosedur bernomor, titik kontrol, pengecualian, rekaman yang disimpan, dan informasi revisi. Hindari prosa panjang.`,
+    analysis: `Tulis analisis RINGKAS (target ±600–900 kata): temuan utama, metode singkat, bukti, interpretasi, keterbatasan, kesimpulan, dan rekomendasi yang diprioritaskan. Utamakan bullet dan tabel ringkas.`,
+    general: `Hasilkan dokumen profesional yang langsung menjawab pekerjaan pengguna. Default RINGKAS dan siap pakai: hierarki jelas, bagian relevan saja, hindari pengulangan. Target ±500–800 kata kecuali user meminta lebih panjang.`,
   },
   en: {
     diagram: `Turn the attached document into a READY process-flow infographic. MUST emit one \`\`\`process fence with JSON {title, steps[{id,label}], edges[{from,to}]} (8–12 short steps). A short title and summary bullets outside the fence are optional. Do not invent steps missing from the source. No Purpose lines or checklists.`,
-    report: `Write a professional report that is READY TO SEND. Include only relevant sections: title/metadata, executive summary, background and period, sources/method, evidence-based findings, analysis, recommendations, and appendix when needed. For Points/Findings/Recommendations use Markdown bullets (- ...), not continuous numbered lists. FORBIDDEN: "Purpose:" / "Section goal:" lines under headings; "Quality Checklist" / review checklist sections; trailing scaffolding "Assumptions:" footnotes. If data is missing, note it briefly in-body without a separate meta block. Do not invent facts.`,
-    minutes: `Write professional meeting minutes with meeting identity, participants when provided, agenda, discussion summary by item, decisions, and an action table (action, owner, due date, status) only when supported. Include unresolved points and follow-up. Do not invent participant names, dates, quotations, decisions, owners, or deadlines from faces or photos. Use "Not provided" for essential missing details.`,
+    report: `Write a professional report that is READY TO SEND. Default: CONCISE — short executive summary, key findings, brief analysis, actionable recommendations (about 600–900 words / 1–2 pages). Include only relevant sections; skip empty ones. For Points/Findings/Recommendations use Markdown bullets (- ...), not continuous numbered lists. FORBIDDEN: "Purpose:" / "Section goal:" lines under headings; "Quality Checklist" / review checklist sections; trailing scaffolding "Assumptions:" footnotes. If data is missing, note it briefly in-body without a separate meta block. Do not invent facts.`,
+    minutes: `Write CONCISE professional meeting minutes: meeting identity, participants when provided, agenda, discussion summary by item, decisions, and an action table (action, owner, due date, status) only when supported. Target about 400–700 words. Do not invent participant names, dates, quotations, decisions, owners, or deadlines from faces or photos. Use "Not provided" for essential missing details.`,
     presentation: `Write a presentation as a narrative deck: specific opening, context, core argument, relevant evidence or visuals, and a decision/recommendation close. Use one main message per slide, point-led slide titles, no more than six bullets and roughly 45 visible words per slide. If length is unspecified, target 8–12 slides. Put supporting detail in speaker notes.`,
-    proposal: `Write a professional proposal with context, problem, objectives, scope, approach, deliverables, timeline, responsibilities, assumptions, risks, and a commercial section only when requested.`,
-    sop: `Write an operational SOP with purpose, scope, roles, prerequisites, numbered procedure, controls, exceptions, retained records, and revision information.`,
-    analysis: `Write an analysis with executive finding, method, evidence, interpretation, limitations, conclusion, and prioritized recommendations.`,
-    general: `Produce professional finished work that directly answers the user's job, derives its structure from the purpose, uses clear hierarchy, and ends with an appropriate next step.`,
+    proposal: `Write a CONCISE professional proposal (about 600–900 words) with context, problem, objectives, scope, approach, deliverables, timeline, responsibilities, brief assumptions/risks, and a commercial section only when requested.`,
+    sop: `Write a tight operational SOP with purpose, scope, roles, prerequisites, numbered procedure, controls, exceptions, retained records, and revision information. Avoid long prose.`,
+    analysis: `Write a CONCISE analysis (about 600–900 words) with executive finding, brief method, evidence, interpretation, limitations, conclusion, and prioritized recommendations. Prefer bullets and compact tables.`,
+    general: `Produce professional finished work that directly answers the user's job. Default CONCISE and ready to use: clear hierarchy, only relevant sections, no repetition. Target about 500–800 words unless the user asked for more.`,
   },
 };
+
+function buildLengthDirective({ language = "id", expanded = false, profile = "general" } = {}) {
+  if (profile === "diagram" || profile === "presentation") return "";
+  const lang = language === "en" ? "en" : "id";
+  if (expanded) {
+    return lang === "en"
+      ? `LENGTH: The user asked for a detailed/complete version — cover needed sections thoroughly, but still avoid filler and stop once the job is done.`
+      : `PANJANG: User meminta versi lengkap/detail — bahas bagian yang perlu secara tuntas, tapi tetap tanpa filler dan berhenti begitu pekerjaan selesai.`;
+  }
+  return lang === "en"
+    ? `LENGTH (system default): Keep this deliverable concise so it finishes in one response. Prefer short sections and bullets over long prose. Do NOT write an exhaustive encyclopedia version unless the user asked for lengkap/detailed/comprehensive.`
+    : `PANJANG (default sistem): Buat dokumen RINGKAS agar selesai dalam satu respons. Utamakan bagian pendek dan bullet, bukan prosa panjang. JANGAN menulis versi ensiklopedia kecuali user meminta lengkap/detail/terperinci.`;
+}
 
 export function detectDeliverableProfile(input = {}) {
   const haystack = `${input.narrative || ""} ${input.outputType || ""} ${input.content || ""}`;
   return PROFILE_SIGNALS.find(([, pattern]) => pattern.test(haystack))?.[0] || "general";
 }
 
-export function buildDeliverableInstruction({ profile = "general", language = "id" } = {}) {
+export function buildDeliverableInstruction({
+  profile = "general",
+  language = "id",
+  narrative = "",
+  content = "",
+} = {}) {
   const lang = language === "en" ? "en" : "id";
   const contract = CONTRACTS[lang][profile] || CONTRACTS[lang].general;
+  const expanded = wantsExpandedDeliverable(`${narrative} ${content}`);
+  const lengthDirective = buildLengthDirective({ language: lang, expanded, profile });
   const universal =
     profile === "diagram"
       ? lang === "en"
@@ -51,7 +78,7 @@ export function buildDeliverableInstruction({ profile = "general", language = "i
       : lang === "en"
         ? `Return only the finished deliverable, never a prompt, instructions, planning commentary, section-purpose blurbs, quality checklists, or explanation of how to create it. Preserve names, dates, numbers, and terminology consistently. Do not fabricate unsupported facts. Use useful Markdown headings, lists, and tables so Office export retains the document hierarchy.`
         : `Kembalikan hanya hasil jadi, bukan prompt, instruksi, komentar perencanaan, baris tujuan per bagian, quality checklist, atau penjelasan cara membuatnya. Jaga konsistensi nama, tanggal, angka, dan istilah. Jangan mengarang fakta yang tidak didukung. Gunakan heading, daftar, dan tabel Markdown yang berguna agar hierarki dokumen tetap rapi saat diekspor ke Office.`;
-  return `\n\nPROFESSIONAL DELIVERABLE CONTRACT (${profile.toUpperCase()}):\n${contract}\n${universal}`;
+  return `\n\nPROFESSIONAL DELIVERABLE CONTRACT (${profile.toUpperCase()}):\n${contract}\n${lengthDirective}\n${universal}`;
 }
 
 export function validateFinishedOutput(content = "", profile = "general") {
