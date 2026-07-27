@@ -497,6 +497,17 @@
   height: auto;
 }
 
+.pl-diagram-save__file {
+  display: grid;
+  place-items: center;
+  margin: var(--s-3) 0;
+  padding: var(--s-5);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: #fbf8f1;
+  color: var(--accent);
+}
+
 .pl-diagram-save .pl-actions {
   margin-top: var(--s-3);
 }

@@ -2835,16 +2835,28 @@ function App() {
 
     const feature = format === "pptx" ? "pptxExport" : "docxExport";
     if (!canExportFormat(accountState.plan, format)) {
-      const message = upgradeMessageForFeature(feature);
+      const message =
+        format === "pptx"
+          ? detectLanguage() === "en"
+            ? "PowerPoint export needs Pro or Business. Word export works on Free."
+            : "Export PowerPoint perlu paket Pro/Business. Word tetap bisa di Free."
+          : upgradeMessageForFeature(feature);
       setBillingMessage(message);
       setExportStatus("");
       flashAction("Upgrade to export");
       setWarningMessage(message);
+      setErrorMessage(message);
       return;
     }
     try {
       setExportStatus(`Preparing ${formatLabel}...`);
-      const authHeaders = await getAuthHeaders();
+      setErrorMessage("");
+      let authHeaders = {};
+      try {
+        authHeaders = await getAuthHeaders();
+      } catch {
+        authHeaders = {};
+      }
       // Document language follows UI locale (owned by Shell via detectLanguage).
       // Do not reference a free `lang` binding here — App no longer owns that state.
       const documentLanguage = detectLanguage() === "en" ? "en" : "id";
@@ -2856,6 +2868,13 @@ function App() {
         narrative: titleSeed || narrative,
         attachmentNames: attachments.map((file) => file.name),
       });
+      if (!String(content || "").trim()) {
+        throw new Error(
+          detectLanguage() === "en"
+            ? "No finished result to export. Tap Create result first."
+            : "Belum ada hasil untuk diekspor. Ketuk Buat hasil dulu."
+        );
+      }
       const response = await fetch(`${apiBase}/api/export/${format}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
@@ -2873,12 +2892,32 @@ function App() {
       if (!blob || blob.size < 64) {
         throw new Error(`Failed to export ${formatLabel}: empty file.`);
       }
-      await triggerBrowserDownload(blob, toDownloadFilename(title, format));
-      setExportStatus(`${formatLabel} downloaded`);
-      window.setTimeout(() => setExportStatus(""), 2800);
+
+      const filename = toDownloadFilename(title, format);
+      const needsSaveSheet =
+        isLikelyAndroidTwa() ||
+        (typeof navigator !== "undefined" && /Android|iPhone|iPad/i.test(navigator.userAgent || ""));
+
+      if (needsSaveSheet) {
+        if (diagramExportOffer?.url) URL.revokeObjectURL(diagramExportOffer.url);
+        const url = URL.createObjectURL(blob);
+        setDiagramExportOffer({ blob, filename, extension: format, url });
+        setExportStatus(`${formatLabel} siap — ketuk Bagikan / Simpan`);
+        return;
+      }
+
+      const result = await triggerBrowserDownload(blob, filename);
+      setExportStatus(
+        result?.method === "share" || result?.method === "share-abort"
+          ? `${formatLabel} ready — pilih Save / Download di share sheet`
+          : `${formatLabel} downloaded`
+      );
+      window.setTimeout(() => setExportStatus(""), 4500);
     } catch (error) {
+      console.error(`[${format}-export]`, error);
       setErrorMessage(error.message || "Export failed.");
       setExportStatus(`${formatLabel} failed`);
+      window.setTimeout(() => setExportStatus(""), 6000);
     }
   }
 
@@ -2893,8 +2932,8 @@ function App() {
   function confirmDiagramExportShare(method = "share") {
     setExportStatus(
       method === "open" || method === "preview"
-        ? "PNG terbuka — tekan lama gambar untuk Simpan"
-        : "PNG dibagikan / siap disimpan"
+        ? "File terbuka — simpan dari menu / tekan lama bila gambar"
+        : "File dibagikan / siap disimpan"
     );
     window.setTimeout(() => setExportStatus(""), 4500);
   }

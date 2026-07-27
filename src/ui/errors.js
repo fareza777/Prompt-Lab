@@ -29,7 +29,7 @@ export function humanizeApiError(message, t) {
   if (!raw) return "";
   // Keep diagram/export diagnostics readable — hiding them as "generic" made PNG debugging impossible.
   if (
-    /mermaid|diagram|png|svg|export|raster|canvas|decode|unduhan|unduh|bagikan/i.test(raw)
+    /mermaid|diagram|png|svg|docx|pptx|word|powerpoint|export|raster|canvas|decode|unduhan|unduh|bagikan|simpan/i.test(raw)
   ) {
     return raw;
   }

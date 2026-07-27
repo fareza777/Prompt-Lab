@@ -1,9 +1,9 @@
 import { useEffect } from "react";
-import { Download, Share2, X } from "lucide-react";
+import { Download, FileText, Share2, X } from "lucide-react";
 
 /**
- * Android TWA ignores silent <a download>. After PNG is ready, show the image
- * and require a fresh tap to Share/Save (user gesture).
+ * Android TWA ignores silent <a download>. After any export blob is ready,
+ * show a sheet and require a fresh tap to Share/Save (user gesture).
  */
 export default function DiagramSaveSheet({ offer, onClose, onShared, t }) {
   useEffect(() => {
@@ -17,14 +17,35 @@ export default function DiagramSaveSheet({ offer, onClose, onShared, t }) {
 
   if (!offer) return null;
 
-  const { url, filename, extension } = offer;
-  const label = String(extension || "png").toUpperCase();
+  const { url, filename, extension, blob } = offer;
+  const ext = String(extension || "bin").toLowerCase();
+  const label = ext.toUpperCase();
+  const isImage = /^(png|svg|jpe?g|webp|gif)$/i.test(ext);
+  const mime =
+    blob?.type ||
+    (ext === "docx"
+      ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      : ext === "pptx"
+        ? "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        : ext === "png"
+          ? "image/png"
+          : ext === "svg"
+            ? "image/svg+xml"
+            : "application/octet-stream");
+
+  const titleKey =
+    ext === "docx"
+      ? "result.saveWordTitle"
+      : ext === "pptx"
+        ? "result.savePptTitle"
+        : "result.saveDiagramTitle";
+  const hintKey =
+    ext === "docx" || ext === "pptx" ? "result.saveOfficeHint" : "result.saveDiagramHint";
 
   async function shareNow() {
     try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const file = new File([blob], filename, { type: blob.type || "image/png" });
+      const fileBlob = blob || (await fetch(url).then((r) => r.blob()));
+      const file = new File([fileBlob], filename, { type: mime });
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], title: filename });
         onShared?.("share");
@@ -37,10 +58,9 @@ export default function DiagramSaveSheet({ offer, onClose, onShared, t }) {
       }
     }
 
-    // Fallback: open the image — user can long-press → Save.
     try {
       window.open(url, "_blank", "noopener");
-      onShared?.("open");
+      onShared?.(isImage ? "open" : "preview");
     } catch {
       onShared?.("preview");
     }
@@ -52,21 +72,27 @@ export default function DiagramSaveSheet({ offer, onClose, onShared, t }) {
         className="pl-sheet pl-diagram-save"
         role="dialog"
         aria-modal="true"
-        aria-label={t("result.saveDiagramTitle")}
+        aria-label={t(titleKey)}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="pl-sheet-head">
-          <h2>{t("result.saveDiagramTitle")}</h2>
+          <h2>{t(titleKey)}</h2>
           <button type="button" className="pl-btn pl-btn--quiet pl-btn--sm" onClick={onClose}>
             <X size={18} aria-hidden="true" />
             {t("result.saveDiagramClose")}
           </button>
         </div>
         <div className="pl-sheet-body">
-          <p className="pl-meta">{t("result.saveDiagramHint")}</p>
-          <div className="pl-diagram-save__preview">
-            <img src={url} alt={filename} />
-          </div>
+          <p className="pl-meta">{t(hintKey)}</p>
+          {isImage ? (
+            <div className="pl-diagram-save__preview">
+              <img src={url} alt={filename} />
+            </div>
+          ) : (
+            <div className="pl-diagram-save__file" aria-hidden="true">
+              <FileText size={40} />
+            </div>
+          )}
           <p className="pl-meta">
             {filename} · {label}
           </p>
