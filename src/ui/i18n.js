@@ -329,6 +329,7 @@ const id = {
   "opt.output.Video Prompt": "Arahan video AI",
   "result.diagramTitle": "Diagram",
   "result.diagramSource": "Kode Mermaid",
+  "result.diagramDrawing": "Sedang menggambar diagram…",
   "result.diagramError": "Diagram tidak bisa digambar. Kode sumber tetap ditampilkan di bawah.",
 };
 
@@ -633,6 +634,7 @@ const en = {
   "opt.output.Video Prompt": "AI video direction",
   "result.diagramTitle": "Diagram",
   "result.diagramSource": "Mermaid source",
+  "result.diagramDrawing": "Drawing diagram…",
   "result.diagramError": "Could not render the diagram. Source code is shown below.",
 };
 

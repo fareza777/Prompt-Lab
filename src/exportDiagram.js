@@ -3,50 +3,25 @@
  *
  * Critical: prefer the already-painted SVG. Re-running mermaid.render() on
  * Android often fails ("No diagram type detected", layout point errors) even
- * when the on-screen diagram is fine.
+ * when the on-screen diagram is fine. Every async step has a hard timeout so
+ * "Preparing PNG…" can never spin forever.
  */
 
-import { MERMAID_INIT } from "./mermaidConfig.js";
+import {
+  renderMermaidToSvg,
+  sanitizeMermaidCode,
+  withTimeout,
+} from "./mermaidRender.js";
 import {
   readRenderedDiagramCode,
   readRenderedDiagramSvg,
 } from "./diagramSvgStore.js";
 
 export { MERMAID_INIT } from "./mermaidConfig.js";
+export { sanitizeMermaidCode } from "./mermaidRender.js";
 
 const DIAGRAM_START =
   /^(flowchart|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|mindmap|timeline|gitGraph|pie|quadrantChart|journey|gantt|C4Context|graph)\b/m;
-
-export function sanitizeMermaidCode(raw = "") {
-  let code = String(raw || "")
-    .replace(/^\uFEFF/, "")
-    .replace(/^```(?:mermaid)?\s*/i, "")
-    .replace(/\s*```\s*$/i, "")
-    .replace(/^~~~(?:mermaid)?\s*/i, "")
-    .replace(/\s*~~~\s*$/i, "")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .trim();
-
-  // If prose got prepended, start at the first diagram keyword.
-  const start = code.search(DIAGRAM_START);
-  if (start > 0) code = code.slice(start);
-
-  // Drop trailing markdown / fence leftovers.
-  code = code.replace(/\n```[\s\S]*$/i, "").replace(/\n~~~[\s\S]*$/i, "");
-
-  const lines = code.split(/\r?\n/);
-  const kept = [];
-  for (const line of lines) {
-    if (/^```/.test(line) || /^~~~/.test(line)) break;
-    if (kept.length && /^#{1,6}\s+/.test(line)) break;
-    if (kept.length && /^(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) break;
-    kept.push(line);
-  }
-  return kept.join("\n").trim();
-}
 
 export function extractMermaidCode(output = "") {
   const text = String(output || "");
@@ -117,10 +92,8 @@ export function isLikelyUiIconSvg(svgString = "") {
   const box = parseViewBox(svg);
   const width = Number(svg.match(/\bwidth\s*=\s*["']([0-9.]+)/i)?.[1]) || box?.width || 0;
   const height = Number(svg.match(/\bheight\s*=\s*["']([0-9.]+)/i)?.[1]) || box?.height || 0;
-  // Lucide icons are typically 24×24; Mermaid diagrams are much larger.
   if (width > 0 && height > 0 && width <= 48 && height <= 48) return true;
 
-  // Real Mermaid diagrams contain many drawing nodes; icons are a single path/polyline.
   const drawOps = (svg.match(/<(path|polygon|polyline|rect|circle|ellipse|line|text)\b/gi) || [])
     .length;
   if (drawOps > 0 && drawOps < 4 && width <= 64 && height <= 64) return true;
@@ -227,35 +200,20 @@ async function waitForPaintedDiagramSvg(timeoutMs = 4000) {
 }
 
 async function renderMermaidSvgMarkup(code) {
-  const clean = sanitizeMermaidCode(code);
-  if (!clean || !DIAGRAM_START.test(clean)) {
-    throw new Error("Mermaid source is missing a diagram type (flowchart, sequenceDiagram, …).");
-  }
-  const mermaid = (await import("mermaid")).default;
-  mermaid.initialize(MERMAID_INIT);
-  const id = `pl-export-mmd-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-  try {
-    const { svg } = await mermaid.render(id, clean);
-    return prepareSvgMarkup(svg);
-  } finally {
-    document.getElementById(id)?.remove();
-    document.getElementById(`d${id}`)?.remove();
-  }
+  const svg = await renderMermaidToSvg(code, { timeoutMs: 12000 });
+  return prepareSvgMarkup(svg);
 }
 
 async function resolvePreparedSvg(output) {
-  // Ask the result UI to expand diagram sections so the canvas is in the DOM.
   try {
     window.dispatchEvent(new CustomEvent("pl:open-diagram-sections"));
   } catch {
     /* ignore */
   }
 
-  // 1) Prefer the SVG already painted (root Mermaid SVG, never nested markers / Lucide).
-  const painted = await waitForPaintedDiagramSvg(5000);
+  const painted = await waitForPaintedDiagramSvg(6000);
   if (painted) return painted;
 
-  // 2) Try the SVG string MermaidBlock stored (sessionStorage / global) even if DOM is gone.
   const remembered = readRenderedDiagramSvg();
   if (remembered && !isLikelyUiIconSvg(remembered)) {
     try {
@@ -265,7 +223,6 @@ async function resolvePreparedSvg(output) {
     }
   }
 
-  // 3) Re-render is fragile on Android for complex flowcharts — only as last resort.
   const code = sanitizeMermaidCode(readRenderedDiagramCode() || extractMermaidCode(output));
   if (!code) {
     throw new Error(
@@ -277,7 +234,7 @@ async function resolvePreparedSvg(output) {
     return await renderMermaidSvgMarkup(code);
   } catch (error) {
     const msg = error?.message || String(error);
-    if (/suitable point|diagram type detected/i.test(msg)) {
+    if (/timed out|suitable point|diagram type detected/i.test(msg)) {
       throw new Error(
         "Buka section Diagram sampai bagannya terlihat di layar, lalu Unduh PNG. Jangan tutup section saat mengunduh."
       );
@@ -289,38 +246,47 @@ async function resolvePreparedSvg(output) {
 function loadImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    const timer = setTimeout(() => reject(new Error("Could not decode diagram image (timeout).")), 10000);
     img.decoding = "sync";
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Could not decode diagram image."));
+    img.onload = () => {
+      clearTimeout(timer);
+      resolve(img);
+    };
+    img.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error("Could not decode diagram image."));
+    };
     img.src = src;
   });
 }
 
 function canvasToPngBlob(canvas) {
   return new Promise((resolve, reject) => {
+    const finish = (blob) => {
+      if (blob && blob.size > 32) resolve(blob);
+      else reject(new Error("PNG encode failed."));
+    };
     if (canvas.toBlob) {
       canvas.toBlob((blob) => {
-        if (blob && blob.size > 32) resolve(blob);
-        else {
-          try {
-            const dataUrl = canvas.toDataURL("image/png");
-            fetch(dataUrl)
-              .then((r) => r.blob())
-              .then((b) => (b?.size > 32 ? resolve(b) : reject(new Error("PNG encode failed."))))
-              .catch(reject);
-          } catch (error) {
-            reject(error);
-          }
+        if (blob && blob.size > 32) {
+          finish(blob);
+          return;
+        }
+        try {
+          const dataUrl = canvas.toDataURL("image/png");
+          fetch(dataUrl)
+            .then((r) => r.blob())
+            .then(finish)
+            .catch(reject);
+        } catch (error) {
+          reject(error);
         }
       }, "image/png");
       return;
     }
     try {
       const dataUrl = canvas.toDataURL("image/png");
-      fetch(dataUrl)
-        .then((r) => r.blob())
-        .then((b) => (b?.size > 32 ? resolve(b) : reject(new Error("PNG encode failed."))))
-        .catch(reject);
+      fetch(dataUrl).then((r) => r.blob()).then(finish).catch(reject);
     } catch (error) {
       reject(error);
     }
@@ -352,21 +318,36 @@ async function drawSvgToPngBlob(svgText, width, height, scale = 2) {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   ctx.drawImage(img, 0, 0, w, h);
-  return canvasToPngBlob(canvas);
+  return withTimeout(canvasToPngBlob(canvas), 8000, "PNG encode");
 }
 
 async function rasterizeViaServer(prepared, { apiBase = "", authHeaders = {}, title = "Diagram" } = {}) {
-  const response = await fetch(`${apiBase}/api/export/diagram-png`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders,
-    },
-    body: JSON.stringify({
-      title,
-      svg: prepared.svg,
-    }),
-  });
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timer = controller
+    ? setTimeout(() => controller.abort(), 25000)
+    : null;
+  let response;
+  try {
+    response = await fetch(`${apiBase}/api/export/diagram-png`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders,
+      },
+      body: JSON.stringify({
+        title,
+        svg: prepared.svg,
+      }),
+      signal: controller?.signal,
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("Server PNG timed out.");
+    }
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));

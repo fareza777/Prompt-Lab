@@ -36,8 +36,11 @@ export function buildMermaidDeliveryInstruction(langCode = "id") {
       ? "Boleh menambah judul Markdown singkat (# ...) dan 2–5 bullet ringkasan wiki di luar fence. Jangan tulis teks lain di dalam fence."
       : "You may add a short Markdown title (# ...) and 2–5 wiki-style summary bullets outside the fence. No prose inside the fence.",
     id
-      ? "Sintaks Mermaid harus valid: label node pendek, panah jelas, hindari karakter khusus yang merusak parser (gunakan kutip untuk label bertanda kurung)."
-      : "Mermaid syntax must be valid: short node labels, clear edges, avoid parser-breaking characters (quote labels that contain parentheses).",
+      ? "Sintaks Mermaid harus valid: label node pendek (kutip jika ada spasi/kurung), panah jelas, maksimal ~12 node, hindari subgraph bersarang dalam, hindari karakter yang merusak parser."
+      : "Mermaid syntax must be valid: short node labels (quote if spaces/parens), clear edges, at most ~12 nodes, avoid deeply nested subgraphs, avoid parser-breaking characters.",
+    id
+      ? "Utamakan flowchart TD atau sequenceDiagram sederhana supaya pasti bisa digambar di HP."
+      : "Prefer a simple flowchart TD or sequenceDiagram so it reliably renders on mobile.",
     id
       ? "Jika dokumen kosong/tidak terbaca: keluarkan diagram minimal dengan satu node 'Sumber tidak tersedia' — jangan mengarang isi."
       : "If the document is empty/unreadable: emit a minimal diagram with one node 'Source unavailable' — do not invent content.",

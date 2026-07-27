@@ -12,6 +12,7 @@ import { createContentActionPayload } from "./contentRecord.js";
 import { groupDocumentSections, parseMarkdownBlocks } from "./markdownBlocks.js";
 import { MERMAID_INIT } from "../mermaidConfig.js";
 import { rememberRenderedDiagramSvg } from "../diagramSvgStore.js";
+import { renderMermaidToSvg, sanitizeMermaidCode } from "../mermaidRender.js";
 
 function renderInline(text) {
   return String(text)
@@ -38,28 +39,33 @@ function MermaidBlock({ code, t }) {
     let cancelled = false;
     setSvg("");
     setError("");
+    const clean = sanitizeMermaidCode(code);
 
     (async () => {
       try {
-        const { default: mermaid } = await import("mermaid");
-        mermaid.initialize(MERMAID_INIT);
-        const { svg: rendered } = await mermaid.render(`pl-mmd-${reactId}`, code);
+        const rendered = await renderMermaidToSvg(clean, {
+          id: `pl-mmd-${reactId}`,
+          timeoutMs: 14000,
+          init: MERMAID_INIT,
+        });
         if (!cancelled) {
           setSvg(rendered);
-          rememberRenderedDiagramSvg(rendered, code);
+          rememberRenderedDiagramSvg(rendered, clean);
         }
       } catch (err) {
         // Retry once with a more tolerant flowchart curve — some docs hit Mermaid layout bugs.
         try {
-          const { default: mermaid } = await import("mermaid");
-          mermaid.initialize({
-            ...MERMAID_INIT,
-            flowchart: { htmlLabels: false, useMaxWidth: false, curve: "basis" },
+          const rendered = await renderMermaidToSvg(clean, {
+            id: `pl-mmd-retry-${reactId}`,
+            timeoutMs: 10000,
+            init: {
+              ...MERMAID_INIT,
+              flowchart: { htmlLabels: false, useMaxWidth: false, curve: "basis" },
+            },
           });
-          const { svg: rendered } = await mermaid.render(`pl-mmd-retry-${reactId}`, code);
           if (!cancelled) {
             setSvg(rendered);
-            rememberRenderedDiagramSvg(rendered, code);
+            rememberRenderedDiagramSvg(rendered, clean);
             setError("");
             return;
           }
@@ -87,7 +93,7 @@ function MermaidBlock({ code, t }) {
           dangerouslySetInnerHTML={{ __html: svg }}
         />
       ) : !error ? (
-        <p className="pl-meta">{t("result.runWorking")}</p>
+        <p className="pl-meta">{t("result.diagramDrawing")}</p>
       ) : null}
       {error ? <p className="pl-notice pl-notice--quiet">{t("result.diagramError")}</p> : null}
       <button

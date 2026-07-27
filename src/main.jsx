@@ -2810,7 +2810,8 @@ function App() {
         console.error("[diagram-export]", error);
         const detail = error?.message || "Diagram export failed.";
         setErrorMessage(detail);
-        setExportStatus(`${formatLabel} failed: ${detail}`);
+        setExportStatus(`${formatLabel} failed`);
+        window.setTimeout(() => setExportStatus(""), 6000);
         try {
           await fetch(`${apiBase}/api/client-log`, {
             method: "POST",
