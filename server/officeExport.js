@@ -15,6 +15,7 @@ import {
   TextRun,
   WidthType,
 } from "docx";
+import { sanitizeReadyDocument } from "../src/readyDocumentSanitize.js";
 
 // Vercel serverless resolves dynamic import("pptxgenjs") to the ESM build and
 // then crashes with "Cannot use import statement outside a module". Force CJS.
@@ -264,7 +265,8 @@ export async function buildDocxBuffer({
   language = "id",
   plan = "Free",
 } = {}) {
-  const blocks = normalizeListsForDocx(parseStructuredContent(content, title));
+  const ready = sanitizeReadyDocument(content, "report");
+  const blocks = normalizeListsForDocx(parseStructuredContent(ready, title));
   const { children, orderedListCount } = blocksToDocx(blocks);
   const numberingConfig = Array.from({ length: Math.max(1, orderedListCount) }, (_, index) => ({
     reference: `ordered-list-${index}`,
@@ -537,7 +539,8 @@ export async function buildPptxBuffer({
     margin: 0,
   });
 
-  const sections = splitForSlides(parseStructuredContent(content, title), language).slice(0, 28);
+  const ready = sanitizeReadyDocument(content, "presentation");
+  const sections = splitForSlides(parseStructuredContent(ready, title), language).slice(0, 28);
   if (!sections.length) {
     sections.push({
       title: language === "en" ? "Overview" : "Ringkasan",
