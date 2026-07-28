@@ -344,6 +344,42 @@ function clipText(value = "", max = 220) {
   return `${text.slice(0, max - 1).trim()}…`;
 }
 
+/**
+ * Leading figure in an item, e.g. "82% peserta lulus" or "Rp 1,2 miliar".
+ *
+ * The symbol and word units are separate branches on purpose: a trailing \b
+ * after "%" never matches, because "%" and the following space are both
+ * non-word characters, so "82%" was being captured as plain "82".
+ */
+const LEADING_STAT =
+  /^(?:Rp\s*)?[+-]?\d[\d.,]*(?:\s*%|\s*(?:persen|juta|miliar|ribu|rb|jt|k|hari|bulan|tahun|orang|peserta|slide|halaman)\b)?/i;
+
+/**
+ * Picks a slide shape from the content itself.
+ *
+ * Every content slide used to be a title plus a bullet list, which is what
+ * makes a generated deck read like pasted text. Short items become cards,
+ * figures become stat callouts, and longer lists split into two columns so a
+ * 16:9 slide is not mostly empty.
+ */
+function pickLayout(items = []) {
+  const list = items.filter(Boolean);
+  if (!list.length) return "bullets";
+
+  const shortEnough = (text, max) => String(text).split(/\s+/).filter(Boolean).length <= max;
+
+  if (list.length >= 2 && list.length <= 4 && list.every((item) => LEADING_STAT.test(String(item).trim()))) {
+    return "stats";
+  }
+  if (list.length >= 2 && list.length <= 4 && list.every((item) => shortEnough(item, 14))) {
+    return "cards";
+  }
+  if (list.length >= 4 && list.every((item) => shortEnough(item, 16))) {
+    return "columns";
+  }
+  return "bullets";
+}
+
 function splitForSlides(blocks, language = "id") {
   const fallbackTitle = language === "en" ? "Overview" : "Ringkasan";
   const sections = [];
@@ -377,16 +413,19 @@ function splitForSlides(blocks, language = "id") {
     if (block.type === "table") {
       const rows = block.rows || [];
       if (rows.length > 1) {
-        const headers = rows[0];
-        rows.slice(1).forEach((row) => {
-          current.items.push(
-            clipText(
-              row
-                .map((cell, index) => `${headers[index] || `Col ${index + 1}`}: ${cell || "—"}`)
-                .join(" · "),
-              170,
-            ),
-          );
+        // A table flattened into "Col: value · Col: value" bullets loses the
+        // one thing that made it readable. Carry it through as a table and let
+        // the renderer draw a real one.
+        const title = current.title;
+        // The heading belongs to the table slide. Pushing it as its own
+        // section too would emit an empty slide showing only a dash.
+        if (current.items.length) push();
+        else current = { title: "", items: [], kind: "content" };
+        sections.push({
+          kind: "table",
+          title,
+          headers: rows[0].map((cell) => clipText(cell, 40)),
+          rows: rows.slice(1, 11).map((row) => row.map((cell) => clipText(cell, 60))),
         });
       }
     }
@@ -395,7 +434,7 @@ function splitForSlides(blocks, language = "id") {
 
   const slides = [];
   for (const section of sections) {
-    if (section.kind === "section") {
+    if (section.kind === "section" || section.kind === "table") {
       slides.push(section);
       continue;
     }
@@ -404,14 +443,20 @@ function splitForSlides(blocks, language = "id") {
       slides.push({ title: section.title || fallbackTitle, items: ["—"], kind: "content" });
       continue;
     }
+    // Short parallel items fit two columns comfortably, so capping every slide
+    // at five split a six-step list into a full slide plus a lone orphan.
+    const allShort = items.every((item) => item.split(/\s+/).filter(Boolean).length <= 16);
+    const maxPerSlide = allShort ? 8 : 5;
+    const wordBudget = allShort ? 90 : 42;
+
     let part = 0;
     while (items.length) {
       const selected = [];
       let words = 0;
-      while (items.length && selected.length < 5) {
+      while (items.length && selected.length < maxPerSlide) {
         const candidate = items[0];
         const count = candidate.split(/\s+/).filter(Boolean).length;
-        if (selected.length && words + count > 42) break;
+        if (selected.length && words + count > wordBudget) break;
         selected.push(items.shift());
         words += count;
       }
@@ -421,6 +466,7 @@ function splitForSlides(blocks, language = "id") {
         title: part ? `${base} (${part + 1})` : base,
         items: selected,
         kind: "content",
+        layout: pickLayout(selected),
       });
       part += 1;
     }
@@ -436,6 +482,168 @@ function addAccentRail(pptx, slide, wide = false) {
     h: 7.5,
     fill: { color: COLORS.accent },
     line: { color: COLORS.accent },
+  });
+}
+
+/** Splits "82% peserta lulus" into the figure and the words after it. */
+function splitStat(text) {
+  const raw = String(text || "").trim();
+  const match = raw.match(LEADING_STAT);
+  if (!match) return { figure: "", label: raw };
+  const figure = match[0].trim().replace(/[:.\s]+$/, "");
+  const label = raw.slice(match[0].length).replace(/^[\s:—-]+/, "").trim();
+  return { figure, label: label || raw };
+}
+
+/** Equal-width tiles — used for a handful of short, parallel points. */
+function addCards(pptx, slide, items) {
+  const count = items.length;
+  const gap = 0.35;
+  const left = 0.85;
+  const total = 11.6;
+  const width = (total - gap * (count - 1)) / count;
+
+  items.forEach((item, index) => {
+    const x = left + index * (width + gap);
+    slide.addShape(pptx.ShapeType.roundRect, {
+      x,
+      y: 1.9,
+      w: width,
+      h: 3.1,
+      rectRadius: 0.12,
+      fill: { color: COLORS.white },
+      line: { color: COLORS.rule, width: 1 },
+    });
+    slide.addShape(pptx.ShapeType.rect, {
+      x: x + 0.35,
+      y: 2.3,
+      w: 0.5,
+      h: 0.06,
+      fill: { color: COLORS.accent },
+      line: { color: COLORS.accent },
+    });
+    slide.addText(String(index + 1).padStart(2, "0"), {
+      x: x + 0.35,
+      y: 2.5,
+      w: width - 0.7,
+      h: 0.4,
+      fontFace: FONT_BODY,
+      fontSize: 13,
+      bold: true,
+      color: COLORS.accent,
+      margin: 0,
+    });
+    slide.addText(String(item), {
+      x: x + 0.35,
+      y: 2.95,
+      w: width - 0.7,
+      h: 1.8,
+      fontFace: FONT_BODY,
+      fontSize: 15,
+      color: COLORS.ink,
+      margin: 0,
+      valign: "top",
+    });
+  });
+}
+
+/** Large figures with a caption underneath. */
+function addStats(pptx, slide, items) {
+  const count = items.length;
+  const gap = 0.4;
+  const left = 0.85;
+  const total = 11.6;
+  const width = (total - gap * (count - 1)) / count;
+
+  items.forEach((item, index) => {
+    const { figure, label } = splitStat(item);
+    const x = left + index * (width + gap);
+    slide.addShape(pptx.ShapeType.roundRect, {
+      x,
+      y: 2.0,
+      w: width,
+      h: 2.9,
+      rectRadius: 0.12,
+      fill: { color: COLORS.accentSoft },
+      line: { color: COLORS.accentSoft },
+    });
+    slide.addText(figure || "—", {
+      x: x + 0.25,
+      y: 2.35,
+      w: width - 0.5,
+      h: 1.0,
+      fontFace: FONT_HEAD,
+      fontSize: 40,
+      bold: true,
+      color: COLORS.accent,
+      align: "center",
+      margin: 0,
+    });
+    slide.addText(label, {
+      x: x + 0.25,
+      y: 3.45,
+      w: width - 0.5,
+      h: 1.2,
+      fontFace: FONT_BODY,
+      fontSize: 14,
+      color: COLORS.ink,
+      align: "center",
+      margin: 0,
+      valign: "top",
+    });
+  });
+}
+
+/** Two balanced bullet columns so a wide slide is not half empty. */
+function addColumns(pptx, slide, items) {
+  const half = Math.ceil(items.length / 2);
+  const columns = [items.slice(0, half), items.slice(half)];
+  columns.forEach((column, index) => {
+    if (!column.length) return;
+    slide.addText(
+      column.map((text, i) => ({
+        text: String(text),
+        options: { bullet: true, breakLine: i < column.length - 1, paraSpaceAfter: 10 },
+      })),
+      {
+        x: index === 0 ? 0.85 : 6.95,
+        y: 1.6,
+        w: 5.5,
+        h: 4.9,
+        fontFace: FONT_BODY,
+        fontSize: 16,
+        color: COLORS.ink,
+        margin: 0.05,
+        valign: "top",
+      }
+    );
+  });
+}
+
+/** A real table, rather than rows flattened into bullet text. */
+function addDataTable(pptx, slide, headers, rows) {
+  const head = headers.map((cell) => ({
+    text: String(cell || ""),
+    options: { bold: true, color: COLORS.white, fill: { color: COLORS.accent } },
+  }));
+  const body = rows.map((row, rowIndex) =>
+    row.map((cell) => ({
+      text: String(cell || "—"),
+      options: { fill: { color: rowIndex % 2 ? COLORS.pale : COLORS.white } },
+    }))
+  );
+  slide.addTable([head, ...body], {
+    x: 0.85,
+    y: 1.6,
+    w: 11.6,
+    fontFace: FONT_BODY,
+    fontSize: 13,
+    color: COLORS.ink,
+    border: { type: "solid", color: COLORS.rule, pt: 1 },
+    align: "left",
+    valign: "middle",
+    margin: 6,
+    autoPage: false,
   });
 }
 
@@ -612,27 +820,45 @@ export async function buildPptxBuffer({
       line: { color: COLORS.accent },
     });
 
-    const bullets = (section.items.length ? section.items : ["—"]).map((text, index, list) => ({
-      text: String(text).trim() || "—",
-      options: {
-        bullet: true,
-        breakLine: index < list.length - 1,
-        paraSpaceAfter: 12,
-      },
-    }));
+    if (section.kind === "table") {
+      addDataTable(pptx, slide, section.headers || [], section.rows || []);
+      addFooter(pptx, slide, `${BRAND}  ·  ${page}`);
+      page += 1;
+      return;
+    }
 
-    slide.addText(bullets, {
-      x: 0.85,
-      y: 1.5,
-      w: 11.6,
-      h: 5.1,
-      fontFace: FONT_BODY,
-      fontSize: 18,
-      color: COLORS.ink,
-      margin: 0.05,
-      valign: "top",
-      paraSpaceAfter: 10,
-    });
+    const items = (section.items || []).map((text) => String(text).trim()).filter(Boolean);
+    const layout = section.layout || "bullets";
+
+    if (layout === "stats" && items.length) {
+      addStats(pptx, slide, items);
+    } else if (layout === "cards" && items.length) {
+      addCards(pptx, slide, items);
+    } else if (layout === "columns" && items.length) {
+      addColumns(pptx, slide, items);
+    } else {
+      const bullets = (items.length ? items : ["—"]).map((text, index, list) => ({
+        text: text || "—",
+        options: {
+          bullet: true,
+          breakLine: index < list.length - 1,
+          paraSpaceAfter: 12,
+        },
+      }));
+      slide.addText(bullets, {
+        x: 0.85,
+        y: 1.5,
+        w: 11.6,
+        h: 5.1,
+        fontFace: FONT_BODY,
+        fontSize: 18,
+        color: COLORS.ink,
+        margin: 0.05,
+        valign: "top",
+        paraSpaceAfter: 10,
+      });
+    }
+
     addFooter(pptx, slide, `${BRAND}  ·  ${page}`);
     page += 1;
   });
