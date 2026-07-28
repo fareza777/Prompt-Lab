@@ -24,7 +24,19 @@ import {
   getProcessFlowLayout,
   paintProcessFlowOnCanvas,
   processFlowToMermaid,
+  mermaidFlowchartToProcessFlow,
 } from "./processFlow.js";
+
+/** Reads a ```mermaid fence and converts it when it is a flowchart. */
+function flowFromMermaidFlowchart(output = "") {
+  const fenced = /```mermaid\s*([\s\S]*?)```/i.exec(String(output || ""));
+  const code = fenced ? fenced[1] : String(output || "");
+  try {
+    return mermaidFlowchartToProcessFlow(sanitizeMermaidCode(code));
+  } catch {
+    return null;
+  }
+}
 
 export { MERMAID_INIT } from "./mermaidConfig.js";
 export { sanitizeMermaidCode, repairMermaidDocument } from "./mermaidRender.js";
@@ -406,7 +418,11 @@ async function rasterizeProcessFlowPng(flow, scale = 2) {
 }
 
 export async function buildDiagramExportBlob(output, format = "png", options = {}) {
-  const flow = extractProcessFlow(output);
+  // A flowchart that never became a ```process fence would otherwise be
+  // rasterized through Mermaid, whose layout engine is what produced the
+  // Android failures ("Could not find a suitable point for the given
+  // distance"). Converting it here keeps it on the canvas renderer instead.
+  const flow = extractProcessFlow(output) || flowFromMermaidFlowchart(output);
 
   // Process diagrams: canvas text first (never trust sharp on SVG <text>).
   if (flow && format === "png") {

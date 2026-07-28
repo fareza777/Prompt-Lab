@@ -39,6 +39,123 @@ export function parseProcessJson(raw = "") {
   }
 }
 
+/** Only flowcharts are linear processes; a sequence or ER diagram is not. */
+const MERMAID_FLOWCHART_HEADER = /^\s*(?:flowchart|graph)\s+(?:TB|TD|BT|RL|LR)?\s*$/im;
+
+/**
+ * Node shapes Mermaid accepts, longest first so `A[[x]]` is not read as `A[`.
+ * Each entry is [open, close].
+ */
+const NODE_SHAPES = [
+  ["[[", "]]"],
+  ["([", "])"],
+  ["[(", ")]"],
+  ["{{", "}}"],
+  ["[", "]"],
+  ["(", ")"],
+  ["{", "}"],
+  [">", "]"],
+];
+
+function stripNodeLabel(raw = "") {
+  let label = String(raw).trim();
+  // Mermaid labels are often quoted to survive punctuation.
+  if (/^"[\s\S]*"$/.test(label) || /^'[\s\S]*'$/.test(label)) label = label.slice(1, -1);
+  return cleanLabel(label.replace(/<br\s*\/?>/gi, " "));
+}
+
+/**
+ * Reads `A[Label]` starting at `index`.
+ *
+ * Leading whitespace is skipped: after a connector the cursor sits on the
+ * space before the next id, and anchoring the id at position 0 stopped the
+ * walk after the first node of every chained line.
+ */
+function readNode(line, index) {
+  const idMatch = /^(\s*)([A-Za-z0-9_-]+)/.exec(line.slice(index));
+  if (!idMatch) return null;
+  const id = idMatch[2];
+  let cursor = index + idMatch[1].length + id.length;
+
+  for (const [open, close] of NODE_SHAPES) {
+    if (!line.startsWith(open, cursor)) continue;
+    const end = line.indexOf(close, cursor + open.length);
+    if (end < 0) continue;
+    return {
+      id,
+      label: stripNodeLabel(line.slice(cursor + open.length, end)),
+      next: end + close.length,
+    };
+  }
+  return { id, label: "", next: cursor };
+}
+
+/**
+ * Converts a Mermaid flowchart into the process-flow shape.
+ *
+ * Flowcharts were the source of the Android PNG failures — Mermaid's layout
+ * engine throws "Could not find a suitable point for the given distance" and
+ * the export dies. The process renderer paints with canvas text instead and
+ * has no layout engine to fail, so anything shaped like a linear flow is
+ * better served by it.
+ *
+ * @returns {{title: string, steps: object[], edges: object[]}|null}
+ */
+export function mermaidFlowchartToProcessFlow(code = "", title = "") {
+  const text = String(code || "").trim();
+  if (!text || !MERMAID_FLOWCHART_HEADER.test(text.split(/\r?\n/)[0] || "")) return null;
+
+  const labels = new Map();
+  const order = [];
+  const edges = [];
+
+  const remember = (node) => {
+    if (!node?.id) return;
+    if (!labels.has(node.id)) {
+      labels.set(node.id, node.label || node.id);
+      order.push(node.id);
+    } else if (node.label && labels.get(node.id) === node.id) {
+      labels.set(node.id, node.label);
+    }
+  };
+
+  for (const rawLine of text.split(/\r?\n/).slice(1)) {
+    const line = rawLine.trim();
+    if (!line || /^(subgraph|end|classDef|class|style|linkStyle|click|direction)\b/i.test(line)) {
+      continue;
+    }
+
+    let cursor = 0;
+    let previous = null;
+    while (cursor < line.length) {
+      const node = readNode(line, cursor);
+      if (!node) break;
+      remember(node);
+
+      // Anything up to the next node id is the connector; an arrow means an edge.
+      const rest = line.slice(node.next);
+      const link = /^\s*(-{2,}>|={2,}>|-{3,}|-\.-+>?|-\.->|\|[^|]*\|)+/.exec(rest);
+      if (previous) edges.push({ from: previous, to: node.id });
+      if (!link) break;
+
+      // Skip the connector and any |edge label| that follows it.
+      let advance = node.next + link[0].length;
+      const labelled = /^\s*\|[^|]*\|/.exec(line.slice(advance));
+      if (labelled) advance += labelled[0].length;
+      previous = node.id;
+      cursor = advance;
+    }
+  }
+
+  if (order.length < 2) return null;
+
+  return normalizeProcessFlow({
+    title: title || "Alur proses",
+    steps: order.map((id) => ({ id, label: labels.get(id) || id })),
+    edges,
+  });
+}
+
 export function normalizeProcessFlow(data = {}) {
   const title = cleanLabel(data.title || data.name || "Alur proses").slice(0, 120) || "Alur proses";
   const rawSteps = Array.isArray(data.steps)
