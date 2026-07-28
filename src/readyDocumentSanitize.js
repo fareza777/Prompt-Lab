@@ -10,8 +10,17 @@ const PURPOSE_LINE =
 const PURPOSE_ITALIC_BLOCK =
   /^\s*\*(?:Tujuan|Section\s*goal|Goal|Purpose)\s*[:：][^*\n]+\*\s*$/gim;
 
+/**
+ * Headings that are scaffolding rather than content.
+ *
+ * The outline entries were added after a production run shipped a section
+ * literally titled "OUTLINE LAPORAN" listing the sections that followed it.
+ * stripLeadingOutline could not catch it: that only handles plain numbered
+ * lines at the very top of the document, and this arrived as a heading with a
+ * heading-form list under it.
+ */
 const META_SECTION_HEADING =
-  /^(#{1,6})\s*(?:Daftar Periksa Kualitas(?:\s*\([^)]*\))?|Quality Checklist|Implementation Checklist|Review Checklist|Acceptance Criteria|Kriteria Penerimaan)\s*$/i;
+  /^(#{1,6})\s*(?:Daftar Periksa Kualitas(?:\s*\([^)]*\))?|Quality Checklist|Implementation Checklist|Review Checklist|Acceptance Criteria|Kriteria Penerimaan|Outline(?:\s+(?:Laporan|Dokumen|Report|Document))?|Kerangka(?:\s+(?:Laporan|Dokumen))?|Daftar Isi|Table of Contents)\s*$/i;
 
 const TRAILING_ASUMSI =
   /\n+(?:#{1,6}\s*)?(?:\*{0,2})?Asumsi(?:\s*\([^)]*\))?\s*[:：][\s\S]*$/i;

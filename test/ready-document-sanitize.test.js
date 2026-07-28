@@ -56,3 +56,48 @@ test("diagram profile is left alone", () => {
   const mermaid = "```mermaid\nflowchart TD\n  A --> B\n```";
   assert.equal(sanitizeReadyDocument(mermaid, "diagram"), mermaid);
 });
+
+test("an outline section is scaffolding, not content", () => {
+  // Observed in production: a finished 10,341-character report shipped with a
+  // section titled "OUTLINE LAPORAN" listing the sections that followed it.
+  const doc = [
+    "# LAPORAN EVALUASI PROGRAM PELATIHAN",
+    "",
+    "## OUTLINE LAPORAN",
+    "1. Halaman Judul",
+    "2. Ringkasan Eksekutif",
+    "3. Latar Belakang",
+    "",
+    "## 1. HALAMAN JUDUL",
+    "Nama Program: Peningkatan Kapabilitas Digital",
+    "",
+    "## 2. RINGKASAN EKSEKUTIF",
+    "Program berjalan selama enam bulan.",
+  ].join("\n");
+
+  const cleaned = sanitizeReadyDocument(doc);
+  assert.doesNotMatch(cleaned, /OUTLINE LAPORAN/i, "outline heading survived");
+  // The real sections and their content must remain untouched.
+  assert.match(cleaned, /# LAPORAN EVALUASI PROGRAM PELATIHAN/);
+  assert.match(cleaned, /## 1\. HALAMAN JUDUL/);
+  assert.match(cleaned, /Nama Program: Peningkatan Kapabilitas Digital/);
+  assert.match(cleaned, /## 2\. RINGKASAN EKSEKUTIF/);
+  assert.match(cleaned, /Program berjalan selama enam bulan\./);
+});
+
+test("the other outline and contents headings are stripped too", () => {
+  for (const heading of ["Outline", "Outline Dokumen", "Daftar Isi", "Table of Contents", "Kerangka Laporan"]) {
+    const doc = `# Judul\n\n## ${heading}\n- A\n- B\n\n## Isi\nTeks nyata.`;
+    const cleaned = sanitizeReadyDocument(doc);
+    assert.doesNotMatch(cleaned, new RegExp(heading, "i"), `${heading} survived`);
+    assert.match(cleaned, /Teks nyata\./, `${heading} removal ate real content`);
+  }
+});
+
+test("headings that merely mention an outline word are kept", () => {
+  // "Outline" as part of a real section title is content, not scaffolding.
+  const doc = "# Judul\n\n## Outline Strategi Pemasaran 2026\nRencana kampanye kuartal pertama.";
+  const cleaned = sanitizeReadyDocument(doc);
+  assert.match(cleaned, /Outline Strategi Pemasaran 2026/);
+  assert.match(cleaned, /Rencana kampanye kuartal pertama\./);
+});
