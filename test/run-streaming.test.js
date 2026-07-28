@@ -76,3 +76,16 @@ test("the client warns when a document was cut short", () => {
   assert.match(main, /if \(data\.truncated\)/);
   assert.match(main, /berhenti sebelum selesai/i);
 });
+
+test("streaming text is rendered as it arrives, not hidden behind a spinner", async () => {
+  const result = await readFile(new URL("../src/ui/Result.jsx", import.meta.url), "utf8");
+  // The first version returned <Working/> for the whole run, so the server
+  // streamed correctly while the user still stared at a blank spinner.
+  assert.match(result, /if \(isRunning && !output\)/);
+  assert.match(result, /const streaming = isRunning && Boolean\(output\)/);
+  assert.match(result, /pl-doc--streaming/);
+  assert.match(result, /result\.streaming/);
+  // Re-parsing markdown and re-rendering Mermaid on every delta would thrash;
+  // the rich view is deferred until the run finishes.
+  assert.match(result, /streaming \? \[\] : groupDocumentSections/);
+});

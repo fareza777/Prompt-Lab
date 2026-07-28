@@ -475,9 +475,13 @@ export default function Result({
   runError,
 }) {
   const output = String(runOutput || "").trim();
+  // While text is still arriving the document is re-parsed on every delta, and
+  // half-written fences would send Mermaid into repeated failed renders. The
+  // rich view is therefore built only once the run has finished.
+  const streaming = isRunning && Boolean(output);
   const sections = useMemo(
-    () => groupDocumentSections(parseMarkdownBlocks(output)),
-    [output]
+    () => (streaming ? [] : groupDocumentSections(parseMarkdownBlocks(output))),
+    [output, streaming]
   );
   const hasDiagram = useMemo(
     () =>
@@ -491,8 +495,31 @@ export default function Result({
     return <Working title={t("result.working")} hint={t("result.workingHint")} />;
   }
 
-  if (isRunning) {
+  // Nothing has arrived yet, so there is only the wait to show.
+  if (isRunning && !output) {
     return <Working title={t("result.runWorking")} hint={t("result.runWorkingHint")} />;
+  }
+
+  // Text is arriving: show it growing rather than hiding it behind a spinner.
+  // The whole point of streaming is that the user stops staring at nothing.
+  if (streaming) {
+    return (
+      <section className="pl-result" aria-label={t("result.title")} aria-busy="true">
+        <header className="pl-result-head">
+          <div>
+            <p className="pl-eyebrow">{t("result.eyebrow")}</p>
+            <h2>{t("result.title")}</h2>
+          </div>
+          <span className="pl-result-status pl-result-status--live">
+            <span className="pl-spinner" aria-hidden="true" />
+            {t("result.streaming")}
+          </span>
+        </header>
+        <div className="pl-doc pl-doc--streaming" aria-live="polite">
+          {output}
+        </div>
+      </section>
+    );
   }
 
   if (!output && !runError) return null;

@@ -62,6 +62,7 @@ const id = {
   "starters.empty": "Tidak ada contoh yang cocok.",
 
   "result.eyebrow": "Hasil kerja",
+  "result.streaming": "Sedang ditulis…",
   "result.title": "Siap dilanjutkan",
   "result.ready": "Selesai",
   "result.readiness": "Kesiapan",
@@ -377,6 +378,7 @@ const en = {
   "starters.empty": "No matching examples.",
 
   "result.eyebrow": "Finished work",
+  "result.streaming": "Writing…",
   "result.title": "Ready to continue",
   "result.ready": "Complete",
   "result.readiness": "Readiness",

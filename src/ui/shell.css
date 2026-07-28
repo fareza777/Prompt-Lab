@@ -1679,6 +1679,24 @@
   font-weight: 600;
 }
 
+/* Shown while the document is still streaming in. */
+.pl-result-status--live {
+  gap: var(--s-2);
+}
+
+.pl-result-status--live .pl-spinner {
+  width: 12px;
+  height: 12px;
+  border-width: 2px;
+}
+
+/* Raw text while streaming: the rich markdown/diagram view is built only once
+   the run finishes, so this keeps whitespace readable in the meantime. */
+.pl-doc--streaming {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .pl-doc {
   max-width: none;
   padding: clamp(24px, 4vw, 42px);
