@@ -16,6 +16,7 @@ import {
   WidthType,
 } from "docx";
 import { sanitizeReadyDocument } from "../src/readyDocumentSanitize.js";
+import { detectDeliverableProfile } from "../src/deliverableProfiles.js";
 
 // Vercel serverless resolves dynamic import("pptxgenjs") to the ESM build and
 // then crashes with "Cannot use import statement outside a module". Force CJS.
@@ -132,12 +133,24 @@ export function parseStructuredContent(content = "", title = "") {
 
 function docxHeading(block) {
   const levels = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3];
+  const isTop = block.level === 1;
   return new Paragraph({
     heading: levels[Math.max(0, block.level - 1)],
     keepNext: true,
     alignment: AlignmentType.LEFT,
-    spacing: { before: block.level === 1 ? 280 : 220, after: 100 },
-    children: [new TextRun({ text: block.text, bold: true, color: COLORS.ink })],
+    spacing: { before: isTop ? 340 : 240, after: isTop ? 140 : 100 },
+    // A ruled top-level heading gives a long report visible structure when
+    // skimmed; without it every heading reads at the same weight.
+    border: isTop
+      ? { bottom: { style: BorderStyle.SINGLE, size: 6, color: COLORS.accent, space: 6 } }
+      : undefined,
+    children: [
+      new TextRun({
+        text: block.text,
+        bold: true,
+        color: isTop ? COLORS.accent : COLORS.ink,
+      }),
+    ],
   });
 }
 
@@ -153,7 +166,15 @@ function docxTable(block) {
           children: Array.from({ length: columnCount }, (_, cellIndex) =>
             new TableCell({
               width: { size: Math.floor(100 / columnCount), type: WidthType.PERCENTAGE },
-              shading: rowIndex === 0 ? { fill: COLORS.pale } : undefined,
+              // Accent header with white text, then zebra body rows — the same
+              // treatment the slides use, so a table scans instead of blending
+              // into the page as a faint grid.
+              shading:
+                rowIndex === 0
+                  ? { fill: COLORS.accent }
+                  : rowIndex % 2 === 0
+                    ? { fill: COLORS.pale }
+                    : undefined,
               borders: { top: border, bottom: border, left: border, right: border },
               margins: { top: 100, bottom: 100, left: 120, right: 120 },
               children: [
@@ -162,7 +183,7 @@ function docxTable(block) {
                     new TextRun({
                       text: row[cellIndex] || "",
                       bold: rowIndex === 0,
-                      color: COLORS.ink,
+                      color: rowIndex === 0 ? COLORS.white : COLORS.ink,
                       size: 20,
                     }),
                   ],
@@ -259,6 +280,47 @@ function blocksToDocx(blocks) {
   return { children, orderedListCount: orderedListIndex };
 }
 
+/** What the document calls itself on its own cover line. */
+const DOC_KIND_LABEL = {
+  id: {
+    report: "Laporan",
+    minutes: "Notulen Rapat",
+    analysis: "Analisis",
+    proposal: "Proposal",
+    sop: "Prosedur Operasional Standar",
+    presentation: "Ringkasan Presentasi",
+    diagram: "Dokumen Proses",
+    general: "Dokumen Kerja",
+  },
+  en: {
+    report: "Report",
+    minutes: "Meeting Minutes",
+    analysis: "Analysis",
+    proposal: "Proposal",
+    sop: "Standard Operating Procedure",
+    presentation: "Presentation Summary",
+    diagram: "Process Document",
+    general: "Working Document",
+  },
+};
+
+function docKindLabel(profile, language) {
+  const table = DOC_KIND_LABEL[language === "en" ? "en" : "id"];
+  return table[profile] || table.general;
+}
+
+function formatDocDate(language) {
+  try {
+    return new Intl.DateTimeFormat(language === "en" ? "en-GB" : "id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(new Date());
+  } catch {
+    return "";
+  }
+}
+
 export async function buildDocxBuffer({
   title = "AI Work Studio Export",
   content = "",
@@ -266,6 +328,21 @@ export async function buildDocxBuffer({
   plan = "Free",
 } = {}) {
   const ready = sanitizeReadyDocument(content, "report");
+  // "Dokumen kerja profesional" sat on every export regardless of what it was.
+  // Minutes should say minutes, a report should say report.
+  //
+  // The title decides first. The shared detector scans title and body together
+  // and checks "analysis" before "report", so a single incidental word in the
+  // body — "Audit vendor" in a follow-up table — was enough to label a
+  // document titled "Laporan Evaluasi" as ANALISIS. The body is only consulted
+  // when the title says nothing.
+  const titleProfile = detectDeliverableProfile({ narrative: title });
+  const profile =
+    titleProfile !== "general"
+      ? titleProfile
+      : detectDeliverableProfile({ narrative: title, content: ready });
+  const kindLabel = docKindLabel(profile, language);
+  const dateLabel = formatDocDate(language);
   const blocks = normalizeListsForDocx(parseStructuredContent(ready, title));
   const { children, orderedListCount } = blocksToDocx(blocks);
   const numberingConfig = Array.from({ length: Math.max(1, orderedListCount) }, (_, index) => ({
@@ -315,16 +392,32 @@ export async function buildDocxBuffer({
           }),
         },
         children: [
+          // Kicker above the title, the way a real document masthead reads.
           new Paragraph({
-            heading: HeadingLevel.TITLE,
-            spacing: { after: 160 },
-            children: [new TextRun({ text: title, bold: true, color: COLORS.accent, size: 42 })],
-          }),
-          new Paragraph({
-            spacing: { after: 360 },
+            spacing: { after: 60 },
             children: [
               new TextRun({
-                text: language === "en" ? "Professional working document" : "Dokumen kerja profesional",
+                text: kindLabel.toUpperCase(),
+                bold: true,
+                color: COLORS.accent,
+                size: 18,
+                characterSpacing: 40,
+              }),
+            ],
+          }),
+          new Paragraph({
+            heading: HeadingLevel.TITLE,
+            spacing: { after: 120 },
+            children: [new TextRun({ text: title, bold: true, color: COLORS.ink, size: 44 })],
+          }),
+          new Paragraph({
+            spacing: { after: 420 },
+            border: {
+              bottom: { style: BorderStyle.SINGLE, size: 12, color: COLORS.accent, space: 10 },
+            },
+            children: [
+              new TextRun({
+                text: dateLabel ? `${dateLabel}  ·  ${BRAND}` : BRAND,
                 color: COLORS.muted,
                 size: 18,
               }),
