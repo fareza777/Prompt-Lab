@@ -63,14 +63,24 @@ test("reports default concise unless user asks for lengkap", async () => {
   assert.match(expanded, /User meminta versi lengkap/);
 });
 
-test("validator removes prompt leakage and flags repeated headings", () => {
+test("validator removes prompt leakage and the duplicate empty heading with it", () => {
   const checked = validateFinishedOutput(
     "Here is the prompt:\n# Laporan\n\n# Laporan\n\n## Temuan\nIsi",
     "report",
   );
   assert.doesNotMatch(checked.content, /Here is the prompt/i);
-  assert.ok(checked.warnings.includes("repeated_heading"));
+  // The first "# Laporan" has nothing under it, so it is now removed rather
+  // than merely flagged — a warning nothing reads left the stray heading in
+  // the finished document.
+  assert.equal((checked.content.match(/^#\s+Laporan\s*$/gm) || []).length, 1);
+  assert.match(checked.content, /## Temuan/);
   assert.equal(checked.valid, true);
+});
+
+test("a genuine repeated heading is still flagged", () => {
+  // Both headings have content, so neither is stripped and the warning stands.
+  const checked = validateFinishedOutput("# Laporan\nIsi satu.\n\n# Laporan\nIsi dua.", "report");
+  assert.ok(checked.warnings.includes("repeated_heading"));
 });
 
 test("validator leaves factual gaps untouched", () => {

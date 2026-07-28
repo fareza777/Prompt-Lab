@@ -116,3 +116,46 @@ test("a short list stays on one slide instead of leaving an orphan", async () =>
   assert.equal(withSteps.length, 1, `steps spread across ${withSteps.length} slides`);
   for (const step of steps) assert.match(withSteps[0], new RegExp(step));
 });
+
+test("headings with no content do not become slides", async () => {
+  // Reported from real use: decks came back with many near-blank slides. Each
+  // was a heading the model left unfilled, rendered as a slide showing "—".
+  const content = [
+    "# Laporan Evaluasi",
+    "",
+    "## Latar Belakang",
+    "Program enam bulan.",
+    "",
+    "## Metodologi",
+    "",
+    "## Temuan",
+    "- Kelulusan 82%",
+    "- Penerapan rendah",
+    "",
+    "## Analisis",
+    "",
+    "## Penutup",
+  ].join("\n");
+
+  const slides = await slidesOf(content);
+  const bodies = slides.map((xml) =>
+    [...xml.matchAll(/<a:t>([^<]*)<\/a:t>/g)]
+      .map((m) => m[1])
+      .filter((t) => t && !/^AI Work Studio|·\s*\d+$/.test(t))
+  );
+
+  const dashSlides = bodies.filter((body) => body.includes("—"));
+  assert.equal(dashSlides.length, 0, "a placeholder slide was emitted");
+
+  for (const gone of ["Metodologi", "Analisis", "Penutup"]) {
+    assert.ok(
+      !slides.some((xml) => xml.includes(gone)),
+      `${gone} had no content but still became a slide`
+    );
+  }
+  // The sections that did have content are all still there.
+  const all = slides.join("");
+  for (const kept of ["Latar Belakang", "Program enam bulan.", "Kelulusan 82%", "Penerapan rendah"]) {
+    assert.ok(all.includes(kept), `${kept} was lost`);
+  }
+});

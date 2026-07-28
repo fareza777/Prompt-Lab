@@ -101,3 +101,69 @@ test("headings that merely mention an outline word are kept", () => {
   assert.match(cleaned, /Outline Strategi Pemasaran 2026/);
   assert.match(cleaned, /Rencana kampanye kuartal pertama\./);
 });
+
+test("scaffolding survives a qualifier between the keyword and the colon", () => {
+  // Production leaked "Tujuan section: Memberikan gambaran esensi laporan"
+  // because the pattern only matched "Tujuan:" with nothing in between.
+  for (const line of [
+    "Tujuan section: Memberikan gambaran esensi laporan.",
+    "Tujuan bagian: Menjelaskan latar belakang.",
+    "**Tujuan section:** Ringkasan singkat.",
+    "Purpose of section: Explain the scope.",
+    "*Tujuan bagian: ringkas*",
+  ]) {
+    const cleaned = sanitizeReadyDocument(`# J\n\n## S\n${line}\n\nIsi nyata.`, "report");
+    assert.doesNotMatch(cleaned, /Tujuan section|Tujuan bagian|Purpose of section/i, line);
+    assert.match(cleaned, /Isi nyata\./, `real content lost for: ${line}`);
+  }
+});
+
+test("a purpose line about the subject matter is content and stays", () => {
+  // "Tujuan Program:" and "Tujuan Evaluasi:" are sections a report should have.
+  for (const line of [
+    "Tujuan Program: meningkatkan kapabilitas digital.",
+    "Tujuan Evaluasi: mengukur efektivitas pelatihan.",
+    "Tujuan kegiatan: pelatihan staf lapangan.",
+  ]) {
+    const cleaned = sanitizeReadyDocument(`# J\n\n## S\n${line}\n\nIsi.`, "report");
+    assert.ok(cleaned.includes(line), `deleted real content: ${line}`);
+  }
+});
+
+test("headings with nothing under them are dropped", () => {
+  const doc = [
+    "# Laporan",
+    "",
+    "## Latar Belakang",
+    "Program enam bulan.",
+    "",
+    "## Metodologi",
+    "",
+    "## Temuan",
+    "- Kelulusan 82%",
+    "",
+    "## Penutup",
+  ].join("\n");
+
+  const cleaned = sanitizeReadyDocument(doc, "report");
+  assert.doesNotMatch(cleaned, /Metodologi/, "empty heading survived");
+  assert.doesNotMatch(cleaned, /Penutup/, "trailing empty heading survived");
+  assert.match(cleaned, /Latar Belakang/);
+  assert.match(cleaned, /Program enam bulan\./);
+  assert.match(cleaned, /Kelulusan 82%/);
+});
+
+test("a heading whose body is only scaffolding is dropped with it", () => {
+  const doc = "# Laporan\n\n## Ringkasan\nTujuan section: gambaran.\n\n## Isi\nTeks nyata.";
+  const cleaned = sanitizeReadyDocument(doc, "report");
+  assert.doesNotMatch(cleaned, /Ringkasan/, "heading left behind after its only line was stripped");
+  assert.match(cleaned, /Teks nyata\./);
+});
+
+test("a heading that only contains subheadings is kept", () => {
+  const doc = "# Laporan\n\n## Temuan\n\n### Temuan A\nIsi A.\n\n### Temuan B\nIsi B.";
+  const cleaned = sanitizeReadyDocument(doc, "report");
+  assert.match(cleaned, /## Temuan/, "parent heading was dropped");
+  assert.match(cleaned, /### Temuan A/);
+  assert.match(cleaned, /Isi B\./);
+});

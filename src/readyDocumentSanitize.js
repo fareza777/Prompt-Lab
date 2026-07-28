@@ -4,11 +4,30 @@
  * footnotes that models often append when trained on outline contracts.
  */
 
-const PURPOSE_LINE =
-  /^\s*(?:\*{1,3}|_{1,2})?\s*(?:Tujuan|Section\s*goal|Goal|Purpose)\s*[:：][^*\n_]*?(?:\*{1,3}|_{1,2})?\s*$/gim;
+/**
+ * Words that name a piece of the document rather than the subject matter.
+ *
+ * The distinction matters: "Tujuan section:" is scaffolding, but "Tujuan
+ * Program:" and "Tujuan Evaluasi:" are real content a report is expected to
+ * contain, so the qualifier is restricted to structural words only.
+ */
+const STRUCTURE_WORD = "(?:section|bagian|sub-?bagian|bab|slide|chapter|subbab)";
 
-const PURPOSE_ITALIC_BLOCK =
-  /^\s*\*(?:Tujuan|Section\s*goal|Goal|Purpose)\s*[:：][^*\n]+\*\s*$/gim;
+/** "Tujuan section:", "Purpose of section:", "Tujuan dari bagian:". */
+const PURPOSE_QUALIFIER = `(?:\\s+(?:of|for|dari|untuk|pada)?\\s*${STRUCTURE_WORD})?`;
+const EMPHASIS = "(?:\\*{1,3}|_{1,2})?";
+
+const PURPOSE_LINE = new RegExp(
+  // Emphasis may close immediately after the colon — "**Tujuan section:** ..." —
+  // so it is allowed on both sides rather than only at the end of the line.
+  `^\\s*${EMPHASIS}\\s*(?:Tujuan|Section\\s*goal|Goal|Purpose)${PURPOSE_QUALIFIER}\\s*[:：]${EMPHASIS}[^\\n]*?${EMPHASIS}\\s*$`,
+  "gim"
+);
+
+const PURPOSE_ITALIC_BLOCK = new RegExp(
+  `^\\s*\\*(?:Tujuan|Section\\s*goal|Goal|Purpose)${PURPOSE_QUALIFIER}\\s*[:：][^*\\n]+\\*\\s*$`,
+  "gim"
+);
 
 /**
  * Headings that are scaffolding rather than content.
@@ -93,6 +112,40 @@ function stripMetaSections(text) {
  * @param {string} [profile]
  * @returns {string}
  */
+/**
+ * Removes headings with nothing underneath them.
+ *
+ * Models routinely emit a section per outline item and then leave several
+ * unfilled, and stripping a scaffolding line can empty one that did have a
+ * body. In a document those become bare headings; in a deck they became
+ * slides showing a single dash. The contract asks for relevant sections only.
+ *
+ * A heading followed by a deeper heading is a parent and is kept.
+ */
+function stripEmptyHeadings(text) {
+  const lines = String(text).split("\n");
+  const headingAt = (index) => {
+    const match = /^(#{1,6})\s+\S/.exec(lines[index] || "");
+    return match ? match[1].length : 0;
+  };
+
+  const drop = new Set();
+  for (let i = 0; i < lines.length; i += 1) {
+    const level = headingAt(i);
+    if (!level) continue;
+
+    let next = i + 1;
+    while (next < lines.length && !lines[next].trim()) next += 1;
+
+    // End of document, or the next thing is a sibling/ancestor heading.
+    const nextLevel = next < lines.length ? headingAt(next) : 0;
+    if (next >= lines.length || (nextLevel && nextLevel <= level)) drop.add(i);
+  }
+
+  if (!drop.size) return text;
+  return lines.filter((_, index) => !drop.has(index)).join("\n");
+}
+
 export function sanitizeReadyDocument(content = "", profile = "general") {
   if (profile === "diagram") return String(content || "");
 
@@ -106,6 +159,8 @@ export function sanitizeReadyDocument(content = "", profile = "general") {
   text = text.replace(/^\s*\*+[^*\n]*(?:Tujuan|Section\s*goal)\s*[:：][^*\n]*\*+\s*$/gim, "");
   text = stripMetaSections(text);
   text = text.replace(TRAILING_ASUMSI, "");
+  // Runs after the removals above, so a section emptied by them goes too.
+  text = stripEmptyHeadings(text);
 
   // Drop orphan horizontal rules left after removals.
   text = text.replace(/\n(?:---|\*\*\*|___)\s*\n(?=\n|#{1,6}\s|$)/g, "\n\n");

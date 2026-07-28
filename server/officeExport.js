@@ -532,8 +532,11 @@ function splitForSlides(blocks, language = "id") {
       continue;
     }
     let items = [...section.items].filter(Boolean);
-    if (!items.length && section.title) {
-      slides.push({ title: section.title || fallbackTitle, items: ["—"], kind: "content" });
+    if (!items.length) {
+      // A heading with nothing under it produced a slide showing only a dash.
+      // Models emit those constantly — an outline of sections they then leave
+      // empty, or a section whose only line was scaffolding that has since
+      // been stripped. Either way it is not a slide.
       continue;
     }
     // Short parallel items fit two columns comfortably, so capping every slide
