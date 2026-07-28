@@ -2448,9 +2448,29 @@ function App() {
           }),
         });
       }
-      const data = await readApiJson(response);
+      // Streaming is the normal path now. Text is shown as it arrives, so a
+      // long document no longer looks like a stalled 40-second wait, and a run
+      // that is cut short still leaves the user with what was written.
+      const isStream = (response.headers.get("content-type") || "").includes("text/event-stream");
+      let data;
+      if (isStream && response.ok) {
+        let streamed = "";
+        data = await consumeGenerateSse(response, {
+          onChunk: (chunk) => {
+            streamed = chunk.replace ? chunk.text || "" : streamed + (chunk.text || "");
+            setRunOutput(streamed);
+          },
+        });
+      } else {
+        data = await readApiJson(response);
+      }
       if (!response.ok) throw new Error(data.error || "Failed to run the prompt.");
       const rawContent = data.content || data.prompt || "";
+      if (data.truncated) {
+        setWarningMessage(
+          "Dokumen berhenti sebelum selesai karena batas waktu. Bagian yang sudah jadi tetap tersimpan — persingkat permintaan untuk hasil penuh."
+        );
+      }
       const profile = detectDeliverableProfile({
         narrative,
         outputType: effectiveOutputType,
@@ -2467,6 +2487,8 @@ function App() {
       return content;
     } catch (error) {
       setRunError(error.message || "Failed to run the prompt.");
+      // Whatever streamed in before the failure is real work the user paid
+      // quota for; keep it on screen instead of clearing back to nothing.
       return null;
     } finally {
       setIsRunning(false);

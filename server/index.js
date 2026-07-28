@@ -1204,6 +1204,75 @@ const RUN_FINAL_DIRECTIVE = [
  * how a run first shipped — the deliverable began "<think> The user is asking
  * me to...".
  */
+/**
+ * Streaming-safe version of the reasoning strip in sanitizeRunOutput.
+ *
+ * Reasoning models emit <think> blocks inside the content, so forwarding raw
+ * deltas would show the user the model's private monologue as it is written.
+ * Deltas also split tags across chunk boundaries ("<thi" | "nk>"), so a plain
+ * per-chunk regex is not enough — anything that could still become a tag is
+ * held back until the next delta proves otherwise.
+ */
+const REASONING_TAGS = "think|thinking|reasoning|scratchpad";
+const REASONING_OPEN = new RegExp(`<(?:${REASONING_TAGS})>`, "i");
+const REASONING_CLOSE = new RegExp(`</(?:${REASONING_TAGS})>`, "i");
+
+/** Length safe to emit — holds back a trailing fragment that may become a tag. */
+function safeEmitLength(buffer) {
+  const at = buffer.lastIndexOf("<");
+  if (at < 0) return buffer.length;
+  const tail = buffer.slice(at);
+  // A complete tag was already handled by the caller; only an unfinished one
+  // (no ">") is ambiguous and worth holding.
+  return tail.includes(">") ? buffer.length : at;
+}
+
+function createReasoningStreamFilter() {
+  let buffer = "";
+  let inside = false;
+
+  return {
+    push(delta) {
+      buffer += delta;
+      let out = "";
+      for (;;) {
+        if (inside) {
+          const close = buffer.match(REASONING_CLOSE);
+          if (!close) {
+            // Discard the reasoning text, but keep a trailing fragment that
+            // could still become "</think>". Clearing the whole buffer loses
+            // the closing tag when it straddles two deltas, and everything
+            // after it is then swallowed as reasoning.
+            buffer = buffer.slice(safeEmitLength(buffer));
+            break;
+          }
+          buffer = buffer.slice(close.index + close[0].length);
+          inside = false;
+          continue;
+        }
+        const open = buffer.match(REASONING_OPEN);
+        if (open) {
+          out += buffer.slice(0, open.index);
+          buffer = buffer.slice(open.index + open[0].length);
+          inside = true;
+          continue;
+        }
+        const safe = safeEmitLength(buffer);
+        out += buffer.slice(0, safe);
+        buffer = buffer.slice(safe);
+        break;
+      }
+      return out;
+    },
+    /** Remaining text once the stream ends; empty if it ended mid-reasoning. */
+    flush() {
+      const out = inside ? "" : buffer;
+      buffer = "";
+      return out;
+    },
+  };
+}
+
 function sanitizeRunOutput(text) {
   if (!text || typeof text !== "string") return "";
   const TAGS = "think|thinking|reasoning|scratchpad|antml:thinking";
@@ -1236,6 +1305,9 @@ function parseRunPromptBody(req) {
     narrative: String(req.body?.narrative || req.body?.prompt || ""),
     generationMode: String(req.body?.generationMode || "Balanced"),
     resultId: String(req.body?.resultId || "").trim(),
+    // Streaming is the default; only an explicit "false" opts out. Multipart
+    // uploads arrive as strings, so both forms are accepted.
+    stream: req.body?.stream === false || req.body?.stream === "false" ? false : true,
   };
 }
 
@@ -1272,6 +1344,97 @@ function acceptRunPromptBody(req, res, next) {
     return upload.array("attachments", 4)(req, res, next);
   }
   return express.json({ limit: "256kb" })(req, res, next);
+}
+
+/** Time held back after the stream ends to sanitize, record quota, and reply. */
+const RUN_STREAM_FINALIZE_RESERVE_MS = 7_000;
+
+/**
+ * Streams the run instead of waiting for the whole completion.
+ *
+ * Non-streaming runs were the single biggest source of production failures:
+ * `Provider timeout after 44000ms: MiniMax-M3`, 12 occurrences across 5 users,
+ * roughly a quarter of all runs. Waiting for a complete document inside one
+ * function invocation is a race against maxDuration that a long document
+ * loses. Streaming changes the failure mode: bytes arrive continuously, the
+ * user sees progress immediately, and if the budget does run out we keep what
+ * was written rather than throwing it away.
+ *
+ * @returns {Promise<{content: string, model: string, truncated: boolean}|null>}
+ *   null when the failure happened before any text existed (caller replies 5xx).
+ */
+async function streamRunExecution({
+  res,
+  runtime,
+  primaryModel,
+  messages,
+  maxTokens,
+  startedRunAt,
+}) {
+  const deadlineAt = startedRunAt + RUN_FUNCTION_BUDGET_MS - RUN_STREAM_FINALIZE_RESERVE_MS;
+  const budgetLeft = () => deadlineAt - Date.now();
+
+  let stream;
+  try {
+    const openTimeout = Math.max(8_000, budgetLeft());
+    stream = await withTimeout(
+      runtime.client.chat.completions.create(
+        buildProviderChatCompletionBody(runtime, {
+          model: primaryModel,
+          messages,
+          max_tokens: maxTokens,
+          temperature: 0.6,
+          stream: true,
+        }),
+        { timeout: openTimeout }
+      ),
+      openTimeout,
+      primaryModel
+    );
+  } catch (error) {
+    // Nothing was produced, so the caller can still fall back or report.
+    throw error;
+  }
+
+  initSse(res);
+  sendSsePhase(res, "drafting", "Writing your document...");
+
+  const filter = createReasoningStreamFilter();
+  let raw = "";
+  let usedModel = primaryModel;
+  let truncated = false;
+
+  try {
+    for await (const part of stream) {
+      if (part.model) usedModel = part.model;
+      const delta = part.choices?.[0]?.delta?.content || "";
+      if (delta) {
+        raw += delta;
+        const visible = filter.push(delta);
+        if (visible) sendSse(res, "chunk", { text: visible });
+      }
+      if (budgetLeft() <= 0) {
+        truncated = true;
+        try {
+          stream.controller?.abort();
+        } catch {
+          /* the loop break is enough */
+        }
+        break;
+      }
+    }
+  } catch (error) {
+    // A mid-stream failure with text already written is recoverable: the user
+    // keeps a partial document instead of losing the whole run and its tokens.
+    if (!raw) throw error;
+    console.warn("run-prompt stream interrupted, keeping partial output", error.message);
+    truncated = true;
+  }
+
+  const tail = filter.flush();
+  if (tail) sendSse(res, "chunk", { text: tail });
+
+  return { content: raw, model: usedModel, truncated };
 }
 
 app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPromptBody, async (req, res) => {
@@ -1376,6 +1539,82 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
     const remaining = () => RUN_FUNCTION_BUDGET_MS - (Date.now() - startedRunAt);
     const primaryTimeoutMs = Math.min(RUN_PRIMARY_TIMEOUT_MS, remaining() - RUN_RESERVE_MS);
 
+    // Streaming is the default path: it is what stopped long documents from
+    // losing the race against maxDuration. The buffered path below stays for
+    // clients that ask for it and as a fallback when the stream cannot open.
+    if (body.stream !== false) {
+      let streamed = null;
+      try {
+        streamed = await streamRunExecution({
+          res,
+          runtime,
+          primaryModel,
+          messages,
+          maxTokens,
+          startedRunAt,
+        });
+      } catch (streamError) {
+        // The stream never opened, so no bytes were sent and a normal JSON
+        // error response is still possible.
+        if (res.headersSent) throw streamError;
+        console.warn("run-prompt stream could not start, using buffered path", streamError.message);
+      }
+
+      if (streamed) {
+        const checkedStream = validateFinishedOutput(
+          sanitizeRunOutput(streamed.content),
+          deliverableProfile
+        );
+        const streamContent = checkedStream.content;
+
+        if (!streamContent) {
+          sendSse(res, "error", { message: "The model returned an empty result." });
+          res.end();
+          return;
+        }
+
+        let quota = null;
+        try {
+          quota = await recordUsage(quotaSession, {
+            eventType: "run_prompt",
+            metadata: {
+              outputType: payload.outputType,
+              model: streamed.model,
+              provider: runtime.provider,
+              streamed: true,
+              truncated: streamed.truncated,
+            },
+            tokenEstimate: quotaEstimate,
+            outputText: streamContent,
+          });
+        } catch (usageError) {
+          console.warn("run stream quota persistence failed", usageError.message);
+        }
+
+        sendSsePhase(res, "done", "Complete");
+        sendSse(res, "done", {
+          engineVersion: PROMPT_ENGINE_VERSION,
+          source: runtime.provider,
+          model: streamed.model,
+          prompt: streamContent,
+          content: streamContent,
+          // Lets the client tell the user the document stopped early rather
+          // than presenting a cut-off draft as finished.
+          truncated: streamed.truncated,
+          quota,
+          weeklyResults: weeklyReservation
+            ? {
+                limit: 5,
+                remaining: weeklyReservation.remaining,
+                resetAt: weeklyReservation.resetAt,
+              }
+            : null,
+        });
+        res.end();
+        return;
+      }
+    }
+
     let completion;
     let usedModel = primaryModel;
     try {
@@ -1449,6 +1688,22 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
       await releaseWeeklyFreeResult(weeklyReservation.client, weeklyReservation.key);
     }
     console.error("run-prompt failed", error.message);
+
+    // Once the stream has started the status line is already on the wire, so a
+    // JSON error response would throw ERR_HTTP_HEADERS_SENT and kill the
+    // socket. Report it as a stream event instead.
+    if (res.headersSent) {
+      try {
+        sendSse(res, "error", {
+          message: error.publicMessage || error.message || "Could not run the prompt.",
+        });
+      } catch {
+        /* the socket is already gone */
+      }
+      res.end();
+      return;
+    }
+
     // A timeout here means the document was too big to finish inside the
     // platform's function limit, which the user can act on — unlike a generic
     // "try again", which would just fail the same way.
