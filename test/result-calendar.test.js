@@ -113,11 +113,12 @@ test("a finished document is filed without the user pressing save", async () => 
   const main = await readFile(new URL("../src/main.jsx", import.meta.url), "utf8");
   // The calendar is only worth opening if nothing had to be remembered.
   assert.match(main, /function fileTemplateResult/);
-  assert.match(main, /fileTemplateResult\(template, content, note, language\)/);
+  assert.match(main, /fileTemplateResult\(template, content, values, language\)/);
   assert.match(main, /activityDate: toDateKey\(new Date\(\)\)/);
   assert.match(main, /templateId: template\.id/);
-  // A heading that is merely the template's first required section is not a
-  // title: it filed every set of minutes under "Identitas Rapat".
+  // The subject the user typed names the entry. Falling back to the first
+  // heading filed every set of minutes under "Identitas Rapat".
+  assert.match(main, /templateSubjectField\(template\)/);
   assert.match(main, /const sectionNames = new Set\(/);
   assert.match(main, /!sectionNames\.has\(heading\.toLowerCase\(\)\)/);
   // And it must be movable afterwards.
@@ -131,13 +132,37 @@ test("reopening a filed document restores its template, not just its text", asyn
   // Without the template the export row would be wrong: a recap must still
   // offer Excel weeks later.
   assert.match(shell, /getTemplate\(item\.templateId\)/);
-  assert.match(shell, /if \(template\) setActiveTemplate\(template\)/);
+  assert.match(shell, /if \(template\) \{\s*\r?\n\s*setActiveTemplate\(template\)/);
   // Custom templates live outside the built-in registry and must resolve too.
   assert.match(shell, /userTemplates\.find\(\(candidate\) => candidate\.id === item\.templateId\)/);
   assert.match(shell, /open=\{sheet === "calendar"\}/);
   assert.match(shell, /onChangeDate=\{setResultDate\}/);
   // Only finished documents belong on a calendar of work done.
   assert.match(shell, /item\.contentType === "output"/);
+});
+
+test("a day's list shows the topic and nothing else", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const calendar = await readFile(new URL("../src/ui/Calendar.jsx", import.meta.url), "utf8");
+  // The day is already the heading above the list, so a date on every row was
+  // noise, and the template name repeated a choice the user had just made.
+  assert.doesNotMatch(calendar, /item\.templateName \|\| item\.folder/);
+  assert.doesNotMatch(calendar, /className="pl-cal-date"/);
+  assert.match(calendar, /<strong>\{item\.title \|\| t\("cal\.untitled"\)\}<\/strong>/);
+  // Re-dating stays reachable, just not printed in the row.
+  assert.match(calendar, /function MoveDate/);
+  assert.match(calendar, /input\.showPicker\(\)/);
+});
+
+test("downloads are named after the topic, not the template", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const shell = await readFile(new URL("../src/ui/Shell.jsx", import.meta.url), "utf8");
+  // Otherwise every activity report lands as "Laporan Kegiatan.docx".
+  assert.match(shell, /const documentTopic = useMemo/);
+  assert.match(shell, /templateValues\[templateSubjectField\(activeTemplate\)\]/);
+  assert.match(shell, /exportFile\(format, text \?\? runOutput, documentTopic\)/);
+  // Reopening from the calendar keeps the filed topic.
+  assert.match(shell, /setTemplateValues\(subjectField \? \{ \[subjectField\]: item\.title \|\| "" \} : \{\}\)/);
 });
 
 test("weekday headings line up with the grid's first column", () => {

@@ -49,10 +49,12 @@ test("an English document labels itself in English", async () => {
   assert.equal(texts(xml)[0], "MEETING MINUTES");
 });
 
-test("the cover carries a date and the brand", async () => {
+test("the cover carries a date but not the tool that typed it", async () => {
+  // The brand used to sit beside the date under the title. A report someone
+  // sends to their manager should not advertise the app in its masthead.
   const xml = await docXml("# Laporan\n\nIsi.", "Laporan Bulanan");
   assert.match(texts(xml)[2], /\d{4}/, "no year on the cover line");
-  assert.match(texts(xml)[2], /AI Work Studio/);
+  assert.doesNotMatch(texts(xml)[2], /AI Work Studio/);
 });
 
 test("tables read as tables, not as a faint grid", async () => {

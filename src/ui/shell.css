@@ -2437,3 +2437,7 @@
     padding-right: var(--s-2);
   }
 }
+
+.pl-textarea--tall {
+  min-height: 190px;
+}

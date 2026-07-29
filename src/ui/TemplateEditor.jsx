@@ -1,24 +1,52 @@
 import { useEffect, useId, useState } from "react";
 import Sheet from "./Sheet.jsx";
-import { listTemplates, localized } from "../workTemplates.js";
+import { listTemplates, localized, templateFields } from "../workTemplates.js";
 
 /**
- * Four fields, deliberately.
+ * Where a user builds a template as specific as the built-in ones.
  *
- * A template is really six things (see workTemplateDefinitions.js), but asking
- * a user for length targets and export formats would turn a two-minute task
- * into a form nobody finishes. The rest takes sensible defaults, and
- * duplicating a built-in template is offered first because editing something
- * that already works is far easier than facing an empty box.
+ * The earlier version asked for a name and an instruction, which produced
+ * vague templates that guessed at everything. A template is only as good as
+ * what it pins down, so this asks for the same three things every built-in
+ * template declares: the fields to collect, the sections the document must
+ * have, and the rules the writing has to follow.
+ *
+ * Duplicating a built-in template is offered first and fills all of it in,
+ * because editing something that already works beats facing an empty box.
  */
 
-const EMPTY = { name: "", blurb: "", instruction: "", sections: "", needsAttachment: true };
+const EMPTY = {
+  name: "",
+  blurb: "",
+  fields: "",
+  sections: "",
+  instruction: "",
+  needsAttachment: true,
+};
+
+/** Renders a built-in template's fields back into the editor's line format. */
+function fieldsToText(template, lang) {
+  return templateFields(template)
+    .map((field) => {
+      const label = localized(field.label, lang) + (field.required ? "*" : "");
+      return field.type === "text" ? label : `${label} | ${field.type}`;
+    })
+    .join("\n");
+}
+
+function Block({ label, hint, children }) {
+  return (
+    <div className="pl-field">
+      <label className="pl-label">{label}</label>
+      {children}
+      {hint && <p className="pl-hint">{hint}</p>}
+    </div>
+  );
+}
 
 export default function TemplateEditor({ t, lang, open, onClose, onSave, editing }) {
   const [draft, setDraft] = useState(EMPTY);
   const nameId = useId();
-  const instructionId = useId();
-  const sectionsId = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -34,22 +62,23 @@ export default function TemplateEditor({ t, lang, open, onClose, onSave, editing
     setDraft({
       name: `${localized(source.name, lang)} (${t("editor.copySuffix")})`,
       blurb: localized(source.blurb, lang),
-      instruction: localized(source.prompt, lang),
+      fields: fieldsToText(source, lang),
       sections: (source.sections?.[lang === "en" ? "en" : "id"] || []).join("\n"),
+      instruction: localized(source.prompt, lang),
       needsAttachment: (source.input?.attachments?.min || 0) > 0,
     });
   };
 
-  const canSave = draft.name.trim() && draft.instruction.trim();
+  const canSave =
+    draft.name.trim() && draft.instruction.trim() && draft.sections.trim();
 
   return (
     <Sheet open={open} title={t("editor.title")} closeLabel={t("nav.close")} onClose={onClose}>
-      <div className="pl-field">
-        <label className="pl-label" htmlFor={`${nameId}-dup`}>
-          {t("editor.duplicate")}
-        </label>
+      <p className="pl-hint">{t("editor.intro")}</p>
+
+      <Block label={t("editor.duplicate")} hint={t("editor.duplicateHint")}>
         <select
-          id={`${nameId}-dup`}
+          id={nameId}
           className="pl-select"
           value=""
           onChange={(event) => duplicate(event.target.value)}
@@ -61,48 +90,52 @@ export default function TemplateEditor({ t, lang, open, onClose, onSave, editing
             </option>
           ))}
         </select>
-      </div>
+      </Block>
 
-      <div className="pl-field">
-        <label className="pl-label" htmlFor={nameId}>
-          {t("editor.name")}
-        </label>
+      <Block label={t("editor.name")}>
         <input
-          id={nameId}
           className="pl-input"
           value={draft.name}
           onChange={set("name")}
           placeholder={t("editor.namePlaceholder")}
         />
-      </div>
+      </Block>
 
-      <div className="pl-field">
-        <label className="pl-label" htmlFor={instructionId}>
-          {t("editor.instruction")}
-        </label>
-        <textarea
-          id={instructionId}
-          className="pl-textarea"
-          value={draft.instruction}
-          onChange={set("instruction")}
-          placeholder={t("editor.instructionPlaceholder")}
+      <Block label={t("editor.blurb")} hint={t("editor.blurbHint")}>
+        <input
+          className="pl-input"
+          value={draft.blurb}
+          onChange={set("blurb")}
+          placeholder={t("editor.blurbPlaceholder")}
         />
-        <p className="pl-hint">{t("editor.instructionHint")}</p>
-      </div>
+      </Block>
 
-      <div className="pl-field">
-        <label className="pl-label" htmlFor={sectionsId}>
-          {t("editor.sections")}
-        </label>
+      <Block label={t("editor.fields")} hint={t("editor.fieldsHint")}>
         <textarea
-          id={sectionsId}
-          className="pl-textarea pl-textarea--short"
+          className="pl-textarea"
+          value={draft.fields}
+          onChange={set("fields")}
+          placeholder={t("editor.fieldsPlaceholder")}
+        />
+      </Block>
+
+      <Block label={t("editor.sections")} hint={t("editor.sectionsHint")}>
+        <textarea
+          className="pl-textarea"
           value={draft.sections}
           onChange={set("sections")}
           placeholder={t("editor.sectionsPlaceholder")}
         />
-        <p className="pl-hint">{t("editor.sectionsHint")}</p>
-      </div>
+      </Block>
+
+      <Block label={t("editor.instruction")} hint={t("editor.instructionHint")}>
+        <textarea
+          className="pl-textarea pl-textarea--tall"
+          value={draft.instruction}
+          onChange={set("instruction")}
+          placeholder={t("editor.instructionPlaceholder")}
+        />
+      </Block>
 
       <label className="pl-check">
         <input
@@ -114,6 +147,8 @@ export default function TemplateEditor({ t, lang, open, onClose, onSave, editing
         />
         <span>{t("editor.needsAttachment")}</span>
       </label>
+
+      {!canSave && <p className="pl-hint pl-hint--requirement">{t("editor.incomplete")}</p>}
 
       <button
         type="button"

@@ -14,8 +14,13 @@ import TemplateWorkbench from "./TemplateWorkbench.jsx";
 import TemplateProgress from "./TemplateProgress.jsx";
 import Calendar from "./Calendar.jsx";
 import TemplateEditor from "./TemplateEditor.jsx";
-import { normalizeCustomTemplate } from "../workTemplates.js";
-import { getTemplate, localized } from "../workTemplates.js";
+import {
+  defaultFieldValues,
+  getTemplate,
+  localized,
+  normalizeCustomTemplate,
+  templateSubjectField,
+} from "../workTemplates.js";
 import History from "./History.jsx";
 import Account from "./Account.jsx";
 import Improve from "./Improve.jsx";
@@ -192,7 +197,7 @@ export default function Shell(props) {
   // Template mode: null means the gallery is showing. The workbench, the wait,
   // and the result all belong to whichever template is selected.
   const [activeTemplate, setActiveTemplate] = useState(null);
-  const [templateNote, setTemplateNote] = useState("");
+  const [templateValues, setTemplateValues] = useState({});
 
   const t = useMemo(() => makeTranslator(lang), [lang]);
 
@@ -298,7 +303,8 @@ export default function Shell(props) {
   const pickTemplate = useCallback(
     (template) => {
       setActiveTemplate(template);
-      setTemplateNote("");
+      // Date and time arrive already filled in for the day the user is on.
+      setTemplateValues(defaultFieldValues(template));
       setRunOutput?.("");
       clearComposer?.();
       clearMessages();
@@ -309,11 +315,27 @@ export default function Shell(props) {
 
   const leaveTemplate = useCallback(() => {
     setActiveTemplate(null);
-    setTemplateNote("");
+    setTemplateValues({});
     setRunOutput?.("");
     clearComposer?.();
     clearMessages();
   }, [setRunOutput, clearComposer, clearMessages]);
+
+  const setTemplateValue = useCallback((id, value) => {
+    setTemplateValues((current) => ({ ...current, [id]: value }));
+  }, []);
+
+  /**
+   * What this document is about, used to name the downloaded file.
+   *
+   * The template's own name would put "Laporan Kegiatan.docx" in the downloads
+   * folder for every activity report the user ever makes.
+   */
+  const documentTopic = useMemo(() => {
+    if (!activeTemplate) return "";
+    const subject = String(templateValues[templateSubjectField(activeTemplate)] || "").trim();
+    return subject || localized(activeTemplate.name, lang);
+  }, [activeTemplate, templateValues, lang]);
 
   /**
    * Reopens a filed document inside the flow that produced it.
@@ -328,7 +350,13 @@ export default function Shell(props) {
       const template =
         getTemplate(item.templateId) ||
         userTemplates.find((candidate) => candidate.id === item.templateId);
-      if (template) setActiveTemplate(template);
+      if (template) {
+        setActiveTemplate(template);
+        // Seed the subject from the filed title so a re-export keeps the same
+        // filename rather than reverting to the template's generic name.
+        const subjectField = templateSubjectField(template);
+        setTemplateValues(subjectField ? { [subjectField]: item.title || "" } : {});
+      }
       setSelectedLibraryId?.(item.id);
       setRunOutput?.(item.output || item.content || "");
       clearMessages();
@@ -341,8 +369,8 @@ export default function Shell(props) {
   const handleTemplateGenerate = useCallback(async () => {
     if (!activeTemplate) return;
     clearMessages();
-    await runTemplate?.(activeTemplate, templateNote, lang);
-  }, [activeTemplate, templateNote, runTemplate, lang, clearMessages]);
+    await runTemplate?.(activeTemplate, templateValues, lang);
+  }, [activeTemplate, templateValues, runTemplate, lang, clearMessages]);
 
   const openHistoryItem = useCallback(
     (item) => {
@@ -570,7 +598,7 @@ export default function Shell(props) {
                     isRunning={false}
                     runError={humanizeApiError(runError, t)}
                     onExport={(format, text) =>
-                      exportFile(format, text ?? runOutput, localized(activeTemplate.name, lang))
+                      exportFile(format, text ?? runOutput, documentTopic)
                     }
                     canExportWord={Boolean(entitlements?.docxExport)}
                     canExportPpt={Boolean(entitlements?.pptxExport)}
@@ -594,8 +622,8 @@ export default function Shell(props) {
                 attachments={attachments}
                 addAttachments={addAttachments}
                 removeAttachment={removeAttachment}
-                note={templateNote}
-                setNote={setTemplateNote}
+                values={templateValues}
+                setValue={setTemplateValue}
                 onGenerate={handleTemplateGenerate}
                 onBack={leaveTemplate}
                 isBusy={isRunning}

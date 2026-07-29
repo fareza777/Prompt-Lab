@@ -1,5 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Download, FileText, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  CalendarClock,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  FileText,
+  Trash2,
+} from "lucide-react";
 import Sheet from "./Sheet.jsx";
 import {
   buildMonthGrid,
@@ -42,6 +49,44 @@ function DayCell({ cell, count, selected, today, onSelect, t }) {
       <span>{cell.day}</span>
       {count > 0 && <span className="pl-cal-dot" aria-hidden="true" />}
     </button>
+  );
+}
+
+/**
+ * Moves a document to the day the work actually happened.
+ *
+ * The native picker is opened from the icon so the row shows a topic and
+ * nothing else. showPicker is the supported route in current Chrome and the
+ * Android WebView; clicking the input is the fallback everywhere else.
+ */
+function MoveDate({ item, t, onChangeDate }) {
+  const ref = useRef(null);
+
+  return (
+    <>
+      <button
+        type="button"
+        className="pl-icon-btn"
+        onClick={() => {
+          const input = ref.current;
+          if (!input) return;
+          if (typeof input.showPicker === "function") input.showPicker();
+          else input.click();
+        }}
+        aria-label={t("cal.changeDate")}
+      >
+        <CalendarClock size={16} aria-hidden="true" />
+      </button>
+      <input
+        ref={ref}
+        className="pl-sr-only"
+        type="date"
+        tabIndex={-1}
+        aria-hidden="true"
+        value={recordDateKey(item)}
+        onChange={(event) => onChangeDate?.(item.id, event.target.value)}
+      />
+    </>
   );
 }
 
@@ -125,27 +170,20 @@ export default function Calendar({
         <p className="pl-empty">{t("cal.empty")}</p>
       ) : (
         <ul className="pl-cal-list">
+          {/* Only the topic. The day is already the heading above this list,
+              so repeating the date in every row was noise, and the template
+              name told the user nothing they had not just chosen. */}
           {dayItems.map((item) => (
             <li key={item.id} className="pl-cal-item">
               <button type="button" className="pl-cal-open" onClick={() => onOpenItem(item)}>
                 <FileText size={16} aria-hidden="true" />
-                <span>
-                  <strong>{item.title || t("cal.untitled")}</strong>
-                  <small>{item.templateName || item.folder || ""}</small>
-                </span>
+                <strong>{item.title || t("cal.untitled")}</strong>
               </button>
               <div className="pl-cal-item-actions">
-                {/* Filing a document under the day it actually happened is the
-                    common case: people write up on Friday what they did on
-                    Tuesday. */}
-                <label className="pl-cal-date">
-                  <span className="pl-sr-only">{t("cal.changeDate")}</span>
-                  <input
-                    type="date"
-                    value={recordDateKey(item)}
-                    onChange={(event) => onChangeDate?.(item.id, event.target.value)}
-                  />
-                </label>
+                {/* Re-dating stays reachable — people write up on Friday what
+                    they did on Tuesday — but the input itself is off-screen
+                    and opened from the icon, so the row stays clean. */}
+                <MoveDate item={item} t={t} onChangeDate={onChangeDate} />
                 <button
                   type="button"
                   className="pl-icon-btn"

@@ -1,29 +1,40 @@
 /**
  * The template catalogue.
  *
- * Each entry is a complete package rather than a label: what may be attached,
- * the instruction the model receives, the section skeleton it must fill, how
- * long the result should be, and which files it can be exported as. Two
- * templates given the same photo must produce visibly different documents —
- * that is the whole point, so the prompts are deliberately specific rather
- * than variations on "write a report".
+ * Each entry is a complete package rather than a label: the fields it asks the
+ * user to fill, which attachments it accepts, the instruction the model
+ * receives, the section skeleton it must fill, how long the result should be,
+ * and which files it can be exported as.
+ *
+ * `fields` is what makes a document usable without editing. A photo of a
+ * meeting cannot tell anyone what the meeting was called or who ran it, so the
+ * template asks for exactly those few facts and treats the answers as truth.
+ * Fields marked `autofill: "today" | "now"` are pre-filled and still editable.
  *
  * `profile` maps onto the existing deliverable profiles so output sanitising
  * and Office export keep working unchanged.
  *
  * Attachment rules: one file is enough everywhere except Before & After, which
- * is meaningless without two.
- *
- * `note.mode`
- *   optional  - extra context, never demanded
- *   required  - the template cannot work without typed input
- *   fallback  - required only when nothing was attached
+ * uses two labelled slots so the pair is unambiguous in the finished document.
  */
 
-/** Shared clause: the model may only describe what is genuinely visible. */
-const VISUAL_HONESTY = {
-  id: "Tulis hanya yang benar-benar terlihat atau tertulis pada lampiran. Jangan menebak nama orang, jabatan, instansi, jumlah peserta, tanggal, atau lokasi dari wajah, seragam, atau latar belakang. Untuk informasi penting yang tidak terbaca, tulis \"Belum tersedia\" dan lanjutkan.",
-  en: "Describe only what is genuinely visible or written in the attachment. Never guess names, job titles, organisations, headcounts, dates, or locations from faces, uniforms, or backgrounds. Where an essential detail cannot be read, write \"Not provided\" and move on.",
+/**
+ * The line every document-producing template shares.
+ *
+ * Deliberately not "describe only what is visible". A report that merely
+ * narrates a photograph is not what anyone wants to send: people want the
+ * finished thing. So ordinary professional connective writing and reasonable
+ * operational context are allowed — what stays forbidden is inventing the
+ * checkable specifics that make a document wrong: names, dates, counts,
+ * figures, decisions, and quotations.
+ */
+const WRITING_STANCE = {
+  id: `Tulis dokumen yang benar-benar SIAP KIRIM, bukan deskripsi foto. Rangkai isian pengguna dan apa yang terlihat di lampiran menjadi narasi kerja yang wajar dan mengalir. Kamu BOLEH menambahkan konteks dan asumsi operasional yang masuk akal agar dokumen terasa utuh (misalnya bahwa kegiatan berjalan tertib, materi disampaikan, peserta mengikuti hingga selesai).
+YANG TETAP DILARANG dikarang: nama orang, jabatan, nama instansi, jumlah peserta, angka, nominal, tanggal, dan kutipan atau keputusan yang tidak diberikan pengguna maupun terbaca di lampiran. Untuk hal-hal itu tulis "Belum tersedia" atau titik-titik isian.
+Jangan pernah menulis kalimat seperti "pada foto terlihat" atau "berdasarkan gambar" — tulis langsung sebagai laporan.`,
+  en: `Write a document that is genuinely READY TO SEND, not a description of a photo. Weave the user's field answers and what the attachment shows into natural, flowing professional prose. You MAY add reasonable operational context and assumptions so the document reads as complete (that the activity ran in an orderly way, that material was delivered, that participants stayed through to the end).
+STILL FORBIDDEN: inventing personal names, job titles, organisation names, headcounts, figures, amounts, dates, quotations, or decisions that the user did not give and that are not legible in the attachment. Write "Not provided" or a dotted fill-in line for those.
+Never write "the photo shows" or "based on the image" — write it straight, as a report.`,
 };
 
 /** Shared clause for templates whose real output is a spreadsheet. */
@@ -33,6 +44,33 @@ const TABLE_ONLY = {
 };
 
 export const TEMPLATE_GROUPS = ["report", "meeting", "extract", "utility"];
+
+/** Field shorthand, so the definitions below stay readable. */
+const text = (id, labelId, labelEn, extra = {}) => ({
+  id,
+  type: "text",
+  label: { id: labelId, en: labelEn },
+  ...extra,
+});
+const area = (id, labelId, labelEn, extra = {}) => ({
+  id,
+  type: "textarea",
+  label: { id: labelId, en: labelEn },
+  ...extra,
+});
+const today = (id = "date", labelId = "Tanggal", labelEn = "Date") => ({
+  id,
+  type: "date",
+  label: { id: labelId, en: labelEn },
+  autofill: "today",
+  required: true,
+});
+const now = (id = "time", labelId = "Jam", labelEn = "Time") => ({
+  id,
+  type: "time",
+  label: { id: labelId, en: labelEn },
+  autofill: "now",
+});
 
 export const WORK_TEMPLATES = [
   {
@@ -47,32 +85,46 @@ export const WORK_TEMPLATES = [
     },
     input: {
       attachments: { kinds: ["image"], min: 1, max: 8 },
-      note: {
-        mode: "optional",
-        label: { id: "Catatan singkat", en: "Short note" },
-        placeholder: {
-          id: "Contoh: rapat koordinasi tim humas, Selasa pagi di aula.",
-          en: "e.g. team coordination meeting, Tuesday morning in the hall.",
-        },
-      },
+      fields: [
+        text("activity", "Kegiatan apa", "What activity", {
+          required: true,
+          placeholder: {
+            id: "Contoh: Sosialisasi Pelayanan Publik",
+            en: "e.g. Public Service Briefing",
+          },
+        }),
+        today(),
+        text("place", "Tempat", "Place", {
+          placeholder: { id: "Contoh: Aula Kelurahan", en: "e.g. the main hall" },
+        }),
+        text("organizer", "Penyelenggara / Unit", "Organiser / Unit"),
+        area("notes", "Catatan tambahan", "Extra notes", {
+          placeholder: {
+            id: "Hal yang tidak terlihat di foto: hasil, kendala, tindak lanjut…",
+            en: "Anything the photo cannot show: outcomes, obstacles, follow-up…",
+          },
+        }),
+      ],
     },
     length: { words: [450, 750], pages: 2 },
     outputs: ["docx", "pdf"],
     sections: {
-      id: ["Judul Kegiatan", "Waktu dan Tempat", "Ringkasan Kegiatan", "Uraian Pelaksanaan", "Hasil dan Tindak Lanjut", "Dokumentasi"],
-      en: ["Activity Title", "Time and Place", "Summary", "How It Ran", "Outcome and Follow-up", "Documentation"],
+      id: ["Waktu dan Tempat", "Ringkasan Kegiatan", "Uraian Pelaksanaan", "Hasil dan Tindak Lanjut", "Dokumentasi"],
+      en: ["Time and Place", "Summary", "How It Ran", "Outcome and Follow-up", "Documentation"],
     },
     prompt: {
-      id: `Susun LAPORAN KEGIATAN resmi berdasarkan foto yang dilampirkan. Panjang sekitar 2 halaman.
-Baca foto dengan cermat: jenis kegiatan, suasana ruangan, jumlah orang yang terlihat, perlengkapan, spanduk/layar, dan tulisan apa pun yang terbaca.
-Bagian "Uraian Pelaksanaan" adalah inti laporan — tulis 2–4 paragraf mengalir, bukan bullet.
-Bagian "Dokumentasi" berisi daftar keterangan foto singkat, satu baris per foto ("Foto 1 — ...").
-Gunakan bahasa Indonesia resmi ragam laporan dinas, kalimat pasif seperlunya, tanpa kata berlebihan.`,
-      en: `Write a formal ACTIVITY REPORT from the attached photos. Around two pages.
-Read the photos closely: what kind of activity, the setting, how many people are visible, equipment, banners or screens, and any legible text.
-"How It Ran" is the heart of the report — write two to four flowing paragraphs, not bullets.
-"Documentation" is a short caption list, one line per photo ("Photo 1 — ...").
-Use plain formal report English without padding.`,
+      id: `Susun LAPORAN KEGIATAN resmi. Judul dokumen (# ) diambil dari isian "Kegiatan apa".
+"Waktu dan Tempat" memakai tanggal dan tempat dari isian pengguna, apa adanya.
+"Uraian Pelaksanaan" adalah inti laporan: 3–4 paragraf mengalir yang menceritakan jalannya kegiatan dari pembukaan sampai penutup. Gunakan nama kegiatan sebagai penuntun isi — kalau kegiatannya sosialisasi, tulis sebagaimana sosialisasi berjalan. Jangan berupa bullet.
+"Hasil dan Tindak Lanjut" 3–5 bullet. Kalau pengguna mengisi catatan tambahan, itu bahan utamanya.
+"Dokumentasi" satu baris keterangan per foto ("Foto 1 — ..."), singkat.
+Bahasa Indonesia resmi ragam laporan dinas.`,
+      en: `Write a formal ACTIVITY REPORT. The document title (# ) comes from the "What activity" field.
+"Time and Place" uses the date and place the user gave, verbatim.
+"How It Ran" is the heart of it: three to four flowing paragraphs telling the activity through from opening to close. Let the activity's name guide the content — if it is a briefing, write how a briefing runs. Not bullets.
+"Outcome and Follow-up" is three to five bullets, built from the user's extra notes where given.
+"Documentation" is one short caption per photo ("Photo 1 — ...").
+Plain formal report English.`,
     },
   },
 
@@ -88,14 +140,23 @@ Use plain formal report English without padding.`,
     },
     input: {
       attachments: { kinds: ["image", "document"], min: 0, max: 6 },
-      note: {
-        mode: "fallback",
-        label: { id: "Transkrip atau catatan rapat", en: "Transcript or meeting notes" },
-        placeholder: {
-          id: "Tempel transkrip, atau ketik poin-poin yang dibahas…",
-          en: "Paste the transcript, or type the points discussed…",
-        },
-      },
+      fields: [
+        text("subject", "Nama / agenda rapat", "Meeting name or agenda", {
+          required: true,
+          placeholder: { id: "Contoh: Rapat Koordinasi Anggaran", en: "e.g. Budget Coordination Meeting" },
+        }),
+        today(),
+        now(),
+        text("place", "Tempat", "Place"),
+        text("chair", "Pimpinan rapat", "Chaired by"),
+        area("transcript", "Transkrip atau poin bahasan", "Transcript or discussion points", {
+          mode: "fallback",
+          placeholder: {
+            id: "Tempel transkrip, atau ketik poin yang dibahas dan diputuskan…",
+            en: "Paste the transcript, or type what was discussed and decided…",
+          },
+        }),
+      ],
     },
     length: { words: [400, 700], pages: 2 },
     outputs: ["docx", "pdf"],
@@ -104,18 +165,18 @@ Use plain formal report English without padding.`,
       en: ["Meeting Details", "Attendees", "Agenda", "Discussion", "Decisions", "Action Items"],
     },
     prompt: {
-      id: `Susun NOTULEN RAPAT dari bahan yang diberikan (transkrip yang diketik dan/atau foto catatan tulisan tangan).
-Jika ada foto catatan tangan, baca tulisannya dan pakai isinya sebagai sumber utama.
-"Pembahasan" ditulis per agenda, ringkas, satu paragraf pendek per agenda.
-"Keputusan" berupa bullet dan hanya memuat hal yang benar-benar diputuskan — bukan usulan atau wacana.
-"Tindak Lanjut" WAJIB berbentuk tabel Markdown: Tindakan | Penanggung Jawab | Tenggat | Status. Isi "Belum tersedia" pada sel yang tidak didukung sumber.
-Jangan pernah mengarang nama peserta, tanggal, atau kutipan.`,
-      en: `Write MEETING MINUTES from the material provided (typed transcript and/or photographed handwritten notes).
-Where a photo of handwritten notes is attached, read it and treat it as the primary source.
-Write "Discussion" agenda item by agenda item, one short paragraph each.
-"Decisions" is a bullet list containing only what was actually decided — not proposals or open discussion.
-"Action Items" MUST be a Markdown table: Action | Owner | Due | Status. Put "Not provided" in any cell the source does not support.
-Never invent attendee names, dates, or quotations.`,
+      id: `Susun NOTULEN RAPAT. Judul dokumen (# ) diambil dari isian nama/agenda rapat.
+"Identitas Rapat" berupa tabel dua kolom: Hari/Tanggal, Waktu, Tempat, Pimpinan Rapat — diisi dari isian pengguna, dan "Belum tersedia" bila kosong.
+"Pembahasan" ditulis per agenda, satu paragraf pendek per agenda.
+"Keputusan" bullet, hanya hal yang benar-benar diputuskan.
+"Tindak Lanjut" WAJIB tabel Markdown: Tindakan | Penanggung Jawab | Tenggat | Status. Sel yang tidak didukung sumber diisi "Belum tersedia".
+Nama peserta HANYA dari transkrip atau foto catatan; jangan dikarang.`,
+      en: `Write MEETING MINUTES. The document title (# ) comes from the meeting name field.
+"Meeting Details" is a two-column table: Day/Date, Time, Place, Chaired by — filled from the user's fields, "Not provided" where empty.
+"Discussion" runs agenda item by agenda item, one short paragraph each.
+"Decisions" is a bullet list of what was actually decided.
+"Action Items" MUST be a Markdown table: Action | Owner | Due | Status, with "Not provided" in unsupported cells.
+Attendee names come only from the transcript or the photographed notes; never invent them.`,
     },
   },
 
@@ -131,14 +192,14 @@ Never invent attendee names, dates, or quotations.`,
     },
     input: {
       attachments: { kinds: ["document", "image"], min: 1, max: 5 },
-      note: {
-        mode: "optional",
-        label: { id: "Fokus ringkasan", en: "Focus" },
-        placeholder: {
-          id: "Contoh: fokus ke anggaran dan risiko.",
-          en: "e.g. focus on budget and risk.",
-        },
-      },
+      fields: [
+        text("subject", "Judul ringkasan", "Summary title", {
+          placeholder: { id: "Kosongkan untuk memakai judul dokumen", en: "Leave blank to use the document's own title" },
+        }),
+        text("focus", "Fokus ringkasan", "Focus", {
+          placeholder: { id: "Contoh: fokus ke anggaran dan risiko", en: "e.g. focus on budget and risk" },
+        }),
+      ],
     },
     length: { words: [300, 550], pages: 1 },
     outputs: ["docx", "pdf"],
@@ -148,17 +209,17 @@ Never invent attendee names, dates, or quotations.`,
     },
     prompt: {
       id: `Ringkas dokumen yang dilampirkan menjadi SATU HALAMAN.
-"Ringkasan Inti" adalah 1 paragraf (4–6 kalimat) yang bisa dibaca sendirian dan sudah menjawab "dokumen ini tentang apa dan apa kesimpulannya".
-"Poin Kunci" maksimal 7 bullet, masing-masing satu kalimat penuh, bukan potongan frasa.
-"Angka Penting" hanya diisi bila dokumen memuat angka — salin persis apa adanya, jangan dibulatkan atau dihitung ulang.
-"Hal yang Perlu Perhatian" memuat risiko, tenggat, atau keputusan yang menunggu. Lewati bagian ini jika tidak ada.
-Pertahankan istilah asli dokumen. Jangan menambahkan opini atau saran yang tidak ada di sumber.`,
+"Ringkasan Inti" 1 paragraf (4–6 kalimat) yang bisa dibaca sendirian.
+"Poin Kunci" maksimal 7 bullet, masing-masing kalimat penuh.
+"Angka Penting" hanya bila dokumen memuat angka — salin persis, jangan dibulatkan atau dihitung ulang.
+"Hal yang Perlu Perhatian" memuat risiko, tenggat, atau keputusan yang menunggu; lewati bila tidak ada.
+Pertahankan istilah asli dokumen. Jangan menambah opini yang tidak ada di sumber — ini satu-satunya template yang TIDAK boleh menambahkan asumsi.`,
       en: `Reduce the attached document to ONE PAGE.
-"Core Summary" is a single paragraph of four to six sentences that stands alone and already answers what the document is about and what it concludes.
-"Key Points" is at most seven bullets, each a full sentence rather than a fragment.
-"Key Figures" is filled only when the document contains numbers — copy them exactly, never round or recompute.
-"Needs Attention" covers risks, deadlines, or pending decisions. Skip the section if there are none.
-Keep the source's own terminology. Add no opinion or advice that is not in the source.`,
+"Core Summary" is one paragraph of four to six sentences that stands alone.
+"Key Points" is at most seven bullets, each a full sentence.
+"Key Figures" only when the document contains numbers — copy them exactly, never round or recompute.
+"Needs Attention" covers risks, deadlines, or pending decisions; skip it if there are none.
+Keep the source's own terminology. Add no opinion that is not in the source — this is the one template that must NOT add assumptions.`,
     },
   },
 
@@ -173,33 +234,51 @@ Keep the source's own terminology. Add no opinion or advice that is not in the s
       en: "Two photos become a before-and-after report.",
     },
     input: {
-      attachments: { kinds: ["image"], min: 2, max: 6 },
-      note: {
-        mode: "optional",
-        label: { id: "Pekerjaan yang dilakukan", en: "Work carried out" },
-        placeholder: {
-          id: "Contoh: pengecatan ulang dan perbaikan plafon ruang arsip.",
-          en: "e.g. repainting and ceiling repair in the archive room.",
-        },
+      // Two labelled slots rather than one pile: which photo is which decides
+      // the entire document, and asking is more reliable than assuming order.
+      attachments: {
+        kinds: ["image"],
+        min: 2,
+        max: 8,
+        slots: [
+          { id: "before", label: { id: "Foto Sebelum", en: "Before photo" } },
+          { id: "after", label: { id: "Foto Sesudah", en: "After photo" } },
+        ],
       },
+      fields: [
+        text("object", "Objek / lokasi", "Object or location", {
+          required: true,
+          placeholder: { id: "Contoh: Ruang Arsip Lantai 2", en: "e.g. second-floor archive room" },
+        }),
+        text("work", "Pekerjaan yang dilakukan", "Work carried out", {
+          required: true,
+          placeholder: { id: "Contoh: pengecatan ulang dan perbaikan plafon", en: "e.g. repainting and ceiling repair" },
+        }),
+        today(),
+        text("executor", "Pelaksana", "Carried out by"),
+      ],
     },
     length: { words: [250, 450], pages: 1 },
     outputs: ["docx", "pdf"],
     sections: {
-      id: ["Objek dan Lokasi", "Kondisi Sebelum", "Pekerjaan yang Dilakukan", "Kondisi Sesudah", "Perubahan yang Terlihat"],
-      en: ["Object and Location", "Condition Before", "Work Carried Out", "Condition After", "Visible Change"],
+      id: ["Objek dan Lokasi", "Kondisi Sebelum", "Pekerjaan yang Dilakukan", "Kondisi Sesudah", "Perubahan yang Terlihat", "Dokumentasi"],
+      en: ["Object and Location", "Condition Before", "Work Carried Out", "Condition After", "Visible Change", "Documentation"],
     },
     prompt: {
-      id: `Susun LAPORAN PERBANDINGAN SEBELUM & SESUDAH dari foto yang dilampirkan. Cukup 1 halaman.
-Foto pertama adalah kondisi SEBELUM, foto berikutnya kondisi SESUDAH, kecuali catatan pengguna menyatakan lain.
-"Kondisi Sebelum" dan "Kondisi Sesudah" harus membahas hal-hal yang SAMA dan sebanding (misal: permukaan dinding, kerapian kabel, penataan barang) agar perbandingannya jujur.
-"Perubahan yang Terlihat" WAJIB berbentuk tabel Markdown: Aspek | Sebelum | Sesudah. Isi hanya aspek yang benar-benar terlihat berubah pada kedua foto.
-Jangan menilai kualitas pekerjaan, biaya, atau ketepatan waktu — itu tidak terlihat di foto.`,
-      en: `Write a BEFORE & AFTER comparison report from the attached photos. One page is enough.
-The first photo is the BEFORE condition and the later ones the AFTER condition, unless the user's note says otherwise.
-"Condition Before" and "Condition After" must address the SAME comparable things (surface, cabling, arrangement) so the comparison is honest.
-"Visible Change" MUST be a Markdown table: Aspect | Before | After, listing only aspects genuinely visible in both photos.
-Do not judge workmanship quality, cost, or timeliness — none of that is visible in a photo.`,
+      id: `Susun LAPORAN SEBELUM & SESUDAH. Judul dokumen (# ) dari isian objek/lokasi.
+Foto diberi label SEBELUM dan SESUDAH oleh pengguna — ikuti label itu, jangan menebak dari urutan.
+"Kondisi Sebelum" dan "Kondisi Sesudah" harus membahas aspek yang SAMA dan sebanding agar perbandingannya jujur.
+"Pekerjaan yang Dilakukan" dikembangkan dari isian pengguna menjadi 1–2 paragraf.
+"Perubahan yang Terlihat" WAJIB tabel Markdown: Aspek | Sebelum | Sesudah.
+"Dokumentasi" cukup satu baris: "Foto sebelum dan sesudah terlampir."
+Jangan menilai mutu pekerjaan, biaya, atau ketepatan waktu.`,
+      en: `Write a BEFORE & AFTER report. The document title (# ) comes from the object/location field.
+The user labelled which photos are BEFORE and which are AFTER — follow those labels, never guess from order.
+"Condition Before" and "Condition After" must address the SAME comparable aspects so the comparison is honest.
+"Work Carried Out" expands the user's field into one or two paragraphs.
+"Visible Change" MUST be a Markdown table: Aspect | Before | After.
+"Documentation" is a single line: "Before and after photographs attached."
+Do not judge workmanship quality, cost, or timeliness.`,
     },
   },
 
@@ -215,30 +294,33 @@ Do not judge workmanship quality, cost, or timeliness — none of that is visibl
     },
     input: {
       attachments: { kinds: ["document", "image"], min: 0, max: 10 },
-      note: {
-        mode: "fallback",
-        label: { id: "Catatan yang mau direkap", en: "Notes to recap" },
-        placeholder: {
-          id: "Tempel daftar, catatan, atau data yang ingin direkap…",
-          en: "Paste the list, notes, or data you want recapped…",
-        },
-      },
+      fields: [
+        text("subject", "Rekap tentang apa", "Recap of what", {
+          required: true,
+          placeholder: { id: "Contoh: Rekap Pengeluaran Mei", en: "e.g. May expense recap" },
+        }),
+        text("columns", "Kolom yang diinginkan", "Columns you want", {
+          placeholder: { id: "Contoh: Tanggal, Uraian, Jumlah. Kosongkan agar ditentukan otomatis.", en: "e.g. Date, Description, Amount. Leave blank to decide automatically." },
+        }),
+        area("source", "Catatan yang mau direkap", "Notes to recap", {
+          mode: "fallback",
+          placeholder: { id: "Tempel daftar atau data yang ingin direkap…", en: "Paste the list or data you want recapped…" },
+        }),
+      ],
     },
     length: { words: [0, 0], pages: 0 },
     outputs: ["xlsx", "docx"],
     sections: { id: [], en: [] },
     prompt: {
-      id: `Buat REKAPITULASI dalam bentuk tabel dari berkas atau catatan yang diberikan.
-Tentukan sendiri kolom yang paling masuk akal untuk bahan ini (misal: No, Tanggal, Uraian, Jumlah, Keterangan) — kolom harus konsisten di seluruh tabel.
-Salin nilai apa adanya. JANGAN menghitung total, rata-rata, atau persentase kecuali angka itu memang sudah tertulis di sumber.
-Jika bahan memuat beberapa kelompok berbeda, buat satu tabel per kelompok dengan heading pendek di atasnya.
-Baris yang datanya tidak terbaca tetap dimasukkan dengan sel kosong diisi "Belum tersedia" — jangan dibuang diam-diam.
+      id: `Buat REKAPITULASI dalam bentuk tabel. Heading tabel diambil dari isian "Rekap tentang apa".
+Kalau pengguna menyebutkan kolom, pakai persis kolom itu. Kalau tidak, tentukan kolom yang paling masuk akal dan konsisten.
+Salin nilai apa adanya. JANGAN menghitung total, rata-rata, atau persentase kecuali angkanya memang sudah tertulis di sumber.
+Baris yang datanya tidak terbaca tetap dimasukkan dengan sel "Belum tersedia" — jangan dibuang diam-diam.
 ${TABLE_ONLY.id}`,
-      en: `Build a RECAP as tables from the supplied file or notes.
-Choose the columns that genuinely fit the material (e.g. No, Date, Description, Amount, Notes) and keep them consistent throughout.
+      en: `Build a RECAP as tables. The table heading comes from the "Recap of what" field.
+Where the user names columns, use exactly those. Otherwise choose the columns that genuinely fit and keep them consistent.
 Copy values exactly. DO NOT compute totals, averages, or percentages unless that figure is already written in the source.
-When the material contains distinct groups, emit one table per group under a short heading.
-Rows whose data cannot be read are still included, with unreadable cells set to "Not provided" — never drop a row silently.
+Rows whose data cannot be read are still included, with "Not provided" cells — never drop a row silently.
 ${TABLE_ONLY.en}`,
     },
   },
@@ -255,29 +337,31 @@ ${TABLE_ONLY.en}`,
     },
     input: {
       attachments: { kinds: ["image", "document"], min: 1, max: 10 },
-      note: {
-        mode: "optional",
-        label: { id: "Nama kegiatan", en: "Activity name" },
-        placeholder: { id: "Contoh: Sosialisasi SPBE, 12 Mei.", en: "e.g. SPBE briefing, 12 May." },
-      },
+      fields: [
+        text("activity", "Nama kegiatan", "Activity name", {
+          required: true,
+          placeholder: { id: "Contoh: Sosialisasi SPBE", en: "e.g. SPBE briefing" },
+        }),
+        today(),
+      ],
     },
     length: { words: [0, 0], pages: 0 },
     outputs: ["xlsx", "docx"],
     sections: { id: [], en: [] },
     prompt: {
-      id: `Ketik ulang DAFTAR HADIR dari foto lembar absensi menjadi tabel.
-Kolom mengikuti lembar aslinya (umumnya: No, Nama, Jabatan/Unit Kerja, Tanda Tangan/Hadir). Jangan menambah kolom yang tidak ada.
-Urutan baris harus sama persis dengan lembar aslinya.
-Tulisan tangan yang tidak yakin terbaca: tulis dugaan terbaik lalu tambahkan tanda "(?)" di belakangnya, jangan dikosongkan dan jangan dikarang.
+      id: `Ketik ulang DAFTAR HADIR dari foto lembar absensi menjadi tabel. Heading tabel dari isian nama kegiatan.
+Kolom mengikuti lembar aslinya (umumnya: No, Nama, Jabatan/Unit Kerja, Tanda Tangan). Jangan menambah kolom yang tidak ada.
+Urutan baris persis seperti lembar aslinya.
+Tulisan tangan yang tidak yakin terbaca: tulis dugaan terbaik lalu tambahkan "(?)", jangan dikosongkan dan jangan dikarang.
 Baris kosong pada lembar tidak perlu dimasukkan.
-Setelah tabel, tulis satu baris: "Jumlah baris terbaca: N" — hitung baris, bukan kesimpulan jumlah peserta hadir.
+Setelah tabel tulis satu baris: "Jumlah baris terbaca: N".
 ${TABLE_ONLY.id}`,
-      en: `Retype the ATTENDANCE SHEET from the photo into a table.
-Mirror the sheet's own columns (typically No, Name, Role/Unit, Signature/Present). Do not add columns that are not there.
-Keep the rows in the sheet's original order.
-Where handwriting is uncertain, give your best reading followed by "(?)" — never blank it out and never invent a name.
-Blank rows on the sheet do not need to be included.
-After the table write one line: "Rows read: N" — a count of rows, not a conclusion about how many people attended.
+      en: `Retype the ATTENDANCE SHEET into a table. The table heading comes from the activity name field.
+Mirror the sheet's own columns (typically No, Name, Role/Unit, Signature). Do not add columns that are not there.
+Keep the sheet's original row order.
+Where handwriting is uncertain, give your best reading followed by "(?)" — never blank it and never invent a name.
+Blank rows need not be included.
+After the table write one line: "Rows read: N".
 ${TABLE_ONLY.en}`,
     },
   },
@@ -294,28 +378,31 @@ ${TABLE_ONLY.en}`,
     },
     input: {
       attachments: { kinds: ["image", "document"], min: 1, max: 10 },
-      note: {
-        mode: "optional",
-        label: { id: "Tabel yang mana", en: "Which table" },
-        placeholder: { id: "Contoh: hanya tabel realisasi anggaran.", en: "e.g. only the budget table." },
-      },
+      fields: [
+        text("subject", "Nama tabel", "Table name", {
+          placeholder: { id: "Kosongkan untuk memakai judul aslinya", en: "Leave blank to use its own caption" },
+        }),
+        text("which", "Tabel yang mana", "Which table", {
+          placeholder: { id: "Contoh: hanya tabel realisasi anggaran", en: "e.g. only the budget table" },
+        }),
+      ],
     },
     length: { words: [0, 0], pages: 0 },
     outputs: ["xlsx", "docx"],
     sections: { id: [], en: [] },
     prompt: {
-      id: `Salin ulang TABEL yang ada di lampiran, persis seperti aslinya.
-Pertahankan judul kolom asli, urutan kolom, dan urutan baris.
-Angka disalin apa adanya termasuk pemisah ribuan dan satuan yang tertulis. Jangan mengubah format, membulatkan, atau menghitung ulang.
-Sel gabungan (merge) dipecah dengan mengulang nilainya di tiap baris agar tabel tetap persegi.
-Jika ada beberapa tabel, keluarkan semuanya, masing-masing dengan heading pendek sesuai judul tabel aslinya.
-Baris total yang memang tertulis di sumber tetap disalin sebagai baris biasa.
+      id: `Salin ulang TABEL di lampiran persis seperti aslinya.
+Pertahankan judul kolom, urutan kolom, dan urutan baris.
+Angka disalin apa adanya termasuk pemisah ribuan dan satuan. Jangan mengubah format, membulatkan, atau menghitung ulang.
+Sel gabungan dipecah dengan mengulang nilainya agar tabel tetap persegi.
+Bila ada beberapa tabel, keluarkan semuanya dengan heading masing-masing.
+Baris total yang memang tertulis di sumber disalin sebagai baris biasa.
 ${TABLE_ONLY.id}`,
       en: `Reproduce the TABLE in the attachment exactly as it stands.
-Keep the original column headers, column order, and row order.
-Copy numbers verbatim including thousands separators and any written units. Do not reformat, round, or recalculate.
-Split merged cells by repeating the value on each row so the table stays rectangular.
-If several tables are present, output them all, each under a short heading taken from its original caption.
+Keep the column headers, column order, and row order.
+Copy numbers verbatim including separators and units. Do not reformat, round, or recalculate.
+Split merged cells by repeating the value so the table stays rectangular.
+If several tables are present, output them all with their own headings.
 A total row that genuinely appears in the source is copied through as an ordinary row.
 ${TABLE_ONLY.en}`,
     },
@@ -333,34 +420,37 @@ ${TABLE_ONLY.en}`,
     },
     input: {
       attachments: { kinds: ["image", "document"], min: 0, max: 6 },
-      note: {
-        mode: "fallback",
-        label: { id: "Catatan hasil diskusi", en: "Discussion notes" },
-        placeholder: {
-          id: "Tempel catatan, atau ketik hal-hal yang harus ditindaklanjuti…",
-          en: "Paste notes, or type what needs following up…",
-        },
-      },
+      fields: [
+        text("subject", "Tindak lanjut dari apa", "Follow-up from what", {
+          required: true,
+          placeholder: { id: "Contoh: Rapat Evaluasi Triwulan I", en: "e.g. Q1 review meeting" },
+        }),
+        today("date", "Tanggal dibuat", "Created on"),
+        area("source", "Catatan hasil diskusi", "Discussion notes", {
+          mode: "fallback",
+          placeholder: { id: "Ketik hal-hal yang harus ditindaklanjuti…", en: "Type what needs following up…" },
+        }),
+      ],
     },
     length: { words: [0, 0], pages: 0 },
     outputs: ["xlsx", "docx"],
     sections: { id: [], en: [] },
     prompt: {
-      id: `Ubah catatan atau foto yang diberikan menjadi DAFTAR TINDAK LANJUT.
-Satu tabel Markdown dengan kolom: No | Tindakan | Penanggung Jawab | Tenggat | Prioritas | Status.
-"Tindakan" harus dimulai dengan kata kerja dan cukup jelas untuk dikerjakan tanpa membaca catatan aslinya.
-"Penanggung Jawab" dan "Tenggat" hanya diisi bila disebut di sumber; selain itu "Belum tersedia".
-"Prioritas" diisi Tinggi/Sedang/Rendah berdasarkan urgensi yang tersurat di sumber; jika tidak ada petunjuk, isi "Sedang".
+      id: `Ubah bahan yang diberikan menjadi DAFTAR TINDAK LANJUT. Heading tabel dari isian "Tindak lanjut dari apa".
+Satu tabel Markdown: No | Tindakan | Penanggung Jawab | Tenggat | Prioritas | Status.
+"Tindakan" dimulai dengan kata kerja dan cukup jelas untuk dikerjakan tanpa membaca catatan aslinya.
+"Penanggung Jawab" dan "Tenggat" hanya bila disebut sumber; selain itu "Belum tersedia".
+"Prioritas" Tinggi/Sedang/Rendah dari urgensi yang tersurat; tanpa petunjuk isi "Sedang".
 "Status" selalu "Belum mulai" kecuali sumber menyatakan lain.
-Hal yang hanya wacana atau informasi tanpa tindakan JANGAN dimasukkan.
+Hal yang hanya wacana tanpa tindakan JANGAN dimasukkan.
 ${TABLE_ONLY.id}`,
-      en: `Turn the supplied notes or photo into an ACTION ITEM list.
-One Markdown table with the columns: No | Action | Owner | Due | Priority | Status.
-"Action" must start with a verb and be clear enough to act on without reading the original notes.
-"Owner" and "Due" are filled only when the source states them; otherwise "Not provided".
-"Priority" is High/Medium/Low based on urgency actually expressed in the source; with no signal, use "Medium".
+      en: `Turn the supplied material into an ACTION ITEM list. The table heading comes from the "Follow-up from what" field.
+One Markdown table: No | Action | Owner | Due | Priority | Status.
+"Action" starts with a verb and is clear enough to act on without the original notes.
+"Owner" and "Due" only where the source states them; otherwise "Not provided".
+"Priority" is High/Medium/Low from urgency actually expressed; with no signal, "Medium".
 "Status" is always "Not started" unless the source says otherwise.
-Points that are discussion or information without an action DO NOT belong in the list.
+Points that are discussion without an action DO NOT belong in the list.
 ${TABLE_ONLY.en}`,
     },
   },
@@ -370,40 +460,56 @@ ${TABLE_ONLY.en}`,
     group: "report",
     icon: "ScrollText",
     profile: "report",
-    name: { id: "Berita Acara", en: "Official Record" },
+    name: { id: "Berita Acara Serah Terima", en: "Handover Record" },
     blurb: {
-      id: "Dokumen formal serah terima atau pemeriksaan.",
-      en: "A formal handover or inspection record.",
+      id: "Dokumen formal serah terima, lengkap dengan kedua pihak.",
+      en: "A formal handover record naming both parties.",
     },
     input: {
       attachments: { kinds: ["image", "document"], min: 0, max: 8 },
-      note: {
-        mode: "fallback",
-        label: { id: "Hal yang diberitakan", en: "What is being recorded" },
-        placeholder: {
-          id: "Contoh: serah terima 12 unit laptop dari Bagian Umum ke Bidang IT.",
-          en: "e.g. handover of 12 laptops from General Affairs to IT.",
-        },
-      },
+      fields: [
+        text("subject", "Hal yang diserahterimakan", "What is being handed over", {
+          required: true,
+          placeholder: { id: "Contoh: 12 unit laptop inventaris", en: "e.g. 12 inventory laptops" },
+        }),
+        area("items", "Rincian barang / dokumen", "Itemised detail", {
+          required: true,
+          placeholder: {
+            id: "Satu baris per barang: nama, jumlah, satuan, keterangan…",
+            en: "One line per item: name, quantity, unit, notes…",
+          },
+        }),
+        today("date", "Tanggal serah terima", "Handover date"),
+        now(),
+        text("place", "Tempat", "Place"),
+        text("party1Name", "Pihak Pertama — Nama", "First party — Name", { required: true }),
+        text("party1Role", "Pihak Pertama — Jabatan / Unit", "First party — Role / Unit"),
+        text("party2Name", "Pihak Kedua — Nama", "Second party — Name", { required: true }),
+        text("party2Role", "Pihak Kedua — Jabatan / Unit", "Second party — Role / Unit"),
+      ],
     },
     length: { words: [300, 550], pages: 2 },
     outputs: ["docx", "pdf"],
     sections: {
-      id: ["Judul Berita Acara", "Hari dan Tanggal", "Pihak yang Terlibat", "Dasar", "Uraian", "Rincian", "Penutup", "Tanda Tangan"],
-      en: ["Title", "Date", "Parties", "Basis", "Description", "Details", "Closing", "Signatures"],
+      id: ["Hari dan Tanggal", "Pihak yang Terlibat", "Uraian", "Rincian Barang", "Penutup", "Tanda Tangan"],
+      en: ["Date", "Parties", "Description", "Itemised Detail", "Closing", "Signatures"],
     },
     prompt: {
-      id: `Susun BERITA ACARA dengan gaya bahasa dokumen resmi.
-Buka bagian "Uraian" dengan kalimat baku: "Pada hari ini, ... , kami yang bertanda tangan di bawah ini:" lalu lanjutkan.
-"Rincian" berbentuk tabel Markdown bila menyangkut barang atau nilai: No | Uraian | Jumlah | Satuan | Keterangan.
-"Tanda Tangan" berisi dua kolom pihak dengan baris nama dan jabatan yang dikosongkan sebagai "( ................................ )" untuk diisi tangan.
-Setiap data yang tidak diberikan pengguna ditulis sebagai titik-titik isian, BUKAN dikarang. Contoh: "Nomor: ......................".
-Jangan menambahkan pasal, sanksi, atau klausul hukum yang tidak diminta.`,
-      en: `Write an OFFICIAL RECORD in formal document register.
-Open "Description" with the standard clause "On this day, ... , we the undersigned:" and continue from there.
-"Details" is a Markdown table when goods or values are involved: No | Description | Quantity | Unit | Notes.
-"Signatures" holds two party columns with name and title lines left as "( ................................ )" to be completed by hand.
-Any detail the user did not supply is written as a dotted fill-in line, NEVER invented. For example "Number: ......................".
+      id: `Susun BERITA ACARA SERAH TERIMA dengan bahasa dokumen resmi. Judul dokumen (# ) memuat hal yang diserahterimakan.
+"Hari dan Tanggal" memakai tanggal dan jam dari isian pengguna, ditulis lengkap (contoh: "Rabu, 29 Juli 2026, pukul 10.30 WIB").
+"Pihak yang Terlibat" berupa dua blok: PIHAK PERTAMA dan PIHAK KEDUA, masing-masing Nama dan Jabatan dari isian pengguna. Nomor induk pegawai dan data lain yang tidak diisi ditulis sebagai titik-titik.
+"Uraian" dibuka dengan kalimat baku: "Pada hari ini, ... , kami yang bertanda tangan di bawah ini:" lalu menyatakan bahwa PIHAK PERTAMA menyerahkan dan PIHAK KEDUA menerima.
+"Rincian Barang" WAJIB tabel Markdown: No | Uraian | Jumlah | Satuan | Keterangan, disusun dari isian rincian.
+"Penutup" satu paragraf baku bahwa berita acara dibuat dengan sebenarnya untuk dipergunakan sebagaimana mestinya.
+"Tanda Tangan" berupa tabel dua kolom: PIHAK PERTAMA dan PIHAK KEDUA. Tiap kolom berisi ruang kosong untuk tanda tangan, lalu nama dari isian pengguna di dalam tanda kurung, lalu jabatannya di bawahnya.
+Jangan menambah pasal, sanksi, atau klausul hukum yang tidak diminta.`,
+      en: `Write a HANDOVER RECORD in formal document register. The document title (# ) names what is being handed over.
+"Date" uses the user's date and time written out in full (e.g. "Wednesday, 29 July 2026, at 10.30").
+"Parties" is two blocks, FIRST PARTY and SECOND PARTY, each with the Name and Role from the user's fields. Employee numbers and anything not supplied are dotted fill-in lines.
+"Description" opens with the standard clause "On this day, ... , we the undersigned:" and states that the FIRST PARTY hands over and the SECOND PARTY receives.
+"Itemised Detail" MUST be a Markdown table: No | Description | Quantity | Unit | Notes, built from the itemised field.
+"Closing" is one standard paragraph stating the record was made truthfully for its proper use.
+"Signatures" is a two-column table, FIRST PARTY and SECOND PARTY, each with blank space then the name in parentheses and the role beneath.
 Do not add clauses, penalties, or legal terms that were not requested.`,
     },
   },
@@ -420,14 +526,19 @@ Do not add clauses, penalties, or legal terms that were not requested.`,
     },
     input: {
       attachments: { kinds: ["image"], min: 1, max: 10 },
-      note: {
-        mode: "optional",
-        label: { id: "Lokasi dan tujuan kunjungan", en: "Location and purpose" },
-        placeholder: {
-          id: "Contoh: monitoring pembangunan RTH Kelurahan Cempaka.",
-          en: "e.g. monitoring the Cempaka park construction.",
-        },
-      },
+      fields: [
+        text("location", "Lokasi yang dikunjungi", "Location visited", {
+          required: true,
+          placeholder: { id: "Contoh: RTH Kelurahan Cempaka", en: "e.g. Cempaka public park" },
+        }),
+        text("purpose", "Tujuan kunjungan", "Purpose of the visit", {
+          required: true,
+          placeholder: { id: "Contoh: monitoring progres pembangunan", en: "e.g. monitoring construction progress" },
+        }),
+        today(),
+        text("officer", "Petugas", "Officer"),
+        area("notes", "Catatan lapangan", "Field notes"),
+      ],
     },
     length: { words: [400, 700], pages: 2 },
     outputs: ["docx", "pdf"],
@@ -436,18 +547,18 @@ Do not add clauses, penalties, or legal terms that were not requested.`,
       en: ["Visit Details", "Purpose", "Conditions Observed", "Findings", "Recommendations", "Documentation"],
     },
     prompt: {
-      id: `Susun LAPORAN KUNJUNGAN LAPANGAN dari foto lokasi.
-"Kondisi yang Ditemui" bersifat deskriptif dan netral — apa yang ada di lokasi, tanpa penilaian.
-"Temuan" WAJIB tabel Markdown: No | Temuan | Kategori | Tingkat Perhatian. Kategori misalnya Sarana, Kebersihan, Keselamatan, Administrasi. Tingkat Perhatian diisi Tinggi/Sedang/Rendah.
-Setiap temuan harus bisa ditunjuk ke sesuatu yang terlihat di foto. Jika tidak ada masalah yang terlihat, tulis satu baris temuan bahwa kondisi terpantau wajar.
-"Rekomendasi" maksimal 5 bullet dan harus menjawab temuan di atasnya, satu per satu.
-Jangan menyebut nama petugas, kontraktor, atau nilai anggaran yang tidak tertulis pada foto.`,
-      en: `Write a SITE VISIT REPORT from the location photos.
-"Conditions Observed" is descriptive and neutral — what is present, without judgement.
-"Findings" MUST be a Markdown table: No | Finding | Category | Attention. Categories are things like Facilities, Cleanliness, Safety, Administration. Attention is High/Medium/Low.
-Every finding must point at something visible in a photo. If nothing appears wrong, record a single finding stating conditions looked normal.
-"Recommendations" is at most five bullets, each answering one of the findings above.
-Never name staff, contractors, or budget figures that are not written in the photos.`,
+      id: `Susun LAPORAN KUNJUNGAN LAPANGAN. Judul dokumen (# ) memuat lokasi yang dikunjungi.
+"Identitas Kunjungan" tabel dua kolom: Lokasi, Hari/Tanggal, Petugas — dari isian pengguna.
+"Kondisi yang Ditemui" deskriptif dan netral, 2–3 paragraf.
+"Temuan" WAJIB tabel Markdown: No | Temuan | Kategori | Tingkat Perhatian. Kategori misalnya Sarana, Kebersihan, Keselamatan, Administrasi. Bila tidak ada masalah terlihat, tulis satu baris bahwa kondisi terpantau wajar.
+"Rekomendasi" maksimal 5 bullet yang menjawab temuan satu per satu.
+Jangan menyebut nama petugas lain, kontraktor, atau nilai anggaran yang tidak diberikan.`,
+      en: `Write a SITE VISIT REPORT. The document title (# ) names the location visited.
+"Visit Details" is a two-column table: Location, Day/Date, Officer — from the user's fields.
+"Conditions Observed" is descriptive and neutral, two to three paragraphs.
+"Findings" MUST be a Markdown table: No | Finding | Category | Attention. Categories such as Facilities, Cleanliness, Safety, Administration. If nothing appears wrong, record one line stating conditions looked normal.
+"Recommendations" is at most five bullets, each answering one finding.
+Never name other staff, contractors, or budget figures that were not supplied.`,
     },
   },
 
@@ -462,15 +573,20 @@ Never name staff, contractors, or budget figures that are not written in the pho
       en: "Trip photos and notes become a standard report.",
     },
     input: {
-      attachments: { kinds: ["image", "document"], min: 1, max: 10 },
-      note: {
-        mode: "optional",
-        label: { id: "Tujuan dan tanggal perjalanan", en: "Destination and dates" },
-        placeholder: {
-          id: "Contoh: Bandung, 3–5 Juni, menghadiri bimtek keuangan.",
-          en: "e.g. Bandung, 3–5 June, finance training.",
-        },
-      },
+      attachments: { kinds: ["image", "document"], min: 0, max: 10 },
+      fields: [
+        text("purpose", "Maksud perjalanan", "Purpose of the trip", {
+          required: true,
+          placeholder: { id: "Contoh: mengikuti Bimtek Pengelolaan Keuangan", en: "e.g. attending finance management training" },
+        }),
+        text("destination", "Tujuan / kota", "Destination", { required: true }),
+        today("dateStart", "Tanggal berangkat", "Departure date"),
+        today("dateEnd", "Tanggal kembali", "Return date"),
+        text("letter", "Nomor surat tugas", "Assignment letter number", {
+          placeholder: { id: "Kosongkan untuk dibuat titik-titik isian", en: "Leave blank for a dotted fill-in line" },
+        }),
+        area("notes", "Hasil yang diperoleh", "What you got out of it"),
+      ],
     },
     length: { words: [400, 700], pages: 2 },
     outputs: ["docx", "pdf"],
@@ -479,18 +595,18 @@ Never name staff, contractors, or budget figures that are not written in the pho
       en: ["Basis", "Time and Place", "Purpose", "What Took Place", "Outcomes", "Conclusion and Suggestions", "Documentation"],
     },
     prompt: {
-      id: `Susun LAPORAN PERJALANAN DINAS dengan struktur baku.
-"Dasar Penugasan" ditulis sebagai baris isian titik-titik ("Surat Tugas Nomor: ......................") kecuali pengguna menyebutkannya.
-"Pelaksanaan" ditulis kronologis per hari bila tanggalnya lebih dari satu.
-"Hasil yang Diperoleh" adalah bagian yang paling bernilai — 4–8 bullet berisi substansi yang didapat, bukan aktivitas yang dilakukan.
+      id: `Susun LAPORAN PERJALANAN DINAS dengan struktur baku. Judul dokumen (# ) memuat maksud dan kota tujuan.
+"Dasar Penugasan" memakai nomor surat tugas dari isian; bila kosong tulis "Surat Tugas Nomor: ......................".
+"Pelaksanaan" kronologis per hari bila rentang tanggalnya lebih dari satu hari.
+"Hasil yang Diperoleh" bagian paling bernilai — 4–8 bullet berisi substansi yang didapat, bukan daftar aktivitas. Kembangkan dari isian pengguna.
 "Kesimpulan dan Saran" maksimal 3 kalimat kesimpulan dan 3 bullet saran yang bisa ditindaklanjuti unit kerja.
-Jangan mencantumkan rincian biaya, tarif, atau nominal apa pun kecuali tertulis jelas di lampiran.`,
-      en: `Write a BUSINESS TRIP REPORT in the standard structure.
-"Basis" is a dotted fill-in line ("Assignment letter number: ......................") unless the user states it.
+Jangan mencantumkan biaya, tarif, atau nominal apa pun kecuali diberikan pengguna.`,
+      en: `Write a BUSINESS TRIP REPORT in the standard structure. The document title (# ) carries the purpose and destination.
+"Basis" uses the assignment letter number from the field; when blank write "Assignment letter number: ......................".
 "What Took Place" runs chronologically by day when the trip spans several dates.
-"Outcomes" is the most valuable section — four to eight bullets of substance gained, not activities performed.
+"Outcomes" is the most valuable section — four to eight bullets of substance gained, not a list of activities. Build it out from the user's field.
 "Conclusion and Suggestions" is at most three sentences of conclusion and three actionable suggestions.
-Never include costs, rates, or any monetary figure unless it is plainly written in the attachment.`,
+Never include costs, rates, or amounts unless the user supplied them.`,
     },
   },
 
@@ -506,14 +622,14 @@ Never include costs, rates, or any monetary figure unless it is plainly written 
     },
     input: {
       attachments: { kinds: ["image"], min: 1, max: 5 },
-      note: {
-        mode: "optional",
-        label: { id: "Konteks kegiatan", en: "Context" },
-        placeholder: {
-          id: "Contoh: peluncuran layanan antar jemput lansia.",
-          en: "e.g. launch of the senior pickup service.",
-        },
-      },
+      fields: [
+        text("activity", "Kegiatan apa", "What activity", {
+          required: true,
+          placeholder: { id: "Contoh: peluncuran layanan antar jemput lansia", en: "e.g. launch of the senior pickup service" },
+        }),
+        text("organizer", "Penyelenggara", "Organiser"),
+        today(),
+      ],
     },
     length: { words: [200, 400], pages: 1 },
     outputs: ["docx", "pdf"],
@@ -522,17 +638,17 @@ Never include costs, rates, or any monetary figure unless it is plainly written 
       en: ["Social Caption", "Hashtags", "Short Release", "Headline Options"],
     },
     prompt: {
-      id: `Buat bahan publikasi dari foto kegiatan.
-"Caption Media Sosial" berisi 3 pilihan caption berbeda gaya: (1) formal instansi, (2) hangat dan mudah dibagikan, (3) sangat singkat untuk story. Masing-masing maksimal 45 kata.
-"Tagar" maksimal 8 tagar relevan, tanpa tagar umum yang tidak ada hubungannya.
-"Rilis Singkat" satu paragraf 4–6 kalimat bergaya berita: apa, siapa, di mana, kapan, mengapa penting. Bagian yang tidak diketahui ditulis dengan tanda kurung siku untuk diisi, contoh: [nama pejabat].
-"Usulan Judul" 3 pilihan judul berita, maksimal 12 kata.
+      id: `Buat bahan publikasi dari kegiatan yang disebutkan pengguna.
+"Caption Media Sosial" 3 pilihan berbeda gaya: (1) formal instansi, (2) hangat dan mudah dibagikan, (3) sangat singkat untuk story. Maksimal 45 kata masing-masing.
+"Tagar" maksimal 8 tagar relevan.
+"Rilis Singkat" satu paragraf 4–6 kalimat bergaya berita: apa, siapa, di mana, kapan, mengapa penting. Bagian yang tidak diketahui ditulis dalam kurung siku untuk diisi, contoh: [nama pejabat].
+"Usulan Judul" 3 pilihan, maksimal 12 kata.
 Jangan mengarang kutipan pejabat, jumlah peserta, atau capaian angka.`,
-      en: `Produce publication material from the activity photo.
-"Social Caption" gives three captions in different registers: (1) formal institutional, (2) warm and shareable, (3) very short for stories. Each at most 45 words.
-"Hashtags" is at most eight relevant tags, with no unrelated generic ones.
-"Short Release" is one news-style paragraph of four to six sentences: what, who, where, when, why it matters. Unknown details go in square brackets to be filled in, e.g. [official's name].
-"Headline Options" gives three headlines of at most twelve words.
+      en: `Produce publication material for the activity the user named.
+"Social Caption" gives three registers: (1) formal institutional, (2) warm and shareable, (3) very short for stories. At most 45 words each.
+"Hashtags" is at most eight relevant tags.
+"Short Release" is one news-style paragraph of four to six sentences: what, who, where, when, why it matters. Unknown details go in square brackets, e.g. [official's name].
+"Headline Options" gives three of at most twelve words.
 Never invent quotations, attendance numbers, or achievement figures.`,
     },
   },
@@ -549,31 +665,26 @@ Never invent quotations, attendance numbers, or achievement figures.`,
     },
     input: {
       attachments: { kinds: ["document", "image"], min: 1, max: 5 },
-      note: {
-        mode: "optional",
-        label: { id: "Bahasa tujuan", en: "Target language" },
-        placeholder: {
-          id: "Contoh: ke bahasa Inggris. Kosongkan untuk terjemahan otomatis.",
-          en: "e.g. into Indonesian. Leave blank to translate automatically.",
-        },
-      },
+      fields: [
+        text("target", "Bahasa tujuan", "Target language", {
+          placeholder: { id: "Contoh: Inggris. Kosongkan untuk otomatis.", en: "e.g. Indonesian. Leave blank for automatic." },
+        }),
+      ],
     },
     length: { words: [0, 0], pages: 0 },
     outputs: ["docx", "pdf"],
     sections: { id: [], en: [] },
     prompt: {
-      id: `Terjemahkan dokumen yang dilampirkan.
-Bahasa tujuan mengikuti catatan pengguna. Jika tidak disebut, terjemahkan Indonesia ke Inggris, atau bahasa lain ke Indonesia.
-Pertahankan struktur asli: heading, penomoran, urutan bagian, tabel, dan daftar tetap sama persis.
+      id: `Terjemahkan dokumen yang dilampirkan ke bahasa tujuan pada isian. Bila kosong, terjemahkan Indonesia ke Inggris atau bahasa lain ke Indonesia.
+Pertahankan struktur asli: heading, penomoran, urutan bagian, tabel, dan daftar.
 Angka, tanggal, nama orang, nama instansi, dan nomor dokumen TIDAK diterjemahkan.
-Istilah teknis atau hukum yang tidak punya padanan pasti: terjemahkan lalu cantumkan istilah aslinya dalam kurung pada kemunculan pertama.
-Keluarkan HANYA hasil terjemahan. Jangan menambahkan catatan penerjemah, ringkasan, atau teks aslinya.`,
-      en: `Translate the attached document.
-The target language follows the user's note. Where none is given, translate Indonesian into English, or any other language into Indonesian.
-Preserve the original structure exactly: headings, numbering, section order, tables, and lists.
+Istilah teknis atau hukum tanpa padanan pasti: terjemahkan lalu cantumkan istilah aslinya dalam kurung pada kemunculan pertama.
+Keluarkan HANYA hasil terjemahan. Tanpa catatan penerjemah, ringkasan, atau teks aslinya.`,
+      en: `Translate the attached document into the target language given in the field. When blank, translate Indonesian into English, or any other language into Indonesian.
+Preserve the original structure: headings, numbering, section order, tables, and lists.
 Numbers, dates, personal names, organisation names, and document numbers are NOT translated.
 For technical or legal terms without a settled equivalent, translate and give the original in parentheses at first mention.
-Output ONLY the translation. Add no translator's notes, no summary, and not the source text.`,
+Output ONLY the translation. No translator's notes, no summary, not the source text.`,
     },
   },
 
@@ -589,14 +700,17 @@ Output ONLY the translation. Add no translator's notes, no summary, and not the 
     },
     input: {
       attachments: { kinds: ["image", "document"], min: 1, max: 5 },
-      note: {
-        mode: "optional",
-        label: { id: "Sikap balasan", en: "Position to take" },
-        placeholder: {
-          id: "Contoh: menyetujui tapi minta jadwal diundur.",
-          en: "e.g. agree but ask to move the date.",
-        },
-      },
+      fields: [
+        area("position", "Sikap balasan", "Position to take", {
+          required: true,
+          placeholder: {
+            id: "Contoh: menyetujui, tapi minta jadwal diundur ke minggu depan",
+            en: "e.g. agree, but ask to move the date to next week",
+          },
+        }),
+        text("sender", "Instansi pengirim balasan", "Replying organisation"),
+        today("date", "Tanggal surat", "Letter date"),
+      ],
     },
     length: { words: [250, 450], pages: 1 },
     outputs: ["docx", "pdf"],
@@ -606,17 +720,17 @@ Output ONLY the translation. Add no translator's notes, no summary, and not the 
     },
     prompt: {
       id: `Baca surat masuk yang dilampirkan lalu susun draf balasannya.
-"Ringkasan Surat Masuk" maksimal 4 bullet: pengirim, nomor dan tanggal surat, pokok permintaan, dan tenggat bila ada.
-"Draf Surat Balasan" ditulis lengkap dalam format surat dinas: tempat dan tanggal, nomor/lampiran/hal, alamat tujuan, salam pembuka, isi 2–3 paragraf, salam penutup, dan blok tanda tangan.
-Nomor surat, nama penanda tangan, dan jabatan ditulis sebagai titik-titik isian, jangan dikarang.
-Isi balasan mengikuti sikap yang diminta pengguna. Jika pengguna tidak menyatakan sikap, susun balasan netral yang mengonfirmasi penerimaan surat dan menyatakan akan menindaklanjuti.
-Gunakan bahasa surat dinas yang sopan dan ringkas — hindari kalimat berbunga-bunga.`,
+"Ringkasan Surat Masuk" maksimal 4 bullet: pengirim, nomor dan tanggal surat, pokok permintaan, tenggat bila ada.
+"Draf Surat Balasan" lengkap dalam format surat dinas: tempat dan tanggal (pakai tanggal dari isian), nomor/lampiran/hal, alamat tujuan, salam pembuka, isi 2–3 paragraf, salam penutup, blok tanda tangan.
+Isi balasan mengikuti sikap yang diisi pengguna.
+Nomor surat, nama penanda tangan, dan jabatan ditulis sebagai titik-titik isian.
+Bahasa surat dinas yang sopan dan ringkas — hindari kalimat berbunga-bunga.`,
       en: `Read the attached incoming letter and draft a reply.
-"Incoming Letter Summary" is at most four bullets: sender, letter number and date, what is being asked, and any deadline.
-"Draft Reply" is a complete formal letter: place and date, reference/enclosure/subject lines, recipient address, salutation, two to three body paragraphs, closing, and a signature block.
-Letter number, signatory name, and job title are dotted fill-in lines, never invented.
-The reply takes the position the user asked for. With no stated position, write a neutral reply acknowledging receipt and undertaking to follow up.
-Use courteous, economical official-letter English — no flowery sentences.`,
+"Incoming Letter Summary" is at most four bullets: sender, letter number and date, what is asked, any deadline.
+"Draft Reply" is a complete formal letter: place and date (use the date field), reference/enclosure/subject lines, recipient address, salutation, two to three body paragraphs, closing, signature block.
+The reply takes the position the user typed.
+Letter number, signatory name, and job title are dotted fill-in lines.
+Courteous, economical official-letter English — no flowery sentences.`,
     },
   },
 
@@ -632,14 +746,11 @@ Use courteous, economical official-letter English — no flowery sentences.`,
     },
     input: {
       attachments: { kinds: ["image"], min: 1, max: 3 },
-      note: {
-        mode: "optional",
-        label: { id: "Yang ingin diubah", en: "What to change" },
-        placeholder: {
-          id: "Contoh: sama tapi suasana malam hari.",
-          en: "e.g. same but at night.",
-        },
-      },
+      fields: [
+        text("changes", "Yang ingin diubah", "What to change", {
+          placeholder: { id: "Contoh: sama tapi suasana malam hari", en: "e.g. same but at night" },
+        }),
+      ],
     },
     length: { words: [0, 0], pages: 0 },
     outputs: ["copy"],
@@ -649,17 +760,17 @@ Use courteous, economical official-letter English — no flowery sentences.`,
 Keluarkan tiga blok, masing-masing di bawah heading:
 
 ## Prompt
-Satu paragraf padat dalam BAHASA INGGRIS (karena model gambar bekerja paling baik dengan bahasa Inggris) yang mencakup: subjek, aksi, latar, waktu dan cuaca, pencahayaan, sudut dan jarak kamera, lensa, komposisi, palet warna, tekstur, suasana, dan gaya visual.
+Satu paragraf padat dalam BAHASA INGGRIS (model gambar bekerja paling baik dengan bahasa Inggris) mencakup: subjek, aksi, latar, waktu dan cuaca, pencahayaan, sudut dan jarak kamera, lensa, komposisi, palet warna, tekstur, suasana, dan gaya visual.
 
 ## Negative Prompt
-Satu baris berisi hal-hal yang harus dihindari, dipisah koma.
+Satu baris hal yang harus dihindari, dipisah koma.
 
 ## Pengaturan
 Bullet singkat: rasio aspek, gaya, dan tingkat detail yang disarankan.
 
-Jika pengguna menyebut hal yang ingin diubah, terapkan pada Prompt tapi pertahankan sisanya.
-Jangan mendeskripsikan wajah orang tertentu, dan jangan menyebut nama merek atau nama fotografer.
-Jangan menambahkan penjelasan apa pun di luar tiga blok itu.`,
+Bila pengguna mengisi "Yang ingin diubah", terapkan pada Prompt dan pertahankan sisanya.
+Jangan mendeskripsikan wajah orang tertentu, dan jangan menyebut merek atau nama fotografer.
+Jangan menambahkan penjelasan di luar tiga blok itu.`,
       en: `Take the attached photo apart and write a PROMPT that would recreate it.
 Emit three blocks, each under a heading:
 
@@ -672,11 +783,11 @@ One comma-separated line of what to avoid.
 ## Settings
 Short bullets: suggested aspect ratio, style, and detail level.
 
-Where the user names something to change, apply it to the Prompt and keep everything else.
+Where the user filled in "What to change", apply it to the Prompt and keep everything else.
 Do not describe an identifiable person's face, and do not name brands or photographers.
 Add no commentary outside those three blocks.`,
     },
   },
 ];
 
-export const VISUAL_HONESTY_CLAUSE = VISUAL_HONESTY;
+export const WRITING_STANCE_CLAUSE = WRITING_STANCE;

@@ -9,7 +9,10 @@ import Shell from "./ui/Shell.jsx";
 import { detectLanguage } from "./ui/i18n.js";
 import { createContentRecord, normalizeContentRecord } from "./ui/contentRecord.js";
 import { toDateKey } from "./ui/resultCalendar.js";
-import { localized as localizedTemplateName } from "./workTemplates.js";
+import {
+  localized as localizedTemplateName,
+  templateSubjectField,
+} from "./workTemplates.js";
 import { createFinishedResult as runResultFirst } from "./ui/resultFlow.js";
 import {
   detectDeliverableProfile,
@@ -874,6 +877,42 @@ async function readApiJson(response) {
 /** Matches RUN_MAX_ATTACHMENTS on the server; more are rejected by multer. */
 const TEMPLATE_UPLOAD_LIMIT = 8;
 
+/**
+ * The attached photographs as data URLs, for embedding in the Word export.
+ *
+ * The slot label travels with each one so a Before & After report can lay the
+ * pair out in two columns rather than as an undifferentiated stack.
+ */
+async function readAttachmentImages(attachments = []) {
+  const photos = attachments.filter(
+    (item) => item?.file && String(item.type || "").startsWith("image/")
+  );
+  if (!photos.length) return [];
+
+  let sending = photos;
+  try {
+    const { compressAttachmentImages } = await import("./compressImage.js");
+    sending = await compressAttachmentImages(photos);
+  } catch {
+    sending = photos;
+  }
+
+  const read = (file) =>
+    new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => resolve("");
+      reader.readAsDataURL(file);
+    });
+
+  const out = [];
+  for (const item of sending.slice(0, TEMPLATE_UPLOAD_LIMIT)) {
+    const dataUrl = await read(item.file);
+    if (dataUrl) out.push({ dataUrl, slot: item.slot || "", name: item.name || "" });
+  }
+  return out;
+}
+
 function getAttachmentUploadPlan(attachments, apiBase) {
   const totalSize = attachments.reduce((sum, item) => sum + (item.file?.size || 0), 0);
   const serverlessTarget = !apiBase || /vercel\.app/i.test(apiBase) || (!import.meta.env.DEV && !/localhost|127\.0\.0\.1|tail/i.test(apiBase));
@@ -940,6 +979,7 @@ function normalizeCustomTemplates(raw) {
       // as an empty shell, because this normaliser drops unknown keys.
       instruction: item.instruction || "",
       sections: item.sections || "",
+      fields: item.fields || "",
       blurb: item.blurb || "",
       needsAttachment: item.needsAttachment !== false,
       custom: true,
@@ -2517,15 +2557,16 @@ function App() {
    * that nothing has to be remembered, and a document the user forgot to save
    * is exactly the one they will go looking for in two weeks.
    */
-  function fileTemplateResult(template, content, note, language) {
+  function fileTemplateResult(template, content, values, language) {
     /**
-     * The calendar entry needs a name a person will recognise weeks later.
+     * The calendar entry is named after the subject the user typed.
      *
-     * The document's first heading is the best candidate, but only when it is
-     * a real title. Models frequently open straight into the first required
-     * section, which filed a set of minutes under "Identitas Rapat" — the same
-     * useless label for every meeting.
+     * That answer — "Sosialisasi SPBE", "12 unit laptop" — is the thing a
+     * person actually recognises weeks later. Falling back to the document's
+     * first heading filed every set of minutes under "Identitas Rapat",
+     * because models open straight into the first required section.
      */
+    const subject = String(values?.[templateSubjectField(template)] || "").trim();
     const sectionNames = new Set(
       [...(template.sections?.id || []), ...(template.sections?.en || [])].map((name) =>
         name.toLowerCase()
@@ -2533,15 +2574,15 @@ function App() {
     );
     const heading = /^#{1,3}\s+(.+)$/m.exec(content)?.[1]?.trim();
     const title =
+      subject ||
       (heading && !sectionNames.has(heading.toLowerCase()) ? heading : "") ||
-      String(note || "").trim().split(/\s+/).slice(0, 8).join(" ") ||
       localizedTemplateName(template.name, language);
     const now = Date.now();
     const item = createContentRecord({
       id: globalThis.crypto?.randomUUID?.() || `${now}`,
       title,
       contentType: "output",
-      request: note || "",
+      request: subject,
       prompt: "",
       output: content,
       templateId: template.id,
@@ -2567,7 +2608,7 @@ function App() {
    * halves the latency and removes the step where the app's own wording could
    * drift away from what the user picked.
    */
-  async function runTemplate(template, note = "", language = "id") {
+  async function runTemplate(template, values = {}, language = "id") {
     if (!template) return null;
 
     /**
@@ -2627,15 +2668,18 @@ function App() {
 
       const formData = new FormData();
       formData.append("templateId", template.id);
-      formData.append("note", note || "");
+      formData.append("values", JSON.stringify(values || {}));
       formData.append("language", language === "en" ? "en" : "id");
       formData.append("resultId", resultId);
       // Smallest first, so if the payload has to be cut it is the largest
       // photo that is dropped rather than an arbitrary one.
-      [...outgoing]
+      const sending = [...outgoing]
         .sort((a, b) => (a.file?.size || 0) - (b.file?.size || 0))
-        .slice(0, TEMPLATE_UPLOAD_LIMIT)
-        .forEach((item) => formData.append("attachments", item.file));
+        .slice(0, TEMPLATE_UPLOAD_LIMIT);
+      sending.forEach((item) => formData.append("attachments", item.file));
+      // Multer preserves file order, so a parallel list of slot labels is
+      // enough to tell the server which photo is the "before".
+      formData.append("slots", JSON.stringify(sending.map((item) => item.slot || "")));
 
       const response = await fetch(`${apiBase}/api/run-prompt`, {
         method: "POST",
@@ -2669,7 +2713,7 @@ function App() {
 
       setRunOutput(content);
       setErrorMessage("");
-      fileTemplateResult(template, content, note, language);
+      fileTemplateResult(template, content, values, language);
       applyServerQuota(data.quota);
       if (data.weeklyResults) setWeeklyResults(data.weeklyResults);
       if (isAnonymousSession) countTrialUse();
@@ -2695,6 +2739,7 @@ function App() {
       blurb: String(draft.blurb || "").trim(),
       instruction,
       sections: String(draft.sections || ""),
+      fields: String(draft.fields || ""),
       needsAttachment: draft.needsAttachment !== false,
       // Kept so the record still satisfies the legacy starter shape that the
       // cloud sync and the older library normaliser expect.
@@ -2836,7 +2881,11 @@ function App() {
     }
   }
 
-  async function addAttachments(fileList) {
+  /**
+   * @param {FileList|File[]} fileList
+   * @param {string} [slot] labelled bucket, e.g. "before" / "after"
+   */
+  async function addAttachments(fileList, slot) {
     const files = Array.from(fileList || []);
     const nextFiles = await Promise.all(
       files.slice(0, 6).map(async (file) => {
@@ -2852,6 +2901,9 @@ function App() {
           preview: file.type?.startsWith("image/") ? URL.createObjectURL(file) : "",
           excerpt,
           file,
+          // Which labelled picker this arrived through. Before & After depends
+          // on it, and guessing from upload order gets it wrong.
+          ...(slot ? { slot } : {}),
         };
       })
     );
@@ -3173,6 +3225,9 @@ function App() {
             : "Belum ada hasil untuk diekspor. Ketuk Buat hasil dulu."
         );
       }
+      // Word carries the photographs; the other formats cannot place them.
+      const images = format === "docx" ? await readAttachmentImages(attachments) : [];
+
       const response = await fetch(`${apiBase}/api/export/${format}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
@@ -3180,6 +3235,7 @@ function App() {
           title,
           content,
           language: documentLanguage,
+          ...(images.length ? { images } : {}),
         }),
       });
       if (!response.ok) {

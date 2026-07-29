@@ -58,7 +58,19 @@ test("more than four attachments survive the upload", () => {
 test("quota is sized against what template mode actually sends", () => {
   // payload.prompt is empty in template mode, so without this the estimate and
   // the token ceiling are both computed against nothing.
-  assert.match(endpoint, /payload\.prompt = \[body\.note, \.\.\.templateDocuments\.map/);
+  assert.match(endpoint, /const answers = Object\.values\(body\.values \|\| \{\}\)/);
+  assert.match(endpoint, /payload\.prompt = \[\.\.\.answers, \.\.\.templateDocuments\.map/);
+});
+
+test("field answers and photo labels reach the model", () => {
+  assert.match(endpoint, /values: body\.values/);
+  assert.match(endpoint, /attachments: \[\.\.\.visionAttachments, \.\.\.templateDocuments\]/);
+  // A malformed multipart value must degrade, not 500 the run.
+  assert.match(server, /function parseJsonField/);
+  assert.match(server, /values: parseJsonField\(req\.body\?\.values, \{\}\)/);
+  assert.match(server, /slots: parseJsonField\(req\.body\?\.slots, \[\]\)/);
+  // Which photo is the "before" is asked, never inferred from upload order.
+  assert.match(server, /slot: String\(slots\[index\] \|\| ""\)/);
 });
 
 test("usage records which template was used", () => {

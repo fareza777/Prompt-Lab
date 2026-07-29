@@ -65,6 +65,9 @@ const id = {
   "tpl.needImages": "Lampirkan minimal {n} foto.",
   "tpl.needFiles": "Lampirkan minimal {n} berkas.",
   "tpl.needSource": "Lampirkan berkas atau isi catatannya dulu.",
+  "tpl.needSlot": "Lampirkan {label} dulu.",
+  "tpl.needField": "Isi dulu kolom {label}.",
+  "tpl.detailsTitle": "Keterangan",
   "tpl.needNote": "Isi kolom di atas dulu.",
   "tpl.tooMany": "Maksimal {n} lampiran.",
   "tpl.generate": "Buat dokumen",
@@ -90,20 +93,37 @@ const id = {
 
   "editor.title": "Buat template sendiri",
   "editor.new": "Template baru",
+  "editor.intro":
+    "Template yang baik menentukan tiga hal: data apa yang ditanyakan ke kamu, bagian apa saja yang harus ada di dokumen, dan aturan penulisannya. Semakin spesifik, semakin hasilnya langsung bisa dipakai tanpa diedit.",
   "editor.duplicate": "Mulai dari template yang ada",
+  "editor.duplicateHint":
+    "Cara tercepat: pilih yang paling mirip, semua isinya akan terisi lalu tinggal kamu ubah.",
   "editor.duplicatePick": "Mulai dari kosong",
   "editor.copySuffix": "salinan",
   "editor.name": "Nama template",
   "editor.namePlaceholder": "Contoh: Laporan Piket Harian",
-  "editor.instruction": "Instruksi untuk AI",
-  "editor.instructionPlaceholder":
-    "Contoh: Susun laporan piket harian dari foto buku jaga. Tulis hanya kejadian yang tercatat.",
-  "editor.instructionHint":
-    "Semakin jelas instruksinya, semakin konsisten hasilnya. Sebutkan juga apa yang tidak boleh dikarang.",
+  "editor.blurb": "Keterangan singkat",
+  "editor.blurbHint": "Satu kalimat yang muncul di bawah nama template pada daftar.",
+  "editor.blurbPlaceholder": "Contoh: Foto buku jaga menjadi laporan piket.",
+
+  "editor.fields": "Kolom yang harus diisi",
+  "editor.fieldsHint":
+    "Satu kolom per baris. Tambahkan * di belakang nama kalau wajib diisi. Tambahkan « | date », « | time », atau « | textarea » untuk mengubah jenis kolom — kolom tanggal dan jam terisi otomatis. Kolom pertama yang wajib akan dipakai sebagai judul dokumen dan nama berkas.",
+  "editor.fieldsPlaceholder": "Nama Petugas*\nTanggal | date\nJam Mulai | time\nCatatan Kejadian | textarea",
+
   "editor.sections": "Bagian dokumen",
-  "editor.sectionsPlaceholder": "Waktu Piket\nKejadian\nSerah Terima",
-  "editor.sectionsHint": "Satu bagian per baris. Kosongkan kalau AI boleh menentukan sendiri.",
+  "editor.sectionsHint":
+    "Satu bagian per baris, urut dari atas ke bawah. Inilah kerangka dokumennya — AI wajib memakai persis judul-judul ini.",
+  "editor.sectionsPlaceholder": "Waktu Piket\nPetugas Jaga\nKejadian\nSerah Terima",
+
+  "editor.instruction": "Aturan penulisan",
+  "editor.instructionHint":
+    "Jelaskan sedetail mungkin: bentuk dokumennya (laporan resmi, notulen, surat), bagian mana yang harus berupa tabel dan apa saja kolomnya, bagian mana yang harus paragraf, panjangnya berapa, gaya bahasanya, dan hal apa yang TIDAK boleh dikarang.",
+  "editor.instructionPlaceholder":
+    "Contoh:\nSusun laporan piket harian bergaya laporan dinas.\n\"Kejadian\" berupa tabel Markdown: Jam | Kejadian | Tindakan.\n\"Serah Terima\" satu paragraf pendek.\nPanjang sekitar 1 halaman.\nJangan mengarang nama orang atau jam yang tidak tercatat — tulis \"Belum tersedia\".",
+
   "editor.needsAttachment": "Wajib melampirkan foto atau berkas",
+  "editor.incomplete": "Nama, bagian dokumen, dan aturan penulisan wajib diisi.",
   "editor.save": "Simpan template",
 
   "advanced.toggle": "Pengaturan lanjutan",
@@ -440,6 +460,9 @@ const en = {
   "tpl.needImages": "Attach at least {n} photo(s).",
   "tpl.needFiles": "Attach at least {n} file(s).",
   "tpl.needSource": "Attach a file or write the notes first.",
+  "tpl.needSlot": "Attach the {label} first.",
+  "tpl.needField": "Fill in {label} first.",
+  "tpl.detailsTitle": "Details",
   "tpl.needNote": "Fill in the field above first.",
   "tpl.tooMany": "At most {n} attachments.",
   "tpl.generate": "Create document",
@@ -465,20 +488,37 @@ const en = {
 
   "editor.title": "Create your own template",
   "editor.new": "New template",
+  "editor.intro":
+    "A good template pins down three things: what it asks you for, which sections the document must have, and the rules the writing follows. The more specific it is, the less you have to edit afterwards.",
   "editor.duplicate": "Start from an existing template",
+  "editor.duplicateHint":
+    "Quickest route: pick the closest one, everything fills in, then change what you need.",
   "editor.duplicatePick": "Start from blank",
   "editor.copySuffix": "copy",
   "editor.name": "Template name",
   "editor.namePlaceholder": "e.g. Daily Duty Report",
-  "editor.instruction": "Instruction for the AI",
-  "editor.instructionPlaceholder":
-    "e.g. Write a daily duty report from photos of the logbook. Cover only what is actually recorded.",
-  "editor.instructionHint":
-    "The clearer the instruction, the more consistent the result. Say what must not be invented too.",
+  "editor.blurb": "One-line description",
+  "editor.blurbHint": "Shown under the template's name in the gallery.",
+  "editor.blurbPlaceholder": "e.g. Logbook photos become a duty report.",
+
+  "editor.fields": "Fields to ask for",
+  "editor.fieldsHint":
+    "One field per line. Add * after the name to make it required. Add « | date », « | time », or « | textarea » to change the type — date and time fields fill themselves in. The first required field names the document and the downloaded file.",
+  "editor.fieldsPlaceholder": "Officer name*\nDate | date\nStart time | time\nIncident notes | textarea",
+
   "editor.sections": "Document sections",
-  "editor.sectionsPlaceholder": "Duty Hours\nIncidents\nHandover",
-  "editor.sectionsHint": "One section per line. Leave blank to let the AI decide.",
+  "editor.sectionsHint":
+    "One section per line, in order. This is the document's skeleton — the AI must use exactly these headings.",
+  "editor.sectionsPlaceholder": "Duty Hours\nOfficer on Duty\nIncidents\nHandover",
+
+  "editor.instruction": "Writing rules",
+  "editor.instructionHint":
+    "Be as specific as you can: what kind of document it is, which sections must be tables and with which columns, which must be prose, how long, the tone, and what must never be invented.",
+  "editor.instructionPlaceholder":
+    "e.g.\nWrite a daily duty report in official register.\n\"Incidents\" is a Markdown table: Time | Incident | Action taken.\n\"Handover\" is one short paragraph.\nAbout one page.\nNever invent names or times that are not recorded — write \"Not provided\".",
+
   "editor.needsAttachment": "An attachment is required",
+  "editor.incomplete": "Name, document sections, and writing rules are all required.",
   "editor.save": "Save template",
 
   "advanced.toggle": "Advanced options",

@@ -6,6 +6,7 @@ import {
   Footer,
   Header,
   HeadingLevel,
+  ImageRun,
   PageNumber,
   Packer,
   Paragraph,
@@ -324,11 +325,175 @@ function formatDocDate(language) {
   }
 }
 
+/** Usable content width on A4 with the margins below, at 96dpi. */
+const PAGE_WIDTH_PX = 620;
+const HALF_WIDTH_PX = 296;
+
+/**
+ * Decodes one attached photo and scales it to fit the page.
+ *
+ * sharp is already a dependency for the diagram rasteriser. Reading the real
+ * dimensions matters: Word stretches an image to whatever size it is told, so
+ * guessing turns a portrait photo into a smeared landscape one.
+ */
+async function prepareImage(image, maxWidthPx) {
+  const raw = String(image?.dataUrl || "");
+  const base64 = raw.slice(raw.indexOf(",") + 1);
+  if (!base64) return null;
+  const input = Buffer.from(base64, "base64");
+  if (!input.length) return null;
+
+  try {
+    const sharp = (await import("sharp")).default;
+    // Re-encode to PNG: Word cannot place HEIC, which is what most phones
+    // hand over, and the client only compresses images it sends to vision.
+    const pipeline = sharp(input).rotate().resize({
+      width: maxWidthPx * 2,
+      withoutEnlargement: true,
+    });
+    const buffer = await pipeline.png().toBuffer();
+    const meta = await sharp(buffer).metadata();
+    const width = Math.min(maxWidthPx, meta.width || maxWidthPx);
+    const ratio = meta.width && meta.height ? meta.height / meta.width : 0.75;
+    return { buffer, width, height: Math.round(width * ratio) };
+  } catch (error) {
+    console.warn("docx image skipped", error.message);
+    return null;
+  }
+}
+
+const DOC_SECTION = {
+  documentation: { id: "Dokumentasi", en: "Documentation" },
+  before: { id: "Sebelum", en: "Before" },
+  after: { id: "Sesudah", en: "After" },
+  photo: { id: "Foto", en: "Photo" },
+};
+
+const pick = (entry, language) => entry[language === "en" ? "en" : "id"];
+
+/**
+ * The attached photographs, placed in the document itself.
+ *
+ * A report that says "photographs attached" and attaches nothing is not a
+ * finished document. Where the template labelled the photos — Before & After —
+ * they are laid out in two columns so the comparison is legible at a glance.
+ */
+async function buildDocumentationSection(images = [], language = "id") {
+  if (!images.length) return [];
+
+  const before = images.filter((image) => image.slot === "before");
+  const after = images.filter((image) => image.slot === "after");
+  const paired = before.length > 0 && after.length > 0;
+
+  const heading = new Paragraph({
+    heading: HeadingLevel.HEADING_1,
+    spacing: { before: 400, after: 160 },
+    keepNext: true,
+    border: {
+      bottom: { style: BorderStyle.SINGLE, size: 6, color: COLORS.accent, space: 6 },
+    },
+    children: [
+      new TextRun({ text: pick(DOC_SECTION.documentation, language), bold: true, color: COLORS.accent }),
+    ],
+  });
+
+  if (paired) {
+    const rows = Math.max(before.length, after.length);
+    const cells = await Promise.all(
+      Array.from({ length: rows }, async (_, index) => [
+        await prepareImage(before[index], HALF_WIDTH_PX),
+        await prepareImage(after[index], HALF_WIDTH_PX),
+      ])
+    );
+
+    const captionRow = new TableRow({
+      tableHeader: true,
+      children: [DOC_SECTION.before, DOC_SECTION.after].map(
+        (entry) =>
+          new TableCell({
+            shading: { fill: COLORS.accent },
+            width: { size: 50, type: WidthType.PERCENTAGE },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 60, after: 60 },
+                children: [
+                  new TextRun({ text: pick(entry, language), bold: true, color: COLORS.white }),
+                ],
+              }),
+            ],
+          })
+      ),
+    });
+
+    const imageRows = cells.map(
+      (pair) =>
+        new TableRow({
+          children: pair.map(
+            (image) =>
+              new TableCell({
+                width: { size: 50, type: WidthType.PERCENTAGE },
+                children: [imageParagraph(image)],
+              })
+          ),
+        })
+    );
+
+    return [
+      heading,
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [captionRow, ...imageRows],
+      }),
+    ];
+  }
+
+  const prepared = await Promise.all(images.map((image) => prepareImage(image, PAGE_WIDTH_PX)));
+  const body = [];
+  prepared.forEach((image, index) => {
+    if (!image) return;
+    body.push(imageParagraph(image));
+    body.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 240 },
+        children: [
+          new TextRun({
+            text: `${pick(DOC_SECTION.photo, language)} ${index + 1}`,
+            color: COLORS.muted,
+            size: 18,
+          }),
+        ],
+      })
+    );
+  });
+
+  return body.length ? [heading, ...body] : [];
+}
+
+function imageParagraph(image) {
+  if (!image) {
+    return new Paragraph({ children: [new TextRun({ text: "—", color: COLORS.muted })] });
+  }
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 80, after: 80 },
+    children: [
+      new ImageRun({
+        type: "png",
+        data: image.buffer,
+        transformation: { width: image.width, height: image.height },
+      }),
+    ],
+  });
+}
+
 export async function buildDocxBuffer({
   title = "AI Work Studio Export",
   content = "",
   language = "id",
   plan = "Free",
+  images = [],
 } = {}) {
   const ready = sanitizeReadyDocument(content, "report");
   // "Dokumen kerja profesional" sat on every export regardless of what it was.
@@ -419,14 +584,18 @@ export async function buildDocxBuffer({
               bottom: { style: BorderStyle.SINGLE, size: 12, color: COLORS.accent, space: 10 },
             },
             children: [
+              // The brand used to sit here beside the date. A report someone
+              // sends to their manager should not carry the name of the tool
+              // that typed it in its masthead.
               new TextRun({
-                text: dateLabel ? `${dateLabel}  ·  ${BRAND}` : BRAND,
+                text: dateLabel,
                 color: COLORS.muted,
                 size: 18,
               }),
             ],
           }),
           ...children,
+          ...(await buildDocumentationSection(images, language)),
         ],
       },
     ],

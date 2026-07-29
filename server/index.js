@@ -512,7 +512,8 @@ app.post("/api/test-provider", express.json({ limit: "64kb" }), async (req, res)
   }
 });
 
-app.post("/api/export/docx", express.json({ limit: "2mb" }), async (req, res) => {
+// Raised from 2mb: the body now carries the attached photographs as base64.
+app.post("/api/export/docx", express.json({ limit: "12mb" }), async (req, res) => {
   try {
     const membership = await getMembershipFromRequest(req);
     if (!canExportFormat(membership.plan, "docx")) {
@@ -525,6 +526,9 @@ app.post("/api/export/docx", express.json({ limit: "2mb" }), async (req, res) =>
       content,
       language: String(req.body?.language || "id"),
       plan: membership.plan,
+      // Photographs the user attached, so the report carries its own evidence
+      // instead of only claiming that photographs exist.
+      images: Array.isArray(req.body?.images) ? req.body.images.slice(0, 8) : [],
     });
     res.setHeader(
       "Content-Type",
@@ -1358,13 +1362,28 @@ function sanitizeRunOutput(text) {
   return cleaned.replace(/\n{3,}/g, "\n\n").trim();
 }
 
+/** Multipart carries everything as strings; a bad value must not 500 the run. */
+function parseJsonField(raw, fallback) {
+  if (raw && typeof raw === "object") return raw;
+  try {
+    const parsed = JSON.parse(String(raw || ""));
+    return parsed && typeof parsed === "object" ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 function parseRunPromptBody(req) {
   return {
     prompt: String(req.body?.prompt || "").trim(),
     // Template mode: the user picked the job up front, so nothing has to be
     // inferred from what they typed and no prompt-writing pass is needed.
     templateId: String(req.body?.templateId || "").trim(),
-    note: String(req.body?.note || "").trim(),
+    // The user's answers to the template's own fields, and the labelled bucket
+    // each uploaded photo arrived in. Both come over as JSON in a multipart
+    // field, so a malformed value must degrade rather than throw.
+    values: parseJsonField(req.body?.values, {}),
+    slots: parseJsonField(req.body?.slots, []),
     language: String(req.body?.language || "id") === "en" ? "en" : "id",
     outputType: String(req.body?.outputType || ""),
     category: String(req.body?.category || ""),
@@ -1424,13 +1443,13 @@ const RUN_MAX_ATTACHMENTS = 8;
  * because a PDF cannot be shown to the model and the summary and translation
  * templates are useless without its contents.
  */
-async function normalizeTemplateAttachments(files = [], modelSettings = {}, plan = "Free") {
+async function normalizeTemplateAttachments(files = [], modelSettings = {}, plan = "Free", slots = []) {
   const list = Array.isArray(files) ? files.slice(0, RUN_MAX_ATTACHMENTS) : [];
   const vision = [];
   const documents = [];
   let visionBytes = 0;
 
-  for (const file of list) {
+  for (const [index, file] of list.entries()) {
     const mime = file.mimetype || "application/octet-stream";
     if (mime.startsWith("image/")) {
       const compressed = await compressImageForVision(file.buffer, mime);
@@ -1446,6 +1465,9 @@ async function normalizeTemplateAttachments(files = [], modelSettings = {}, plan
         size: compressed.buffer.length,
         kind: "gambar/screenshot",
         excerpt: "",
+        // Uploads keep their order through multer, so the parallel slot list
+        // still lines up with the files here.
+        slot: String(slots[index] || ""),
       });
       continue;
     }
@@ -1607,17 +1629,19 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
       const sources = await normalizeTemplateAttachments(
         req.files || [],
         modelSettings,
-        membership.plan
+        membership.plan,
+        Array.isArray(body.slots) ? body.slots : []
       );
       visionAttachments = sources.vision;
       templateDocuments = sources.documents;
       // The prompt field is empty in template mode, so quota and the token
       // ceiling would both be sized against nothing. The real weight is the
-      // note plus whatever text was extracted from the attached documents.
-      payload.prompt = [body.note, ...templateDocuments.map((doc) => doc.excerpt)]
+      // field answers plus whatever text was extracted from the documents.
+      const answers = Object.values(body.values || {}).map((value) => String(value || ""));
+      payload.prompt = [...answers, ...templateDocuments.map((doc) => doc.excerpt)]
         .filter(Boolean)
         .join("\n");
-      payload.narrative = body.note || body.templateId;
+      payload.narrative = answers.find(Boolean) || body.templateId;
     } else {
       visionAttachments = await normalizeRunAttachments(req.files || [], modelSettings, membership.plan);
     }
@@ -1669,8 +1693,8 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
       const instruction = buildTemplateInstruction({
         template,
         language: body.language,
-        note: body.note,
-        attachmentCount: visionAttachments.length + templateDocuments.length,
+        values: body.values,
+        attachments: [...visionAttachments, ...templateDocuments],
       });
       const visionNote = visionAttachments.length
         ? `\n\n${runVisionDirective(body.language)}`
