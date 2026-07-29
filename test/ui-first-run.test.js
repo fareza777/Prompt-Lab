@@ -30,18 +30,42 @@ test("first run language stage finishes into the next boot step", () => {
   assert.equal(typeof hasStoredLanguage, "function");
 });
 
-test("onboarding tour is detailed, skippable, and covers menus", () => {
+test("onboarding tour walks the flow the app actually has", () => {
+  // The tour used to end on Improve/Compare and a menu tour. Those features
+  // are gone and the calendar arrived, so the steps track the real path:
+  // pick a template, attach, create, find it by date, send it.
   assert.match(firstRun, /const TOUR_STEPS/);
   assert.match(firstRun, /data-stage="tour"/);
-  assert.match(firstRun, /id: "menus"/);
-  assert.match(firstRun, /firstrun\.menus\.title/);
   assert.match(firstRun, /onSkipTour/);
   assert.match(firstRun, /firstrun\.skip/);
   assert.match(firstRun, /firstrun\.startNow/);
-  for (const lang of ["id", "en"]) {
-    assert.notEqual(translate(lang, "firstrun.menus.point1"), "firstrun.menus.point1");
-    assert.notEqual(translate(lang, "firstrun.stepOf"), "firstrun.stepOf");
+
+  for (const step of ["templates", "input", "build", "calendar", "output"]) {
+    assert.match(firstRun, new RegExp(`id: "${step}"`), `tour is missing the ${step} step`);
+    for (const lang of ["id", "en"]) {
+      for (const part of ["title", "body", "point1", "point2", "point3"]) {
+        const key = `firstrun.${step}.${part}`;
+        assert.notEqual(translate(lang, key), key, `${key} missing for ${lang}`);
+      }
+    }
   }
+
+  // Retired steps must not linger as dead copy.
+  assert.doesNotMatch(firstRun, /id: "(improve|menus)"/);
+  for (const lang of ["id", "en"]) {
+    assert.notEqual(translate(lang, "firstrun.stepOf"), "firstrun.stepOf");
+    assert.equal(translate(lang, "firstrun.improve.title"), "firstrun.improve.title");
+  }
+});
+
+test("double-tapping Next cannot run the tour past its last step", () => {
+  // Functional state updates queue, so two taps before a re-render advanced the
+  // index twice. Past the final step TOUR_STEPS[index] was undefined and
+  // reading .icon threw, crashing the first screen a new user ever sees.
+  assert.match(firstRun, /const last = TOUR_STEPS\.length - 1/);
+  assert.match(firstRun, /TOUR_STEPS\[Math\.min\(index, last\)\]/);
+  assert.match(firstRun, /setIndex\(\(value\) => Math\.min\(value \+ 1, last\)\)/);
+  assert.doesNotMatch(firstRun, /setIndex\(\(value\) => value \+ 1\)/);
 });
 
 test("auth gate offers guest continue without email", () => {
@@ -94,11 +118,17 @@ test("the detailed guide stays reachable after first run", () => {
   }
 });
 
-test("the guide states the AI-accuracy and timing caveats", () => {
+test("the guide states the accuracy, no-invention, and timing caveats", () => {
   assert.match(translate("id", "guide.limit1"), /AI|periksa/i);
   assert.match(translate("en", "guide.limit1"), /AI|check/i);
-  assert.match(translate("id", "guide.limit2"), /detik/);
-  assert.match(translate("en", "guide.limit2"), /seconds/);
+
+  // Not pinned to a numbered slot: the caveats were reordered when the
+  // no-invention rule was added, and what matters is that each is stated.
+  const limits = (lang) => [1, 2, 3, 4].map((n) => translate(lang, `guide.limit${n}`)).join(" ");
+  assert.match(limits("id"), /detik/, "no timing caveat in Indonesian");
+  assert.match(limits("en"), /seconds/, "no timing caveat in English");
+  assert.match(limits("id"), /Belum tersedia|tidak.*tebak|bukan ditebak/i);
+  assert.match(limits("en"), /Not provided|guessed/i);
 });
 
 test("the wait sets an expectation instead of showing a bare spinner", () => {

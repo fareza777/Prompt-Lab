@@ -73,12 +73,33 @@ test("homepage product narrative is result-first rather than prompt-first", () =
     .replaceAll(/Prompt[-\s]*Lab/gi, "");
 
   assert.doesNotMatch(productCopy, /\b(prompt|prompts|prompting)\b/i);
-  assert.match(productCopy, /From a rough request to/);
+  assert.match(productCopy, /finished work/i);
   assert.match(productCopy, /Create Result/);
 
   const componentCopy = landingComponent
     .slice(landingComponent.indexOf("const WHAT_IT_DOES"))
     .replaceAll(/Prompt[-\s]*Lab/gi, "");
   assert.doesNotMatch(componentCopy, /\bprompt(s|ing)?\b/i);
-  assert.match(componentCopy, /finished work/i);
+  assert.match(componentCopy, /finished document/i);
+});
+
+test("the homepage describes the template flow the app actually ships", () => {
+  // The old copy sold a freeform request box and named the chat assistants the
+  // output was meant to be pasted into. Neither exists now.
+  const productCopy = indexHtml.slice(
+    indexHtml.indexOf("<!-- Hero -->"),
+    indexHtml.indexOf("<!-- Blog -->")
+  );
+  assert.match(productCopy, /template/i);
+  assert.match(productCopy, /Activity report/i);
+  assert.doesNotMatch(productCopy, /ChatGPT|Gemini|Grok/);
+  // Readiness scoring was removed from the result view; do not advertise it.
+  assert.doesNotMatch(productCopy, /Readiness scoring/i);
+
+  const componentCopy = landingComponent.slice(landingComponent.indexOf("const WHAT_IT_DOES"));
+  assert.match(componentCopy, /Pick a template/);
+  assert.match(componentCopy, /calendar/i);
+  assert.match(componentCopy, /\.xlsx/);
+  // Improve/Compare are gone from the product.
+  assert.doesNotMatch(componentCopy, /Improve it in place|readiness estimate/i);
 });

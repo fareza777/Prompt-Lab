@@ -90,7 +90,19 @@ test("the anti-stalling directive is repeated after the prompt", () => {
     server,
     /buildVisionUserContent\(userText,\s*visionAttachments\)/,
   );
-  assert.match(server, /const userText = `\$\{prompt\}\$\{deliverableInstruction\}\$\{diagramAddon\}\$\{visionNote\}\\n\\n\$\{RUN_FINAL_DIRECTIVE\}`/);
+  // Template mode has its own pair of directives, so this assembly is now the
+  // untemplated branch rather than the only one.
+  assert.match(server, /userText = `\$\{prompt\}\$\{deliverableInstruction\}\$\{diagramAddon\}\$\{visionNote\}\\n\\n\$\{RUN_FINAL_DIRECTIVE\}`/);
+});
+
+test("template mode keeps the anti-stalling rule but drops the invent-a-fact licence", () => {
+  // RUN_FINAL_DIRECTIVE tells the model to make up a plausible detail and
+  // bracket it. For a template that is a defect: invented attendee names on a
+  // retyped sign-in sheet are worse than an obviously incomplete one.
+  assert.match(server, /const RUN_TEMPLATE_FINAL_DIRECTIVE = \[/);
+  assert.match(server, /Do NOT ask for data/i);
+  assert.match(server, /Do NOT invent names, dates, numbers, quotations, or decisions/);
+  assert.match(server, /userText = `\$\{source\}\$\{instruction\}\$\{visionNote\}\\n\\n\$\{RUN_TEMPLATE_FINAL_DIRECTIVE\}`/);
 });
 
 test("the run instruction forbids stalling for more detail", () => {

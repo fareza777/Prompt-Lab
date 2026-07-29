@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Clock, User, HelpCircle } from "lucide-react";
+import { CalendarDays, Clock, User, HelpCircle } from "lucide-react";
 import { makeTranslator, detectLanguage, persistLanguage, hasStoredLanguage } from "./i18n.js";
 import FirstRun from "./FirstRun.jsx";
 import AuthGate from "./AuthGate.jsx";
@@ -9,6 +9,13 @@ import { readThemeMode, applyThemeMode, watchSystemScheme, resolveScheme } from 
 import Composer from "./Composer.jsx";
 import Result from "./Result.jsx";
 import Starters from "./Starters.jsx";
+import TemplateGallery from "./TemplateGallery.jsx";
+import TemplateWorkbench from "./TemplateWorkbench.jsx";
+import TemplateProgress from "./TemplateProgress.jsx";
+import Calendar from "./Calendar.jsx";
+import TemplateEditor from "./TemplateEditor.jsx";
+import { normalizeCustomTemplate } from "../workTemplates.js";
+import { getTemplate, localized } from "../workTemplates.js";
 import History from "./History.jsx";
 import Account from "./Account.jsx";
 import Improve from "./Improve.jsx";
@@ -164,6 +171,10 @@ export default function Shell(props) {
     authSessionReady,
     continueAsGuest,
     clearComposer,
+    runTemplate,
+    templatePhase,
+    setResultDate,
+    saveCustomTemplate,
   } = props;
 
   const [lang, setLangState] = useState(detectLanguage);
@@ -178,8 +189,26 @@ export default function Shell(props) {
   const [previousPrompt, setPreviousPrompt] = useState("");
   const [saved, setSaved] = useState(false);
   const [reportContent, setReportContent] = useState("");
+  // Template mode: null means the gallery is showing. The workbench, the wait,
+  // and the result all belong to whichever template is selected.
+  const [activeTemplate, setActiveTemplate] = useState(null);
+  const [templateNote, setTemplateNote] = useState("");
 
   const t = useMemo(() => makeTranslator(lang), [lang]);
+
+  /**
+   * The user's own templates, in the same shape as the built-in ones.
+   *
+   * The stored library also holds legacy prompt starters, which have no
+   * instruction and would appear as cards that cannot run.
+   */
+  const userTemplates = useMemo(
+    () =>
+      (templates || [])
+        .filter((item) => item.custom && String(item.instruction || "").trim())
+        .map((item) => normalizeCustomTemplate(item)),
+    [templates]
+  );
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -229,6 +258,7 @@ export default function Shell(props) {
     await createFinishedResult?.();
   }, [createFinishedResult, setRunOutput]);
 
+
   const handleSave = useCallback(
     (payload) => {
       if (savePrompt(payload, narrative)) setSaved(true);
@@ -262,6 +292,57 @@ export default function Shell(props) {
     setErrorMessage?.("");
     setWarningMessage?.("");
   }, [setErrorMessage, setWarningMessage]);
+
+  // Declared after clearMessages so the dependency array is not read while
+  // that binding is still in its temporal dead zone.
+  const pickTemplate = useCallback(
+    (template) => {
+      setActiveTemplate(template);
+      setTemplateNote("");
+      setRunOutput?.("");
+      clearComposer?.();
+      clearMessages();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [setRunOutput, clearComposer, clearMessages]
+  );
+
+  const leaveTemplate = useCallback(() => {
+    setActiveTemplate(null);
+    setTemplateNote("");
+    setRunOutput?.("");
+    clearComposer?.();
+    clearMessages();
+  }, [setRunOutput, clearComposer, clearMessages]);
+
+  /**
+   * Reopens a filed document inside the flow that produced it.
+   *
+   * Restoring the template as well as the text is what brings back the right
+   * export buttons — a recap must still offer Excel three weeks later.
+   */
+  const openCalendarItem = useCallback(
+    (item) => {
+      // Custom templates are not in the built-in registry, so a document made
+      // from one would otherwise reopen with no template and the wrong exports.
+      const template =
+        getTemplate(item.templateId) ||
+        userTemplates.find((candidate) => candidate.id === item.templateId);
+      if (template) setActiveTemplate(template);
+      setSelectedLibraryId?.(item.id);
+      setRunOutput?.(item.output || item.content || "");
+      clearMessages();
+      setSheet(null);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [setSelectedLibraryId, setRunOutput, clearMessages, userTemplates]
+  );
+
+  const handleTemplateGenerate = useCallback(async () => {
+    if (!activeTemplate) return;
+    clearMessages();
+    await runTemplate?.(activeTemplate, templateNote, lang);
+  }, [activeTemplate, templateNote, runTemplate, lang, clearMessages]);
 
   const openHistoryItem = useCallback(
     (item) => {
@@ -420,6 +501,14 @@ export default function Shell(props) {
           <button
             type="button"
             className="pl-icon-btn"
+            onClick={() => setSheet("calendar")}
+            aria-label={t("cal.title")}
+          >
+            <CalendarDays size={20} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="pl-icon-btn"
             onClick={() => setSheet("history")}
             aria-label={t("nav.history")}
           >
@@ -437,21 +526,16 @@ export default function Shell(props) {
       </header>
 
       <main className="pl-main" id="pl-main">
-        <div
-          className={`pl-workbench${hasResult || isGenerating || isRunning ? " is-result-mode" : ""}`}
-        >
-          <aside className="pl-intro">
-            <p className="pl-eyebrow">{t("canvas.eyebrow")}</p>
-            <div className="pl-lede">
-              <h1>{t("canvas.hero")}</h1>
-              <p>{t("canvas.subtitle")}</p>
-            </div>
-            {!hasResult && !isGenerating && (
-              <Starters t={t} templates={templates} onPick={pickStarter} />
-            )}
-          </aside>
-
-          <section className="pl-work-column" aria-label={t("canvas.title")}>
+        {!activeTemplate ? (
+          <TemplateGallery
+            t={t}
+            lang={lang}
+            onPick={pickTemplate}
+            customTemplates={userTemplates}
+            onNewTemplate={() => setSheet("editor")}
+          />
+        ) : (
+          <div className="pl-template-flow">
             {trialNotice && (
               <div
                 className={trialNotice.tone === "warn" ? "pl-notice pl-notice--warn" : "pl-notice"}
@@ -464,79 +548,85 @@ export default function Shell(props) {
               </div>
             )}
 
-            <div className="pl-composer-tray">
-              <div className="pl-tray-core">
-                <Composer
-                  t={t}
-                  narrative={narrative}
-                  setNarrative={setNarrative}
-                  attachments={attachments}
-                  addAttachments={addAttachments}
-                  removeAttachment={removeAttachment}
-                  maxAttachments={maxAttachments}
-                  onGenerate={handleGenerate}
-                  isGenerating={isGenerating || isRunning}
-                  category={category}
-                  setCategory={setCategory}
-                  tone={tone}
-                  setTone={setTone}
-                  model={model}
-                  setModel={setModel}
-                  outputType={outputType}
-                  setOutputType={setOutputType}
-                  errorMessage={humanizeApiError(errorMessage, t)}
-                  warningMessage={humanizeApiError(warningMessage, t)}
-                  disabled={trialExhausted}
-                  disabledReason={trialExhausted ? t("trial.overHint") : ""}
-                />
-              </div>
-            </div>
-
-            {trialExhausted && (
-              <button
-                type="button"
-                className="pl-btn pl-btn--primary pl-btn--block"
-                onClick={() => setSheet("account")}
-              >
-                {t("trial.cta")}
-              </button>
-            )}
-
-            {(isGenerating || isRunning || hasResult || runError) && (
+            {isRunning ? (
+              <TemplateProgress
+                t={t}
+                templateName={localized(activeTemplate.name, lang)}
+                phase={templatePhase}
+              />
+            ) : hasResult || runError ? (
               <div className="pl-result-tray">
                 <div className="pl-tray-core">
                   <Result
                     t={t}
-                    prompt={prompt}
+                    prompt={runOutput}
                     metrics={metrics}
-                    isGenerating={isGenerating}
+                    isGenerating={false}
                     copied={copied}
-                    onCopy={(text) => copyText(text ?? prompt)}
+                    onCopy={(text) => copyText(text ?? runOutput)}
                     onSave={handleSave}
                     saved={saved}
-                    onImprove={openImprove}
-                    onCompare={openCompare}
-                    canCompare={Boolean(previousPrompt)}
                     runOutput={runOutput}
-                    isRunning={isRunning}
+                    isRunning={false}
                     runError={humanizeApiError(runError, t)}
                     onExport={(format, text) =>
-                      exportFile(format, text ?? runOutput ?? prompt, narrative)
+                      exportFile(format, text ?? runOutput, localized(activeTemplate.name, lang))
                     }
                     canExportWord={Boolean(entitlements?.docxExport)}
                     canExportPpt={Boolean(entitlements?.pptxExport)}
+                    canExportSheet={
+                      Boolean(entitlements?.xlsxExport) && activeTemplate.outputs.includes("xlsx")
+                    }
                     exportStatus={exportStatus}
                     onReport={(payload) => {
                       setReportContent(payload?.content || "");
                       setSheet("report");
                     }}
+                    onStartOver={leaveTemplate}
                   />
                 </div>
               </div>
+            ) : (
+              <TemplateWorkbench
+                t={t}
+                lang={lang}
+                template={activeTemplate}
+                attachments={attachments}
+                addAttachments={addAttachments}
+                removeAttachment={removeAttachment}
+                note={templateNote}
+                setNote={setTemplateNote}
+                onGenerate={handleTemplateGenerate}
+                onBack={leaveTemplate}
+                isBusy={isRunning}
+                errorMessage={humanizeApiError(errorMessage, t)}
+                disabled={trialExhausted}
+                disabledReason={trialExhausted ? t("trial.overHint") : ""}
+              />
             )}
-          </section>
-        </div>
+          </div>
+        )}
+
       </main>
+
+      <TemplateEditor
+        t={t}
+        lang={lang}
+        open={sheet === "editor"}
+        onClose={closeSheet}
+        onSave={saveCustomTemplate}
+      />
+
+      <Calendar
+        t={t}
+        lang={lang}
+        open={sheet === "calendar"}
+        onClose={closeSheet}
+        items={(filteredLibrary || []).filter((item) => item.contentType === "output")}
+        onOpenItem={openCalendarItem}
+        onDelete={deleteLibraryItem}
+        onChangeDate={setResultDate}
+      />
 
       <History
         t={t}

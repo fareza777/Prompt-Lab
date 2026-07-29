@@ -67,50 +67,50 @@ const S = {
 
 const WHAT_IT_DOES = [
   {
-    title: "Start from what you already have",
-    desc: "Type a request, or attach photos, screenshots, PDF, Word, Excel, and PowerPoint files. Text is read out of the file and used as context.",
+    title: "Pick the job, not the wording",
+    desc: "Fifteen templates cover the work most people actually repeat: activity reports, meeting minutes, summaries, before-and-after write-ups, attendance recaps, and site visits.",
   },
   {
-    title: "Get the finished work",
-    desc: "AI Work Studio reads the request and its context, then writes the report, content, analysis, slide outline, or code directly in the app.",
+    title: "Every template has its own format",
+    desc: "Each one carries its own structure, length, and rules. A comparison asks for two photos and returns a comparison table; a summary asks for a document and returns one page.",
   },
   {
-    title: "Stay in one workspace",
-    desc: "There is nothing to copy into another AI tool. The result appears here, ready to review, save, or continue.",
+    title: "Photos and files are read for you",
+    desc: "Attach activity photos, screenshots, sign-in sheets, handwritten notes, PDF, Word, Excel, or PowerPoint. The text inside is read and used as the source.",
   },
   {
-    title: "Improve it in place",
-    desc: "Ask for a clearer, shorter, or more detailed version, then compare it against what you had before deciding which one to keep.",
+    title: "It does not invent your data",
+    desc: "Only what the attachment actually shows is written. Names, dates, and figures that are not there are marked as missing rather than filled in with something plausible.",
   },
   {
-    title: "Download as Word or PowerPoint",
-    desc: "Export a result to .docx or .pptx on a paid plan, so it lands somewhere you can actually send it.",
+    title: "Everything is filed by date",
+    desc: "Each finished document is saved to a calendar automatically. Weeks later, pick the date to find it, reopen it, and download it again.",
   },
   {
-    title: "Keep what worked",
-    desc: "Save results to your history, search them, and reuse them. Signed in, history follows you across devices.",
+    title: "Word, Excel, and PowerPoint",
+    desc: "Download a document as .docx, a recap as .xlsx, or a deck as .pptx, then share it through your phone's own share sheet.",
   },
   {
-    title: "See a readiness estimate",
-    desc: "Each result gets an automated completeness estimate across context, format, constraints, and actionability. It is a guide, not a guarantee.",
+    title: "Write your own template",
+    desc: "When your format is fixed and not in the list, describe it once — name, instruction, and sections — and reuse it from then on.",
   },
 ];
 
 const STEPS = [
   {
     num: 1,
-    title: "Describe it, or attach it",
-    desc: "Plain language is enough. Attach a file when the detail lives there.",
+    title: "Pick a template",
+    desc: "Choose the job you are doing. That decides the format, the length, and the rules.",
   },
   {
     num: 2,
-    title: "Create",
-    desc: "Sensible defaults are already chosen. Adjust the target AI or output form under Advanced only if you want to.",
+    title: "Attach the material",
+    desc: "A photo, a document, or a few lines of notes — whichever that template needs.",
   },
   {
     num: 3,
-    title: "Use it",
-    desc: "Copy it, improve it, save it, or download it as a document.",
+    title: "Create, then send",
+    desc: "A finished document comes back. Download it, share it, and find it later by date.",
   },
 ];
 

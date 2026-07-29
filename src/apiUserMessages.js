@@ -13,6 +13,7 @@ export const API_MSG = {
   compareFailed: "Could not compare prompts. Please try again.",
   docxFailed: "Could not create the DOCX file.",
   pptxFailed: "Could not create the PPTX file.",
+  xlsxFailed: "Could not create the Excel file.",
   apiKeyInactive: "API key is not active. Set Vercel environment variables or an API key override.",
   apiKeyInactiveCompare: "AI compare is not configured. Using readiness scores instead.",
   apiKeyInactiveGenerate: "AI generation is not configured. Showing a quick preview.",

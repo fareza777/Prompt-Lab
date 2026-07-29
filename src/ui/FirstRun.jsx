@@ -1,47 +1,59 @@
 import { useMemo, useState } from "react";
 import {
   ArrowRight,
+  CalendarDays,
   Check,
   FileOutput,
   Languages,
   LayoutDashboard,
+  Paperclip,
   Sparkles,
-  Wand2,
 } from "lucide-react";
 import { LANGUAGES, makeTranslator } from "./i18n.js";
 
+/**
+ * The tour follows the flow the app actually has: pick a template, attach the
+ * material, create, find it again by date, send it.
+ *
+ * The old second-to-last step explained Improve and Compare, which no longer
+ * exist, and the menu step never mentioned the calendar.
+ */
 const TOUR_STEPS = [
   {
+    id: "templates",
+    icon: LayoutDashboard,
+    titleKey: "firstrun.templates.title",
+    bodyKey: "firstrun.templates.body",
+    points: [
+      "firstrun.templates.point1",
+      "firstrun.templates.point2",
+      "firstrun.templates.point3",
+    ],
+  },
+  {
     id: "input",
-    icon: Sparkles,
+    icon: Paperclip,
     titleKey: "firstrun.input.title",
     bodyKey: "firstrun.input.body",
     points: ["firstrun.input.point1", "firstrun.input.point2", "firstrun.input.point3"],
   },
   {
     id: "build",
-    icon: FileOutput,
+    icon: Sparkles,
     titleKey: "firstrun.build.title",
     bodyKey: "firstrun.build.body",
     points: ["firstrun.build.point1", "firstrun.build.point2", "firstrun.build.point3"],
   },
   {
-    id: "improve",
-    icon: Wand2,
-    titleKey: "firstrun.improve.title",
-    bodyKey: "firstrun.improve.body",
-    points: ["firstrun.improve.point1", "firstrun.improve.point2", "firstrun.improve.point3"],
-  },
-  {
-    id: "menus",
-    icon: LayoutDashboard,
-    titleKey: "firstrun.menus.title",
-    bodyKey: "firstrun.menus.body",
-    points: ["firstrun.menus.point1", "firstrun.menus.point2", "firstrun.menus.point3"],
+    id: "calendar",
+    icon: CalendarDays,
+    titleKey: "firstrun.calendar.title",
+    bodyKey: "firstrun.calendar.body",
+    points: ["firstrun.calendar.point1", "firstrun.calendar.point2", "firstrun.calendar.point3"],
   },
   {
     id: "output",
-    icon: Check,
+    icon: FileOutput,
     titleKey: "firstrun.output.title",
     bodyKey: "firstrun.output.body",
     points: ["firstrun.output.point1", "firstrun.output.point2", "firstrun.output.point3"],
@@ -83,9 +95,17 @@ function LanguageStage({ onPickLanguage }) {
 
 function TourStage({ t, onFinish, onSkip }) {
   const [index, setIndex] = useState(0);
-  const step = TOUR_STEPS[index];
+  const last = TOUR_STEPS.length - 1;
+  /**
+   * Clamped because two taps land before React re-renders.
+   *
+   * Functional updates queue, so a double-tap on Next ran the index past the
+   * final step, TOUR_STEPS[index] came back undefined, and reading .icon threw
+   * — crashing the very first screen a new user sees into the error boundary.
+   */
+  const step = TOUR_STEPS[Math.min(index, last)];
   const Icon = step.icon;
-  const isLast = index === TOUR_STEPS.length - 1;
+  const isLast = index >= last;
 
   return (
     <main className="pl-firstrun" data-stage="tour">
@@ -116,7 +136,7 @@ function TourStage({ t, onFinish, onSkip }) {
 
         <div className="pl-firstrun-dots" aria-hidden="true">
           {TOUR_STEPS.map((item, dotIndex) => (
-            <span key={item.id} className={dotIndex === index ? "is-active" : ""} />
+            <span key={item.id} className={dotIndex === Math.min(index, last) ? "is-active" : ""} />
           ))}
         </div>
 
@@ -125,7 +145,7 @@ function TourStage({ t, onFinish, onSkip }) {
             <button
               type="button"
               className="pl-btn pl-btn--primary pl-btn--block"
-              onClick={() => setIndex((value) => value + 1)}
+              onClick={() => setIndex((value) => Math.min(value + 1, last))}
             >
               {t("firstrun.next")}
               <ArrowRight size={17} aria-hidden="true" />

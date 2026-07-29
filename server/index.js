@@ -82,6 +82,8 @@ import {
 } from "./playBillingGoogle.js";
 import { persistReservedUsage, quotaFailureStatus } from "./quotaReservation.js";
 import { buildDocxBuffer, buildPptxBuffer } from "./officeExport.js";
+import { buildXlsxBuffer } from "./xlsxExport.js";
+import { buildTemplateInstruction, getTemplate } from "../src/workTemplates.js";
 import { attachmentDisposition } from "./exportFilename.js";
 import {
   releaseWeeklyFreeResult,
@@ -558,6 +560,31 @@ app.post("/api/export/pptx", express.json({ limit: "2mb" }), async (req, res) =>
   } catch (error) {
     console.error("pptx export failed", error.message);
     res.status(500).json({ error: API_MSG.pptxFailed });
+  }
+});
+
+app.post("/api/export/xlsx", express.json({ limit: "2mb" }), async (req, res) => {
+  try {
+    const membership = await getMembershipFromRequest(req);
+    if (!canExportFormat(membership.plan, "xlsx")) {
+      res.status(402).json({ error: upgradeMessageForFeature("xlsxExport"), code: "UPGRADE_REQUIRED", minPlan: "Pro" });
+      return;
+    }
+    const { title, content } = normalizeExportPayload(req.body);
+    const buffer = await buildXlsxBuffer({
+      title,
+      content,
+      language: String(req.body?.language || "id"),
+    });
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader("Content-Disposition", attachmentDisposition(title, "xlsx"));
+    res.send(Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer));
+  } catch (error) {
+    console.error("xlsx export failed", error.message);
+    res.status(500).json({ error: API_MSG.xlsxFailed });
   }
 });
 
@@ -1196,6 +1223,40 @@ const RUN_FINAL_DIRECTIVE = [
   "brackets so it can be replaced — for example [12 Mei 2026] or [Nama Peserta].",
   "Your entire reply must be the document itself and nothing else.",
 ].join("\n");
+
+/**
+ * Template mode replaces the two directives above rather than adding to them.
+ *
+ * Both tell the model to invent a plausible fact and bracket it when something
+ * is missing. That is right for a freeform brief and wrong for every template
+ * here: an attendance sheet with invented names, or minutes with an invented
+ * decision, is worse than an obviously incomplete one. The templates each
+ * specify their own placeholder ("Belum tersedia", a dotted fill-in line), so
+ * the only thing this has to do is stop the model asking questions.
+ */
+const RUN_TEMPLATE_SYSTEM_PROMPT =
+  "You are producing a finished business document from a template contract. " +
+  "When images are attached, you CAN see them via multimodal vision — read the text " +
+  "in the photo and describe what is visually present. Never claim you cannot see images. " +
+  "Write the document now. Never ask a question, never request more details, and never " +
+  "offer to wait for further information. " +
+  "Do NOT invent facts that the source does not support: no names, dates, figures, " +
+  "quotations, decisions, or owners. Use the placeholder the template specifies for " +
+  "anything genuinely missing, and carry on. " +
+  "Return only the document itself — no preamble, no restatement of the instructions, " +
+  "no commentary, no reasoning notes. Use plain text with clear Markdown headings, " +
+  "lists, and tables; do not wrap the whole response in a code fence.";
+
+const RUN_TEMPLATE_FINAL_DIRECTIVE = [
+  "---",
+  "EXECUTION INSTRUCTION — this overrides anything above it that conflicts:",
+  "Produce the finished document now, following the template contract exactly.",
+  "Do NOT ask for data. Do NOT list what is missing. Do NOT reply with questions,",
+  "a checklist, or an offer to start once details are provided.",
+  "Do NOT invent names, dates, numbers, quotations, or decisions. Where the source",
+  "does not support a detail, use the placeholder the template specified.",
+  "Your entire reply must be the document itself and nothing else.",
+].join("\n");
 /**
  * Strips a reasoning model's internal monologue from executed output.
  *
@@ -1300,6 +1361,11 @@ function sanitizeRunOutput(text) {
 function parseRunPromptBody(req) {
   return {
     prompt: String(req.body?.prompt || "").trim(),
+    // Template mode: the user picked the job up front, so nothing has to be
+    // inferred from what they typed and no prompt-writing pass is needed.
+    templateId: String(req.body?.templateId || "").trim(),
+    note: String(req.body?.note || "").trim(),
+    language: String(req.body?.language || "id") === "en" ? "en" : "id",
     outputType: String(req.body?.outputType || ""),
     category: String(req.body?.category || ""),
     narrative: String(req.body?.narrative || req.body?.prompt || ""),
@@ -1341,9 +1407,78 @@ async function normalizeRunAttachments(files = [], modelSettings = {}, plan = "F
 function acceptRunPromptBody(req, res, next) {
   const contentType = String(req.headers["content-type"] || "");
   if (contentType.includes("multipart/form-data")) {
-    return upload.array("attachments", 4)(req, res, next);
+    // Raised from 4: templates such as the activity report and site visit ask
+    // for up to eight photos, and silently dropping the rest would produce a
+    // report missing half the evidence the user attached.
+    return upload.array("attachments", RUN_MAX_ATTACHMENTS)(req, res, next);
   }
   return express.json({ limit: "256kb" })(req, res, next);
+}
+
+const RUN_MAX_ATTACHMENTS = 8;
+
+/**
+ * Attachments for a template run, split by what the model can do with them.
+ *
+ * Photos go to vision. Documents are read server-side and handed over as text,
+ * because a PDF cannot be shown to the model and the summary and translation
+ * templates are useless without its contents.
+ */
+async function normalizeTemplateAttachments(files = [], modelSettings = {}, plan = "Free") {
+  const list = Array.isArray(files) ? files.slice(0, RUN_MAX_ATTACHMENTS) : [];
+  const vision = [];
+  const documents = [];
+  let visionBytes = 0;
+
+  for (const file of list) {
+    const mime = file.mimetype || "application/octet-stream";
+    if (mime.startsWith("image/")) {
+      const compressed = await compressImageForVision(file.buffer, mime);
+      const dataUrl = toDataUrl(compressed.buffer, compressed.mime);
+      // Same soft cap as the older path: past roughly 4.5MB of base64 the
+      // provider request itself starts failing.
+      if (visionBytes + dataUrl.length > 4_500_000) continue;
+      visionBytes += dataUrl.length;
+      vision.push({
+        filename: file.originalname || "image.jpg",
+        mime: compressed.mime,
+        dataUrl,
+        size: compressed.buffer.length,
+        kind: "gambar/screenshot",
+        excerpt: "",
+      });
+      continue;
+    }
+
+    const normalized = await normalizeFile(file, modelSettings, plan).catch((error) => {
+      console.warn("template attachment skipped", file.originalname, error.message);
+      return null;
+    });
+    if (normalized?.excerpt) {
+      documents.push({ filename: normalized.filename, excerpt: normalized.excerpt });
+    }
+  }
+
+  return { vision, documents };
+}
+
+/**
+ * The source block for a template run.
+ *
+ * Kept separate from the instruction so the model reads the material first and
+ * the contract last — the same ordering that stopped long briefs from being
+ * answered with a request for more details.
+ */
+function buildTemplateSourceBlock(documents, language) {
+  if (!documents.length) return "";
+  const heading =
+    language === "en"
+      ? "SOURCE MATERIAL — work only from what appears below and in the attached photos."
+      : "BAHAN SUMBER — kerjakan hanya dari apa yang ada di bawah ini dan pada foto yang dilampirkan.";
+  const body = documents
+    .map((doc) => `--- ${doc.filename} ---\n${doc.excerpt}`)
+    .join("\n\n");
+  return `${heading}\n\n${body}\n\n`;
 }
 
 /** Time held back after the stream ends to sanitize, record quota, and reply. */
@@ -1441,8 +1576,13 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
   let weeklyReservation = null;
   try {
     const body = parseRunPromptBody(req);
+    const template = body.templateId ? getTemplate(body.templateId) : null;
+    if (body.templateId && !template) {
+      res.status(400).json({ error: "Unknown template." });
+      return;
+    }
     const prompt = body.prompt;
-    if (!prompt) {
+    if (!prompt && !template) {
       res.status(400).json({ error: "No prompt to run." });
       return;
     }
@@ -1456,12 +1596,31 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
       prompt,
       outputType: body.outputType,
       category: body.category,
-      narrative: body.narrative || prompt,
+      narrative: body.narrative || body.note || prompt,
       generationMode: body.generationMode,
       modelSettings,
     };
 
-    const visionAttachments = await normalizeRunAttachments(req.files || [], modelSettings, membership.plan);
+    let templateDocuments = [];
+    let visionAttachments;
+    if (template) {
+      const sources = await normalizeTemplateAttachments(
+        req.files || [],
+        modelSettings,
+        membership.plan
+      );
+      visionAttachments = sources.vision;
+      templateDocuments = sources.documents;
+      // The prompt field is empty in template mode, so quota and the token
+      // ceiling would both be sized against nothing. The real weight is the
+      // note plus whatever text was extracted from the attached documents.
+      payload.prompt = [body.note, ...templateDocuments.map((doc) => doc.excerpt)]
+        .filter(Boolean)
+        .join("\n");
+      payload.narrative = body.note || body.templateId;
+    } else {
+      visionAttachments = await normalizeRunAttachments(req.files || [], modelSettings, membership.plan);
+    }
     const quotaEstimate = estimateRunTokens(payload, membership.plan) + visionAttachments.length * 400;
     const quotaSession = await getQuotaSession(req, quotaEstimate);
     const runtime = getRuntimeProvider(modelSettings);
@@ -1497,23 +1656,47 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
     // real data attached, so run cold a model reasonably replies "send me the
     // details first". A system message loses to 5,000 characters of user
     // instruction; repeating the directive as the last thing read does not.
-    const deliverableProfile = detectDeliverableProfile(payload);
-    const outputLang = resolveOutputLanguage(payload.narrative || prompt);
-    const deliverableInstruction = buildDeliverableInstruction({
-      profile: deliverableProfile,
-      language: outputLang,
-      narrative: payload.narrative || prompt,
-      content: prompt,
-    });
-    const diagramAddon = detectDiagramIntent(payload)
-      ? `\n\n${buildMermaidDeliveryAddon({ ...payload, outputLanguage: outputLang })}`
-      : "";
-    const visionNote = visionAttachments.length
-      ? `\n\n${runVisionDirective(outputLang)}`
-      : "";
-    const userText = `${prompt}${deliverableInstruction}${diagramAddon}${visionNote}\n\n${RUN_FINAL_DIRECTIVE}`;
+    let deliverableProfile;
+    let userText;
+    let systemPrompt;
+
+    if (template) {
+      // The user chose the job, so nothing is guessed: the template supplies
+      // the contract, the sections, the length, and the honesty rules.
+      deliverableProfile = template.profile;
+      systemPrompt = RUN_TEMPLATE_SYSTEM_PROMPT;
+      const source = buildTemplateSourceBlock(templateDocuments, body.language);
+      const instruction = buildTemplateInstruction({
+        template,
+        language: body.language,
+        note: body.note,
+        attachmentCount: visionAttachments.length + templateDocuments.length,
+      });
+      const visionNote = visionAttachments.length
+        ? `\n\n${runVisionDirective(body.language)}`
+        : "";
+      userText = `${source}${instruction}${visionNote}\n\n${RUN_TEMPLATE_FINAL_DIRECTIVE}`;
+    } else {
+      deliverableProfile = detectDeliverableProfile(payload);
+      systemPrompt = RUN_SYSTEM_PROMPT;
+      const outputLang = resolveOutputLanguage(payload.narrative || prompt);
+      const deliverableInstruction = buildDeliverableInstruction({
+        profile: deliverableProfile,
+        language: outputLang,
+        narrative: payload.narrative || prompt,
+        content: prompt,
+      });
+      const diagramAddon = detectDiagramIntent(payload)
+        ? `\n\n${buildMermaidDeliveryAddon({ ...payload, outputLanguage: outputLang })}`
+        : "";
+      const visionNote = visionAttachments.length
+        ? `\n\n${runVisionDirective(outputLang)}`
+        : "";
+      userText = `${prompt}${deliverableInstruction}${diagramAddon}${visionNote}\n\n${RUN_FINAL_DIRECTIVE}`;
+    }
+
     const messages = [
-      { role: "system", content: RUN_SYSTEM_PROMPT },
+      { role: "system", content: systemPrompt },
       {
         role: "user",
         content: buildVisionUserContent(userText, visionAttachments),
@@ -1583,6 +1766,7 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
               provider: runtime.provider,
               streamed: true,
               truncated: streamed.truncated,
+              templateId: body.templateId || null,
             },
             tokenEstimate: quotaEstimate,
             outputText: streamContent,
@@ -1664,7 +1848,12 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
       quotaSession,
       {
         eventType: "run_prompt",
-        metadata: { outputType: payload.outputType, model: usedModel, provider: runtime.provider },
+        metadata: {
+          outputType: payload.outputType,
+          model: usedModel,
+          provider: runtime.provider,
+          templateId: body.templateId || null,
+        },
         tokenEstimate: quotaEstimate,
         outputText: content,
       },
