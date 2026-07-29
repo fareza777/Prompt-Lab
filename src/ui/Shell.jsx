@@ -6,9 +6,7 @@ import AuthGate from "./AuthGate.jsx";
 import Guide from "./Guide.jsx";
 import { humanizeApiError } from "./errors.js";
 import { readThemeMode, applyThemeMode, watchSystemScheme, resolveScheme } from "./theme.js";
-import Composer from "./Composer.jsx";
 import Result from "./Result.jsx";
-import Starters from "./Starters.jsx";
 import TemplateGallery from "./TemplateGallery.jsx";
 import TemplateWorkbench from "./TemplateWorkbench.jsx";
 import TemplateProgress from "./TemplateProgress.jsx";
@@ -23,8 +21,6 @@ import {
 } from "../workTemplates.js";
 import History from "./History.jsx";
 import Account from "./Account.jsx";
-import Improve from "./Improve.jsx";
-import Compare from "./Compare.jsx";
 import Report from "./Report.jsx";
 import DiagramSaveSheet from "./DiagramSaveSheet.jsx";
 import { getRecordRestoreState } from "./contentRecord.js";
@@ -270,27 +266,6 @@ export default function Shell(props) {
     },
     [savePrompt, narrative]
   );
-
-  const openImprove = useCallback(() => {
-    clearOptimizerResult?.();
-    setSheet("improve");
-  }, [clearOptimizerResult]);
-
-  const runImprove = useCallback((mode) => optimizePrompt(prompt, mode), [optimizePrompt, prompt]);
-
-  const applyImprove = useCallback(() => {
-    if (!optimizerResult) return;
-    setPreviousPrompt(prompt);
-    setPrompt(optimizerResult);
-    clearOptimizerResult?.();
-    setSheet(null);
-  }, [optimizerResult, prompt, setPrompt, clearOptimizerResult]);
-
-  const openCompare = useCallback(() => {
-    setCompareA?.(previousPrompt);
-    setCompareB?.(prompt);
-    setSheet("compare");
-  }, [setCompareA, setCompareB, previousPrompt, prompt]);
 
   /** A message about a previous generation must not outlive that generation. */
   const clearMessages = useCallback(() => {
@@ -600,8 +575,15 @@ export default function Shell(props) {
                     onExport={(format, text) =>
                       exportFile(format, text ?? runOutput, documentTopic)
                     }
-                    canExportWord={Boolean(entitlements?.docxExport)}
-                    canExportPpt={Boolean(entitlements?.pptxExport)}
+                    /* Gated by the template as well as the plan: offering a
+                       spreadsheet download for a formal letter, or slides for a
+                       handover record, only invites a disappointing file. */
+                    canExportWord={
+                      Boolean(entitlements?.docxExport) && activeTemplate.outputs.includes("docx")
+                    }
+                    canExportPpt={
+                      Boolean(entitlements?.pptxExport) && activeTemplate.outputs.includes("pptx")
+                    }
                     canExportSheet={
                       Boolean(entitlements?.xlsxExport) && activeTemplate.outputs.includes("xlsx")
                     }
@@ -627,6 +609,7 @@ export default function Shell(props) {
                 onGenerate={handleTemplateGenerate}
                 onBack={leaveTemplate}
                 isBusy={isRunning}
+                planMaxAttachments={maxAttachments}
                 errorMessage={humanizeApiError(errorMessage, t)}
                 disabled={trialExhausted}
                 disabledReason={trialExhausted ? t("trial.overHint") : ""}
@@ -699,31 +682,10 @@ export default function Shell(props) {
         quotaSummary={quotaSummary}
       />
 
-      <Improve
-        t={t}
-        open={sheet === "improve"}
-        onClose={closeSheet}
-        isOptimizing={isOptimizing}
-        original={prompt}
-        result={optimizerResult}
-        error={humanizeApiError(optimizerError, t)}
-        warning={humanizeApiError(optimizerWarning, t)}
-        onRun={runImprove}
-        onApply={applyImprove}
-      />
-
-      <Compare
-        t={t}
-        open={sheet === "compare"}
-        onClose={closeSheet}
-        before={previousPrompt}
-        after={prompt}
-        result={compareResult}
-        isComparing={isComparing}
-        error={humanizeApiError(compareError, t)}
-        warning={humanizeApiError(compareWarning, t)}
-        onRun={comparePrompts}
-      />
+      {/* Improve and Compare were removed here, not merely hidden: nothing has
+          opened them since the prompt-first flow was replaced, so they were
+          unreachable UI still being shipped and parsed on every launch. Their
+          components remain on disk. */}
 
       <Guide
         t={t}

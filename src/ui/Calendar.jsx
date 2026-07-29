@@ -3,11 +3,50 @@ import {
   CalendarClock,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   Download,
+  FileSearch,
   FileText,
+  Grid3x3,
+  Images,
+  Languages,
+  ListChecks,
+  Mail,
+  MapPin,
+  Megaphone,
+  Plane,
+  Presentation,
+  ScrollText,
+  Search,
+  Sparkles,
+  Table,
   Trash2,
+  Users,
+  Workflow,
 } from "lucide-react";
 import Sheet from "./Sheet.jsx";
+import { getTemplate } from "../workTemplates.js";
+
+/** Named explicitly so the icon set stays tree-shakeable. */
+const ROW_ICONS = {
+  ClipboardList,
+  FileSearch,
+  FileText,
+  Grid3x3,
+  Images,
+  Languages,
+  ListChecks,
+  Mail,
+  MapPin,
+  Megaphone,
+  Plane,
+  Presentation,
+  ScrollText,
+  Sparkles,
+  Table,
+  Users,
+  Workflow,
+};
 import {
   buildMonthGrid,
   dayLabel,
@@ -59,6 +98,13 @@ function DayCell({ cell, count, selected, today, onSelect, t }) {
  * nothing else. showPicker is the supported route in current Chrome and the
  * Android WebView; clicking the input is the fallback everywhere else.
  */
+/** The icon of the template a document came from, falling back to a page. */
+function TemplateIcon({ templateId }) {
+  const name = getTemplate(templateId)?.icon;
+  const Icon = ROW_ICONS[name] || FileText;
+  return <Icon size={16} aria-hidden="true" />;
+}
+
 function MoveDate({ item, t, onChangeDate }) {
   const ref = useRef(null);
 
@@ -101,6 +147,7 @@ export default function Calendar({
   onChangeDate,
 }) {
   const todayKey = toDateKey(new Date());
+  const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(todayKey);
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
@@ -112,11 +159,30 @@ export default function Calendar({
   useEffect(() => {
     if (!open) return;
     const now = new Date();
+    setQuery("");
     setSelected(toDateKey(now));
     setCursor({ year: now.getFullYear(), month: now.getMonth() });
   }, [open]);
 
-  const byDate = useMemo(() => groupByDate(items), [items]);
+  /**
+   * Search across titles and document bodies.
+   *
+   * Picking days one at a time stops working somewhere around forty documents,
+   * and the thing a person remembers is a phrase from inside the report, not
+   * the date they filed it. Matching the body — which for a photographed
+   * document is the text read out of it — is what makes the archive usable.
+   */
+  const matches = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return items;
+    return items.filter((item) =>
+      `${item.title || ""} ${item.templateName || ""} ${item.output || item.content || ""}`
+        .toLowerCase()
+        .includes(needle)
+    );
+  }, [items, query]);
+
+  const byDate = useMemo(() => groupByDate(matches), [matches]);
   const grid = useMemo(() => buildMonthGrid(cursor.year, cursor.month), [cursor]);
   const headings = useMemo(() => weekdayLabels(lang), [lang]);
   const dayItems = byDate.get(selected) || [];
@@ -125,6 +191,22 @@ export default function Calendar({
 
   return (
     <Sheet open={open} title={t("cal.title")} closeLabel={t("nav.close")} onClose={onClose}>
+      <div className="pl-gallery-search">
+        <Search size={16} aria-hidden="true" />
+        <input
+          className="pl-input"
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t("cal.search")}
+          aria-label={t("cal.search")}
+        />
+      </div>
+
+      {query.trim() && (
+        <p className="pl-hint">{t("cal.searchCount", { n: matches.length })}</p>
+      )}
+
       <div className="pl-cal-head">
         <button
           type="button"
@@ -176,7 +258,9 @@ export default function Calendar({
           {dayItems.map((item) => (
             <li key={item.id} className="pl-cal-item">
               <button type="button" className="pl-cal-open" onClick={() => onOpenItem(item)}>
-                <FileText size={16} aria-hidden="true" />
+                {/* The template's own icon, so a day's list can be read at a
+                    glance rather than by reading every title. */}
+                <TemplateIcon templateId={item.templateId} />
                 <strong>{item.title || t("cal.untitled")}</strong>
               </button>
               <div className="pl-cal-item-actions">

@@ -643,6 +643,107 @@ Never include costs, rates, or amounts unless the user supplied them.`,
   },
 
   {
+    id: "presentation",
+    group: "report",
+    icon: "Presentation",
+    profile: "presentation",
+    name: { id: "Paparan / Presentasi", en: "Presentation" },
+    blurb: {
+      id: "Bahan atau catatan menjadi deck siap tayang.",
+      en: "Material or notes become a deck you can present.",
+    },
+    input: {
+      attachments: { kinds: ["document", "image"], min: 0, max: 8 },
+      fields: [
+        text("subject", "Judul paparan", "Presentation title", {
+          required: true,
+          placeholder: { id: "Contoh: Paparan Capaian Triwulan I", en: "e.g. Q1 Results Briefing" },
+        }),
+        text("audience", "Untuk siapa", "Audience", {
+          placeholder: { id: "Contoh: rapat pimpinan, forum warga", en: "e.g. leadership meeting, public forum" },
+        }),
+        today(),
+        text("presenter", "Pembicara", "Presenter"),
+        area("points", "Poin yang wajib masuk", "Points that must be covered", {
+          mode: "fallback",
+          placeholder: {
+            id: "Satu poin per baris. Tempel juga data atau angka yang mau ditampilkan…",
+            en: "One point per line. Paste any data or figures to show…",
+          },
+        }),
+      ],
+    },
+    length: { words: [0, 0], pages: 0 },
+    outputs: ["pptx", "docx"],
+    sections: { id: [], en: [] },
+    prompt: {
+      id: `Susun PAPARAN sebagai alur cerita, bukan daftar tempelan. Target 8–12 slide.
+Setiap slide adalah satu heading "## " berisi PESAN slide itu — bukan label topik. Tulis "Realisasi tertinggal 8 persen dari target", bukan "Realisasi".
+Di bawah tiap heading: maksimal 6 bullet dan sekitar 45 kata terlihat.
+Buka dengan satu slide konteks yang spesifik, tutup dengan slide keputusan atau rekomendasi.
+Angka disajikan sebagai bullet yang DIMULAI dengan angkanya ("62 persen dari pagu terserap") — itu yang membuatnya tampil sebagai callout besar di slide.
+Data pembanding disajikan sebagai tabel Markdown; tabel akan menjadi tabel sungguhan di slide.
+Sesuaikan bahasa dengan audiens yang diisi pengguna.
+Jangan mengarang angka atau nama yang tidak diberikan.`,
+      en: `Write a PRESENTATION as a narrative, not a list of labels. Target 8–12 slides.
+Each slide is one "## " heading carrying that slide's MESSAGE — not a topic label. Write "Spending is 8 points behind target", not "Spending".
+Under each heading: at most six bullets and roughly 45 visible words.
+Open with one specific context slide and close on a decision or recommendation.
+Figures are bullets that START with the number ("62 per cent of the budget drawn"), which is what renders them as a large callout.
+Comparative data goes in a Markdown table; tables become real tables on the slide.
+Pitch the language at the audience the user named.
+Never invent figures or names that were not supplied.`,
+    },
+  },
+
+  {
+    id: "diagram",
+    group: "utility",
+    icon: "Workflow",
+    profile: "diagram",
+    name: { id: "Diagram Alur", en: "Process Diagram" },
+    blurb: {
+      id: "Prosedur atau dokumen menjadi bagan alur yang bisa diunduh.",
+      en: "A procedure or document becomes a downloadable flow chart.",
+    },
+    input: {
+      attachments: { kinds: ["document", "image"], min: 0, max: 5 },
+      fields: [
+        text("subject", "Alur apa", "Which process", {
+          required: true,
+          placeholder: { id: "Contoh: Alur Perizinan Reklame", en: "e.g. Signage permit process" },
+        }),
+        area("steps", "Langkah-langkahnya", "The steps", {
+          mode: "fallback",
+          placeholder: {
+            id: "Satu langkah per baris, urut. Atau lampirkan SOP-nya dan biarkan dibaca…",
+            en: "One step per line, in order. Or attach the procedure and let it be read…",
+          },
+        }),
+      ],
+    },
+    length: { words: [0, 0], pages: 0 },
+    outputs: ["png", "svg", "docx"],
+    sections: { id: [], en: [] },
+    prompt: {
+      id: `Ubah prosedur yang diberikan menjadi DIAGRAM ALUR yang siap ditampilkan.
+Ambil alur utamanya saja: 5–8 langkah, label pendek (maksimal 6 kata per langkah).
+WAJIB keluarkan satu blok \`\`\`process berisi JSON {title, steps[{id,label}], edges[{from,to}]}.
+Judul diagram diambil dari isian "Alur apa".
+Di luar fence, tulis 2–4 bullet ringkasan alurnya.
+Jangan mengarang langkah yang tidak ada di sumber. Jangan mengandalkan kode Mermaid mentah.
+"Bagus" di sini berarti jelas dan mudah dibaca, bukan rumit.`,
+      en: `Turn the supplied procedure into a READY process diagram.
+Take the main flow only: five to eight steps, short labels of at most six words each.
+MUST emit one \`\`\`process fence containing JSON {title, steps[{id,label}], edges[{from,to}]}.
+The diagram title comes from the "Which process" field.
+Outside the fence, write two to four summary bullets.
+Do not invent steps that are not in the source. Do not rely on raw Mermaid.
+"Good" here means clear and readable, not elaborate.`,
+    },
+  },
+
+  {
     id: "press-caption",
     group: "utility",
     icon: "Megaphone",

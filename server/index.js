@@ -83,7 +83,7 @@ import {
 import { persistReservedUsage, quotaFailureStatus } from "./quotaReservation.js";
 import { buildDocxBuffer, buildPptxBuffer } from "./officeExport.js";
 import { buildXlsxBuffer } from "./xlsxExport.js";
-import { extractPdfText } from "./pdfText.js";
+import { extractPdfImages, extractPdfText } from "./pdfText.js";
 import { buildTemplateInstruction, getTemplate } from "../src/workTemplates.js";
 import { attachmentDisposition } from "./exportFilename.js";
 import {
@@ -1479,6 +1479,40 @@ async function normalizeTemplateAttachments(files = [], modelSettings = {}, plan
     });
     if (normalized?.excerpt) {
       documents.push({ filename: normalized.filename, excerpt: normalized.excerpt });
+      continue;
+    }
+
+    /**
+     * A scan has no text layer, so the only way to read it is to look at it.
+     *
+     * Its pages are bitmaps inside the file; handing those to the same vision
+     * path the photographs use turns an unreadable upload into a readable one,
+     * which is otherwise the single largest category of files that simply
+     * cannot be summarised.
+     */
+    const isPdf =
+      mime === "application/pdf" || /\.pdf$/i.test(file.originalname || "");
+    if (!isPdf) continue;
+
+    const pages = await extractPdfImages(file.buffer, 3).catch((error) => {
+      console.warn("pdf page images skipped", file.originalname, error.message);
+      return [];
+    });
+
+    for (const page of pages) {
+      const compressed = await compressImageForVision(page.buffer, page.mime);
+      const dataUrl = toDataUrl(compressed.buffer, compressed.mime);
+      if (visionBytes + dataUrl.length > 4_500_000) break;
+      visionBytes += dataUrl.length;
+      vision.push({
+        filename: `${file.originalname || "dokumen"} (halaman ${vision.length + 1})`,
+        mime: compressed.mime,
+        dataUrl,
+        size: compressed.buffer.length,
+        kind: "halaman dokumen hasil scan",
+        excerpt: "",
+        slot: "",
+      });
     }
   }
 

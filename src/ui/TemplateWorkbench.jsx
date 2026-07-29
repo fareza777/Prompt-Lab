@@ -1,4 +1,4 @@
-import { useId, useMemo } from "react";
+﻿import { useId, useMemo } from "react";
 import { ArrowLeft, ImagePlus, Paperclip, Sparkles, X } from "lucide-react";
 import {
   acceptFor,
@@ -127,6 +127,7 @@ export default function TemplateWorkbench({
   onBack,
   isBusy,
   errorMessage,
+  planMaxAttachments,
   disabled,
   disabledReason,
 }) {
@@ -134,6 +135,17 @@ export default function TemplateWorkbench({
   const slots = templateSlots(template);
   const fields = templateFields(template);
   const photosOnly = spec.kinds.length === 1 && spec.kinds[0] === "image";
+
+  /**
+   * What this user can actually attach.
+   *
+   * The template asks for up to eight photos while the free plan allows three,
+   * and the picker used to accept all eight and drop the extras with only a
+   * passing warning. Losing evidence silently is worse than being told the
+   * limit up front.
+   */
+  const allowed = Math.max(1, Math.min(spec.max || 0, planMaxAttachments || spec.max || 0));
+  const atLimit = attachments.length >= allowed;
 
   const problem = useMemo(
     () => validateTemplateInput(template, { attachments, values }),
@@ -177,7 +189,7 @@ export default function TemplateWorkbench({
                   label={localized(slot.label, lang)}
                   slot={slot.id}
                   onAdd={addAttachments}
-                  disabled={isBusy || attachments.length >= spec.max}
+                  disabled={isBusy || atLimit}
                   t={t}
                 />
               </div>
@@ -189,11 +201,17 @@ export default function TemplateWorkbench({
                 template={template}
                 label={photosOnly ? t("tpl.attachPhotos") : t("tpl.attachFiles")}
                 onAdd={addAttachments}
-                disabled={isBusy || attachments.length >= spec.max}
+                disabled={isBusy || atLimit}
                 t={t}
               />
             </>
           )}
+
+          <p className="pl-hint">
+            {atLimit
+              ? t("tpl.limitReached", { n: allowed })
+              : t("tpl.limitRemaining", { n: allowed - attachments.length })}
+          </p>
         </div>
       )}
 

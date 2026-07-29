@@ -138,8 +138,26 @@ test("a non-PDF buffer is handled without throwing", async () => {
 
 test("the server uses the shared extractor rather than its own copy", async () => {
   const server = await readFile(new URL("../server/index.js", import.meta.url), "utf8");
-  assert.match(server, /import \{ extractPdfText \} from "\.\/pdfText\.js"/);
+  assert.match(server, /import \{ extractPdfImages, extractPdfText \} from "\.\/pdfText\.js"/);
   assert.doesNotMatch(server, /async function extractPdfText/);
+});
+
+test("a scanned PDF falls back to reading its page images", async () => {
+  // A scan has no text layer, so the only way to read it is to look at it.
+  // Without this, the single largest category of unreadable upload stays
+  // unreadable.
+  assert.ok(pdfSource.includes("export async function extractPdfImages"));
+  assert.ok(pdfSource.includes("Subtype") && pdfSource.includes("Image"), "image objects are not located");
+  // Raw bitmaps need their real geometry; sharp will misread a guessed one.
+  assert.ok(pdfSource.includes("Width"), "image width is not read");
+  assert.ok(pdfSource.includes("BitsPerComponent"), "bit depth is not checked");
+  assert.ok(pdfSource.includes("raw: { width, height, channels }"));
+  // Logos and signature scribbles are not pages.
+  assert.ok(pdfSource.includes("width < 500 || height < 500"));
+
+  const server = await readFile(new URL("../server/index.js", import.meta.url), "utf8");
+  assert.match(server, /extractPdfImages\(file\.buffer, 3\)/);
+  assert.match(server, /halaman dokumen hasil scan/);
 });
 
 test("an unreadable upload is reported rather than summarised as nothing", async () => {

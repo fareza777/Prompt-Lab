@@ -12,11 +12,13 @@ import {
   Megaphone,
   Plane,
   Plus,
+  Presentation,
   ScrollText,
   Search,
   Sparkles,
   Table,
   Users,
+  Workflow,
 } from "lucide-react";
 import { groupTemplates, listTemplates, localized } from "../workTemplates.js";
 
@@ -46,10 +48,12 @@ const ICONS = {
   MapPin,
   Megaphone,
   Plane,
+  Presentation,
   ScrollText,
   Sparkles,
   Table,
   Users,
+  Workflow,
 };
 
 function Icon({ name, size = 20 }) {
