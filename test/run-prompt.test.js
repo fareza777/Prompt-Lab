@@ -100,5 +100,7 @@ test("run copy exists in both languages", () => {
 test("product copy describes finished documents the app now delivers", async () => {
   const landing = await read("../src/LandingPage.jsx");
   assert.match(translate("id", "canvas.subtitle"), /dokumen kerja/i);
-  assert.match(landing, /finished work/i);
+  // The landing copy now names the deliverable a document rather than "work",
+  // matching what a template actually returns.
+  assert.match(landing, /finished document/i);
 });

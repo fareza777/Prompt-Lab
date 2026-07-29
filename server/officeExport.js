@@ -52,7 +52,10 @@ const stripInline = (value = "") =>
     .trim();
 
 function isTableDivider(line) {
-  return /^\s*\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$/.test(line);
+  // The trailing column was previously required, so a single-column table
+  // ("| Nama |") was never recognised and silently degraded into paragraphs.
+  // Attendance and recap sheets are frequently one column wide.
+  return /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(line);
 }
 
 function parseTableRow(line) {

@@ -135,6 +135,31 @@ test("the launch screen is light before React mounts unless dark was explicitly 
   );
 });
 
+test("the document surface is themed, not a hardcoded white page", async () => {
+  // A literal #fffefb on .pl-doc left every finished document as near-white
+  // text on a near-white page in dark mode — unreadable, and invisible to
+  // anyone testing only in light.
+  const shellCss = await read("../src/ui/shell.css");
+  assert.doesNotMatch(shellCss, /#fffefb/i);
+  const docRules = shellCss.match(/^\.pl-doc \{[^}]*\}/gms) || [];
+  assert.ok(docRules.length > 0, "no .pl-doc rule found");
+  for (const rule of docRules) {
+    const background = /background:\s*([^;]+);/.exec(rule)?.[1];
+    if (!background) continue;
+    assert.match(background, /var\(--/, `.pl-doc background is not tokenised: ${background}`);
+  }
+});
+
+test("the finished document reads as a page, not a stack of collapsibles", async () => {
+  const resultJsx = await read("../src/ui/Result.jsx");
+  // The accordion opened section one and folded the rest, so a two-page report
+  // arrived looking like a list of unread items.
+  assert.match(resultJsx, /function DocumentPage/);
+  assert.match(resultJsx, /<DocumentPage sections=\{sections\} t=\{t\} \/>/);
+  assert.doesNotMatch(resultJsx, /pl-doc-card__toggle/);
+  assert.doesNotMatch(resultJsx, /function SectionCards/);
+});
+
 test("reduced motion is honoured", () => {
   assert.match(baseCss, /@media \(prefers-reduced-motion: reduce\)/);
 });

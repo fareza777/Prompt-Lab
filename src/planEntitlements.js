@@ -17,6 +17,12 @@ export const PLAN_ENTITLEMENTS = {
     maxAttachments: 3,
     docxExport: true,
     pptxExport: false,
+    /**
+     * Spreadsheets sit with DOCX rather than PPTX: the recap, table-extract,
+     * attendance and action-item templates exist to produce one, so gating it
+     * would leave four templates with no usable output on the free tier.
+     */
+    xlsxExport: true,
     ocrPriority: false,
     aiCompare: false,
     /**
@@ -37,6 +43,7 @@ export const PLAN_ENTITLEMENTS = {
     maxAttachments: 8,
     docxExport: true,
     pptxExport: true,
+    xlsxExport: true,
     ocrPriority: true,
     aiCompare: true,
     aiOptimize: true,
@@ -51,6 +58,7 @@ export const PLAN_ENTITLEMENTS = {
     maxAttachments: 8,
     docxExport: true,
     pptxExport: true,
+    xlsxExport: true,
     ocrPriority: true,
     aiCompare: true,
     aiOptimize: true,
@@ -85,6 +93,7 @@ export function canExportFormat(plan, format) {
   const ent = getEntitlements(plan);
   if (format === "docx") return ent.docxExport;
   if (format === "pptx") return ent.pptxExport;
+  if (format === "xlsx") return ent.xlsxExport;
   return false;
 }
 

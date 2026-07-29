@@ -146,8 +146,17 @@ function stripEmptyHeadings(text) {
   return lines.filter((_, index) => !drop.has(index)).join("\n");
 }
 
+/**
+ * Profiles whose output is not a document and must survive untouched.
+ *
+ * "prompt" is the Image Prompt template: its whole deliverable is text a user
+ * pastes into an image model, so the scaffolding strippers below — which exist
+ * to clean up reports — would only damage it.
+ */
+const VERBATIM_PROFILES = new Set(["diagram", "prompt"]);
+
 export function sanitizeReadyDocument(content = "", profile = "general") {
-  if (profile === "diagram") return String(content || "");
+  if (VERBATIM_PROFILES.has(profile)) return String(content || "");
 
   let text = String(content || "").replace(/\r\n?/g, "\n").trim();
   if (!text) return "";

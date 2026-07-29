@@ -1,0 +1,66 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const server = await readFile(new URL("../server/index.js", import.meta.url), "utf8");
+
+const endpoint = server.slice(
+  server.indexOf('app.post("/api/run-prompt"'),
+  server.indexOf('app.post("/api/optimize-prompt"')
+);
+
+test("a templateId runs the template contract instead of guessing a profile", () => {
+  assert.match(endpoint, /const template = body\.templateId \? getTemplate\(body\.templateId\) : null/);
+  assert.match(endpoint, /buildTemplateInstruction\(\{/);
+  assert.match(endpoint, /deliverableProfile = template\.profile/);
+  // Profile detection must still exist for the untemplated path.
+  assert.match(endpoint, /deliverableProfile = detectDeliverableProfile\(payload\)/);
+});
+
+test("template mode needs no separately generated prompt", () => {
+  assert.match(endpoint, /if \(!prompt && !template\)/);
+  assert.match(endpoint, /Unknown template/);
+});
+
+test("the invent-a-fact directive is not used in template mode", () => {
+  // Both default directives tell the model to invent a plausible detail and
+  // bracket it. An attendance sheet with invented names is worse than an
+  // incomplete one, so template mode swaps in its own pair.
+  assert.match(server, /const RUN_TEMPLATE_SYSTEM_PROMPT =/);
+  assert.match(server, /const RUN_TEMPLATE_FINAL_DIRECTIVE = \[/);
+  assert.match(server, /Do NOT invent names, dates, numbers, quotations, or decisions/);
+  assert.match(endpoint, /systemPrompt = RUN_TEMPLATE_SYSTEM_PROMPT/);
+  assert.match(endpoint, /RUN_TEMPLATE_FINAL_DIRECTIVE/);
+
+  // Sliced by landmark rather than by exact whitespace: the file uses CRLF.
+  const start = endpoint.indexOf("systemPrompt = RUN_TEMPLATE_SYSTEM_PROMPT");
+  const end = endpoint.indexOf("deliverableProfile = detectDeliverableProfile(payload)");
+  assert.ok(start > 0 && end > start, "the template branch could not be located");
+  const templateBranch = endpoint.slice(start, end);
+  assert.doesNotMatch(templateBranch, /RUN_FINAL_DIRECTIVE(?!S)/);
+});
+
+test("documents are read into text while photos go to vision", () => {
+  assert.match(server, /async function normalizeTemplateAttachments/);
+  assert.match(server, /const \{ vision, documents \}|sources\.vision/);
+  assert.match(server, /function buildTemplateSourceBlock/);
+  assert.match(server, /BAHAN SUMBER/);
+  assert.match(endpoint, /normalizeTemplateAttachments\(/);
+});
+
+test("more than four attachments survive the upload", () => {
+  // Activity and site-visit reports ask for up to eight photos; the old cap
+  // dropped the rest silently.
+  assert.match(server, /const RUN_MAX_ATTACHMENTS = 8/);
+  assert.match(server, /upload\.array\("attachments", RUN_MAX_ATTACHMENTS\)/);
+});
+
+test("quota is sized against what template mode actually sends", () => {
+  // payload.prompt is empty in template mode, so without this the estimate and
+  // the token ceiling are both computed against nothing.
+  assert.match(endpoint, /payload\.prompt = \[body\.note, \.\.\.templateDocuments\.map/);
+});
+
+test("usage records which template was used", () => {
+  assert.match(server, /templateId: body\.templateId \|\| null/);
+});

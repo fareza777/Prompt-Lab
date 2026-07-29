@@ -1702,10 +1702,10 @@
   padding: clamp(24px, 4vw, 42px);
   border-color: var(--rule);
   border-radius: var(--r-lg);
-  background: #fffefb;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 12px 38px rgba(72, 61, 42, 0.08);
+  /* Was a hardcoded near-white literal, which left every document as pale ink
+     on a pale page in dark mode. The token carries both schemes. */
+  background: var(--paper-raised);
+  box-shadow: var(--lift-2);
   font-size: var(--t-md);
 }
 
@@ -1901,4 +1901,539 @@
 
 :root[data-ui-theme="dark"] .pl-btn--primary {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+ * Template flow: gallery -> workbench -> wait -> result.
+ *
+ * The premium cues here are space, one hairline, and restraint — no gradients
+ * or heavy shadows, because the initial CSS is budgeted and the app runs on
+ * mid-range Android hardware inside a WebView.
+ * ------------------------------------------------------------------------- */
+
+.pl-gallery {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--s-6) var(--s-4) var(--s-8);
+}
+
+.pl-gallery-head {
+  text-align: center;
+  margin-bottom: var(--s-6);
+}
+
+.pl-gallery-head h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.55rem, 4.5vw, 2.15rem);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--s-2);
+}
+
+.pl-gallery-head p {
+  color: var(--ink-soft);
+  margin: 0 auto;
+  max-width: 46ch;
+}
+
+.pl-gallery-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--s-6);
+}
+
+.pl-gallery-search svg {
+  position: absolute;
+  left: 14px;
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+
+.pl-gallery-search .pl-input {
+  padding-left: 40px;
+}
+
+.pl-tpl-group + .pl-tpl-group {
+  margin-top: var(--s-6);
+}
+
+.pl-tpl-group .pl-eyebrow {
+  margin-bottom: var(--s-3);
+}
+
+.pl-tpl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: var(--s-3);
+}
+
+.pl-tpl-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  text-align: left;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.pl-tpl-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px -12px rgb(0 0 0 / 0.35);
+}
+
+.pl-tpl-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.pl-tpl-name {
+  font-size: 0.98rem;
+  line-height: 1.3;
+}
+
+.pl-tpl-blurb {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+.pl-template-flow {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--s-5) var(--s-4) var(--s-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.pl-bench-title h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 3.6vw, 1.8rem);
+  letter-spacing: -0.012em;
+  margin: 0 0 var(--s-1);
+}
+
+.pl-bench-title p {
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.pl-bench-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+}
+
+.pl-attach--block {
+  justify-content: center;
+  width: 100%;
+  padding: var(--s-4);
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--r-md);
+}
+
+.pl-textarea--short {
+  min-height: 92px;
+}
+
+.pl-label-note {
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+
+.pl-hint--requirement {
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+.pl-tpl-progress {
+  padding: var(--s-8) var(--s-4);
+  text-align: center;
+}
+
+.pl-tpl-progress h2 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  margin: var(--s-1) 0 var(--s-5);
+}
+
+.pl-tpl-progress-steps {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin: 0 0 var(--s-5);
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.pl-tpl-progress-step {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink-faint);
+  transition: color 200ms ease;
+}
+
+.pl-tpl-progress-step.is-active,
+.pl-tpl-progress-step.is-done {
+  color: var(--ink);
+}
+
+.pl-tpl-progress-mark {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.pl-tpl-progress-step.is-waiting .pl-tpl-progress-mark {
+  background: transparent;
+  border: 1px solid var(--rule);
+}
+
+.pl-tpl-progress-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+
+.pl-spin {
+  animation: pl-spin 900ms linear infinite;
+}
+
+@keyframes pl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pl-spin {
+    animation: none;
+  }
+
+  .pl-tpl-card:hover {
+    transform: none;
+  }
+}
+
+/* ---- Calendar ------------------------------------------------------------ */
+
+.pl-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  margin-bottom: var(--s-4);
+}
+
+.pl-cal-head strong {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.pl-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: var(--s-5);
+}
+
+.pl-cal-heading {
+  padding: var(--s-1) 0;
+  text-align: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.pl-cal-day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  aspect-ratio: 1;
+  min-height: 38px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.87rem;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.pl-cal-day:hover {
+  background: var(--paper-sunken);
+}
+
+.pl-cal-day.is-outside {
+  color: var(--ink-faint);
+}
+
+.pl-cal-day.is-today {
+  border-color: var(--rule-strong);
+  font-weight: 600;
+}
+
+.pl-cal-day.is-selected {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+.pl-cal-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.pl-cal-day.is-selected .pl-cal-dot {
+  background: var(--accent-ink);
+}
+
+.pl-cal-daytitle {
+  margin-bottom: var(--s-2);
+}
+
+.pl-cal-list {
+  list-style: none;
+  margin: 0 0 var(--s-4);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.pl-cal-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+}
+
+.pl-cal-open {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
+.pl-cal-open span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pl-cal-open strong {
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pl-cal-open small {
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+}
+
+.pl-cal-item-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  flex-shrink: 0;
+}
+
+.pl-cal-date input {
+  padding: 4px 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.pl-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Premium pass.
+ *
+ * The single biggest lift is treating the finished document as a sheet of
+ * paper rather than another card in a list: wider margins, a real page
+ * shadow, and a titled first heading. That is what separates "a chatbot
+ * printed some text" from "here is your document".
+ *
+ * Scoped to the template flow so nothing older changes underneath it.
+ * ------------------------------------------------------------------------- */
+
+.pl-template-flow .pl-doc--output {
+  max-width: none;
+  padding: clamp(var(--s-5), 5vw, var(--s-10)) clamp(var(--s-4), 5vw, var(--s-8));
+  border-radius: var(--r-md);
+  box-shadow: var(--lift-2);
+  /* A hairline of accent along the top edge reads as a printed rule. */
+  border-top: 2px solid var(--accent);
+}
+
+.pl-template-flow .pl-doc--output > h1:first-child {
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: var(--s-5);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.pl-template-flow .pl-doc--output h2 {
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+/* Justified text needs a wide enough column; on a phone it makes rivers. */
+@media (max-width: 520px) {
+  .pl-template-flow .pl-doc--output p,
+  .pl-template-flow .pl-doc--output li {
+    text-align: left;
+    hyphens: manual;
+  }
+}
+
+/* Sheets inherit the display face so the app reads as one family. */
+.pl-sheet h2,
+.pl-sheet h3 {
+  font-family: var(--font-display);
+}
+
+.pl-gallery-new {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-6);
+}
+
+.pl-tpl-card--new {
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  color: var(--ink-mute);
+}
+
+.pl-tpl-card--new .pl-tpl-icon {
+  background: transparent;
+  border: 1px dashed var(--rule-strong);
+  color: var(--ink-mute);
+}
+
+.pl-check {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-bottom: var(--s-4);
+  cursor: pointer;
+}
+
+.pl-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.pl-btn--lg {
+  min-height: 52px;
+  font-size: var(--t-md);
+}
+
+/* The wait screen is the one place the user is doing nothing; give it room. */
+.pl-tpl-progress {
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--paper-raised);
+}
+
+/* One continuous page instead of a stack of collapsible cards. */
+.pl-doc--page > .pl-doc-part + .pl-doc-part {
+  margin-top: var(--s-6);
+}
+
+.pl-doc--page h1 {
+  margin-top: 0;
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: var(--s-5);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.pl-doc--page h2 {
+  margin-top: 0;
+}
+
+.pl-doc--page .pl-doc-part:first-child > h2 {
+  margin-top: 0;
+}
+
+/* The document sat inside five nested paddings inherited from the old tray
+   layout: on a 375px phone that cost 50px each side before the page's own
+   margins. In the template flow the page is the frame, so the wrappers give
+   up their padding. */
+.pl-template-flow .pl-result-tray,
+.pl-template-flow .pl-tray-core,
+.pl-template-flow .pl-result {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+@media (max-width: 520px) {
+  .pl-template-flow {
+    padding-left: var(--s-2);
+    padding-right: var(--s-2);
+  }
 }

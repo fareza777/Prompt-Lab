@@ -1,4 +1,13 @@
-import { Check, FileText, Sparkles, Wand2, Download, RotateCcw, AlertTriangle } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarDays,
+  Check,
+  Download,
+  FileText,
+  LayoutDashboard,
+  RotateCcw,
+  Sparkles,
+} from "lucide-react";
 import Sheet from "./Sheet.jsx";
 
 /**
@@ -9,8 +18,21 @@ import Sheet from "./Sheet.jsx";
  * anything work.
  */
 
-const ICONS = { input: FileText, build: Sparkles, improve: Wand2, output: Download };
-const GUIDE_STEPS = [{ id: "input" }, { id: "build" }, { id: "output" }];
+// Mirrors the tour, minus the language step: pick, attach, create, find, send.
+const ICONS = {
+  templates: LayoutDashboard,
+  input: FileText,
+  build: Sparkles,
+  calendar: CalendarDays,
+  output: Download,
+};
+const GUIDE_STEPS = [
+  { id: "templates" },
+  { id: "input" },
+  { id: "build" },
+  { id: "calendar" },
+  { id: "output" },
+];
 
 export default function Guide({ t, open, onClose, onReplay }) {
   return (

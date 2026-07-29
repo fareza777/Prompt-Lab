@@ -1,4 +1,4 @@
-import React, { Component, useEffect, useMemo, useState } from "react";
+﻿import React, { Component, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import LandingPage from "./LandingPage.jsx";
 import { Check, Clipboard, Settings, User, X } from "lucide-react";
@@ -8,6 +8,8 @@ import "./ui/shell.css";
 import Shell from "./ui/Shell.jsx";
 import { detectLanguage } from "./ui/i18n.js";
 import { createContentRecord, normalizeContentRecord } from "./ui/contentRecord.js";
+import { toDateKey } from "./ui/resultCalendar.js";
+import { localized as localizedTemplateName } from "./workTemplates.js";
 import { createFinishedResult as runResultFirst } from "./ui/resultFlow.js";
 import {
   detectDeliverableProfile,
@@ -133,7 +135,7 @@ function writeTrialUsed(value) {
  * Copy for the native account-deletion dialogs.
  *
  * Play requires that deleting an account is reachable in-app and that the user
- * is told what it does and does not remove — notably that it does not cancel a
+ * is told what it does and does not remove â€” notably that it does not cancel a
  * Play subscription.
  */
 function translateAccountDeletion() {
@@ -141,13 +143,13 @@ function translateAccountDeletion() {
   if (lang === "en") {
     return {
       warning:
-        "Delete your AI Work Studio account permanently? This removes your profile, synced history, and membership record.\n\nImportant: this does NOT cancel a Google Play subscription. Manage that in Google Play → Payments & subscriptions.",
+        "Delete your AI Work Studio account permanently? This removes your profile, synced history, and membership record.\n\nImportant: this does NOT cancel a Google Play subscription. Manage that in Google Play â†’ Payments & subscriptions.",
       typeToConfirm: "Type DELETE to confirm account deletion:",
     };
   }
   return {
     warning:
-      "Hapus akun AI Work Studio secara permanen? Tindakan ini menghapus profil, riwayat tersinkron, dan catatan keanggotaan.\n\nPenting: ini TIDAK membatalkan langganan Google Play. Batalkan langganan lewat Google Play → Pembayaran & langganan.",
+      "Hapus akun AI Work Studio secara permanen? Tindakan ini menghapus profil, riwayat tersinkron, dan catatan keanggotaan.\n\nPenting: ini TIDAK membatalkan langganan Google Play. Batalkan langganan lewat Google Play â†’ Pembayaran & langganan.",
     typeToConfirm: 'Ketik DELETE untuk mengonfirmasi penghapusan akun:',
   };
 }
@@ -869,6 +871,9 @@ async function readApiJson(response) {
   }
 }
 
+/** Matches RUN_MAX_ATTACHMENTS on the server; more are rejected by multer. */
+const TEMPLATE_UPLOAD_LIMIT = 8;
+
 function getAttachmentUploadPlan(attachments, apiBase) {
   const totalSize = attachments.reduce((sum, item) => sum + (item.file?.size || 0), 0);
   const serverlessTarget = !apiBase || /vercel\.app/i.test(apiBase) || (!import.meta.env.DEV && !/localhost|127\.0\.0\.1|tail/i.test(apiBase));
@@ -930,10 +935,17 @@ function normalizeCustomTemplates(raw) {
       outputType: outputTypes.includes(item.outputType) ? item.outputType : "Content",
       tone: tones.includes(item.tone) ? item.tone : "Professional",
       prompt: item.prompt || "",
+      // Work-template fields. A record carrying `instruction` is one the user
+      // wrote in the template editor; without these it would survive a reload
+      // as an empty shell, because this normaliser drops unknown keys.
+      instruction: item.instruction || "",
+      sections: item.sections || "",
+      blurb: item.blurb || "",
+      needsAttachment: item.needsAttachment !== false,
       custom: true,
       createdAt: item.createdAt || Date.now(),
     }))
-    .filter((item) => item.prompt.trim())
+    .filter((item) => item.prompt.trim() || item.instruction.trim())
     .slice(0, getEntitlements("Business").customTemplateLimit);
 }
 
@@ -1233,8 +1245,8 @@ function App() {
   const [tone, setTone] = useState("Professional");
   const [model, setModel] = useState("ChatGPT");
   // A document is the most common thing people come here to produce. The old
-  // default of "Application Code" shaped every unadjusted request — including a
-  // marketing or academic one — into code.
+  // default of "Application Code" shaped every unadjusted request â€” including a
+  // marketing or academic one â€” into code.
   const [outputType, setOutputType] = useState("Word Document");
   // The canvas starts empty. Seeding it with a sample meant every user opened
   // the app to someone else's text they had to clear first; the placeholder
@@ -1302,10 +1314,13 @@ function App() {
   const [adminActionStatus, setAdminActionStatus] = useState("");
   const [globalPublishAt, setGlobalPublishAt] = useState("");
   const [globalConfigSource, setGlobalConfigSource] = useState("env");
-  /** Output of running the prompt — the finished deliverable, not instructions. */
+  /** Output of running the prompt â€” the finished deliverable, not instructions. */
   const [runOutput, setRunOutput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [runError, setRunError] = useState("");
+  // Template mode keeps the stream but stops painting it; this is what the
+  // waiting screen shows instead, and it moves on real events only.
+  const [templatePhase, setTemplatePhase] = useState("reading");
   const [optimizerResult, setOptimizerResult] = useState("");
   const [optimizerSource, setOptimizerSource] = useState("local");
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -1347,7 +1362,7 @@ function App() {
   /**
    * An anonymous Supabase session lets a new user try the app before creating
    * an account. It authenticates the API call, but the UI must keep treating
-   * the person as signed out — otherwise we would show them account and
+   * the person as signed out â€” otherwise we would show them account and
    * membership state they do not actually have.
    */
   const [isAnonymousSession, setIsAnonymousSession] = useState(false);
@@ -2107,7 +2122,7 @@ function App() {
     if (checkoutUrl) {
       window.open(checkoutUrl, "_blank", "noopener,noreferrer");
       setBillingMessage(
-        `Opening Lemon Squeezy checkout for ${planName}. Your plan updates automatically after payment — tap Refresh membership below if needed.`
+        `Opening Lemon Squeezy checkout for ${planName}. Your plan updates automatically after payment â€” tap Refresh membership below if needed.`
       );
       flashAction(`${planName} checkout opened`);
       return;
@@ -2468,7 +2483,7 @@ function App() {
       const rawContent = data.content || data.prompt || "";
       if (data.truncated) {
         setWarningMessage(
-          "Dokumen berhenti sebelum selesai karena batas waktu. Bagian yang sudah jadi tetap tersimpan — persingkat permintaan untuk hasil penuh."
+          "Dokumen berhenti sebelum selesai karena batas waktu. Bagian yang sudah jadi tetap tersimpan â€” persingkat permintaan untuk hasil penuh."
         );
       }
       const profile = detectDeliverableProfile({
@@ -2493,6 +2508,180 @@ function App() {
     } finally {
       setIsRunning(false);
     }
+  }
+
+  /**
+   * Files a finished template document so the calendar can find it later.
+   *
+   * Saved automatically rather than on a button: the value of the calendar is
+   * that nothing has to be remembered, and a document the user forgot to save
+   * is exactly the one they will go looking for in two weeks.
+   */
+  function fileTemplateResult(template, content, note, language) {
+    const heading = /^#{1,3}\s+(.+)$/m.exec(content)?.[1]?.trim();
+    const title =
+      heading ||
+      String(note || "").trim().split(/\s+/).slice(0, 8).join(" ") ||
+      localizedTemplateName(template.name, language);
+    const now = Date.now();
+    const item = createContentRecord({
+      id: globalThis.crypto?.randomUUID?.() || `${now}`,
+      title,
+      contentType: "output",
+      request: note || "",
+      prompt: "",
+      output: content,
+      templateId: template.id,
+      templateName: localizedTemplateName(template.name, language),
+      // The day the work happened, which the user can move in the calendar.
+      activityDate: toDateKey(new Date()),
+      folder: localizedTemplateName(template.name, language),
+      tag: template.group,
+      createdAt: now,
+      updatedAt: now,
+      meta: { source: "template", model: generationModel || "" },
+    });
+    setLibrary((items) => [item, ...items].slice(0, libraryLimit));
+    setSelectedLibraryId(item.id);
+    return item;
+  }
+
+  /**
+   * Runs one template: material in, finished document out.
+   *
+   * Deliberately not the two-step of the older flow. There is no prompt to
+   * write first because the template already carries the contract, which
+   * halves the latency and removes the step where the app's own wording could
+   * drift away from what the user picked.
+   */
+  async function runTemplate(template, note = "", language = "id") {
+    if (!template) return null;
+
+    setIsRunning(true);
+    setRunError("");
+    setWarningMessage("");
+    setRunOutput("");
+    setTemplatePhase("reading");
+    const resultId = globalThis.crypto?.randomUUID?.() || `result-${Date.now()}`;
+
+    try {
+      const authHeaders = await getAuthHeaders();
+      const images = attachments.filter((item) => item?.file && String(item.type || "").startsWith("image/"));
+      const documents = attachments.filter((item) => item?.file && !String(item.type || "").startsWith("image/"));
+
+      let visionFiles = images;
+      if (images.length) {
+        try {
+          const { compressAttachmentImages } = await import("./compressImage.js");
+          visionFiles = await compressAttachmentImages(images);
+        } catch {
+          visionFiles = images;
+        }
+      }
+
+      const outgoing = [...visionFiles, ...documents];
+      const uploadPlan = getAttachmentUploadPlan(outgoing, apiBase);
+      if (outgoing.length && !uploadPlan.sendRawFiles) {
+        throw new Error(
+          uploadPlan.warning ||
+            "Lampiran terlalu besar untuk dikirim. Kurangi jumlah atau ukuran filenya."
+        );
+      }
+
+      const formData = new FormData();
+      formData.append("templateId", template.id);
+      formData.append("note", note || "");
+      formData.append("language", language === "en" ? "en" : "id");
+      formData.append("resultId", resultId);
+      // Smallest first, so if the payload has to be cut it is the largest
+      // photo that is dropped rather than an arbitrary one.
+      [...outgoing]
+        .sort((a, b) => (a.file?.size || 0) - (b.file?.size || 0))
+        .slice(0, TEMPLATE_UPLOAD_LIMIT)
+        .forEach((item) => formData.append("attachments", item.file));
+
+      const response = await fetch(`${apiBase}/api/run-prompt`, {
+        method: "POST",
+        headers: authHeaders,
+        body: formData,
+      });
+
+      const isStream = (response.headers.get("content-type") || "").includes("text/event-stream");
+      let data;
+      if (isStream && response.ok) {
+        data = await consumeGenerateSse(response, {
+          // The text itself is discarded: the first chunk only tells us the
+          // model has started writing, which is what the stage display needs.
+          onChunk: () => setTemplatePhase("drafting"),
+        });
+        setTemplatePhase("finishing");
+      } else {
+        data = await readApiJson(response);
+      }
+      if (!response.ok) throw new Error(data.error || "Gagal membuat dokumen.");
+
+      const checked = validateFinishedOutput(data.content || data.prompt || "", template.profile);
+      const content = checked.content;
+      if (!content) throw new Error("Dokumen kembali kosong. Coba lagi.");
+
+      if (data.truncated) {
+        setWarningMessage(
+          "Dokumen berhenti sebelum selesai karena batas waktu. Bagian yang sudah jadi tetap tersimpan â€” kurangi lampiran untuk hasil penuh."
+        );
+      }
+
+      setRunOutput(content);
+      setErrorMessage("");
+      fileTemplateResult(template, content, note, language);
+      applyServerQuota(data.quota);
+      if (data.weeklyResults) setWeeklyResults(data.weeklyResults);
+      if (isAnonymousSession) countTrialUse();
+      return content;
+    } catch (error) {
+      setRunError(error.message || "Gagal membuat dokumen.");
+      return null;
+    } finally {
+      setIsRunning(false);
+    }
+  }
+
+  /** Stores a template the user wrote in the editor. */
+  function saveCustomTemplate(draft) {
+    const name = String(draft?.name || "").trim();
+    const instruction = String(draft?.instruction || "").trim();
+    if (!name || !instruction) return false;
+    const now = Date.now();
+    const record = {
+      id: draft.id || globalThis.crypto?.randomUUID?.() || `custom-template-${now}`,
+      title: name,
+      name,
+      blurb: String(draft.blurb || "").trim(),
+      instruction,
+      sections: String(draft.sections || ""),
+      needsAttachment: draft.needsAttachment !== false,
+      // Kept so the record still satisfies the legacy starter shape that the
+      // cloud sync and the older library normaliser expect.
+      prompt: instruction,
+      category: "Business",
+      custom: true,
+      createdAt: draft.createdAt || now,
+    };
+    setCustomTemplates((items) => {
+      const rest = items.filter((item) => item.id !== record.id);
+      return [record, ...rest].slice(0, customTemplateLimit);
+    });
+    flashAction("Template saved");
+    return true;
+  }
+
+  /** Moves a filed document to the day the work actually happened. */
+  function setResultDate(id, activityDate) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(activityDate || ""))) return;
+    setLibrary((items) =>
+      items.map((item) =>
+        item.id === id ? { ...item, activityDate, updatedAt: Date.now() } : item
+      )
+    );
   }
 
   async function createFinishedResult() {
@@ -2869,14 +3058,14 @@ function App() {
           if (diagramExportOffer?.url) URL.revokeObjectURL(diagramExportOffer.url);
           const url = URL.createObjectURL(blob);
           setDiagramExportOffer({ blob, filename, extension, url });
-          setExportStatus(`${label} siap — ketuk Bagikan / Simpan`);
+          setExportStatus(`${label} siap â€” ketuk Bagikan / Simpan`);
           return;
         }
 
         const result = await triggerBrowserDownload(blob, filename);
         setExportStatus(
           result?.method === "share" || result?.method === "share-abort"
-            ? `${label} ready — pilih Save / Download di share sheet`
+            ? `${label} ready â€” pilih Save / Download di share sheet`
             : `${label} downloaded`
         );
         window.setTimeout(() => setExportStatus(""), 4500);
@@ -2904,7 +3093,8 @@ function App() {
       return;
     }
 
-    const feature = format === "pptx" ? "pptxExport" : "docxExport";
+    const feature =
+      format === "pptx" ? "pptxExport" : format === "xlsx" ? "xlsxExport" : "docxExport";
     if (!canExportFormat(accountState.plan, format)) {
       const message =
         format === "pptx"
@@ -2929,7 +3119,7 @@ function App() {
         authHeaders = {};
       }
       // Document language follows UI locale (owned by Shell via detectLanguage).
-      // Do not reference a free `lang` binding here — App no longer owns that state.
+      // Do not reference a free `lang` binding here â€” App no longer owns that state.
       const documentLanguage = detectLanguage() === "en" ? "en" : "id";
       const { deriveExportTitle, toDownloadFilename, triggerBrowserDownload } = await import(
         "./exportNaming.js"
@@ -2973,14 +3163,14 @@ function App() {
         if (diagramExportOffer?.url) URL.revokeObjectURL(diagramExportOffer.url);
         const url = URL.createObjectURL(blob);
         setDiagramExportOffer({ blob, filename, extension: format, url });
-        setExportStatus(`${formatLabel} siap — ketuk Bagikan / Simpan`);
+        setExportStatus(`${formatLabel} siap â€” ketuk Bagikan / Simpan`);
         return;
       }
 
       const result = await triggerBrowserDownload(blob, filename);
       setExportStatus(
         result?.method === "share" || result?.method === "share-abort"
-          ? `${formatLabel} ready — pilih Save / Download di share sheet`
+          ? `${formatLabel} ready â€” pilih Save / Download di share sheet`
           : `${formatLabel} downloaded`
       );
       window.setTimeout(() => setExportStatus(""), 4500);
@@ -3003,7 +3193,7 @@ function App() {
   function confirmDiagramExportShare(method = "share") {
     setExportStatus(
       method === "open" || method === "preview"
-        ? "File terbuka — simpan dari menu / tekan lama bila gambar"
+        ? "File terbuka â€” simpan dari menu / tekan lama bila gambar"
         : "File dibagikan / siap disimpan"
     );
     window.setTimeout(() => setExportStatus(""), 4500);
@@ -3166,6 +3356,10 @@ function App() {
     prompt: generatedPrompt,
     setPrompt: setGeneratedPrompt,
     runPrompt,
+    runTemplate,
+    templatePhase,
+    setResultDate,
+    saveCustomTemplate,
     runOutput,
     setRunOutput,
     isRunning,
@@ -3180,7 +3374,7 @@ function App() {
     // An anonymous trial session is not an account, and must not be presented
     // as one.
     hasAuthSession: hasAuthSession && !isAnonymousSession,
-    // null hides the trial affordance entirely — used when the backend cannot
+    // null hides the trial affordance entirely â€” used when the backend cannot
     // grant trials, so the UI never advertises a free try it cannot deliver.
     trialRemaining: trialAvailable ? Math.max(0, TRIAL_LIMIT - trialUsed) : null,
     isAdmin: accountState.role === "admin",
@@ -3195,9 +3389,9 @@ function App() {
     return (
       <div data-theme="v2" style={{ padding: 16 }}>
         <button className="v2-btn" type="button" onClick={() => setActive("Builder")}>
-          ← Back to app
+          â† Back to app
         </button>
-        <React.Suspense fallback={<p style={{ padding: 24 }}>Loading admin console…</p>}>
+        <React.Suspense fallback={<p style={{ padding: 24 }}>Loading admin consoleâ€¦</p>}>
           <AdminConsole {...shared} />
         </React.Suspense>
       </div>

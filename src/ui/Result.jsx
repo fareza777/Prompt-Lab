@@ -2,7 +2,6 @@ import { useEffect, useId, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Check,
-  ChevronDown,
   Copy,
   Download,
   Flag,
@@ -210,121 +209,35 @@ function BlockView({ block, index, t }) {
   return <p key={key}>{renderInline(block.text)}</p>;
 }
 
-function SectionCards({ sections, t }) {
-  const [openIds, setOpenIds] = useState(() => {
-    const withDiagram = sections
-      .filter((section) =>
-        section.blocks.some(
-          (block) =>
-            block.type === "code" && (block.lang === "mermaid" || block.lang === "process")
-        )
-      )
-      .map((section) => section.id);
-    if (withDiagram.length) return new Set(withDiagram);
-    return new Set(sections.slice(0, 1).map((section) => section.id));
-  });
-
-  useEffect(() => {
-    const withDiagram = sections
-      .filter((section) =>
-        section.blocks.some(
-          (block) =>
-            block.type === "code" && (block.lang === "mermaid" || block.lang === "process")
-        )
-      )
-      .map((section) => section.id);
-    setOpenIds(
-      new Set(withDiagram.length ? withDiagram : sections.slice(0, 1).map((section) => section.id))
-    );
-  }, [sections]);
-
-  useEffect(() => {
-    function openDiagramSections() {
-      setOpenIds((current) => {
-        const next = new Set(current);
-        for (const section of sections) {
-          if (
-            section.blocks.some(
-              (block) =>
-                block.type === "code" && (block.lang === "mermaid" || block.lang === "process")
-            )
-          ) {
-            next.add(section.id);
-          }
-        }
-        return next;
-      });
-    }
-    window.addEventListener("pl:open-diagram-sections", openDiagramSections);
-    return () => window.removeEventListener("pl:open-diagram-sections", openDiagramSections);
-  }, [sections]);
-
-  function toggle(id) {
-    setOpenIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
+/**
+ * The finished document as one continuous page.
+ *
+ * This replaced a collapsible accordion, which is a chat pattern: it opened the
+ * first section and folded the rest away, so a two-page report arrived looking
+ * like a list of unread items. A document the user is about to send should be
+ * readable top to bottom the moment it appears — that single change is most of
+ * what separates "the machine printed some text" from "here is your document".
+ *
+ * Section grouping is still used, because it carries the heading level that
+ * decides whether a title sets as the document title or a section heading.
+ */
+function DocumentPage({ sections, t }) {
   return (
-    <div className="pl-doc-sections" aria-label={t("result.sections")}>
-      {sections.map((section, index) => {
-        const open = openIds.has(section.id);
-        const hasMermaid = section.blocks.some(
-          (block) =>
-            block.type === "code" && (block.lang === "mermaid" || block.lang === "process")
-        );
-        const title =
-          section.title ||
-          (hasMermaid ? t("result.diagramTitle") : t("result.untitledSection"));
-        return (
-          <section
-            key={section.id}
-            className={`pl-doc-card${open ? " is-open" : ""}`}
-          >
-            <h3 className="pl-doc-card__title">
-              <button
-                type="button"
-                className="pl-doc-card__toggle"
-                aria-expanded={open}
-                aria-controls={`${section.id}-body`}
-                onClick={() => toggle(section.id)}
-              >
-                <span className="pl-doc-card__index">{index + 1}</span>
-                <span className="pl-doc-card__label">{renderInline(title)}</span>
-                <ChevronDown size={18} aria-hidden="true" className="pl-doc-card__chevron" />
-              </button>
-            </h3>
-            {/**
-              Keep diagram body mounted after first open so the painted SVG stays
-              available for PNG export (Android re-render often fails).
-            */}
-            {(open || hasMermaid) && (
-              <div
-                className="pl-doc-card__body pl-doc pl-doc--output"
-                id={`${section.id}-body`}
-                hidden={!open}
-              >
-                {section.blocks.length ? (
-                  section.blocks.map((block, blockIndex) => (
-                    <BlockView
-                      key={`${section.id}-${blockIndex}`}
-                      block={block}
-                      index={blockIndex}
-                      t={t}
-                    />
-                  ))
-                ) : (
-                  <p className="pl-meta">{t("result.emptySection")}</p>
-                )}
-              </div>
-            )}
-          </section>
-        );
-      })}
-    </div>
+    <article className="pl-doc pl-doc--output pl-doc--page" aria-label={t("result.sections")}>
+      {sections.map((section) => (
+        <section key={section.id} className="pl-doc-part">
+          {section.title &&
+            (section.level === 1 ? (
+              <h1>{renderInline(section.title)}</h1>
+            ) : (
+              <h2>{renderInline(section.title)}</h2>
+            ))}
+          {section.blocks.map((block, blockIndex) => (
+            <BlockView key={`${section.id}-${blockIndex}`} block={block} index={blockIndex} t={t} />
+          ))}
+        </section>
+      ))}
+    </article>
   );
 }
 
@@ -375,6 +288,7 @@ function ResultActions({
   onExport,
   canExportWord,
   canExportPpt,
+  canExportSheet,
   exportStatus,
   hasDiagram,
 }) {
@@ -447,6 +361,14 @@ function ResultActions({
             {t("result.exportPpt")}
           </button>
         )}
+
+        {/* Offered only by templates whose deliverable is a table. */}
+        {canExportSheet && (
+          <button type="button" className="pl-btn" onClick={() => onExport("xlsx", output)}>
+            <Download size={17} aria-hidden="true" />
+            {t("tpl.exportXlsx")}
+          </button>
+        )}
       </div>
       {hasDiagram && <p className="pl-meta">{t("result.exportDiagramHint")}</p>}
       {exportStatus && (
@@ -468,11 +390,13 @@ export default function Result({
   onExport,
   canExportWord,
   canExportPpt,
+  canExportSheet,
   exportStatus,
   onReport,
   runOutput,
   isRunning,
   runError,
+  onStartOver,
 }) {
   const output = String(runOutput || "").trim();
   // While text is still arriving the document is re-parsed on every delta, and
@@ -545,6 +469,7 @@ export default function Result({
           onExport={onExport}
           canExportWord={canExportWord}
           canExportPpt={canExportPpt}
+          canExportSheet={canExportSheet}
           exportStatus={exportStatus}
           hasDiagram={hasDiagram}
         />
@@ -562,8 +487,14 @@ export default function Result({
             <AlertTriangle size={16} aria-hidden="true" />
             <span>{t("result.aiNotice")}</span>
           </p>
-          <SectionCards sections={sections} t={t} />
+          <DocumentPage sections={sections} t={t} />
         </>
+      )}
+
+      {onStartOver && output && (
+        <button type="button" className="pl-btn pl-btn--block" onClick={onStartOver}>
+          {t("tpl.startOver")}
+        </button>
       )}
 
       <button

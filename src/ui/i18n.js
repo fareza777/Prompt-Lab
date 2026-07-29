@@ -48,6 +48,64 @@ const id = {
   "canvas.removeFile": "Hapus lampiran {name}",
   "canvas.clear": "Mulai baru",
 
+  "tpl.galleryTitle": "Mau membuat apa hari ini?",
+  "tpl.gallerySubtitle":
+    "Pilih satu template, lampirkan bahannya, dan hasilnya keluar sebagai dokumen siap kirim.",
+  "tpl.search": "Cari template",
+  "tpl.searchEmpty": "Tidak ada template yang cocok.",
+  "tpl.group.report": "Laporan",
+  "tpl.group.meeting": "Rapat & tindak lanjut",
+  "tpl.group.extract": "Data & tabel",
+  "tpl.group.utility": "Alat bantu",
+  "tpl.group.custom": "Template saya",
+  "tpl.change": "Ganti template",
+  "tpl.attachTitle": "Bahan",
+  "tpl.attachPhotos": "Tambah foto",
+  "tpl.attachFiles": "Tambah berkas",
+  "tpl.needImages": "Lampirkan minimal {n} foto.",
+  "tpl.needFiles": "Lampirkan minimal {n} berkas.",
+  "tpl.needSource": "Lampirkan berkas atau isi catatannya dulu.",
+  "tpl.needNote": "Isi kolom di atas dulu.",
+  "tpl.tooMany": "Maksimal {n} lampiran.",
+  "tpl.generate": "Buat dokumen",
+  "tpl.working": "Sedang membuat dokumen",
+  "tpl.step.reading": "Membaca lampiran",
+  "tpl.step.drafting": "Menyusun dokumen",
+  "tpl.step.finishing": "Merapikan hasil",
+  "tpl.workingHint": "Biasanya 20–60 detik. Layar boleh ditinggal.",
+  "tpl.startOver": "Buat yang baru",
+  "tpl.optional": "opsional",
+  "tpl.exportXlsx": "Unduh Excel",
+
+  "cal.title": "Kalender",
+  "cal.prevMonth": "Bulan sebelumnya",
+  "cal.nextMonth": "Bulan berikutnya",
+  "cal.empty": "Belum ada dokumen di tanggal ini.",
+  "cal.untitled": "Tanpa judul",
+  "cal.changeDate": "Ubah tanggal",
+  "cal.delete": "Hapus dokumen",
+  "cal.dayWithCount": "{date}, {n} dokumen",
+  "cal.openHint": "Ketuk dokumen untuk membukanya, lalu unduh atau bagikan.",
+  "cal.saved": "Tersimpan di kalender",
+
+  "editor.title": "Buat template sendiri",
+  "editor.new": "Template baru",
+  "editor.duplicate": "Mulai dari template yang ada",
+  "editor.duplicatePick": "Mulai dari kosong",
+  "editor.copySuffix": "salinan",
+  "editor.name": "Nama template",
+  "editor.namePlaceholder": "Contoh: Laporan Piket Harian",
+  "editor.instruction": "Instruksi untuk AI",
+  "editor.instructionPlaceholder":
+    "Contoh: Susun laporan piket harian dari foto buku jaga. Tulis hanya kejadian yang tercatat.",
+  "editor.instructionHint":
+    "Semakin jelas instruksinya, semakin konsisten hasilnya. Sebutkan juga apa yang tidak boleh dikarang.",
+  "editor.sections": "Bagian dokumen",
+  "editor.sectionsPlaceholder": "Waktu Piket\nKejadian\nSerah Terima",
+  "editor.sectionsHint": "Satu bagian per baris. Kosongkan kalau AI boleh menentukan sendiri.",
+  "editor.needsAttachment": "Wajib melampirkan foto atau berkas",
+  "editor.save": "Simpan template",
+
   "advanced.toggle": "Pengaturan lanjutan",
   "advanced.category": "Bidang",
   "advanced.tone": "Gaya bahasa",
@@ -199,40 +257,40 @@ const id = {
   "firstrun.startNow": "Lewati saja, langsung coba",
   "firstrun.stepOf": "Langkah {n} dari {total}",
 
-  "firstrun.input.title": "Mulai dari bahan yang sudah ada",
+  "firstrun.templates.title": "Pilih dulu mau membuat apa",
+  "firstrun.templates.body":
+    "Ada 15 template siap pakai: laporan kegiatan, notulen rapat, ringkasan, sebelum & sesudah, rekap Excel, dan lainnya. Setiap template punya format dan aturannya sendiri.",
+  "firstrun.templates.point1": "Tidak perlu menulis instruksi panjang — cukup pilih pekerjaannya",
+  "firstrun.templates.point2": "Format dokumen sudah ditentukan per template",
+  "firstrun.templates.point3": "Bisa membuat template sendiri kalau ada format khusus",
+
+  "firstrun.input.title": "Lampirkan bahannya",
   "firstrun.input.body":
-    "Tidak perlu menulis rapi. Ketik permintaanmu apa adanya, atau lampirkan berkas dan biarkan isinya jadi konteks.",
-  "firstrun.input.point1": "Foto papan tulis, tangkapan layar, atau hasil scan",
+    "Template akan meminta bahan yang memang dibutuhkannya saja. Tambahkan satu baris catatan kalau ada konteks yang tidak terlihat di lampiran.",
+  "firstrun.input.point1": "Foto kegiatan, tangkapan layar, absensi, atau catatan tulisan tangan",
   "firstrun.input.point2": "PDF, Word, Excel, PowerPoint — teksnya dibaca otomatis",
-  "firstrun.input.point3": "Boleh bahasa campur; hasil mengikuti bahasa yang kamu pakai",
+  "firstrun.input.point3": "Cukup satu lampiran, kecuali Sebelum & Sesudah yang perlu dua foto",
 
-  "firstrun.build.title": "Satu tombol, hasil jadi",
+  "firstrun.build.title": "Satu tombol, dokumen jadi",
   "firstrun.build.body":
-    "Tekan Buat hasil. Di belakang layar AI menyusun lalu mengerjakan permintaanmu — yang muncul adalah dokumen siap pakai, bukan draf mentah.",
-  "firstrun.build.point1": "Hasil langsung muncul tanpa perlu pindah aplikasi",
-  "firstrun.build.point2": "Permintaan dan lampiran dipakai sebagai konteks",
-  "firstrun.build.point3": "Proses biasanya butuh 30–60 detik; hasilnya muncul sekaligus",
+    "Tekan Buat dokumen, lalu tunggu. Yang keluar adalah dokumen berformat lengkap yang siap dikirim, bukan draf mentah.",
+  "firstrun.build.point1": "Biasanya 20–60 detik; layar boleh ditinggal",
+  "firstrun.build.point2": "AI hanya menulis yang terbaca dari lampiran — nama dan angka tidak dikarang",
+  "firstrun.build.point3": "Bagian yang datanya tidak ada ditandai, bukan diisi tebakan",
 
-  "firstrun.improve.title": "Perbaiki, lalu bandingkan",
-  "firstrun.improve.body":
-    "Kalau hasilnya belum pas, minta versi yang lebih jelas, lebih ringkas, atau lebih rinci — tanpa mengulang dari nol.",
-  "firstrun.improve.point1": "Lihat berapa kata yang ditambah dan dihapus",
-  "firstrun.improve.point2": "Bandingkan versi lama dan baru berdampingan",
-  "firstrun.improve.point3": "Versi lama tidak hilang sampai kamu memilih",
+  "firstrun.calendar.title": "Semua tercatat per tanggal",
+  "firstrun.calendar.body":
+    "Setiap dokumen otomatis tersimpan ke kalender. Dua minggu kemudian tinggal pilih tanggalnya untuk menemukannya lagi.",
+  "firstrun.calendar.point1": "Tidak perlu menekan tombol simpan",
+  "firstrun.calendar.point2": "Tanggal bisa dimundurkan ke hari kegiatan sebenarnya",
+  "firstrun.calendar.point3": "Buka lagi kapan saja untuk diunduh ulang",
 
-  "firstrun.menus.title": "Menu yang sering dipakai",
-  "firstrun.menus.body":
-    "Semua alat sekunder ada di atas — tidak mengganggu kanvas utama.",
-  "firstrun.menus.point1": "Bantuan: panduan singkat kapan saja",
-  "firstrun.menus.point2": "Riwayat: buka ulang hasil yang sudah disimpan",
-  "firstrun.menus.point3": "Akun: bahasa, tema, kuota, dan langganan",
-
-  "firstrun.output.title": "Simpan dan bawa keluar",
+  "firstrun.output.title": "Unduh, bagikan, selesai",
   "firstrun.output.body":
-    "Hasil yang bagus disimpan ke riwayat, diunduh Word, atau diklik judul AI Work Studio di atas untuk kembali ke beranda.",
-  "firstrun.output.point1": "Riwayat tersinkron antar perangkat setelah punya akun",
-  "firstrun.output.point2": "Export Word tersedia di paket Free; PowerPoint di paket berbayar",
-  "firstrun.output.point3": "5 hasil gratis per minggu untuk tamu",
+    "Dari hasil jadi, unduh ke HP atau bagikan lewat WhatsApp, email, dan Drive memakai menu berbagi bawaan.",
+  "firstrun.output.point1": "Word dan Excel tersedia di paket gratis; PowerPoint di paket berbayar",
+  "firstrun.output.point2": "Riwayat tersinkron antar perangkat setelah punya akun",
+  "firstrun.output.point3": "5 dokumen gratis per minggu untuk tamu",
 
   "guide.title": "Panduan",
   "guide.intro":
@@ -242,21 +300,21 @@ const id = {
   "guide.section.tips": "Cara dapat hasil lebih baik",
   "guide.section.limits": "Batas dan hal yang perlu diketahui",
   "guide.tip1":
-    "Sebutkan untuk siapa dokumennya. \"Untuk atasan\" dan \"untuk klien baru\" menghasilkan nada yang berbeda.",
+    "Pilih template yang paling dekat dengan pekerjaanmu. Template yang tepat lebih berpengaruh pada hasil daripada catatan yang panjang.",
   "guide.tip2":
-    "Sebutkan panjang yang kamu mau — jumlah halaman, jumlah slide, atau jumlah paragraf.",
+    "Foto yang jelas dan tidak miring jauh lebih terbaca, terutama untuk daftar hadir dan tabel.",
   "guide.tip3":
-    "Kalau melampirkan berkas, katakan apa yang harus diambil darinya. \"Pakai angka penjualannya saja\" lebih baik daripada membiarkannya menebak.",
+    "Isi kolom catatan dengan hal yang tidak terlihat di foto — tanggal, nama kegiatan, atau lokasi. Itu yang paling sering dibutuhkan.",
   "guide.tip4":
-    "Kalau hasil pertama belum pas, pakai Perbaiki daripada menulis ulang permintaan dari awal.",
+    "Kalau formatnya selalu sama dan tidak ada di daftar, buat template sendiri sekali lalu pakai terus.",
   "guide.limit1":
     "Hasil dibuat oleh AI dan bisa salah. Selalu periksa angka, nama, dan tanggal sebelum dikirim.",
   "guide.limit2":
-    "Menyusun butuh sekitar 20–40 detik. Menutup aplikasi saat proses berjalan akan membatalkannya.",
+    "AI hanya menulis yang terbaca dari lampiran. Data yang tidak ada ditandai \"Belum tersedia\", bukan ditebak.",
   "guide.limit3":
-    "Kuota dihitung per bulan. Paket gratis cukup untuk sekitar 15 hasil.",
+    "Menyusun butuh sekitar 20–60 detik. Menutup aplikasi saat proses berjalan akan membatalkannya.",
   "guide.limit4":
-    "Unduh Word dan PowerPoint tersedia mulai paket Pro.",
+    "Unduh Word dan Excel tersedia di paket gratis. PowerPoint mulai paket Pro.",
 
   "about.title": "Tentang",
   "about.blurb":
@@ -363,6 +421,64 @@ const en = {
     "Photos, screenshots, PDF, Word, Excel, PowerPoint, or text.",
   "canvas.removeFile": "Remove attachment {name}",
   "canvas.clear": "Start over",
+
+  "tpl.galleryTitle": "What are you making today?",
+  "tpl.gallerySubtitle":
+    "Pick a template, attach your material, and the result comes back as a document you can send.",
+  "tpl.search": "Search templates",
+  "tpl.searchEmpty": "No template matches that.",
+  "tpl.group.report": "Reports",
+  "tpl.group.meeting": "Meetings & follow-up",
+  "tpl.group.extract": "Data & tables",
+  "tpl.group.utility": "Tools",
+  "tpl.group.custom": "My templates",
+  "tpl.change": "Change template",
+  "tpl.attachTitle": "Material",
+  "tpl.attachPhotos": "Add photos",
+  "tpl.attachFiles": "Add files",
+  "tpl.needImages": "Attach at least {n} photo(s).",
+  "tpl.needFiles": "Attach at least {n} file(s).",
+  "tpl.needSource": "Attach a file or write the notes first.",
+  "tpl.needNote": "Fill in the field above first.",
+  "tpl.tooMany": "At most {n} attachments.",
+  "tpl.generate": "Create document",
+  "tpl.working": "Creating your document",
+  "tpl.step.reading": "Reading the attachments",
+  "tpl.step.drafting": "Writing the document",
+  "tpl.step.finishing": "Tidying the result",
+  "tpl.workingHint": "Usually 20–60 seconds. You can leave this screen.",
+  "tpl.startOver": "Make another",
+  "tpl.optional": "optional",
+  "tpl.exportXlsx": "Download Excel",
+
+  "cal.title": "Calendar",
+  "cal.prevMonth": "Previous month",
+  "cal.nextMonth": "Next month",
+  "cal.empty": "Nothing filed on this day yet.",
+  "cal.untitled": "Untitled",
+  "cal.changeDate": "Change date",
+  "cal.delete": "Delete document",
+  "cal.dayWithCount": "{date}, {n} document(s)",
+  "cal.openHint": "Tap a document to open it, then download or share.",
+  "cal.saved": "Filed in the calendar",
+
+  "editor.title": "Create your own template",
+  "editor.new": "New template",
+  "editor.duplicate": "Start from an existing template",
+  "editor.duplicatePick": "Start from blank",
+  "editor.copySuffix": "copy",
+  "editor.name": "Template name",
+  "editor.namePlaceholder": "e.g. Daily Duty Report",
+  "editor.instruction": "Instruction for the AI",
+  "editor.instructionPlaceholder":
+    "e.g. Write a daily duty report from photos of the logbook. Cover only what is actually recorded.",
+  "editor.instructionHint":
+    "The clearer the instruction, the more consistent the result. Say what must not be invented too.",
+  "editor.sections": "Document sections",
+  "editor.sectionsPlaceholder": "Duty Hours\nIncidents\nHandover",
+  "editor.sectionsHint": "One section per line. Leave blank to let the AI decide.",
+  "editor.needsAttachment": "An attachment is required",
+  "editor.save": "Save template",
 
   "advanced.toggle": "Advanced options",
   "advanced.category": "Field",
@@ -514,40 +630,40 @@ const en = {
   "firstrun.startNow": "Skip and try it now",
   "firstrun.stepOf": "Step {n} of {total}",
 
-  "firstrun.input.title": "Start from what you already have",
+  "firstrun.templates.title": "Start by picking the job",
+  "firstrun.templates.body":
+    "Fifteen ready templates: activity report, meeting minutes, summary, before & after, Excel recap, and more. Each one carries its own format and its own rules.",
+  "firstrun.templates.point1": "No long instructions to write — just pick the job",
+  "firstrun.templates.point2": "The document's structure is already decided per template",
+  "firstrun.templates.point3": "Write your own template when you have a fixed format",
+
+  "firstrun.input.title": "Attach the material",
   "firstrun.input.body":
-    "No need to write it neatly. Type your request as it comes, or attach a file and let its contents be the context.",
-  "firstrun.input.point1": "Photos of a whiteboard, screenshots, or scans",
+    "Each template asks only for what it genuinely needs. Add a line of context for anything the attachment cannot show.",
+  "firstrun.input.point1": "Activity photos, screenshots, sign-in sheets, or handwritten notes",
   "firstrun.input.point2": "PDF, Word, Excel, PowerPoint — the text is read for you",
-  "firstrun.input.point3": "Mixed languages are fine; the result follows the one you used",
+  "firstrun.input.point3": "One attachment is enough, except Before & After which needs two",
 
-  "firstrun.build.title": "One button, finished work",
+  "firstrun.build.title": "One button, a finished document",
   "firstrun.build.body":
-    "Tap Create result. Behind the scenes AI drafts then completes your request — what you see is a finished document, not a raw draft.",
-  "firstrun.build.point1": "The result appears directly—no app switching",
-  "firstrun.build.point2": "Your request and attachments provide the context",
-  "firstrun.build.point3": "It usually takes 30–60 seconds; the result arrives at once",
+    "Tap Create document and wait. What comes back is a fully formatted document ready to send, not a raw draft.",
+  "firstrun.build.point1": "Usually 20–60 seconds; you can leave the screen",
+  "firstrun.build.point2": "Only what the attachment shows is written — names and figures are never invented",
+  "firstrun.build.point3": "Missing details are marked as missing rather than guessed",
 
-  "firstrun.improve.title": "Improve it, then compare",
-  "firstrun.improve.body":
-    "If the result is not right, ask for a clearer, shorter, or more detailed version — without starting over.",
-  "firstrun.improve.point1": "See how many words were added and removed",
-  "firstrun.improve.point2": "Put the old and new versions side by side",
-  "firstrun.improve.point3": "The original stays until you choose",
+  "firstrun.calendar.title": "Everything filed by date",
+  "firstrun.calendar.body":
+    "Every document is saved to the calendar automatically. Two weeks later, pick the date to find it again.",
+  "firstrun.calendar.point1": "Nothing to remember to save",
+  "firstrun.calendar.point2": "Move a document back to the day the work actually happened",
+  "firstrun.calendar.point3": "Reopen any time to download it again",
 
-  "firstrun.menus.title": "Menus you will use often",
-  "firstrun.menus.body":
-    "Secondary tools live up top — they stay out of the way of the main canvas.",
-  "firstrun.menus.point1": "Help: a short guide whenever you need it",
-  "firstrun.menus.point2": "History: reopen results you already saved",
-  "firstrun.menus.point3": "Account: language, theme, quota, and membership",
-
-  "firstrun.output.title": "Save it and take it with you",
+  "firstrun.output.title": "Download, share, done",
   "firstrun.output.body":
-    "Good results go to history, download as Word, or tap the AI Work Studio title above to return home.",
-  "firstrun.output.point1": "History syncs across devices once you have an account",
-  "firstrun.output.point2": "Word export is included on Free; PowerPoint is paid",
-  "firstrun.output.point3": "5 free results per week for guests",
+    "From the finished document, download to your phone or share via WhatsApp, email, and Drive through your device's own share sheet.",
+  "firstrun.output.point1": "Word and Excel are on the free plan; PowerPoint is paid",
+  "firstrun.output.point2": "History syncs across devices once you have an account",
+  "firstrun.output.point3": "5 free documents per week for guests",
 
   "guide.title": "Guide",
   "guide.intro": "Everything you need to use AI Work Studio, open any time.",
@@ -556,18 +672,20 @@ const en = {
   "guide.section.tips": "Getting better results",
   "guide.section.limits": "Limits and things to know",
   "guide.tip1":
-    'Say who the document is for. "For my manager" and "for a new client" produce different tones.',
-  "guide.tip2": "Say how long you want it — pages, slides, or paragraphs.",
+    "Pick the template closest to your job. The right template shapes the result far more than a long note does.",
+  "guide.tip2":
+    "A sharp, square-on photo reads far better, especially for sign-in sheets and tables.",
   "guide.tip3":
-    'If you attach a file, say what to take from it. "Use only the sales figures" beats letting it guess.',
+    "Use the note field for what the photo cannot show — the date, the activity name, the location. That is what is missed most often.",
   "guide.tip4":
-    "If the first result is off, use Improve rather than rewriting your request from scratch.",
+    "If your format is always the same and is not in the list, write your own template once and reuse it.",
   "guide.limit1":
     "Results are generated by AI and can be wrong. Always check figures, names, and dates before sending.",
   "guide.limit2":
-    "Building takes about 20–40 seconds. Closing the app mid-run cancels it.",
-  "guide.limit3": "Quota is monthly. The free plan covers roughly 15 results.",
-  "guide.limit4": "Word and PowerPoint download start on the Pro plan.",
+    "Only what the attachment shows gets written. Anything missing is marked \"Not provided\" rather than guessed.",
+  "guide.limit3":
+    "Building takes about 20–60 seconds. Closing the app mid-run cancels it.",
+  "guide.limit4": "Word and Excel download on the free plan. PowerPoint starts on Pro.",
 
   "about.title": "About",
   "about.blurb":
