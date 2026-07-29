@@ -4,6 +4,8 @@ import { deflateSync } from "node:zlib";
 import { readFile } from "node:fs/promises";
 import { extractPdfText } from "../server/pdfText.js";
 
+const pdfSource = await readFile(new URL("../server/pdfText.js", import.meta.url), "utf8");
+
 /**
  * The failure this guards against is silent and expensive: a PDF whose text
  * cannot be read produces an empty excerpt, the model is handed nothing, and
@@ -81,6 +83,38 @@ test("hex strings are decoded", async () => {
   assert.match(text, /Nota Dinas Kepala Bagian Umum/);
 });
 
+test("glyph indexes are decoded through the font's ToUnicode map", () => {
+  // The real-world fix, verified against four genuine Indonesian government
+  // PDFs that previously yielded zero characters between them. Asserted at
+  // source level: building a subset-font PDF by hand that is faithful enough
+  // to be worth trusting turned out to be more error-prone than the code it
+  // was meant to guard.
+  assert.match(pdfSource, /function parseCMap/);
+  assert.match(pdfSource, /beginbfchar\(\[\\s\\S\]\*\?\)endbfchar/);
+  assert.match(pdfSource, /beginbfrange\(\[\\s\\S\]\*\?\)endbfrange/);
+  assert.match(pdfSource, /begincodespacerange/);
+  // The selected font decides the mapping, so Tf has to be tracked.
+  assert.match(pdfSource, /cmap = cmaps\.get\(match\[1\]\) \|\| null/);
+  assert.match(pdfSource, /function decodeBytes/);
+});
+
+test("per-glyph positioning does not shatter words", () => {
+  // Treating every Td as a newline turned "PEMERINTAH" into a column of ten
+  // single letters, and the readable word count came out as zero.
+  assert.match(pdfSource, /function joinShatteredText/);
+  assert.match(pdfSource, /Math\.abs\(ty\) > 2 \? "\\n\\n" : " "/);
+  assert.doesNotMatch(pdfSource, /\(T\\\*\|Td\|TD\|ET\)/, "Td is still treated as a line break");
+});
+
+test("the font dictionary is found when it is an indirect reference", async () => {
+  // LibreOffice writes "/Font 7 0 R" rather than "/Font << /F1 4 0 R >>".
+  // Matching only the inline form found no fonts at all, so every glyph code
+  // stayed unmapped and the whole document was rejected as noise.
+  const source = await readFile(new URL("../server/pdfText.js", import.meta.url), "utf8");
+  assert.match(source, /isFont\(target\)/);
+  assert.doesNotMatch(source, /\/Font\\s\*<</);
+});
+
 test("a scanned PDF with no text layer returns nothing rather than noise", async () => {
   // An image-only page has no text operators at all. Returning "" lets the
   // caller say so instead of summarising an empty string.
@@ -117,8 +151,21 @@ test("an unreadable upload is reported rather than summarised as nothing", async
     server,
     /if \(documentUploads\.length && !templateDocuments\.length && !visionAttachments\.length\)/
   );
-  assert.match(server, /Teks di berkas itu tidak bisa dibaca/);
-  assert.match(server, /could not be read/);
+  // A sentinel, not prose. The client's humaniser replaces any message it does
+  // not recognise with the generic "something went wrong" — which is exactly
+  // what swallowed the first attempt at this message in production.
+  assert.match(server, /throw publicApiError\("UNREADABLE_DOCUMENT", 422\)/);
+
+  const { humanizeApiError } = await import("../src/ui/errors.js");
+  const { makeTranslator, translate } = await import("../src/ui/i18n.js");
+  for (const lang of ["id", "en"]) {
+    const shown = humanizeApiError("UNREADABLE_DOCUMENT", makeTranslator(lang));
+    assert.equal(shown, translate(lang, "error.unreadableDocument"));
+    assert.doesNotMatch(shown, /UNREADABLE_DOCUMENT/, "the raw sentinel reached the user");
+    assert.notEqual(shown, translate(lang, "error.generic"));
+    // It has to say what to do next, not just that something failed.
+    assert.match(shown, lang === "id" ? /foto/i : /photo/i);
+  }
 });
 
 test("the summary asks for section-by-section detail, not a skim", async () => {

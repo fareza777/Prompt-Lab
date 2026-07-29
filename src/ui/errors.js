@@ -13,6 +13,8 @@
 const PATTERNS = [
   // Server-side sentinel: the run did not fit the platform's time limit.
   [/^RUN_TOO_LONG$/, "error.runTooLong"],
+  // Server-side sentinel: the attached file carried no readable text.
+  [/^UNREADABLE_DOCUMENT$/, "error.unreadableDocument"],
   [/failed to fetch|networkerror|load failed|network request failed/i, "error.offline"],
   [/sign in|invalid session|authentication required|\b401\b/i, "error.needAccount"],
   [/quota|usage limit/i, "error.quota"],

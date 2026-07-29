@@ -1649,12 +1649,11 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
         (file) => !String(file.mimetype || "").startsWith("image/")
       );
       if (documentUploads.length && !templateDocuments.length && !visionAttachments.length) {
-        throw publicApiError(
-          body.language === "en"
-            ? "The text in that file could not be read. If it is a scanned document, attach a photo of the page instead."
-            : "Teks di berkas itu tidak bisa dibaca. Kalau dokumennya hasil scan, lampirkan fotonya saja.",
-          422
-        );
+        // A sentinel, not prose: the client's error humaniser only recognises
+        // patterns it knows and replaces everything else with the generic
+        // "something went wrong", which is what swallowed the first attempt at
+        // this message. The localized wording lives in the client.
+        throw publicApiError("UNREADABLE_DOCUMENT", 422);
       }
 
       const answers = Object.values(body.values || {}).map((value) => String(value || ""));

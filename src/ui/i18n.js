@@ -377,6 +377,8 @@ const id = {
   "error.timeout": "AI terlalu lama merespons. Coba lagi sebentar.",
   "error.runTooLong":
     "Dokumennya terlalu berat untuk diselesaikan sekali jalan. Coba Buat hasil lagi — sistem sudah default ke versi ringkas — atau minta satu bagian saja.",
+  "error.unreadableDocument":
+    "Teks di berkas itu tidak bisa dibaca, jadi hasilnya pasti melenceng. Kalau PDF-nya hasil scan atau foto, lampirkan fotonya langsung — foto bisa dibaca. Bisa juga salin isinya ke kolom catatan.",
   "error.busy": "AI sedang sibuk. Coba lagi sebentar.",
   "error.notConfigured": "Layanan AI belum dikonfigurasi. Hubungi dukungan.",
   "error.fileTooLarge": "File terlalu besar. Maksimal 8 MB per file.",
@@ -769,6 +771,8 @@ const en = {
   "error.timeout": "The AI took too long to respond. Try again shortly.",
   "error.runTooLong":
     "That document was too heavy to finish in one run. Try Create result again — the system now defaults to a concise version — or ask for one section only.",
+  "error.unreadableDocument":
+    "No text could be read out of that file, so any result would be guesswork. If the PDF is a scan or a photo, attach the photo itself — photos can be read. You can also paste the contents into the notes field.",
   "error.busy": "The AI is busy. Try again shortly.",
   "error.notConfigured": "The AI service is not configured. Please contact support.",
   "error.fileTooLarge": "That file is too large. Maximum 8 MB per file.",
