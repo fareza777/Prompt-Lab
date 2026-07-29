@@ -2518,9 +2518,22 @@ function App() {
    * is exactly the one they will go looking for in two weeks.
    */
   function fileTemplateResult(template, content, note, language) {
+    /**
+     * The calendar entry needs a name a person will recognise weeks later.
+     *
+     * The document's first heading is the best candidate, but only when it is
+     * a real title. Models frequently open straight into the first required
+     * section, which filed a set of minutes under "Identitas Rapat" — the same
+     * useless label for every meeting.
+     */
+    const sectionNames = new Set(
+      [...(template.sections?.id || []), ...(template.sections?.en || [])].map((name) =>
+        name.toLowerCase()
+      )
+    );
     const heading = /^#{1,3}\s+(.+)$/m.exec(content)?.[1]?.trim();
     const title =
-      heading ||
+      (heading && !sectionNames.has(heading.toLowerCase()) ? heading : "") ||
       String(note || "").trim().split(/\s+/).slice(0, 8).join(" ") ||
       localizedTemplateName(template.name, language);
     const now = Date.now();

@@ -116,6 +116,10 @@ test("a finished document is filed without the user pressing save", async () => 
   assert.match(main, /fileTemplateResult\(template, content, note, language\)/);
   assert.match(main, /activityDate: toDateKey\(new Date\(\)\)/);
   assert.match(main, /templateId: template\.id/);
+  // A heading that is merely the template's first required section is not a
+  // title: it filed every set of minutes under "Identitas Rapat".
+  assert.match(main, /const sectionNames = new Set\(/);
+  assert.match(main, /!sectionNames\.has\(heading\.toLowerCase\(\)\)/);
   // And it must be movable afterwards.
   assert.match(main, /function setResultDate/);
   assert.match(main, /\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$/);

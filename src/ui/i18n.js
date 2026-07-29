@@ -122,6 +122,7 @@ const id = {
   "result.eyebrow": "Hasil kerja",
   "result.streaming": "Sedang ditulis…",
   "result.title": "Siap dilanjutkan",
+  "result.failedTitle": "Dokumen belum jadi",
   "result.ready": "Selesai",
   "result.readiness": "Kesiapan",
   "result.readinessHelp":
@@ -496,6 +497,7 @@ const en = {
   "result.eyebrow": "Finished work",
   "result.streaming": "Writing…",
   "result.title": "Ready to continue",
+  "result.failedTitle": "Document not created",
   "result.ready": "Complete",
   "result.readiness": "Readiness",
   "result.readinessHelp":

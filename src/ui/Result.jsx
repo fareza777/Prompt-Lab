@@ -450,12 +450,15 @@ export default function Result({
 
   return (
     <section className="pl-result" aria-label={t("result.title")}>
+      {/* A failed run must not be dressed as a finished one. Announcing
+          "Ready to continue / Done" above an error message is how the failure
+          screen read before: as though work had been delivered. */}
       <header className="pl-result-head">
         <div>
           <p className="pl-eyebrow">{t("result.eyebrow")}</p>
-          <h2>{t("result.title")}</h2>
+          <h2>{output ? t("result.title") : t("result.failedTitle")}</h2>
         </div>
-        <span className="pl-result-status">{t("result.ready")}</span>
+        {output && <span className="pl-result-status">{t("result.ready")}</span>}
       </header>
 
       {output && (
