@@ -201,25 +201,57 @@ Attendee names come only from the transcript or the photographed notes; never in
         }),
       ],
     },
-    length: { words: [300, 550], pages: 1 },
+    length: { words: [700, 1100], pages: 2 },
     outputs: ["docx", "pdf"],
     sections: {
-      id: ["Ringkasan Inti", "Poin Kunci", "Angka Penting", "Hal yang Perlu Perhatian"],
-      en: ["Core Summary", "Key Points", "Key Figures", "Needs Attention"],
+      id: [
+        "Ringkasan Inti",
+        "Pembahasan per Bagian",
+        "Angka dan Data Penting",
+        "Pihak yang Disebut",
+        "Kesimpulan Dokumen",
+        "Hal yang Perlu Perhatian",
+      ],
+      en: [
+        "Core Summary",
+        "Section by Section",
+        "Key Figures and Data",
+        "Parties Named",
+        "What the Document Concludes",
+        "Needs Attention",
+      ],
     },
     prompt: {
-      id: `Ringkas dokumen yang dilampirkan menjadi SATU HALAMAN.
-"Ringkasan Inti" 1 paragraf (4–6 kalimat) yang bisa dibaca sendirian.
-"Poin Kunci" maksimal 7 bullet, masing-masing kalimat penuh.
-"Angka Penting" hanya bila dokumen memuat angka — salin persis, jangan dibulatkan atau dihitung ulang.
-"Hal yang Perlu Perhatian" memuat risiko, tenggat, atau keputusan yang menunggu; lewati bila tidak ada.
-Pertahankan istilah asli dokumen. Jangan menambah opini yang tidak ada di sumber — ini satu-satunya template yang TIDAK boleh menambahkan asumsi.`,
-      en: `Reduce the attached document to ONE PAGE.
-"Core Summary" is one paragraph of four to six sentences that stands alone.
-"Key Points" is at most seven bullets, each a full sentence.
-"Key Figures" only when the document contains numbers — copy them exactly, never round or recompute.
-"Needs Attention" covers risks, deadlines, or pending decisions; skip it if there are none.
-Keep the source's own terminology. Add no opinion that is not in the source — this is the one template that must NOT add assumptions.`,
+      id: `Ringkas dokumen yang dilampirkan secara PADAT DAN SPESIFIK. Ini bukan ringkasan sekilas — pembaca harus paham isi dokumen tanpa membuka aslinya.
+
+"Ringkasan Inti" 1 paragraf (5–7 kalimat) yang bisa dibaca sendirian dan sudah menjawab: dokumen ini tentang apa, siapa yang terlibat, dan apa kesimpulannya.
+
+"Pembahasan per Bagian" adalah bagian terpenting dan terpanjang. Telusuri dokumen dari awal sampai akhir. Untuk SETIAP bab/bagian utama, tulis satu sub-bagian dengan heading "### " memakai judul asli bagian itu, lalu 2–4 kalimat yang memuat isi konkretnya. Jangan melompati bagian. Jangan menulis kalimat kosong seperti "bagian ini membahas berbagai hal" — sebutkan hal-halnya.
+
+"Angka dan Data Penting" berupa tabel Markdown: Uraian | Nilai | Konteks. Muat SEMUA angka penting yang ada di dokumen (anggaran, persentase, jumlah, target, tanggal tenggat). Salin persis apa adanya — jangan dibulatkan, dijumlahkan, atau dihitung ulang. Lewati bagian ini hanya bila dokumen benar-benar tidak memuat angka.
+
+"Pihak yang Disebut" daftar nama orang, jabatan, unit kerja, atau instansi yang disebut dokumen beserta perannya. Lewati bila tidak ada.
+
+"Kesimpulan Dokumen" apa yang disimpulkan atau diputuskan DOKUMEN ITU, bukan pendapatmu.
+
+"Hal yang Perlu Perhatian" risiko, tenggat, syarat, atau keputusan yang masih menggantung.
+
+Pertahankan istilah, singkatan, dan penamaan asli dokumen. Jangan menambah opini, saran, atau konteks yang tidak ada di sumber — ini satu-satunya template yang TIDAK boleh menambahkan asumsi.`,
+      en: `Summarise the attached document DENSELY AND SPECIFICALLY. This is not a skim — the reader must understand the document without opening the original.
+
+"Core Summary" is one paragraph of five to seven sentences that stands alone and already answers: what this document is about, who is involved, and what it concludes.
+
+"Section by Section" is the longest and most important part. Walk the document from beginning to end. For EVERY major chapter or section, write a sub-section headed with "### " using that section's own title, then two to four sentences of its concrete content. Skip nothing. Never write empty sentences like "this section discusses various matters" — name the matters.
+
+"Key Figures and Data" is a Markdown table: Item | Value | Context. Include EVERY significant number in the document (budgets, percentages, quantities, targets, deadlines). Copy them exactly — never round, total, or recompute. Skip this section only if the document truly contains no numbers.
+
+"Parties Named" lists the people, roles, units, or organisations the document names, with their part in it. Skip if there are none.
+
+"What the Document Concludes" is what THE DOCUMENT concludes or decides, not your view.
+
+"Needs Attention" covers risks, deadlines, conditions, or decisions still outstanding.
+
+Keep the source's own terminology, abbreviations, and naming. Add no opinion, advice, or context that is not in the source — this is the one template that must NOT add assumptions.`,
     },
   },
 

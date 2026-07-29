@@ -83,6 +83,7 @@ import {
 import { persistReservedUsage, quotaFailureStatus } from "./quotaReservation.js";
 import { buildDocxBuffer, buildPptxBuffer } from "./officeExport.js";
 import { buildXlsxBuffer } from "./xlsxExport.js";
+import { extractPdfText } from "./pdfText.js";
 import { buildTemplateInstruction, getTemplate } from "../src/workTemplates.js";
 import { attachmentDisposition } from "./exportFilename.js";
 import {
@@ -1637,6 +1638,25 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
       // The prompt field is empty in template mode, so quota and the token
       // ceiling would both be sized against nothing. The real weight is the
       // field answers plus whatever text was extracted from the documents.
+      /**
+       * A file we could not read is worse than no file: the model would write
+       * a confident, entirely generic summary of nothing. Say so instead.
+       *
+       * Scanned PDFs are the common case — they carry an image of the page and
+       * no text layer at all.
+       */
+      const documentUploads = (req.files || []).filter(
+        (file) => !String(file.mimetype || "").startsWith("image/")
+      );
+      if (documentUploads.length && !templateDocuments.length && !visionAttachments.length) {
+        throw publicApiError(
+          body.language === "en"
+            ? "The text in that file could not be read. If it is a scanned document, attach a photo of the page instead."
+            : "Teks di berkas itu tidak bisa dibaca. Kalau dokumennya hasil scan, lampirkan fotonya saja.",
+          422
+        );
+      }
+
       const answers = Object.values(body.values || {}).map((value) => String(value || ""));
       payload.prompt = [...answers, ...templateDocuments.map((doc) => doc.excerpt)]
         .filter(Boolean)
@@ -4511,55 +4531,6 @@ async function normalizeFile(file, modelSettings = {}, plan = "Free") {
     mime: outMime,
     size: outSize,
   };
-}
-
-async function extractPdfText(buffer) {
-  const raw = buffer.toString("latin1");
-  const chunks = [];
-  const literalStringPattern = /\(([^()\\]*(?:\\.[^()\\]*)*)\)\s*(?:Tj|'|"|\])/g;
-  const hexStringPattern = /<([0-9A-Fa-f\s]{4,})>\s*Tj/g;
-  let match;
-
-  while ((match = literalStringPattern.exec(raw)) && chunks.length < 1200) {
-    chunks.push(decodePdfLiteralString(match[1]));
-  }
-
-  while ((match = hexStringPattern.exec(raw)) && chunks.length < 1400) {
-    chunks.push(decodePdfHexString(match[1]));
-  }
-
-  return chunks
-    .filter(Boolean)
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 15000);
-}
-
-function decodePdfLiteralString(value) {
-  return value
-    .replace(/\\([nrtbf()\\])/g, (_match, char) => {
-      const map = { b: "\b", f: "\f", n: "\n", r: "\r", t: "\t" };
-      return map[char] || char;
-    })
-    .replace(/\\(\d{1,3})/g, (_match, octal) => String.fromCharCode(Number.parseInt(octal, 8)))
-    .replace(/[^\S\r\n]+/g, " ")
-    .trim();
-}
-
-function decodePdfHexString(value) {
-  const clean = value.replace(/\s+/g, "");
-  const bytes = clean.match(/.{1,2}/g)?.map((hex) => Number.parseInt(hex, 16)) || [];
-  if (!bytes.length) return "";
-  const hasUtf16Bom = bytes[0] === 0xfe && bytes[1] === 0xff;
-  if (hasUtf16Bom) {
-    let output = "";
-    for (let index = 2; index + 1 < bytes.length; index += 2) {
-      output += String.fromCharCode((bytes[index] << 8) | bytes[index + 1]);
-    }
-    return output.trim();
-  }
-  return Buffer.from(bytes).toString("utf8").replace(/\u0000/g, "").trim();
 }
 
 async function extractImageText(file, modelSettings = {}, plan = "Free") {
