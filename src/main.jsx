@@ -135,7 +135,7 @@ function writeTrialUsed(value) {
  * Copy for the native account-deletion dialogs.
  *
  * Play requires that deleting an account is reachable in-app and that the user
- * is told what it does and does not remove â€” notably that it does not cancel a
+ * is told what it does and does not remove — notably that it does not cancel a
  * Play subscription.
  */
 function translateAccountDeletion() {
@@ -143,13 +143,13 @@ function translateAccountDeletion() {
   if (lang === "en") {
     return {
       warning:
-        "Delete your AI Work Studio account permanently? This removes your profile, synced history, and membership record.\n\nImportant: this does NOT cancel a Google Play subscription. Manage that in Google Play â†’ Payments & subscriptions.",
+        "Delete your AI Work Studio account permanently? This removes your profile, synced history, and membership record.\n\nImportant: this does NOT cancel a Google Play subscription. Manage that in Google Play → Payments & subscriptions.",
       typeToConfirm: "Type DELETE to confirm account deletion:",
     };
   }
   return {
     warning:
-      "Hapus akun AI Work Studio secara permanen? Tindakan ini menghapus profil, riwayat tersinkron, dan catatan keanggotaan.\n\nPenting: ini TIDAK membatalkan langganan Google Play. Batalkan langganan lewat Google Play â†’ Pembayaran & langganan.",
+      "Hapus akun AI Work Studio secara permanen? Tindakan ini menghapus profil, riwayat tersinkron, dan catatan keanggotaan.\n\nPenting: ini TIDAK membatalkan langganan Google Play. Batalkan langganan lewat Google Play → Pembayaran & langganan.",
     typeToConfirm: 'Ketik DELETE untuk mengonfirmasi penghapusan akun:',
   };
 }
@@ -1245,8 +1245,8 @@ function App() {
   const [tone, setTone] = useState("Professional");
   const [model, setModel] = useState("ChatGPT");
   // A document is the most common thing people come here to produce. The old
-  // default of "Application Code" shaped every unadjusted request â€” including a
-  // marketing or academic one â€” into code.
+  // default of "Application Code" shaped every unadjusted request — including a
+  // marketing or academic one — into code.
   const [outputType, setOutputType] = useState("Word Document");
   // The canvas starts empty. Seeding it with a sample meant every user opened
   // the app to someone else's text they had to clear first; the placeholder
@@ -1314,7 +1314,7 @@ function App() {
   const [adminActionStatus, setAdminActionStatus] = useState("");
   const [globalPublishAt, setGlobalPublishAt] = useState("");
   const [globalConfigSource, setGlobalConfigSource] = useState("env");
-  /** Output of running the prompt â€” the finished deliverable, not instructions. */
+  /** Output of running the prompt — the finished deliverable, not instructions. */
   const [runOutput, setRunOutput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [runError, setRunError] = useState("");
@@ -1362,7 +1362,7 @@ function App() {
   /**
    * An anonymous Supabase session lets a new user try the app before creating
    * an account. It authenticates the API call, but the UI must keep treating
-   * the person as signed out â€” otherwise we would show them account and
+   * the person as signed out — otherwise we would show them account and
    * membership state they do not actually have.
    */
   const [isAnonymousSession, setIsAnonymousSession] = useState(false);
@@ -2122,7 +2122,7 @@ function App() {
     if (checkoutUrl) {
       window.open(checkoutUrl, "_blank", "noopener,noreferrer");
       setBillingMessage(
-        `Opening Lemon Squeezy checkout for ${planName}. Your plan updates automatically after payment â€” tap Refresh membership below if needed.`
+        `Opening Lemon Squeezy checkout for ${planName}. Your plan updates automatically after payment — tap Refresh membership below if needed.`
       );
       flashAction(`${planName} checkout opened`);
       return;
@@ -2483,7 +2483,7 @@ function App() {
       const rawContent = data.content || data.prompt || "";
       if (data.truncated) {
         setWarningMessage(
-          "Dokumen berhenti sebelum selesai karena batas waktu. Bagian yang sudah jadi tetap tersimpan â€” persingkat permintaan untuk hasil penuh."
+          "Dokumen berhenti sebelum selesai karena batas waktu. Bagian yang sudah jadi tetap tersimpan — persingkat permintaan untuk hasil penuh."
         );
       }
       const profile = detectDeliverableProfile({
@@ -2557,6 +2557,30 @@ function App() {
   async function runTemplate(template, note = "", language = "id") {
     if (!template) return null;
 
+    /**
+     * A guest needs an anonymous session before the server will run anything.
+     *
+     * The old flow got this for free because every run went through
+     * generatePrompt first, which bootstrapped the trial. Template mode skips
+     * that step by design, and skipping it also skipped the sign-in — so a
+     * guest who picked a template could never generate.
+     */
+    const onTrial = !hasAuthSession || isAnonymousSession;
+    if (onTrial && trialUsed >= TRIAL_LIMIT) {
+      setRunError("");
+      setErrorMessage("");
+      return null;
+    }
+    if (!hasAuthSession) {
+      const ready = await ensureTrialSession();
+      if (!ready) {
+        // Phrased so the error humanizer maps it to the localized
+        // "create a free account" copy rather than a generic failure.
+        setRunError("Sign in to use AI features.");
+        return null;
+      }
+    }
+
     setIsRunning(true);
     setRunError("");
     setWarningMessage("");
@@ -2626,7 +2650,7 @@ function App() {
 
       if (data.truncated) {
         setWarningMessage(
-          "Dokumen berhenti sebelum selesai karena batas waktu. Bagian yang sudah jadi tetap tersimpan â€” kurangi lampiran untuk hasil penuh."
+          "Dokumen berhenti sebelum selesai karena batas waktu. Bagian yang sudah jadi tetap tersimpan — kurangi lampiran untuk hasil penuh."
         );
       }
 
@@ -3058,14 +3082,14 @@ function App() {
           if (diagramExportOffer?.url) URL.revokeObjectURL(diagramExportOffer.url);
           const url = URL.createObjectURL(blob);
           setDiagramExportOffer({ blob, filename, extension, url });
-          setExportStatus(`${label} siap â€” ketuk Bagikan / Simpan`);
+          setExportStatus(`${label} siap — ketuk Bagikan / Simpan`);
           return;
         }
 
         const result = await triggerBrowserDownload(blob, filename);
         setExportStatus(
           result?.method === "share" || result?.method === "share-abort"
-            ? `${label} ready â€” pilih Save / Download di share sheet`
+            ? `${label} ready — pilih Save / Download di share sheet`
             : `${label} downloaded`
         );
         window.setTimeout(() => setExportStatus(""), 4500);
@@ -3119,7 +3143,7 @@ function App() {
         authHeaders = {};
       }
       // Document language follows UI locale (owned by Shell via detectLanguage).
-      // Do not reference a free `lang` binding here â€” App no longer owns that state.
+      // Do not reference a free `lang` binding here — App no longer owns that state.
       const documentLanguage = detectLanguage() === "en" ? "en" : "id";
       const { deriveExportTitle, toDownloadFilename, triggerBrowserDownload } = await import(
         "./exportNaming.js"
@@ -3163,14 +3187,14 @@ function App() {
         if (diagramExportOffer?.url) URL.revokeObjectURL(diagramExportOffer.url);
         const url = URL.createObjectURL(blob);
         setDiagramExportOffer({ blob, filename, extension: format, url });
-        setExportStatus(`${formatLabel} siap â€” ketuk Bagikan / Simpan`);
+        setExportStatus(`${formatLabel} siap — ketuk Bagikan / Simpan`);
         return;
       }
 
       const result = await triggerBrowserDownload(blob, filename);
       setExportStatus(
         result?.method === "share" || result?.method === "share-abort"
-          ? `${formatLabel} ready â€” pilih Save / Download di share sheet`
+          ? `${formatLabel} ready — pilih Save / Download di share sheet`
           : `${formatLabel} downloaded`
       );
       window.setTimeout(() => setExportStatus(""), 4500);
@@ -3193,7 +3217,7 @@ function App() {
   function confirmDiagramExportShare(method = "share") {
     setExportStatus(
       method === "open" || method === "preview"
-        ? "File terbuka â€” simpan dari menu / tekan lama bila gambar"
+        ? "File terbuka — simpan dari menu / tekan lama bila gambar"
         : "File dibagikan / siap disimpan"
     );
     window.setTimeout(() => setExportStatus(""), 4500);
@@ -3374,7 +3398,7 @@ function App() {
     // An anonymous trial session is not an account, and must not be presented
     // as one.
     hasAuthSession: hasAuthSession && !isAnonymousSession,
-    // null hides the trial affordance entirely â€” used when the backend cannot
+    // null hides the trial affordance entirely — used when the backend cannot
     // grant trials, so the UI never advertises a free try it cannot deliver.
     trialRemaining: trialAvailable ? Math.max(0, TRIAL_LIMIT - trialUsed) : null,
     isAdmin: accountState.role === "admin",
@@ -3389,9 +3413,9 @@ function App() {
     return (
       <div data-theme="v2" style={{ padding: 16 }}>
         <button className="v2-btn" type="button" onClick={() => setActive("Builder")}>
-          â† Back to app
+          ← Back to app
         </button>
-        <React.Suspense fallback={<p style={{ padding: 24 }}>Loading admin consoleâ€¦</p>}>
+        <React.Suspense fallback={<p style={{ padding: 24 }}>Loading admin console…</p>}>
           <AdminConsole {...shared} />
         </React.Suspense>
       </div>

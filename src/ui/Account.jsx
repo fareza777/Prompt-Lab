@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LogOut, Trash2, Shield, Sun, Moon, Monitor, Star, Mail } from "lucide-react";
+import { LogOut, Trash2, Shield, Sun, Moon, Star, Mail } from "lucide-react";
 import Sheet from "./Sheet.jsx";
 import { LANGUAGES } from "./i18n.js";
 import { PLAY_STORE_LISTING_URL, SUPPORT_EMAIL } from "../aboutApp.js";
@@ -127,8 +127,9 @@ function AuthForm({ t, isBusy, status, error, onSignIn, onSignUp, onGoogle, onFo
 }
 
 function Preferences({ t, lang, setLang, themeMode, setThemeMode }) {
+  // "Follow the system" was retired: it silently put a document tool into dark
+  // mode for every user whose phone defaults there.
   const themes = [
-    ["system", Monitor, t("account.theme.system")],
     ["light", Sun, t("account.theme.light")],
     ["dark", Moon, t("account.theme.dark")],
   ];
