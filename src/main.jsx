@@ -2608,7 +2608,7 @@ function App() {
    * halves the latency and removes the step where the app's own wording could
    * drift away from what the user picked.
    */
-  async function runTemplate(template, values = {}, language = "id") {
+  async function runTemplate(template, values = {}, language = "id", editedFields = []) {
     if (!template) return null;
 
     /**
@@ -2669,6 +2669,7 @@ function App() {
       const formData = new FormData();
       formData.append("templateId", template.id);
       formData.append("values", JSON.stringify(values || {}));
+      formData.append("editedFields", JSON.stringify(editedFields || []));
       formData.append("language", language === "en" ? "en" : "id");
       formData.append("resultId", resultId);
       // Smallest first, so if the payload has to be cut it is the largest

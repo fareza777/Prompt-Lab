@@ -194,6 +194,7 @@ export default function Shell(props) {
   // and the result all belong to whichever template is selected.
   const [activeTemplate, setActiveTemplate] = useState(null);
   const [templateValues, setTemplateValues] = useState({});
+  const [templateEditedFields, setTemplateEditedFields] = useState([]);
 
   const t = useMemo(() => makeTranslator(lang), [lang]);
 
@@ -280,6 +281,7 @@ export default function Shell(props) {
       setActiveTemplate(template);
       // Date and time arrive already filled in for the day the user is on.
       setTemplateValues(defaultFieldValues(template));
+      setTemplateEditedFields([]);
       setRunOutput?.("");
       clearComposer?.();
       clearMessages();
@@ -291,6 +293,7 @@ export default function Shell(props) {
   const leaveTemplate = useCallback(() => {
     setActiveTemplate(null);
     setTemplateValues({});
+    setTemplateEditedFields([]);
     setRunOutput?.("");
     clearComposer?.();
     clearMessages();
@@ -298,6 +301,9 @@ export default function Shell(props) {
 
   const setTemplateValue = useCallback((id, value) => {
     setTemplateValues((current) => ({ ...current, [id]: value }));
+    setTemplateEditedFields((current) =>
+      current.includes(id) ? current : [...current, id]
+    );
   }, []);
 
   /**
@@ -331,6 +337,7 @@ export default function Shell(props) {
         // filename rather than reverting to the template's generic name.
         const subjectField = templateSubjectField(template);
         setTemplateValues(subjectField ? { [subjectField]: item.title || "" } : {});
+        setTemplateEditedFields(subjectField ? [subjectField] : []);
       }
       setSelectedLibraryId?.(item.id);
       setRunOutput?.(item.output || item.content || "");
@@ -344,8 +351,8 @@ export default function Shell(props) {
   const handleTemplateGenerate = useCallback(async () => {
     if (!activeTemplate) return;
     clearMessages();
-    await runTemplate?.(activeTemplate, templateValues, lang);
-  }, [activeTemplate, templateValues, runTemplate, lang, clearMessages]);
+    await runTemplate?.(activeTemplate, templateValues, lang, templateEditedFields);
+  }, [activeTemplate, templateValues, runTemplate, lang, templateEditedFields, clearMessages]);
 
   const openHistoryItem = useCallback(
     (item) => {

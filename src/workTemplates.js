@@ -195,20 +195,37 @@ function universalDirective(language, template) {
 }
 
 /** The user's answers, written out as facts the model must use verbatim. */
-function fieldDirective(template, values, language) {
+function fieldDirective(template, values, language, editedFields = []) {
   const l = lang(language);
-  const lines = templateFields(template)
-    .map((field) => {
-      const value = filled(values, field.id);
-      if (!value) return null;
-      return `- ${localized(field.label, l)}: ${value}`;
-    })
-    .filter(Boolean);
+  const edited = new Set(Array.isArray(editedFields) ? editedFields : []);
+  const entries = templateFields(template)
+    .map((field) => ({ field, value: filled(values, field.id) }))
+    .filter((entry) => entry.value);
+  const facts = entries.filter(
+    ({ field }) => !field.autofill || edited.has(field.id)
+  );
+  const fallbacks = entries.filter(
+    ({ field }) => field.autofill && !edited.has(field.id)
+  );
+  const lines = facts.map(
+    ({ field, value }) => `- ${localized(field.label, l)}: ${value}`
+  );
+  const fallbackLines = fallbacks.map(
+    ({ field, value }) => `- ${localized(field.label, l)}: ${value}`
+  );
 
-  if (!lines.length) return "";
-  return l === "en"
-    ? `\nSUPPLIED DATA — these are established facts. Use every one of them, verbatim, in the right section. They outrank anything you infer from an attachment:\n${lines.join("\n")}\n`
-    : `\nDATA DARI PENGGUNA — ini fakta yang sudah pasti. Pakai semuanya, apa adanya, di bagian yang tepat. Ini mengalahkan apa pun yang kamu simpulkan dari lampiran:\n${lines.join("\n")}\n`;
+  const factsBlock = !lines.length
+    ? ""
+    : l === "en"
+      ? `\nSUPPLIED DATA — these are established facts. Use every one of them, verbatim, in the right section. They outrank anything you infer from an attachment:\n${lines.join("\n")}\n`
+      : `\nDATA DARI PENGGUNA — ini fakta yang sudah pasti. Pakai semuanya, apa adanya, di bagian yang tepat. Ini mengalahkan apa pun yang kamu simpulkan dari lampiran:\n${lines.join("\n")}\n`;
+  const fallbackBlock = !fallbackLines.length
+    ? ""
+    : l === "en"
+      ? `\nAPPLICATION TIME FALLBACK — if the attachment clearly shows the relevant event date or time, use that instead. Otherwise use these values so the finished document has no gap:\n${fallbackLines.join("\n")}\n`
+      : `\nFALLBACK WAKTU APLIKASI — jika tanggal atau waktu kegiatan pada lampiran terbaca jelas, utamakan nilai dari lampiran. Jika tidak, gunakan nilai berikut agar dokumen jadi tidak memiliki bagian kosong:\n${fallbackLines.join("\n")}\n`;
+
+  return `${factsBlock}${fallbackBlock}`;
 }
 
 function attachmentDirective(attachments, language) {
@@ -239,6 +256,7 @@ function attachmentDirective(attachments, language) {
  * @param {object} options.template   a built-in or normalised custom template
  * @param {string} [options.language] "id" | "en"
  * @param {object} [options.values]   the user's field answers, keyed by field id
+ * @param {Array}  [options.editedFields] autofilled field ids manually changed by the user
  * @param {Array}  [options.attachments] `[{slot?}]` — only the labels are read
  * @returns {string}
  */
@@ -246,6 +264,7 @@ export function buildTemplateInstruction({
   template,
   language = "id",
   values = {},
+  editedFields = [],
   attachments = [],
 } = {}) {
   if (!template) return "";
@@ -260,7 +279,7 @@ export function buildTemplateInstruction({
     head,
     "",
     localized(template.prompt, l),
-    fieldDirective(template, values, l),
+    fieldDirective(template, values, l, editedFields),
     attachmentDirective(attachments, l),
     // The stance goes last of the content rules so it colours everything above.
     `\n${COMPLETION_STANCE_CLAUSES[template.completionPolicy || "bounded"][l]}\n`,

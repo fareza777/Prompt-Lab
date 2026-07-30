@@ -179,6 +179,41 @@ test("field answers are handed over as established facts", () => {
   assert.doesNotMatch(instruction, /Tempat: *\n/);
 });
 
+test("untouched autofilled date and time are attachment-aware fallbacks", () => {
+  const template = getTemplate("meeting-minutes");
+  const values = defaultFieldValues(template, new Date(2026, 6, 30, 9, 45));
+  values.subject = "Rapat koordinasi";
+  values.transcript = "Pembahasan singkat";
+  const instruction = buildTemplateInstruction({
+    template,
+    values,
+    editedFields: [],
+  });
+
+  assert.match(instruction, /FALLBACK WAKTU APLIKASI/);
+  assert.match(instruction, /2026-07-30/);
+  assert.match(instruction, /09:45/);
+  assert.match(instruction, /lampiran[\s\S]*terbaca jelas[\s\S]*utamakan/i);
+});
+
+test("manually edited autofill is authoritative", () => {
+  const template = getTemplate("meeting-minutes");
+  const values = {
+    ...defaultFieldValues(template, new Date(2026, 6, 30, 9, 45)),
+    subject: "Rapat koordinasi",
+    transcript: "Pembahasan singkat",
+    date: "2026-08-17",
+  };
+  const instruction = buildTemplateInstruction({
+    template,
+    values,
+    editedFields: ["date"],
+  });
+
+  assert.match(instruction, /DATA DARI PENGGUNA[\s\S]*2026-08-17/);
+  assert.doesNotMatch(instruction, /FALLBACK WAKTU APLIKASI[\s\S]*2026-08-17/);
+});
+
 test("the writing stance asks for a finished document, not a photo caption", () => {
   const instruction = buildTemplateInstruction({
     template: getTemplate("activity-report"),

@@ -1384,6 +1384,7 @@ function parseRunPromptBody(req) {
     // each uploaded photo arrived in. Both come over as JSON in a multipart
     // field, so a malformed value must degrade rather than throw.
     values: parseJsonField(req.body?.values, {}),
+    editedFields: parseJsonField(req.body?.editedFields, []),
     slots: parseJsonField(req.body?.slots, []),
     language: String(req.body?.language || "id") === "en" ? "en" : "id",
     outputType: String(req.body?.outputType || ""),
@@ -1747,6 +1748,7 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
         template,
         language: body.language,
         values: body.values,
+        editedFields: body.editedFields,
         attachments: [...visionAttachments, ...templateDocuments],
       });
       const visionNote = visionAttachments.length
