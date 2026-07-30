@@ -3184,7 +3184,13 @@ function App() {
     }
 
     const feature =
-      format === "pptx" ? "pptxExport" : format === "xlsx" ? "xlsxExport" : "docxExport";
+      format === "pptx"
+        ? "pptxExport"
+        : format === "xlsx"
+          ? "xlsxExport"
+          : format === "pdf"
+            ? "pdfExport"
+            : "docxExport";
     if (!canExportFormat(accountState.plan, format)) {
       const message =
         format === "pptx"
@@ -3226,8 +3232,10 @@ function App() {
             : "Belum ada hasil untuk diekspor. Ketuk Buat hasil dulu."
         );
       }
-      // Word carries the photographs; the other formats cannot place them.
-      const images = format === "docx" ? await readAttachmentImages(attachments) : [];
+      // Finished reports carry their photographs in both portable formats.
+      const images = ["docx", "pdf"].includes(format)
+        ? await readAttachmentImages(attachments)
+        : [];
 
       const response = await fetch(`${apiBase}/api/export/${format}`, {
         method: "POST",

@@ -12,6 +12,7 @@ export const API_MSG = {
   optimizeFailed: "Could not optimize the prompt. Please try again.",
   compareFailed: "Could not compare prompts. Please try again.",
   docxFailed: "Could not create the DOCX file.",
+  pdfFailed: "Could not create the PDF file.",
   pptxFailed: "Could not create the PPTX file.",
   xlsxFailed: "Could not create the Excel file.",
   apiKeyInactive: "API key is not active. Set Vercel environment variables or an API key override.",

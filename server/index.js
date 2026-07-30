@@ -82,6 +82,7 @@ import {
 } from "./playBillingGoogle.js";
 import { persistReservedUsage, quotaFailureStatus } from "./quotaReservation.js";
 import { buildDocxBuffer, buildPptxBuffer } from "./officeExport.js";
+import { buildPdfBuffer } from "./pdfExport.js";
 import { buildXlsxBuffer } from "./xlsxExport.js";
 import { extractPdfImages, extractPdfText } from "./pdfText.js";
 import { buildTemplateInstruction, getTemplate } from "../src/workTemplates.js";
@@ -540,6 +541,34 @@ app.post("/api/export/docx", express.json({ limit: "12mb" }), async (req, res) =
   } catch (error) {
     console.error("docx export failed", error.message);
     res.status(500).json({ error: API_MSG.docxFailed });
+  }
+});
+
+app.post("/api/export/pdf", express.json({ limit: "12mb" }), async (req, res) => {
+  try {
+    const membership = await getMembershipFromRequest(req);
+    if (!canExportFormat(membership.plan, "pdf")) {
+      res.status(402).json({
+        error: upgradeMessageForFeature("pdfExport"),
+        code: "UPGRADE_REQUIRED",
+        minPlan: "Free",
+      });
+      return;
+    }
+    const { title, content } = normalizeExportPayload(req.body);
+    const buffer = await buildPdfBuffer({
+      title,
+      content,
+      language: String(req.body?.language || "id"),
+      plan: membership.plan,
+      images: Array.isArray(req.body?.images) ? req.body.images.slice(0, 8) : [],
+    });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", attachmentDisposition(title, "pdf"));
+    res.send(buffer);
+  } catch (error) {
+    console.error("pdf export failed", error.message);
+    res.status(500).json({ error: API_MSG.pdfFailed });
   }
 });
 

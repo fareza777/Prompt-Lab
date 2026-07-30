@@ -109,6 +109,6 @@ test("the export route accepts photographs", async () => {
 
   const main = await readFile(new URL("../src/main.jsx", import.meta.url), "utf8");
   assert.match(main, /async function readAttachmentImages/);
-  assert.match(main, /format === "docx" \? await readAttachmentImages\(attachments\) : \[\]/);
+  assert.match(main, /\["docx", "pdf"\]\.includes\(format\)/);
   assert.match(main, /slot: item\.slot \|\| ""/);
 });
