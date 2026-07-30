@@ -92,6 +92,28 @@ const id = {
   "cal.dayWithCount": "{date}, {n} dokumen",
   "cal.openHint": "Ketuk dokumen untuk membukanya, lalu unduh atau bagikan.",
   "cal.saved": "Tersimpan di kalender",
+  "theme.title": "Warna tampilan",
+  "theme.intro":
+    "Pilih satu tema siap pakai, atau atur sendiri warnanya di bawah. Semua pilihan gratis.",
+  "theme.customTitle": "Atur sendiri",
+  "theme.customHint":
+    "Empat warna ini yang kamu tentukan. Garis, bayangan, dan warna tombol dihitung otomatis dari keempatnya.",
+  "theme.colour.paper": "Latar halaman",
+  "theme.colour.surface": "Kartu & dokumen",
+  "theme.colour.ink": "Tulisan",
+  "theme.colour.accent": "Aksen",
+  "theme.contrastOk": "Keterbacaan bagus — kontras tulisan {ratio}:1.",
+  "theme.warnTextPage":
+    "Tulisan sulit dibaca di latar itu (kontras {ratio}:1). Gelapkan tulisannya atau terangkan latarnya.",
+  "theme.warnTextCard":
+    "Tulisan sulit dibaca di atas kartu (kontras {ratio}:1) — dan di situlah dokumenmu ditampilkan.",
+  "theme.warnAccent":
+    "Warna aksen terlalu mirip latarnya (kontras {ratio}:1), jadi tombol dan judul akan tenggelam.",
+  "theme.warnLayers":
+    "Latar halaman dan kartu terlalu jauh berbeda, jadi tampilannya terasa belang.",
+  "theme.warnInvalid": "Ada warna yang belum valid.",
+  "theme.reset": "Kembalikan ke bawaan",
+
   "cal.search": "Cari judul atau isi dokumen",
   "cal.searchCount": "{n} dokumen cocok",
 
@@ -498,6 +520,28 @@ const en = {
   "cal.dayWithCount": "{date}, {n} document(s)",
   "cal.openHint": "Tap a document to open it, then download or share.",
   "cal.saved": "Filed in the calendar",
+  "theme.title": "Colours",
+  "theme.intro":
+    "Pick a ready theme, or set the colours yourself below. Every option is free.",
+  "theme.customTitle": "Set your own",
+  "theme.customHint":
+    "You choose these four. Rules, shadows and button colours are derived from them.",
+  "theme.colour.paper": "Page background",
+  "theme.colour.surface": "Cards & documents",
+  "theme.colour.ink": "Text",
+  "theme.colour.accent": "Accent",
+  "theme.contrastOk": "Comfortable to read — text contrast {ratio}:1.",
+  "theme.warnTextPage":
+    "Text is hard to read on that background ({ratio}:1). Darken the text or lighten the page.",
+  "theme.warnTextCard":
+    "Text is hard to read on the cards ({ratio}:1) — and that is where your documents appear.",
+  "theme.warnAccent":
+    "The accent is too close to the background ({ratio}:1), so buttons and headings will sink into it.",
+  "theme.warnLayers":
+    "The page and the cards are too far apart, which makes the interface look patchy.",
+  "theme.warnInvalid": "One of those colours is not valid yet.",
+  "theme.reset": "Back to the default",
+
   "cal.search": "Search titles or document text",
   "cal.searchCount": "{n} document(s) match",
 

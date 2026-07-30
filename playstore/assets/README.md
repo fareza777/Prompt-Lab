@@ -1,6 +1,6 @@
 # Play Store graphics
 
-Generated assets for Google Play **Store listing**.
+Generated assets for the Google Play Store listing.
 
 ## Upload these
 
@@ -12,26 +12,29 @@ Generated assets for Google Play **Store listing**.
 
 ## Screenshot story (1 → 8)
 
-1. Pilih bahasa tampilan  
-2. Masuk, atau coba sebagai tamu  
-3. Pelajari alur kerjanya  
-4. Tulis kebutuhanmu, lalu buat hasil  
-5. Dokumen jadi langsung di layar  
-6. Simpan, lalu buka lagi kapan saja  
-7. Atur akun, tema, dan kuota  
-8. Butuh bantuan? Buka Panduan  
+1. **Semua pekerjaan, satu tempat** — memperkenalkan koleksi template utama.
+2. **Foto masuk. Laporan jadi.** — menunjukkan alur Laporan Kegiatan.
+3. **Dokumen panjang, langsung ringkas** — menunjukkan ringkasan berbasis berkas.
+4. **Template yang pas untuk setiap tugas** — memperluas cakupan pekerjaan.
+5. **Semua hasil tertata otomatis** — menunjukkan kalender dan riwayat.
+6. **Rapi. Lengkap. Siap dibagikan.** — menampilkan hasil serta ekspor PDF/Word.
+7. **Bukan cuma dokumen. Data pun beres.** — memperkenalkan alat data dan tabel.
+8. **Mudah sejak pertama dibuka** — menutup dengan panduan dan janji produk.
 
-## Regenerate
+Sumber UI: delapan tangkapan Android asli di `RAW 2/`. Generator hanya membingkai
+layar dan menambahkan narasi; isi aplikasi tidak direkayasa.
 
-```bash
-npm run build
-npm run playstore:assets
-```
-
-Or separately:
+## Regenerate screenshots
 
 ```bash
-node scripts/generate-playstore-assets.mjs   # icon + feature graphic
-node scripts/capture-playstore-screenshots.mjs
-node scripts/frame-playstore-screenshots.mjs # 2D frames → screenshot-01…08
+npm run playstore:frame
 ```
+
+## Remotion promotional video
+
+```bash
+npm run playstore:promo
+```
+
+Output: `promo/AI-Work-Studio-remotion-1080p.mp4` (1920×1080, 30 detik,
+H.264, musik latar orisinal yang dibuat lokal).

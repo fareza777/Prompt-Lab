@@ -6,6 +6,13 @@ import AuthGate from "./AuthGate.jsx";
 import Guide from "./Guide.jsx";
 import { humanizeApiError } from "./errors.js";
 import { readThemeMode, applyThemeMode, watchSystemScheme, resolveScheme } from "./theme.js";
+import {
+  PALETTE_PRESETS,
+  applyPalette,
+  readPaletteChoice,
+  resolvePalette,
+  writePaletteChoice,
+} from "./themePalette.js";
 import Result from "./Result.jsx";
 import TemplateGallery from "./TemplateGallery.jsx";
 import TemplateWorkbench from "./TemplateWorkbench.jsx";
@@ -180,6 +187,7 @@ export default function Shell(props) {
 
   const [lang, setLangState] = useState(detectLanguage);
   const [themeMode, setThemeModeState] = useState(readThemeMode);
+  const [paletteChoice, setPaletteChoice] = useState(readPaletteChoice);
   const [sheet, setSheet] = useState(null);
   const [firstRunDone, setFirstRunDone] = useState(readFirstRunDone);
   const [authGateDone, setAuthGateDone] = useState(readAuthGateDone);
@@ -221,6 +229,48 @@ export default function Shell(props) {
     if (themeMode !== "system") return undefined;
     return watchSystemScheme(() => applyThemeMode("system"));
   }, [themeMode]);
+
+  /**
+   * Colour overrides, applied after the light/dark mode above.
+   *
+   * Order matters: applyThemeMode writes data-ui-theme, which selects the
+   * stylesheet's own token block, and this then paints over it. Running them the
+   * other way round would let the stylesheet win and the choice would vanish on
+   * every re-render.
+   */
+  useEffect(() => {
+    const resolved = applyPalette(paletteChoice);
+    if (resolved) document.documentElement.setAttribute("data-ui-theme", resolved.scheme);
+  }, [paletteChoice, themeMode]);
+
+  const pickPreset = useCallback((id) => {
+    const choice = { preset: id };
+    writePaletteChoice(choice);
+    setPaletteChoice(choice);
+  }, []);
+
+  /**
+   * Editing one colour moves the user off a preset onto their own palette,
+   * seeded from whatever they were looking at — so a small change to a preset
+   * does not start them from a blank slate.
+   */
+  const editColour = useCallback(
+    (key, value) => {
+      setPaletteChoice((current) => {
+        const base = resolvePalette(current)?.palette || PALETTE_PRESETS[0].palette;
+        const scheme = resolvePalette(current)?.scheme || "light";
+        const choice = { palette: { ...base, [key]: value }, scheme };
+        writePaletteChoice(choice);
+        return choice;
+      });
+    },
+    []
+  );
+
+  const resetPalette = useCallback(() => {
+    writePaletteChoice(null);
+    setPaletteChoice(null);
+  }, []);
 
   // A real signed-in session (or a previous guest choice) clears the auth gate.
   useEffect(() => {
@@ -690,6 +740,11 @@ export default function Shell(props) {
         billingMessage={billingMessage}
         billingBusy={billingBusy}
         quotaSummary={quotaSummary}
+        paletteChoice={paletteChoice}
+        palette={resolvePalette(paletteChoice)?.palette || PALETTE_PRESETS[0].palette}
+        onPickPreset={pickPreset}
+        onEditColour={editColour}
+        onResetPalette={resetPalette}
       />
 
       {/* Improve and Compare were removed here, not merely hidden: nothing has

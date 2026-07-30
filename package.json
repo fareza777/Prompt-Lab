@@ -15,7 +15,7 @@
     "icons:android": "node --use-system-ca scripts/sync-android-icons.mjs",
     "playstore:assets": "node --use-system-ca scripts/generate-playstore-assets.mjs && node --use-system-ca scripts/capture-playstore-screenshots.mjs && node --use-system-ca scripts/frame-playstore-screenshots.mjs",
     "playstore:frame": "node --use-system-ca scripts/frame-playstore-screenshots.mjs",
-    "playstore:promo": "node --use-system-ca scripts/create-promo-video.mjs",
+    "playstore:promo": "node scripts/generate-promo-audio.mjs && remotion render playstore/remotion/index.jsx AIWorkStudioPromo playstore/assets/promo/AI-Work-Studio-remotion-1080p.mp4 --codec=h264 --crf=18",
     "playstore:build": "npm run icons:android && cd android-app && gradlew.bat bundleRelease",
     "setup:google-auth": "node scripts/setup-google-auth.mjs",
     "check:supabase": "node --use-system-ca scripts/check-supabase-setup.mjs"
@@ -44,6 +44,8 @@
   },
   "devDependencies": {
     "@bubblewrap/cli": "^1.24.1",
-    "playwright": "^1.59.1"
+    "@remotion/cli": "^4.0.501",
+    "playwright": "^1.59.1",
+    "remotion": "^4.0.501"
   }
 }

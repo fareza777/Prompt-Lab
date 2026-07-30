@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LogOut, Trash2, Shield, Sun, Moon, Star, Mail } from "lucide-react";
 import Sheet from "./Sheet.jsx";
+import ThemeEditor from "./ThemeEditor.jsx";
 import { LANGUAGES } from "./i18n.js";
 import { PLAY_STORE_LISTING_URL, SUPPORT_EMAIL } from "../aboutApp.js";
 
@@ -202,6 +203,11 @@ export default function Account({
   billingMessage,
   billingBusy,
   quotaSummary,
+  paletteChoice,
+  palette,
+  onPickPreset,
+  onEditColour,
+  onResetPalette,
 }) {
   return (
     <Sheet open={open} title={t("account.title")} closeLabel={t("nav.close")} onClose={onClose}>
@@ -282,6 +288,18 @@ export default function Account({
         setLang={setLang}
         themeMode={themeMode}
         setThemeMode={setThemeMode}
+      />
+
+      <hr style={{ border: "none", borderTop: "1px solid var(--rule)" }} />
+
+      <ThemeEditor
+        t={t}
+        lang={lang}
+        choice={paletteChoice}
+        palette={palette}
+        onPickPreset={onPickPreset}
+        onEditColour={onEditColour}
+        onReset={onResetPalette}
       />
 
       <hr style={{ border: "none", borderTop: "1px solid var(--rule)" }} />

@@ -1,26 +1,28 @@
 # AI Work Studio promotional video
 
-## File
-- `AI-Work-Studio-promo-1080p.mp4` — 1920×1080, H.264, ~60s, silent
+## Final deliverable
 
-## Story (≈60s)
-1. Title — Dari bahan mentah ke hasil jadi
-2. Pilih bahasa
-3. Masuk atau tamu
-4. Tour alur
-5. Workspace
-6. Dokumen jadi
-7. Riwayat
-8. Akun & kuota
-9. Panduan
-10. End card — prompt-lab.xyz
+- `AI-Work-Studio-remotion-1080p.mp4`
+- 1920×1080, 30 fps, H.264 + AAC stereo
+- 30 seconds
+- Original locally generated instrumental soundtrack
 
-## Play Console
-1. Upload the MP4 to **YouTube** (unlisted is fine)
-2. Play Console → Store listing → **Promotional video**
-3. Paste the YouTube URL
+## Story
 
-## Notes
-- Video is intentionally silent so you can add royalty-free music on YouTube
-- Needs raw captures in `playstore/assets/raw/`
-- Regenerate: `node scripts/create-promo-video.mjs`
+1. Hook — **Bahan masuk. Hasil siap.**
+2. Foto dan narasi menjadi laporan
+3. Dokumen panjang menjadi ringkasan
+4. Hasil rapi siap dibagikan sebagai PDF atau Word
+5. Dokumen dan pekerjaan data dalam satu alur
+6. Montage delapan layar aplikasi
+7. End card — **Kerjaan beres. Waktu kembali.**
+
+## Regenerate
+
+```bash
+npm run playstore:frame
+npm run playstore:promo
+```
+
+The video is authored in `playstore/remotion/`. The screenshots are real Android
+captures from `playstore/assets/RAW 2/`; no fictional interface is generated.

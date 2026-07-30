@@ -2441,3 +2441,91 @@
 .pl-textarea--tall {
   min-height: 190px;
 }
+
+
+/* ---- Colour settings ----------------------------------------------------- */
+
+.pl-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--s-2);
+  margin: var(--s-3) 0 var(--s-5);
+}
+
+.pl-preset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease;
+}
+
+.pl-preset:hover,
+.pl-preset.is-active {
+  border-color: var(--accent);
+}
+
+/* The swatch row is the whole point of a preset card: it has to show what the
+   choice looks like before it is applied. */
+.pl-preset-chips {
+  display: flex;
+  height: 26px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  border: 1px solid var(--rule);
+}
+
+.pl-preset-chips i {
+  flex: 1;
+}
+
+.pl-preset-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-1);
+  font-weight: 500;
+}
+
+.pl-theme-subhead {
+  margin-top: var(--s-5);
+}
+
+.pl-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--s-3);
+  margin: var(--s-3) 0 var(--s-4);
+}
+
+.pl-swatch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+/* Native colour inputs are styled inconsistently across engines; the border and
+   fixed height keep them from collapsing to a hairline on Android. */
+.pl-swatch input[type="color"] {
+  width: 100%;
+  height: 40px;
+  padding: 2px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-sm);
+  background: var(--paper-raised);
+  cursor: pointer;
+}
+
+.pl-swatch code {
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}

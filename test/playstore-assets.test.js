@@ -11,8 +11,10 @@ test("Play Store graphics have the required dimensions", async () => {
   const expected = new Map([
     ["app-icon-512.png", [512, 512]],
     ["feature-graphic-1024x500.png", [1024, 500]],
-    ...["workspace", "result", "advanced-controls", "history", "account", "guide"]
-      .map((screen) => [`screenshot-phone-${screen}.png`, [1080, 1920]]),
+    ...Array.from({ length: 8 }, (_, index) => [
+      `screenshot-${String(index + 1).padStart(2, "0")}.png`,
+      [1080, 1920],
+    ]),
   ]);
 
   for (const [name, [width, height]] of expected) {
@@ -23,50 +25,58 @@ test("Play Store graphics have the required dimensions", async () => {
 
 test("feature graphic copy stays inside the 64px safe padding", async () => {
   const source = await readFile(join(root, "scripts", "generate-playstore-assets.mjs"), "utf8");
-  assert.match(source, /const FEATURE_TEXT_RIGHT = 960;/);
-  assert.match(source, /wrapSvgText\([\s\S]*FEATURE_TEXT_RIGHT/);
+  assert.match(source, /<svg width="1024" height="500"/);
+  assert.match(source, /<text x="430"/);
+  assert.doesNotMatch(source, /<text x="(?:9[7-9]\d|10\d\d)"/);
   assert.doesNotMatch(source, /Turn ideas and files into structured prompts for ChatGPT, Claude, Gemini, and more\./);
 });
 
-test("capture script targets the current result-first workspace and all six surfaces", async () => {
-  const source = await readFile(join(root, "scripts", "capture-playstore-screenshots.mjs"), "utf8");
-  assert.match(source, /const screens = \["workspace", "result", "advanced-controls", "history", "account", "guide"\];/);
-  assert.match(source, /promptlab-library/);
-  assert.match(source, /pl-workbench/);
-  assert.match(source, /Pengaturan lanjutan/);
-  assert.doesNotMatch(source, /MOBILE_TABS|v2-bottom-nav/);
+test("screenshot generator uses the eight real RAW 2 captures in chronological order", async () => {
+  const source = await readFile(join(root, "scripts", "frame-playstore-screenshots.mjs"), "utf8");
+  assert.match(source, /const rawDir = join\(assetsDir, "RAW 2"\)/);
+  assert.match(source, /files\.length !== story\.length/);
+  assert.match(source, /\.sort\(\(a, b\) => a\.localeCompare\(b\)\)/);
+  assert.match(source, /screenshot-\$\{String\(index \+ 1\)\.padStart\(2, "0"\)\}\.png/);
 });
 
-test("capture validates every result-first surface before writing PNGs", async () => {
-  const source = await readFile(join(root, "scripts", "capture-playstore-screenshots.mjs"), "utf8");
-  assert.match(source, /const SURFACE_EXPECTATIONS =/);
-  assert.match(source, /async function assertSurfaceReady/);
-  assert.match(source, /await assertSurfaceReady\(page, name\)/);
-  assert.match(source, /document\.fonts\.ready/);
-  assert.match(source, /requestAnimationFrame/);
-  assert.match(source, /document\.documentElement\.scrollWidth/);
-  assert.match(source, /async function captureStableScreenshot/);
-  assert.match(source, /browser\.newContext/);
-  assert.match(source, /await context\.close\(\)/);
-  assert.match(source, /createHash\("sha256"\)/);
-  assert.match(source, /backdrop-filter: none !important/);
-  assert.match(source, /\.pl-top/);
+test("screenshot narrative covers discovery, document creation, organization, and export", async () => {
+  const source = await readFile(join(root, "scripts", "frame-playstore-screenshots.mjs"), "utf8");
+  for (const claim of [
+    "Semua pekerjaan",
+    "Foto masuk",
+    "Dokumen panjang",
+    "Template yang pas",
+    "tertata otomatis",
+    "Siap dibagikan",
+    "Data pun beres",
+    "Mudah sejak",
+  ]) {
+    assert.match(source, new RegExp(claim));
+  }
+  assert.match(source, /bagikan PDF, atau unduh Word/);
 });
 
-test("capture uses natural responsive CSS at a 1080x1920 device viewport", async () => {
-  const source = await readFile(join(root, "scripts", "capture-playstore-screenshots.mjs"), "utf8");
-  assert.match(source, /viewport: \{ width: 360, height: 640 \}/);
-  assert.match(source, /deviceScaleFactor: 1/);
+test("screenshot generator preserves real UI pixels inside a rounded phone frame", async () => {
+  const source = await readFile(join(root, "scripts", "frame-playstore-screenshots.mjs"), "utf8");
+  assert.match(source, /const width = 1080/);
+  assert.match(source, /const height = 1920/);
   assert.match(source, /kernel: sharp\.kernel\.lanczos3/);
-  assert.match(source, /resize\(PHONE_WIDTH, PHONE_HEIGHT, \{ fit: "fill"/);
-  assert.doesNotMatch(source, /\.v2-shell|grid-template-columns: repeat\(5/);
+  assert.match(source, /blend: "dest-in"/);
+  assert.doesNotMatch(source, /imagegen|generative fill|mock UI/i);
 });
 
-test("promo pipeline uses the warm result-first release identity", async () => {
-  const source = await readFile(join(root, "scripts", "create-promo-video.mjs"), "utf8");
+test("Remotion promo is Full HD, 30 seconds, and driven by all eight real captures", async () => {
+  const rootSource = await readFile(join(root, "playstore", "remotion", "root.jsx"), "utf8");
+  const source = await readFile(join(root, "playstore", "remotion", "video.jsx"), "utf8");
+  assert.match(rootSource, /durationInFrames=\{900\}/);
+  assert.match(rootSource, /fps=\{30\}/);
+  assert.match(rootSource, /width=\{1920\}/);
+  assert.match(rootSource, /height=\{1080\}/);
   assert.match(source, /AI WORK STUDIO/);
-  assert.match(source, /#F7F3EB/i);
-  assert.doesNotMatch(source, /#050a0c|FROM IDEA TO PROMPT/);
+  assert.match(source, /Html5Audio/);
+  for (let index = 1; index <= 8; index += 1) {
+    assert.match(source, new RegExp(`shot${index}`));
+  }
 });
 
 test("production CSS gives bottom navigation buttons explicit V2 styling", async () => {
@@ -84,9 +94,10 @@ test("production entry graph stays within the documented initial JS and CSS budg
   assert.match(config, /INITIAL_JS_BUDGET_KB = 700/);
   assert.match(config, /INITIAL_CSS_BUDGET_KB = 80/);
   assert.match(config, /enforceInitialAssetBudget/);
-  for (const chunk of ["react", "icons", "supabase", "vendor"]) {
+  for (const chunk of ["react", "icons", "supabase"]) {
     assert.match(config, new RegExp(`return "${chunk}"`));
   }
+  assert.doesNotMatch(config, /return "vendor"/);
 
   // "Initial" means what the app route actually loads before it is usable:
   // the entry document's own <script>/<link> graph. Assets fetched later
