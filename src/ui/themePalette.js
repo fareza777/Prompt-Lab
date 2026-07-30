@@ -53,29 +53,44 @@ function tokensFor(palette) {
  * cannot produce an unreadable screen.
  */
 export const PALETTE_PRESETS = [
+  /**
+   * The light pages are deliberately deeper than the cards on them.
+   *
+   * The first attempt used near-white for both, and the whole set read as
+   * "white, slightly different" — the page and the document sitting on it were
+   * indistinguishable, which also flattened the paper metaphor the design is
+   * built on. The page now carries the colour and the card stays bright, so a
+   * document reads as a sheet laid on a desk.
+   */
   {
     id: "kertas",
     name: { id: "Kertas", en: "Paper" },
     scheme: "light",
-    palette: { paper: "#f7f3eb", surface: "#fffdf8", ink: "#1f241f", accent: "#2f5a46" },
+    palette: { paper: "#e7dcc6", surface: "#fffdf7", ink: "#1f241f", accent: "#2f5a46" },
   },
   {
     id: "kabut",
     name: { id: "Kabut", en: "Mist" },
     scheme: "light",
-    palette: { paper: "#f2f4f7", surface: "#ffffff", ink: "#1b2330", accent: "#2f5d8a" },
+    palette: { paper: "#d7dfea", surface: "#ffffff", ink: "#1b2330", accent: "#2f5d8a" },
   },
   {
     id: "tanah",
     name: { id: "Tanah", en: "Clay" },
     scheme: "light",
-    palette: { paper: "#f6efe9", surface: "#fffcfa", ink: "#2a211c", accent: "#9a4a24" },
+    palette: { paper: "#ebd9c9", surface: "#fffcf9", ink: "#2a211c", accent: "#9a4a24" },
   },
   {
     id: "arsip",
     name: { id: "Arsip", en: "Archive" },
     scheme: "light",
-    palette: { paper: "#f4f2ee", surface: "#ffffff", ink: "#22242a", accent: "#4b4f8a" },
+    palette: { paper: "#e0ded6", surface: "#ffffff", ink: "#22242a", accent: "#43477e" },
+  },
+  {
+    id: "sage",
+    name: { id: "Daun", en: "Sage" },
+    scheme: "light",
+    palette: { paper: "#dde5da", surface: "#fdfffc", ink: "#1c241d", accent: "#3c6b4a" },
   },
   {
     id: "malam",

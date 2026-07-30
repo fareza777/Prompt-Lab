@@ -31,7 +31,8 @@ test("store narrative sells finished work rather than prompt creation", () => {
   assert.match(customerCopy, /polished documents/i);
   assert.match(customerCopy, /5 results per week/i);
   assert.match(customerCopy, /Export complete results to Word/i);
-  assert.match(customerCopy, /LANGSUNG MENJADI HASIL/i);
+  assert.match(customerCopy, /BUAT LAPORAN DARI FOTO DAN CATATAN/i);
+  assert.match(customerCopy, /RINGKAS DOKUMEN PANJANG/i);
 });
 
 test("listing documents benefit-led screenshots and the no-AAB metadata path", () => {
@@ -41,11 +42,23 @@ test("listing documents benefit-led screenshots and the no-AAB metadata path", (
 
 test("Indonesian listing fits Play's metadata limits", () => {
   const idTitle = "AI Work Studio: Dokumen AI";
-  const idShort = "Ubah catatan, foto, dan file menjadi dokumen rapi yang siap dipakai.";
+  const idShort = "Ubah foto, catatan, dan file jadi laporan, ringkasan, Word, PDF, dan Excel.";
+  const idSection = listing.split("## Indonesian listing (id-ID)")[1].split("## Category")[0];
+  const codeBlocks = idSection
+    .split("```")
+    .filter((_, index) => index % 2 === 1)
+    .map((value) => value.trim());
+  const idLong = codeBlocks[2];
   assert.ok(idTitle.length <= 30, `id title is ${idTitle.length} chars`);
   assert.ok(idShort.length <= 80, `id short description is ${idShort.length} chars`);
+  assert.ok(idLong.length <= 4000, `id full description is ${idLong.length} chars`);
   assert.ok(listing.includes(idTitle), "listing is missing the Indonesian title");
   assert.ok(listing.includes(idShort), "listing is missing the Indonesian short description");
+  assert.match(idLong, /aplikasi AI pembuat laporan/i);
+  assert.match(idLong, /laporan kegiatan/i);
+  assert.match(idLong, /Ringkasan PDF/i);
+  assert.match(idLong, /format Word/i);
+  assert.match(idLong, /tabel ke Excel/i);
 });
 
 test("listing discloses AI generation and the account-free trial", () => {

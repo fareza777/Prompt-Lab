@@ -136,6 +136,40 @@ test("the editor is wired into settings and free for every plan", async () => {
   );
 });
 
+test("the Light/Dark control keeps authority over the scheme", async () => {
+  // Setting data-ui-theme from the palette effect broke the control outright:
+  // every render forced the attribute back to the active palette's scheme, so
+  // pressing Dark did nothing at all.
+  const shell = await readFile(new URL("../src/ui/Shell.jsx", import.meta.url), "utf8");
+  const effect = shell.slice(
+    shell.indexOf("applyPalette(paletteChoice);"),
+    shell.indexOf("const pickPreset")
+  );
+  assert.ok(effect.length > 0, "the palette effect could not be located");
+  assert.doesNotMatch(effect, /setAttribute\("data-ui-theme"/);
+
+  // Picking a dark preset moves the switch with it.
+  assert.match(shell, /const scheme = resolvePalette\(choice\)\?\.scheme/);
+  assert.match(shell, /if \(scheme\) setThemeModeState\(applyThemeMode\(scheme\)\)/);
+
+  // And switching scheme drops a palette belonging to the other one, so the
+  // control always produces a visible change.
+  assert.match(shell, /if \(resolvePalette\(current\)\?\.scheme === next\) return current/);
+  assert.match(shell, /writePaletteChoice\(null\)/);
+});
+
+test("light pages are clearly deeper than the cards on them", () => {
+  // The first set used near-white for both, and every preset read as "white,
+  // slightly different" — the page and the document on it were indistinguishable.
+  for (const preset of PALETTE_PRESETS.filter((entry) => entry.scheme === "light")) {
+    const separation = contrastRatio(preset.palette.paper, preset.palette.surface);
+    assert.ok(
+      separation >= 1.15,
+      `${preset.id}: page and card are only ${separation.toFixed(2)}:1 apart`
+    );
+  }
+});
+
 test("every colour-settings string exists in both languages", () => {
   const keys = [
     "theme.title",

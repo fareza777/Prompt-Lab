@@ -63,38 +63,53 @@ AI Work Studio: Dokumen AI
 ### Short description (80 chars max)
 
 ```
-Ubah catatan, foto, dan file menjadi dokumen rapi yang siap dipakai.
+Ubah foto, catatan, dan file jadi laporan, ringkasan, Word, PDF, dan Excel.
 ```
 
 ### Full description
 
 ```
-Ubah ide, catatan, foto, dan file langsung menjadi hasil kerja AI yang siap kamu pakai dan lanjutkan.
+Ubah foto, catatan, PDF, Word, dan file kerja menjadi laporan atau dokumen yang rapi dengan AI Work Studio.
 
-LANGSUNG MENJADI HASIL
-• Tulis permintaan dengan bahasa sehari-hari
-• Lampirkan foto, tangkapan layar, PDF, Word, Excel, atau PowerPoint
-• AI Work Studio membaca konteks dan langsung menampilkan hasil final
+AI Work Studio adalah aplikasi AI pembuat laporan untuk pekerjaan administrasi, kegiatan lapangan, rapat, sekolah, organisasi, dan usaha. Pilih template, lampirkan bahan yang tersedia, tambahkan sedikit keterangan, lalu terima hasil yang sudah tersusun dan siap digunakan.
 
-HASIL YANG RAPI DAN SIAP PAKAI
-• Salin, simpan, laporkan, atau ekspor hasil dari satu layar
-• Semua tindakan utama tersedia dari layar hasil
-• Export Word tersedia di paket Free
-• Export PowerPoint tersedia di paket berbayar
+BUAT LAPORAN DARI FOTO DAN CATATAN
+Dokumentasi kegiatan tidak perlu berhenti sebagai kumpulan foto. AI Work Studio membantu menyusunnya menjadi laporan kegiatan, laporan kunjungan lapangan, laporan perjalanan dinas, laporan sebelum dan sesudah, serta laporan formal lain dengan struktur yang jelas.
 
-STRUKTUR SESUAI JENIS DOKUMEN
-• Laporan memiliki temuan, kesimpulan, dan rekomendasi
-• Notulen memisahkan pembahasan, keputusan, dan tindak lanjut
-• Presentasi disusun sebagai alur slide yang jelas
+RINGKAS DOKUMEN PANJANG
+Lampirkan PDF atau dokumen, tentukan fokus yang dibutuhkan, lalu dapatkan ringkasan padat dan mudah dibaca. Cocok untuk memahami inti laporan, proposal, materi rapat, atau dokumen kerja tanpa menyusun ulang dari awal.
 
-SIMPAN DAN PAKAI LAGI
-• Mulai dari contoh yang sudah tersedia
-• Simpan hasil ke riwayat, cari, dan buka lagi kapan saja
+TEMPLATE UNTUK PEKERJAAN SEHARI-HARI
+• Laporan kegiatan dan laporan kunjungan
+• Notulen rapat dan daftar tindak lanjut
+• Ringkasan PDF dan dokumen
+• Berita acara serah terima
+• Rekapitulasi dan tabel Excel
+• Rekap daftar hadir dari foto
+• Ekstraksi tabel dari foto atau PDF
+• Draf balasan surat dan terjemahan dokumen
+• Caption, rilis singkat, presentasi, dan diagram alur
 
-GRATIS SETIAP MINGGU
-Buat hingga 5 hasil per minggu di paket Free dan export hasil lengkap ke Word. Tingkatkan paket untuk kapasitas lebih besar dan export PowerPoint.
+HASIL RAPI, BUKAN SEKADAR TEKS
+Tanggal dan waktu dapat terisi otomatis. Saat bahan terbatas, AI menyusun konteks umum secara wajar agar laporan tetap utuh tanpa mengubah fakta inti yang kamu berikan. Setiap template mempunyai struktur khusus sehingga hasilnya sesuai dengan jenis pekerjaan.
 
-Hasil dibuat oleh AI. Periksa kembali sebelum dipakai atau dikirim.
+BAGIKAN DAN UNDUH
+• Bagikan atau ekspor laporan ke PDF
+• Unduh dokumen dalam format Word
+• Ekspor pekerjaan tabel ke Excel
+• Buat materi presentasi dalam format PowerPoint
+• Simpan hasil ke riwayat dan temukan kembali melalui kalender
+
+CARA MENGGUNAKAN
+1. Pilih template sesuai pekerjaan.
+2. Lampirkan foto, catatan, atau dokumen.
+3. Tambahkan informasi penting yang diketahui.
+4. Biarkan AI menyusun hasil lengkap.
+5. Periksa, bagikan, atau unduh file jadi.
+
+AI Work Studio membantu menghemat waktu dari bahan mentah sampai dokumen siap kirim—tanpa harus menulis laporan dari halaman kosong.
+
+Hasil dibuat oleh AI. Periksa kembali nama, angka, tanggal, dan informasi penting sebelum dokumen digunakan atau dikirim.
 ```
 
 ## Category

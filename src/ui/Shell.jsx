@@ -231,23 +231,32 @@ export default function Shell(props) {
   }, [themeMode]);
 
   /**
-   * Colour overrides, applied after the light/dark mode above.
+   * Colour overrides, painted after the light/dark mode above.
    *
    * Order matters: applyThemeMode writes data-ui-theme, which selects the
-   * stylesheet's own token block, and this then paints over it. Running them the
-   * other way round would let the stylesheet win and the choice would vanish on
-   * every re-render.
+   * stylesheet's own token block, and this paints over it. Running them the
+   * other way round lets the stylesheet win and the choice vanishes.
+   *
+   * What this must NOT do is set data-ui-theme itself. It did, and that broke
+   * the Light/Dark control completely: every render forced the attribute back
+   * to the active palette's own scheme, so pressing Dark did nothing at all.
+   * The control owns the scheme; a palette only supplies colours.
    */
   useEffect(() => {
-    const resolved = applyPalette(paletteChoice);
-    if (resolved) document.documentElement.setAttribute("data-ui-theme", resolved.scheme);
+    applyPalette(paletteChoice);
   }, [paletteChoice, themeMode]);
 
-  const pickPreset = useCallback((id) => {
-    const choice = { preset: id };
-    writePaletteChoice(choice);
-    setPaletteChoice(choice);
-  }, []);
+  /** Presets are tagged light or dark, so picking one also moves the switch. */
+  const pickPreset = useCallback(
+    (id) => {
+      const choice = { preset: id };
+      writePaletteChoice(choice);
+      setPaletteChoice(choice);
+      const scheme = resolvePalette(choice)?.scheme;
+      if (scheme) setThemeModeState(applyThemeMode(scheme));
+    },
+    []
+  );
 
   /**
    * Editing one colour moves the user off a preset onto their own palette,
@@ -290,9 +299,25 @@ export default function Shell(props) {
     setLangState(next);
   }, []);
 
-  const setThemeMode = useCallback((next) => {
-    setThemeModeState(applyThemeMode(next));
-  }, []);
+  /**
+   * Switching scheme drops a palette that belongs to the other one.
+   *
+   * Otherwise pressing Dark while a light palette is active repaints nothing:
+   * the stylesheet's dark tokens are immediately overwritten by the light
+   * colours, and the switch looks broken. Falling back to the built-in tokens
+   * for the requested scheme means the control always does something visible.
+   */
+  const setThemeMode = useCallback(
+    (next) => {
+      setThemeModeState(applyThemeMode(next));
+      setPaletteChoice((current) => {
+        if (resolvePalette(current)?.scheme === next) return current;
+        writePaletteChoice(null);
+        return null;
+      });
+    },
+    []
+  );
 
   const closeSheet = useCallback(() => setSheet(null), []);
 
