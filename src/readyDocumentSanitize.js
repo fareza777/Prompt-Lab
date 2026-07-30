@@ -158,7 +158,10 @@ const VERBATIM_PROFILES = new Set(["diagram", "prompt"]);
 export function sanitizeReadyDocument(content = "", profile = "general") {
   if (VERBATIM_PROFILES.has(profile)) return String(content || "");
 
-  let text = String(content || "").replace(/\r\n?/g, "\n").trim();
+  let text = String(content || "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .trim();
   if (!text) return "";
 
   text = stripLeadingOutline(text);

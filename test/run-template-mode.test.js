@@ -29,10 +29,11 @@ test("the invent-a-fact directive is not used in template mode", () => {
   // bracket it. An attendance sheet with invented names is worse than an
   // incomplete one, so template mode swaps in its own pair.
   assert.match(server, /const RUN_TEMPLATE_SYSTEM_PROMPT =/);
-  assert.match(server, /const RUN_TEMPLATE_FINAL_DIRECTIVE = \[/);
-  assert.match(server, /Do NOT invent names, dates, numbers, quotations, or decisions/);
+  assert.match(server, /function buildRunTemplateFinalDirective\(template, language/);
+  assert.match(server, /source-faithful/);
+  assert.match(server, /one output language/i);
   assert.match(endpoint, /systemPrompt = RUN_TEMPLATE_SYSTEM_PROMPT/);
-  assert.match(endpoint, /RUN_TEMPLATE_FINAL_DIRECTIVE/);
+  assert.match(endpoint, /buildRunTemplateFinalDirective\(template, body\.language\)/);
 
   // Sliced by landmark rather than by exact whitespace: the file uses CRLF.
   const start = endpoint.indexOf("systemPrompt = RUN_TEMPLATE_SYSTEM_PROMPT");

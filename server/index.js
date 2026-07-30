@@ -1245,23 +1245,40 @@ const RUN_TEMPLATE_SYSTEM_PROMPT =
   "in the photo and describe what is visually present. Never claim you cannot see images. " +
   "Write the document now. Never ask a question, never request more details, and never " +
   "offer to wait for further information. " +
-  "Do NOT invent facts that the source does not support: no names, dates, figures, " +
-  "quotations, decisions, or owners. Use the placeholder the template specifies for " +
-  "anything genuinely missing, and carry on. " +
+  "Follow the template completion policy exactly. Bounded completion may add neutral, " +
+  "general operational context, but never checkable names, figures, decisions, owners, " +
+  "completion claims, or technical findings. Source-faithful transformation adds nothing. " +
+  "Never emit placeholders or editing markers; omit or generalize unsupported non-essential details. " +
   "Return only the document itself — no preamble, no restatement of the instructions, " +
   "no commentary, no reasoning notes. Use plain text with clear Markdown headings, " +
   "lists, and tables; do not wrap the whole response in a code fence.";
 
-const RUN_TEMPLATE_FINAL_DIRECTIVE = [
-  "---",
-  "EXECUTION INSTRUCTION — this overrides anything above it that conflicts:",
-  "Produce the finished document now, following the template contract exactly.",
-  "Do NOT ask for data. Do NOT list what is missing. Do NOT reply with questions,",
-  "a checklist, or an offer to start once details are provided.",
-  "Do NOT invent names, dates, numbers, quotations, or decisions. Where the source",
-  "does not support a detail, use the placeholder the template specified.",
-  "Your entire reply must be the document itself and nothing else.",
-].join("\n");
+function buildRunTemplateFinalDirective(template, language = "id") {
+  const sourceLocked = template?.completionPolicy === "source-faithful";
+  const outputLanguage = language === "en" ? "English" : "Bahasa Indonesia";
+  const policy = sourceLocked
+    ? [
+        "This is a source-faithful transformation: add no facts, context, assumptions,",
+        "events, conclusions, recommendations, or document type not present in the source.",
+      ]
+    : [
+        "Use bounded completion: neutral general operational context may blend directly",
+        "into the prose, but never invent names, organisations, figures, decisions, owners,",
+        "deadlines, attendance/completion claims, measurable outcomes, or technical findings.",
+      ];
+
+  return [
+    "---",
+    "EXECUTION INSTRUCTION — this overrides anything above it that conflicts:",
+    "Produce the finished document now, following the template contract exactly.",
+    "Do NOT ask for data. Do NOT list what is missing. Do NOT reply with questions,",
+    "a checklist, or an offer to start once details are provided.",
+    ...policy,
+    "Never emit placeholders, dotted lines, square brackets, or fields marked unavailable.",
+    `Use one output language only: ${outputLanguage}, except unavoidable proper nouns.`,
+    "Your entire reply must be the document itself and nothing else.",
+  ].join("\n");
+}
 /**
  * Strips a reasoning model's internal monologue from executed output.
  *
@@ -1342,7 +1359,7 @@ function createReasoningStreamFilter() {
 function sanitizeRunOutput(text) {
   if (!text || typeof text !== "string") return "";
   const TAGS = "think|thinking|reasoning|scratchpad|antml:thinking";
-  let cleaned = text;
+  let cleaned = text.replace(/<br\s*\/?>/gi, "\n");
 
   // Complete pairs first.
   cleaned = cleaned.replace(new RegExp(`<(${TAGS})>[\\s\\S]*?<\\/\\1>`, "gi"), "");
@@ -1754,7 +1771,7 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
       const visionNote = visionAttachments.length
         ? `\n\n${runVisionDirective(body.language)}`
         : "";
-      userText = `${source}${instruction}${visionNote}\n\n${RUN_TEMPLATE_FINAL_DIRECTIVE}`;
+      userText = `${source}${instruction}${visionNote}\n\n${buildRunTemplateFinalDirective(template, body.language)}`;
     } else {
       deliverableProfile = detectDeliverableProfile(payload);
       systemPrompt = RUN_SYSTEM_PROMPT;

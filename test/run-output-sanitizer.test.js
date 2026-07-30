@@ -69,6 +69,13 @@ test("collapses runaway blank lines", () => {
   assert.equal(sanitizeRunOutput("A\n\n\n\n\nB"), "A\n\nB");
 });
 
+test("literal HTML breaks become Markdown line breaks", () => {
+  assert.equal(
+    sanitizeRunOutput("Nama: Rina<br>NIK: 123<br/>Jabatan: Ketua<br />Selesai"),
+    "Nama: Rina\nNIK: 123\nJabatan: Ketua\nSelesai"
+  );
+});
+
 test("survives empty and non-string input", () => {
   assert.equal(sanitizeRunOutput(""), "");
   assert.equal(sanitizeRunOutput(null), "");
@@ -95,14 +102,15 @@ test("the anti-stalling directive is repeated after the prompt", () => {
   assert.match(server, /userText = `\$\{prompt\}\$\{deliverableInstruction\}\$\{diagramAddon\}\$\{visionNote\}\\n\\n\$\{RUN_FINAL_DIRECTIVE\}`/);
 });
 
-test("template mode keeps the anti-stalling rule but drops the invent-a-fact licence", () => {
+test("template mode repeats the selected completion policy at the end", () => {
   // RUN_FINAL_DIRECTIVE tells the model to make up a plausible detail and
   // bracket it. For a template that is a defect: invented attendee names on a
   // retyped sign-in sheet are worse than an obviously incomplete one.
-  assert.match(server, /const RUN_TEMPLATE_FINAL_DIRECTIVE = \[/);
+  assert.match(server, /function buildRunTemplateFinalDirective\(template, language/);
   assert.match(server, /Do NOT ask for data/i);
-  assert.match(server, /Do NOT invent names, dates, numbers, quotations, or decisions/);
-  assert.match(server, /userText = `\$\{source\}\$\{instruction\}\$\{visionNote\}\\n\\n\$\{RUN_TEMPLATE_FINAL_DIRECTIVE\}`/);
+  assert.match(server, /source-faithful/);
+  assert.match(server, /one output language/i);
+  assert.match(server, /userText = `\$\{source\}\$\{instruction\}\$\{visionNote\}\\n\\n\$\{buildRunTemplateFinalDirective\(template, body\.language\)\}`/);
 });
 
 test("the run instruction forbids stalling for more detail", () => {

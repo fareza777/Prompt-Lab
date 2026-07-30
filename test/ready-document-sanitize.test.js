@@ -52,6 +52,13 @@ test("validateFinishedOutput applies ready sanitize for reports", () => {
   assert.doesNotMatch(checked.content, /Daftar Periksa Kualitas/i);
 });
 
+test("literal HTML breaks become Markdown line breaks", () => {
+  assert.equal(
+    sanitizeReadyDocument("Nama: Rina<br>NIK: 123<br/>Jabatan: Ketua<br />Selesai", "report"),
+    "Nama: Rina\nNIK: 123\nJabatan: Ketua\nSelesai"
+  );
+});
+
 test("diagram profile is left alone", () => {
   const mermaid = "```mermaid\nflowchart TD\n  A --> B\n```";
   assert.equal(sanitizeReadyDocument(mermaid, "diagram"), mermaid);
