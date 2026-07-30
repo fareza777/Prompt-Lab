@@ -36,7 +36,8 @@ test("the presentation template drives the slide-layout engine", () => {
   // tables as real tables, so the prompt has to ask for both in that shape.
   assert.match(instruction, /DIMULAI dengan angkanya/);
   assert.match(instruction, /tabel Markdown/);
-  assert.match(instruction, /8–12 slide/);
+  assert.match(instruction, /6–10 slide/);
+  assert.match(instruction, /jangan menambah slide untuk mengejar jumlah/);
 });
 
 test("the diagram template drives the process-flow renderer", () => {
