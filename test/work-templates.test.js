@@ -192,6 +192,42 @@ test("the writing stance asks for a finished document, not a photo caption", () 
   assert.match(instruction, /jumlah peserta/);
 });
 
+test("narrative templates use bounded completion without risky claims or edit markers", () => {
+  const instruction = buildTemplateInstruction({
+    template: getTemplate("activity-report"),
+    language: "id",
+    values: completeValues(getTemplate("activity-report")),
+  });
+  assert.match(instruction, /asumsi operasional umum/i);
+  assert.match(instruction, /langsung menyatu/i);
+  assert.match(instruction, /DILARANG dikarang[\s\S]*jumlah[\s\S]*keputusan/i);
+  assert.match(instruction, /jangan[\s\S]*Belum tersedia/i);
+  assert.doesNotMatch(instruction, /peserta mengikuti hingga selesai/i);
+});
+
+test("source-faithful templates prohibit narrative expansion", () => {
+  for (const id of [
+    "summary",
+    "translate",
+    "recap-sheet",
+    "action-items",
+    "attendance-list",
+    "table-extract",
+    "diagram",
+    "image-prompt",
+  ]) {
+    const template = getTemplate(id);
+    assert.equal(template.completionPolicy, "source-faithful", `${id} policy`);
+    const instruction = buildTemplateInstruction({ template, language: "id", values: {} });
+    assert.match(instruction, /terkunci pada sumber/i, `${id} source lock`);
+    assert.doesNotMatch(
+      instruction,
+      /BOLEH menambahkan konteks dan asumsi/i,
+      `${id} inherited narrative assumptions`
+    );
+  }
+});
+
 test("a summary is the one template forbidden from adding assumptions", () => {
   const instruction = buildTemplateInstruction({
     template: getTemplate("summary"),

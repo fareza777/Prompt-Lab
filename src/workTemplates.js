@@ -17,7 +17,7 @@
 import {
   WORK_TEMPLATES,
   TEMPLATE_GROUPS,
-  WRITING_STANCE_CLAUSE,
+  COMPLETION_STANCE_CLAUSES,
 } from "./workTemplateDefinitions.js";
 
 export { TEMPLATE_GROUPS };
@@ -263,7 +263,7 @@ export function buildTemplateInstruction({
     fieldDirective(template, values, l),
     attachmentDirective(attachments, l),
     // The stance goes last of the content rules so it colours everything above.
-    template.profile === "prompt" ? "" : `\n${WRITING_STANCE_CLAUSE[l]}\n`,
+    `\n${COMPLETION_STANCE_CLAUSES[template.completionPolicy || "bounded"][l]}\n`,
     sectionDirective(template, l),
     lengthDirective(template, l),
     universalDirective(l, template),

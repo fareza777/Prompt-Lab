@@ -28,13 +28,23 @@
  * checkable specifics that make a document wrong: names, dates, counts,
  * figures, decisions, and quotations.
  */
-const WRITING_STANCE = {
-  id: `Tulis dokumen yang benar-benar SIAP KIRIM, bukan deskripsi foto. Rangkai isian pengguna dan apa yang terlihat di lampiran menjadi narasi kerja yang wajar dan mengalir. Kamu BOLEH menambahkan konteks dan asumsi operasional yang masuk akal agar dokumen terasa utuh (misalnya bahwa kegiatan berjalan tertib, materi disampaikan, peserta mengikuti hingga selesai).
-YANG TETAP DILARANG dikarang: nama orang, jabatan, nama instansi, jumlah peserta, angka, nominal, tanggal, dan kutipan atau keputusan yang tidak diberikan pengguna maupun terbaca di lampiran. Untuk hal-hal itu tulis "Belum tersedia" atau titik-titik isian.
-Jangan pernah menulis kalimat seperti "pada foto terlihat" atau "berdasarkan gambar" — tulis langsung sebagai laporan.`,
-  en: `Write a document that is genuinely READY TO SEND, not a description of a photo. Weave the user's field answers and what the attachment shows into natural, flowing professional prose. You MAY add reasonable operational context and assumptions so the document reads as complete (that the activity ran in an orderly way, that material was delivered, that participants stayed through to the end).
-STILL FORBIDDEN: inventing personal names, job titles, organisation names, headcounts, figures, amounts, dates, quotations, or decisions that the user did not give and that are not legible in the attachment. Write "Not provided" or a dotted fill-in line for those.
-Never write "the photo shows" or "based on the image" — write it straight, as a report.`,
+const COMPLETION_STANCES = {
+  bounded: {
+    id: `Tulis dokumen yang benar-benar SIAP KIRIM, bukan deskripsi foto. Rangkai fakta pengguna dan bukti lampiran menjadi narasi profesional yang wajar. Kamu BOLEH menambahkan konteks dan asumsi operasional umum agar dokumen terasa utuh; asumsi itu harus netral, tidak dapat diperiksa sebagai fakta baru, dan langsung menyatu dalam narasi tanpa label asumsi.
+YANG TETAP DILARANG dikarang: nama orang, jabatan, instansi, alamat, jumlah peserta, angka, nominal, persentase, durasi, tenggat, kutipan, keputusan, penanggung jawab, status penyelesaian, hasil pemeriksaan, kondisi teknis, atau klaim bahwa semua orang hadir, setuju, antusias, maupun mengikuti sampai selesai.
+JANGAN menulis "Belum tersedia", "Tidak tersedia", titik-titik isian, kurung siku, atau penanda yang masih perlu diedit. Jika rincian non-esensial tidak didukung sumber, hilangkan rincian itu, gabungkan ke kalimat yang lebih umum, atau gunakan penyebutan peran yang netral.
+Jangan pernah menulis "pada foto terlihat" atau "berdasarkan gambar" — tulis langsung sebagai dokumen jadi. Gunakan Bahasa Indonesia saja kecuali nama diri atau istilah sumber yang memang harus dipertahankan.`,
+    en: `Write a document that is genuinely READY TO SEND, not a description of a photo. Weave the user's facts and attachment evidence into natural professional prose. You MAY add general operational assumptions so the document reads as complete; they must be neutral, not checkable as new facts, and blend directly into the prose without an assumptions label.
+DO NOT invent personal names, job titles, organisations, addresses, headcounts, figures, amounts, percentages, durations, deadlines, quotations, decisions, owners, completion status, inspection results, technical conditions, or claims that everyone attended, agreed, was enthusiastic, or stayed through the end.
+DO NOT write "Not provided", "Unavailable", dotted fill-in lines, square brackets, or any marker that still needs editing. If a non-essential detail lacks support, omit it, merge it into a more general sentence, or use a role-neutral construction.
+Never write "the photo shows" or "based on the image" — write the finished document directly. Use English only, except for proper nouns or source terms that must be preserved.`,
+  },
+  "source-faithful": {
+    id: `TRANSFORMASI TERKUNCI PADA SUMBER. Gunakan hanya isi yang diberikan pengguna atau terbaca jelas di lampiran. Kamu boleh merapikan struktur dan bahasa, tetapi TIDAK boleh menambahkan konteks, asumsi, kejadian, kesimpulan, saran, angka, atau fakta baru.
+Pertahankan jenis dokumen dan makna sumber. Jangan mengubah terjemahan menjadi ringkasan, notulen, balasan, atau dokumen lain. Jangan menulis "Belum tersedia", titik-titik isian, maupun komentar proses. Gunakan Bahasa Indonesia saja kecuali target bahasa atau isi sumber mengharuskan bahasa lain.`,
+    en: `SOURCE-LOCKED TRANSFORMATION. Use only content supplied by the user or clearly legible in the attachment. You may improve structure and wording, but MUST NOT add context, assumptions, events, conclusions, advice, figures, or new facts.
+Preserve the source document type and meaning. Never turn a translation into a summary, minutes, reply, or another document. Do not write "Not provided", dotted fill-in lines, or process commentary. Use English only unless the target language or source content requires another language.`,
+  },
 };
 
 /** Shared clause for templates whose real output is a spreadsheet. */
@@ -182,6 +192,7 @@ Attendee names come only from the transcript or the photographed notes; never in
 
   {
     id: "summary",
+    completionPolicy: "source-faithful",
     group: "report",
     icon: "FileSearch",
     profile: "general",
@@ -316,6 +327,7 @@ Do not judge workmanship quality, cost, or timeliness.`,
 
   {
     id: "recap-sheet",
+    completionPolicy: "source-faithful",
     group: "extract",
     icon: "Table",
     profile: "general",
@@ -359,6 +371,7 @@ ${TABLE_ONLY.en}`,
 
   {
     id: "attendance-list",
+    completionPolicy: "source-faithful",
     group: "extract",
     icon: "Users",
     profile: "general",
@@ -400,6 +413,7 @@ ${TABLE_ONLY.en}`,
 
   {
     id: "table-extract",
+    completionPolicy: "source-faithful",
     group: "extract",
     icon: "Grid3x3",
     profile: "general",
@@ -442,6 +456,7 @@ ${TABLE_ONLY.en}`,
 
   {
     id: "action-items",
+    completionPolicy: "source-faithful",
     group: "meeting",
     icon: "ListChecks",
     profile: "general",
@@ -698,6 +713,7 @@ Never invent figures or names that were not supplied.`,
 
   {
     id: "diagram",
+    completionPolicy: "source-faithful",
     group: "utility",
     icon: "Workflow",
     profile: "diagram",
@@ -788,6 +804,7 @@ Never invent quotations, attendance numbers, or achievement figures.`,
 
   {
     id: "translate",
+    completionPolicy: "source-faithful",
     group: "utility",
     icon: "Languages",
     profile: "general",
@@ -869,6 +886,7 @@ Courteous, economical official-letter English — no flowery sentences.`,
 
   {
     id: "image-prompt",
+    completionPolicy: "source-faithful",
     group: "utility",
     icon: "Sparkles",
     profile: "prompt",
@@ -923,4 +941,4 @@ Add no commentary outside those three blocks.`,
   },
 ];
 
-export const WRITING_STANCE_CLAUSE = WRITING_STANCE;
+export const COMPLETION_STANCE_CLAUSES = COMPLETION_STANCES;
