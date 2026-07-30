@@ -127,8 +127,10 @@ test("the guide states the accuracy, no-invention, and timing caveats", () => {
   const limits = (lang) => [1, 2, 3, 4].map((n) => translate(lang, `guide.limit${n}`)).join(" ");
   assert.match(limits("id"), /detik/, "no timing caveat in Indonesian");
   assert.match(limits("en"), /seconds/, "no timing caveat in English");
-  assert.match(limits("id"), /Belum tersedia|tidak.*tebak|bukan ditebak/i);
-  assert.match(limits("en"), /Not provided|guessed/i);
+  assert.match(limits("id"), /asumsi umum/i);
+  assert.match(limits("en"), /general assumptions/i);
+  assert.match(limits("id"), /nama|angka|keputusan/i);
+  assert.match(limits("en"), /names|figures|decisions/i);
 });
 
 test("the wait sets an expectation instead of showing a bare spinner", () => {
