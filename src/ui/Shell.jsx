@@ -588,6 +588,9 @@ export default function Shell(props) {
                     canExportWord={
                       Boolean(entitlements?.docxExport) && activeTemplate.outputs.includes("docx")
                     }
+                    canExportPdf={
+                      Boolean(entitlements?.pdfExport) && activeTemplate.outputs.includes("pdf")
+                    }
                     canExportPpt={
                       Boolean(entitlements?.pptxExport) && activeTemplate.outputs.includes("pptx")
                     }

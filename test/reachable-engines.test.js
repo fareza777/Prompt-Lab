@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { getTemplate, listTemplates, buildTemplateInstruction } from "../src/workTemplates.js";
+import { translate } from "../src/ui/i18n.js";
 
 /**
  * Two whole engines shipped that nothing could reach.
@@ -62,8 +63,28 @@ test("export buttons follow the template, not only the plan", async () => {
   // handover record, only produces a disappointing file.
   const shell = await readFile(new URL("../src/ui/Shell.jsx", import.meta.url), "utf8");
   assert.match(shell, /activeTemplate\.outputs\.includes\("docx"\)/);
+  assert.match(shell, /activeTemplate\.outputs\.includes\("pdf"\)/);
   assert.match(shell, /activeTemplate\.outputs\.includes\("pptx"\)/);
   assert.match(shell, /activeTemplate\.outputs\.includes\("xlsx"\)/);
+
+  const result = await readFile(new URL("../src/ui/Result.jsx", import.meta.url), "utf8");
+  assert.match(result, /onExport\("pdf", output\)/);
+  assert.match(result, /canExportPdf/);
+});
+
+test("share and download copy is format-specific and never exposes Android internals", () => {
+  assert.equal(translate("id", "result.exportPdf"), "Bagikan / Ekspor PDF");
+  assert.equal(translate("id", "result.exportWord"), "Unduh Word");
+  assert.equal(
+    translate("id", "result.saveOfficeHint"),
+    "Silakan bagikan atau unduh laporan siap pakai."
+  );
+  assert.equal(translate("en", "result.exportPdf"), "Share / Export PDF");
+  assert.equal(translate("en", "result.exportWord"), "Download Word");
+
+  for (const lang of ["id", "en"]) {
+    assert.doesNotMatch(translate(lang, "result.saveOfficeHint"), /Android|silent|diam/i);
+  }
 });
 
 test("unreachable prompt-era UI is no longer shipped", async () => {

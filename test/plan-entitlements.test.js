@@ -24,7 +24,14 @@ test("Pro unlocks exports and AI features", () => {
 
 test("Free includes complete Word export but keeps PowerPoint paid", () => {
   assert.equal(canExportFormat("Free", "docx"), true);
+  assert.equal(canExportFormat("Free", "pdf"), true);
   assert.equal(canExportFormat("Free", "pptx"), false);
+});
+
+test("PDF follows the Word entitlement on every plan", () => {
+  for (const plan of ["Free", "Pro", "Business"]) {
+    assert.equal(canExportFormat(plan, "pdf"), canExportFormat(plan, "docx"));
+  }
 });
 
 test("Business has higher limits than Pro", () => {

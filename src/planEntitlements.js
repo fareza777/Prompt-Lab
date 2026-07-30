@@ -16,6 +16,7 @@ export const PLAN_ENTITLEMENTS = {
     generateMaxTokens: 3200,
     maxAttachments: 3,
     docxExport: true,
+    pdfExport: true,
     pptxExport: false,
     /**
      * Spreadsheets sit with DOCX rather than PPTX: the recap, table-extract,
@@ -42,6 +43,7 @@ export const PLAN_ENTITLEMENTS = {
     generateMaxTokens: 4500,
     maxAttachments: 8,
     docxExport: true,
+    pdfExport: true,
     pptxExport: true,
     xlsxExport: true,
     ocrPriority: true,
@@ -57,6 +59,7 @@ export const PLAN_ENTITLEMENTS = {
     generateMaxTokens: 6000,
     maxAttachments: 8,
     docxExport: true,
+    pdfExport: true,
     pptxExport: true,
     xlsxExport: true,
     ocrPriority: true,
@@ -92,6 +95,7 @@ export function canUseFeature(plan, feature) {
 export function canExportFormat(plan, format) {
   const ent = getEntitlements(plan);
   if (format === "docx") return ent.docxExport;
+  if (format === "pdf") return ent.pdfExport;
   if (format === "pptx") return ent.pptxExport;
   if (format === "xlsx") return ent.xlsxExport;
   return false;
@@ -101,6 +105,7 @@ export function upgradeMessageForFeature(feature) {
   const min = minPlanForFeature(feature);
   const labels = {
     docxExport: "DOCX export",
+    pdfExport: "PDF export",
     pptxExport: "PPTX export",
     ocrPriority: "Priority OCR",
     aiCompare: "AI Compare",

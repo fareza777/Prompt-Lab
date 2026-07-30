@@ -34,13 +34,23 @@ export default function DiagramSaveSheet({ offer, onClose, onShared, t }) {
             : "application/octet-stream");
 
   const titleKey =
-    ext === "docx"
+    ext === "pdf"
+      ? "result.savePdfTitle"
+      : ext === "docx"
       ? "result.saveWordTitle"
       : ext === "pptx"
         ? "result.savePptTitle"
         : "result.saveDiagramTitle";
-  const hintKey =
-    ext === "docx" || ext === "pptx" ? "result.saveOfficeHint" : "result.saveDiagramHint";
+  const hintKey = /^(pdf|docx|pptx)$/i.test(ext)
+    ? "result.saveOfficeHint"
+    : "result.saveDiagramHint";
+  const shareKey = ext === "pdf" ? "result.savePdfShare" : "result.saveDiagramShare";
+  const downloadKey =
+    ext === "pdf"
+      ? "result.savePdfDownload"
+      : ext === "docx"
+        ? "result.saveWordDownload"
+        : "result.saveDiagramDownload";
 
   async function shareNow() {
     try {
@@ -99,11 +109,11 @@ export default function DiagramSaveSheet({ offer, onClose, onShared, t }) {
           <div className="pl-actions pl-actions--primary">
             <button type="button" className="pl-btn pl-btn--primary" onClick={shareNow}>
               <Share2 size={17} aria-hidden="true" />
-              {t("result.saveDiagramShare")}
+              {t(shareKey)}
             </button>
             <a className="pl-btn" href={url} download={filename}>
               <Download size={17} aria-hidden="true" />
-              {t("result.saveDiagramDownload")}
+              {t(downloadKey)}
             </a>
           </div>
         </div>

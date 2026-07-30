@@ -5,6 +5,7 @@ import {
   Copy,
   Download,
   Flag,
+  Share2,
   Star,
 } from "lucide-react";
 import { createContentActionPayload } from "./contentRecord.js";
@@ -287,6 +288,7 @@ function ResultActions({
   saved,
   onExport,
   canExportWord,
+  canExportPdf,
   canExportPpt,
   canExportSheet,
   exportStatus,
@@ -344,10 +346,21 @@ function ResultActions({
           </>
         )}
 
-        {canExportWord && (
+        {canExportPdf && (
           <button
             type="button"
             className={`pl-btn${hasDiagram ? "" : " pl-btn--primary"}`}
+            onClick={() => onExport("pdf", output)}
+          >
+            <Share2 size={17} aria-hidden="true" />
+            {t("result.exportPdf")}
+          </button>
+        )}
+
+        {canExportWord && (
+          <button
+            type="button"
+            className={`pl-btn${hasDiagram || canExportPdf ? "" : " pl-btn--primary"}`}
             onClick={() => onExport("docx", output)}
           >
             <Download size={17} aria-hidden="true" />
@@ -389,6 +402,7 @@ export default function Result({
   saved,
   onExport,
   canExportWord,
+  canExportPdf,
   canExportPpt,
   canExportSheet,
   exportStatus,
@@ -471,6 +485,7 @@ export default function Result({
           saved={saved}
           onExport={onExport}
           canExportWord={canExportWord}
+          canExportPdf={canExportPdf}
           canExportPpt={canExportPpt}
           canExportSheet={canExportSheet}
           exportStatus={exportStatus}
