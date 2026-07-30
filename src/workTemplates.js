@@ -170,8 +170,8 @@ function sectionDirective(template, language) {
   if (!sections.length) return "";
   const list = sections.map((title) => `## ${title}`).join("\n");
   return lang(language) === "en"
-    ? `\nREQUIRED SECTIONS — use exactly these headings, in this order, under a single "# " document title of your own:\n${list}\n`
-    : `\nBAGIAN WAJIB — pakai persis heading ini, dengan urutan ini, di bawah satu judul dokumen "# " yang kamu susun sendiri:\n${list}\n`;
+    ? `\nDOCUMENT SECTIONS — use these headings in this order under one "# " document title. Omit an entire non-essential section when the source cannot support useful content; never leave an empty heading:\n${list}\n`
+    : `\nBAGIAN DOKUMEN — gunakan heading berikut dalam urutan ini di bawah satu judul "# ". Hilangkan seluruh bagian non-esensial bila sumber tidak mendukung isi yang berguna; jangan menyisakan heading kosong:\n${list}\n`;
 }
 
 function lengthDirective(template, language) {

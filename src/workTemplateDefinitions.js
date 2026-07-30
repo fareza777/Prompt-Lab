@@ -176,16 +176,16 @@ Plain formal report English.`,
     },
     prompt: {
       id: `Susun NOTULEN RAPAT. Judul dokumen (# ) diambil dari isian nama/agenda rapat.
-"Identitas Rapat" berupa tabel dua kolom: Hari/Tanggal, Waktu, Tempat, Pimpinan Rapat — diisi dari isian pengguna, dan "Belum tersedia" bila kosong.
+"Identitas Rapat" berupa tabel dua kolom. Tanggal dan waktu selalu diisi dari sumber atau fallback aplikasi; baris Tempat dan Pimpinan Rapat hanya ditampilkan bila didukung sumber.
 "Pembahasan" ditulis per agenda, satu paragraf pendek per agenda.
-"Keputusan" bullet, hanya hal yang benar-benar diputuskan.
-"Tindak Lanjut" WAJIB tabel Markdown: Tindakan | Penanggung Jawab | Tenggat | Status. Sel yang tidak didukung sumber diisi "Belum tersedia".
+"Keputusan" bullet, hanya bila ada hal yang benar-benar diputuskan; bila tidak ada, hilangkan bagian ini.
+"Tindak Lanjut" berupa tabel Markdown hanya bila sumber memuat tindakan. Pakai kolom Tindakan dan tambahkan kolom Penanggung Jawab, Tenggat, atau Status hanya bila sumber mendukungnya.
 Nama peserta HANYA dari transkrip atau foto catatan; jangan dikarang.`,
       en: `Write MEETING MINUTES. The document title (# ) comes from the meeting name field.
-"Meeting Details" is a two-column table: Day/Date, Time, Place, Chaired by — filled from the user's fields, "Not provided" where empty.
+"Meeting Details" is a two-column table. Date and time always come from the source or application fallback; show Place and Chaired by only when supported.
 "Discussion" runs agenda item by agenda item, one short paragraph each.
-"Decisions" is a bullet list of what was actually decided.
-"Action Items" MUST be a Markdown table: Action | Owner | Due | Status, with "Not provided" in unsupported cells.
+"Decisions" is a bullet list only when the source contains actual decisions; otherwise omit the section.
+"Action Items" is a Markdown table only when the source contains actions. Always use Action and add Owner, Due, or Status columns only when the source supports them.
 Attendee names come only from the transcript or the photographed notes; never invent them.`,
     },
   },
@@ -359,12 +359,12 @@ Do not judge workmanship quality, cost, or timeliness.`,
       id: `Buat REKAPITULASI dalam bentuk tabel. Heading tabel diambil dari isian "Rekap tentang apa".
 Kalau pengguna menyebutkan kolom, pakai persis kolom itu. Kalau tidak, tentukan kolom yang paling masuk akal dan konsisten.
 Salin nilai apa adanya. JANGAN menghitung total, rata-rata, atau persentase kecuali angkanya memang sudah tertulis di sumber.
-Baris yang datanya tidak terbaca tetap dimasukkan dengan sel "Belum tersedia" — jangan dibuang diam-diam.
+Untuk tulisan yang meragukan, gunakan pembacaan terbaik diikuti "(?)". Jika satu sel benar-benar tidak dapat dibaca, tulis "Tidak terbaca" tanpa menebak.
 ${TABLE_ONLY.id}`,
       en: `Build a RECAP as tables. The table heading comes from the "Recap of what" field.
 Where the user names columns, use exactly those. Otherwise choose the columns that genuinely fit and keep them consistent.
 Copy values exactly. DO NOT compute totals, averages, or percentages unless that figure is already written in the source.
-Rows whose data cannot be read are still included, with "Not provided" cells — never drop a row silently.
+For uncertain writing, give the best reading followed by "(?)". If a cell is genuinely illegible, write "Illegible" rather than guessing.
 ${TABLE_ONLY.en}`,
     },
   },
@@ -484,19 +484,15 @@ ${TABLE_ONLY.en}`,
     sections: { id: [], en: [] },
     prompt: {
       id: `Ubah bahan yang diberikan menjadi DAFTAR TINDAK LANJUT. Heading tabel dari isian "Tindak lanjut dari apa".
-Satu tabel Markdown: No | Tindakan | Penanggung Jawab | Tenggat | Prioritas | Status.
+Satu tabel Markdown dengan kolom wajib No | Tindakan. Tambahkan Penanggung Jawab, Tenggat, Prioritas, dan Status hanya untuk kolom yang memang didukung sumber.
 "Tindakan" dimulai dengan kata kerja dan cukup jelas untuk dikerjakan tanpa membaca catatan aslinya.
-"Penanggung Jawab" dan "Tenggat" hanya bila disebut sumber; selain itu "Belum tersedia".
-"Prioritas" Tinggi/Sedang/Rendah dari urgensi yang tersurat; tanpa petunjuk isi "Sedang".
-"Status" selalu "Belum mulai" kecuali sumber menyatakan lain.
+"Penanggung Jawab", "Tenggat", "Prioritas", dan "Status" tidak boleh disimpulkan dari kebiasaan umum. Jika kolom opsional sama sekali tidak punya data, hilangkan kolomnya.
 Hal yang hanya wacana tanpa tindakan JANGAN dimasukkan.
 ${TABLE_ONLY.id}`,
       en: `Turn the supplied material into an ACTION ITEM list. The table heading comes from the "Follow-up from what" field.
-One Markdown table: No | Action | Owner | Due | Priority | Status.
+One Markdown table with required columns No | Action. Add Owner, Due, Priority, and Status only for columns the source actually supports.
 "Action" starts with a verb and is clear enough to act on without the original notes.
-"Owner" and "Due" only where the source states them; otherwise "Not provided".
-"Priority" is High/Medium/Low from urgency actually expressed; with no signal, "Medium".
-"Status" is always "Not started" unless the source says otherwise.
+"Owner", "Due", "Priority", and "Status" must not be inferred from routine practice. If an optional column has no source data at all, omit that column.
 Points that are discussion without an action DO NOT belong in the list.
 ${TABLE_ONLY.en}`,
     },
@@ -544,7 +540,7 @@ ${TABLE_ONLY.en}`,
     prompt: {
       id: `Susun BERITA ACARA SERAH TERIMA dengan bahasa dokumen resmi. Judul dokumen (# ) memuat hal yang diserahterimakan.
 "Hari dan Tanggal" memakai tanggal dan jam dari isian pengguna, ditulis lengkap (contoh: "Rabu, 29 Juli 2026, pukul 10.30 WIB").
-"Pihak yang Terlibat" berupa dua blok: PIHAK PERTAMA dan PIHAK KEDUA, masing-masing Nama dan Jabatan dari isian pengguna. Nomor induk pegawai dan data lain yang tidak diisi ditulis sebagai titik-titik.
+"Pihak yang Terlibat" berupa dua blok: PIHAK PERTAMA dan PIHAK KEDUA. Tampilkan Nama serta Jabatan/Unit hanya jika diberikan; jangan menambahkan baris identitas lain.
 "Uraian" dibuka dengan kalimat baku: "Pada hari ini, ... , kami yang bertanda tangan di bawah ini:" lalu menyatakan bahwa PIHAK PERTAMA menyerahkan dan PIHAK KEDUA menerima.
 "Rincian Barang" WAJIB tabel Markdown: No | Uraian | Jumlah | Satuan | Keterangan, disusun dari isian rincian.
 "Penutup" satu paragraf baku bahwa berita acara dibuat dengan sebenarnya untuk dipergunakan sebagaimana mestinya.
@@ -552,7 +548,7 @@ ${TABLE_ONLY.en}`,
 Jangan menambah pasal, sanksi, atau klausul hukum yang tidak diminta.`,
       en: `Write a HANDOVER RECORD in formal document register. The document title (# ) names what is being handed over.
 "Date" uses the user's date and time written out in full (e.g. "Wednesday, 29 July 2026, at 10.30").
-"Parties" is two blocks, FIRST PARTY and SECOND PARTY, each with the Name and Role from the user's fields. Employee numbers and anything not supplied are dotted fill-in lines.
+"Parties" is two blocks, FIRST PARTY and SECOND PARTY. Show Name and Role/Unit only when supplied; do not add other identity rows.
 "Description" opens with the standard clause "On this day, ... , we the undersigned:" and states that the FIRST PARTY hands over and the SECOND PARTY receives.
 "Itemised Detail" MUST be a Markdown table: No | Description | Quantity | Unit | Notes, built from the itemised field.
 "Closing" is one standard paragraph stating the record was made truthfully for its proper use.
@@ -630,7 +626,7 @@ Never name other staff, contractors, or budget figures that were not supplied.`,
         today("dateStart", "Tanggal berangkat", "Departure date"),
         today("dateEnd", "Tanggal kembali", "Return date"),
         text("letter", "Nomor surat tugas", "Assignment letter number", {
-          placeholder: { id: "Kosongkan untuk dibuat titik-titik isian", en: "Leave blank for a dotted fill-in line" },
+          placeholder: { id: "Opsional — isi jika tersedia", en: "Optional — enter when available" },
         }),
         area("notes", "Hasil yang diperoleh", "What you got out of it"),
       ],
@@ -643,16 +639,16 @@ Never name other staff, contractors, or budget figures that were not supplied.`,
     },
     prompt: {
       id: `Susun LAPORAN PERJALANAN DINAS dengan struktur baku. Judul dokumen (# ) memuat maksud dan kota tujuan.
-"Dasar Penugasan" memakai nomor surat tugas dari isian; bila kosong tulis "Surat Tugas Nomor: ......................".
-"Pelaksanaan" kronologis per hari bila rentang tanggalnya lebih dari satu hari.
-"Hasil yang Diperoleh" bagian paling bernilai — 4–8 bullet berisi substansi yang didapat, bukan daftar aktivitas. Kembangkan dari isian pengguna.
-"Kesimpulan dan Saran" maksimal 3 kalimat kesimpulan dan 3 bullet saran yang bisa ditindaklanjuti unit kerja.
+"Dasar Penugasan" hanya ditampilkan bila nomor surat tugas tersedia.
+"Pelaksanaan" merangkum kronologi yang didukung catatan dan lampiran. Jangan membuat agenda harian, pertemuan, narasumber, atau sesi yang tidak disebut.
+"Hasil yang Diperoleh" berisi substansi dari isian dan lampiran. Boleh dilengkapi konteks umum yang netral, tetapi jangan membuat komitmen, kesepakatan, capaian, atau bukti dokumentasi.
+"Kesimpulan dan Saran" singkat dan proporsional terhadap bahan; saran bersifat umum dan tidak menetapkan pemilik maupun tenggat baru.
 Jangan mencantumkan biaya, tarif, atau nominal apa pun kecuali diberikan pengguna.`,
       en: `Write a BUSINESS TRIP REPORT in the standard structure. The document title (# ) carries the purpose and destination.
-"Basis" uses the assignment letter number from the field; when blank write "Assignment letter number: ......................".
-"What Took Place" runs chronologically by day when the trip spans several dates.
-"Outcomes" is the most valuable section — four to eight bullets of substance gained, not a list of activities. Build it out from the user's field.
-"Conclusion and Suggestions" is at most three sentences of conclusion and three actionable suggestions.
+"Basis" appears only when an assignment letter number is available.
+"What Took Place" summarises chronology supported by the notes and attachments. Do not invent a daily agenda, meetings, speakers, or sessions.
+"Outcomes" contains substance from the field and attachments. Neutral general context is allowed, but do not invent commitments, agreements, achievements, or documentary evidence.
+"Conclusion and Suggestions" stays brief and proportional to the source; suggestions are general and do not assign a new owner or deadline.
 Never include costs, rates, or amounts unless the user supplied them.`,
     },
   },
@@ -692,22 +688,22 @@ Never include costs, rates, or amounts unless the user supplied them.`,
     outputs: ["pptx", "docx"],
     sections: { id: [], en: [] },
     prompt: {
-      id: `Susun PAPARAN sebagai alur cerita, bukan daftar tempelan. Target 8–12 slide.
-Setiap slide adalah satu heading "## " berisi PESAN slide itu — bukan label topik. Tulis "Realisasi tertinggal 8 persen dari target", bukan "Realisasi".
+      id: `Susun PAPARAN sebagai alur cerita, bukan daftar tempelan. Target 6–10 slide sesuai banyaknya bahan; jangan menambah slide untuk mengejar jumlah.
+Setiap slide adalah satu heading "## " berisi pesan yang benar-benar didukung bahan, bukan angka atau kesimpulan rekaan.
 Di bawah tiap heading: maksimal 6 bullet dan sekitar 45 kata terlihat.
-Buka dengan satu slide konteks yang spesifik, tutup dengan slide keputusan atau rekomendasi.
+Buka dengan konteks yang didukung sumber dan tutup dengan langkah berikutnya yang umum. Jangan mengarang keputusan, pemilik, sumber daya, jadwal, target, indikator, atau status pelaksanaan.
 Angka disajikan sebagai bullet yang DIMULAI dengan angkanya ("62 persen dari pagu terserap") — itu yang membuatnya tampil sebagai callout besar di slide.
 Data pembanding disajikan sebagai tabel Markdown; tabel akan menjadi tabel sungguhan di slide.
 Sesuaikan bahasa dengan audiens yang diisi pengguna.
-Jangan mengarang angka atau nama yang tidak diberikan.`,
-      en: `Write a PRESENTATION as a narrative, not a list of labels. Target 8–12 slides.
-Each slide is one "## " heading carrying that slide's MESSAGE — not a topic label. Write "Spending is 8 points behind target", not "Spending".
+Jika sumber tidak memuat angka, jangan membuat metrik, persentase nol, durasi, maupun tabel angka.`,
+      en: `Write a PRESENTATION as a narrative, not a list of labels. Target six to ten slides according to the amount of source material; never pad to hit a count.
+Each slide is one "## " heading carrying a message genuinely supported by the material, never a fabricated figure or conclusion.
 Under each heading: at most six bullets and roughly 45 visible words.
-Open with one specific context slide and close on a decision or recommendation.
+Open with source-supported context and close with general next steps. Do not invent decisions, owners, resources, schedules, targets, indicators, or implementation status.
 Figures are bullets that START with the number ("62 per cent of the budget drawn"), which is what renders them as a large callout.
 Comparative data goes in a Markdown table; tables become real tables on the slide.
 Pitch the language at the audience the user named.
-Never invent figures or names that were not supplied.`,
+If the source contains no figures, do not create metrics, zero percentages, durations, or numeric tables.`,
     },
   },
 
@@ -873,13 +869,13 @@ Output ONLY the translation. No translator's notes, no summary, not the source t
 "Ringkasan Surat Masuk" maksimal 4 bullet: pengirim, nomor dan tanggal surat, pokok permintaan, tenggat bila ada.
 "Draf Surat Balasan" lengkap dalam format surat dinas: tempat dan tanggal (pakai tanggal dari isian), nomor/lampiran/hal, alamat tujuan, salam pembuka, isi 2–3 paragraf, salam penutup, blok tanda tangan.
 Isi balasan mengikuti sikap yang diisi pengguna.
-Nomor surat, nama penanda tangan, dan jabatan ditulis sebagai titik-titik isian.
+Jangan membuat nomor surat, nama penanda tangan, atau jabatan. Hilangkan baris yang tidak didukung. Untuk penutup, gunakan instansi pengirim dari isian; bila kosong, gunakan penyebutan netral "atas nama instansi pengirim" tanpa penanda edit.
 Bahasa surat dinas yang sopan dan ringkas — hindari kalimat berbunga-bunga.`,
       en: `Read the attached incoming letter and draft a reply.
 "Incoming Letter Summary" is at most four bullets: sender, letter number and date, what is asked, any deadline.
 "Draft Reply" is a complete formal letter: place and date (use the date field), reference/enclosure/subject lines, recipient address, salutation, two to three body paragraphs, closing, signature block.
 The reply takes the position the user typed.
-Letter number, signatory name, and job title are dotted fill-in lines.
+Do not invent a letter number, signatory, or job title. Omit unsupported lines. In the closing, use the replying organisation when supplied; otherwise use the role-neutral phrase "on behalf of the replying organisation" without an editing marker.
 Courteous, economical official-letter English — no flowery sentences.`,
     },
   },

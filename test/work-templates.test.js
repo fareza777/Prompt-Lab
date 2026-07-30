@@ -263,6 +263,17 @@ test("source-faithful templates prohibit narrative expansion", () => {
   }
 });
 
+test("template-specific prompts do not reintroduce edit markers", () => {
+  for (const template of templates) {
+    const instruction = localized(template.prompt, "id");
+    assert.doesNotMatch(
+      instruction,
+      /diisi "Belum tersedia"|sel "Belum tersedia"|ditulis sebagai titik-titik|titik-titik isian/i,
+      `${template.id} asks for an unfinished marker`
+    );
+  }
+});
+
 test("a summary is the one template forbidden from adding assumptions", () => {
   const instruction = buildTemplateInstruction({
     template: getTemplate("summary"),
