@@ -18,6 +18,7 @@ import {
 } from "docx";
 import { sanitizeReadyDocument } from "../src/readyDocumentSanitize.js";
 import { detectDeliverableProfile } from "../src/deliverableProfiles.js";
+import { prepareExportImage } from "./exportImages.js";
 
 // Vercel serverless resolves dynamic import("pptxgenjs") to the ESM build and
 // then crashes with "Cannot use import statement outside a module". Force CJS.
@@ -337,29 +338,15 @@ const HALF_WIDTH_PX = 296;
  * guessing turns a portrait photo into a smeared landscape one.
  */
 async function prepareImage(image, maxWidthPx) {
-  const raw = String(image?.dataUrl || "");
-  const base64 = raw.slice(raw.indexOf(",") + 1);
-  if (!base64) return null;
-  const input = Buffer.from(base64, "base64");
-  if (!input.length) return null;
-
-  try {
-    const sharp = (await import("sharp")).default;
-    // Re-encode to PNG: Word cannot place HEIC, which is what most phones
-    // hand over, and the client only compresses images it sends to vision.
-    const pipeline = sharp(input).rotate().resize({
-      width: maxWidthPx * 2,
-      withoutEnlargement: true,
-    });
-    const buffer = await pipeline.png().toBuffer();
-    const meta = await sharp(buffer).metadata();
-    const width = Math.min(maxWidthPx, meta.width || maxWidthPx);
-    const ratio = meta.width && meta.height ? meta.height / meta.width : 0.75;
-    return { buffer, width, height: Math.round(width * ratio) };
-  } catch (error) {
-    console.warn("docx image skipped", error.message);
-    return null;
-  }
+  const prepared = await prepareExportImage(image);
+  if (!prepared) return null;
+  const width = Math.min(maxWidthPx, prepared.width);
+  const ratio = prepared.height / prepared.width;
+  return {
+    ...prepared,
+    width,
+    height: Math.round(width * ratio),
+  };
 }
 
 const DOC_SECTION = {
@@ -480,7 +467,7 @@ function imageParagraph(image) {
     spacing: { before: 80, after: 80 },
     children: [
       new ImageRun({
-        type: "png",
+        type: image.type,
         data: image.buffer,
         transformation: { width: image.width, height: image.height },
       }),

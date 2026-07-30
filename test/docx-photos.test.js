@@ -42,6 +42,7 @@ test("attached photographs end up inside the document", async () => {
   const { media, xml } = await docx({ title: "Laporan Kegiatan", language: "id", images });
 
   assert.equal(media.length, 2, `expected two embedded images, found ${media.length}`);
+  assert.ok(media.every((name) => /\.jpe?g$/i.test(name)), `expected JPEG media: ${media.join(", ")}`);
   assert.match(xml, /<w:drawing>/, "no drawing element was emitted");
   assert.match(xml, /Dokumentasi/);
   assert.match(xml, /Foto 1/);
