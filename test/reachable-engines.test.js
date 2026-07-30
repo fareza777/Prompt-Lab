@@ -87,6 +87,24 @@ test("share and download copy is format-specific and never exposes Android inter
   }
 });
 
+test("every built-in template declares only an action the result screen can deliver", () => {
+  const supported = new Set(["copy", "docx", "pdf", "xlsx", "pptx", "png", "svg"]);
+  for (const template of listTemplates()) {
+    assert.ok(template.outputs.length > 0, `${template.id} has no output action`);
+    assert.equal(
+      new Set(template.outputs).size,
+      template.outputs.length,
+      `${template.id} repeats an output action`
+    );
+    for (const output of template.outputs) {
+      assert.ok(supported.has(output), `${template.id} declares unsupported output ${output}`);
+    }
+    if (template.outputs.includes("pdf")) {
+      assert.ok(template.outputs.includes("docx"), `${template.id} offers PDF without editable Word`);
+    }
+  }
+});
+
 test("unreachable prompt-era UI is no longer shipped", async () => {
   // Nothing has opened Improve or Compare since the prompt-first flow was
   // replaced, and the two of them plus the retired composer cost 13.9 KiB of

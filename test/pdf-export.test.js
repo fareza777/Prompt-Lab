@@ -58,6 +58,17 @@ test("PDF export produces a readable, real PDF report", async () => {
   assert.match(text, /Pembersihan saluran/i);
 });
 
+test("a short text-only report stays on one page", async () => {
+  const buffer = await buildPdfBuffer({
+    title: "Laporan Ringkas",
+    content: "# Laporan Ringkas\n\n## Ringkasan\n\nKondisi lokasi tercatat baik.",
+    language: "id",
+    plan: "Pro",
+  });
+  const source = buffer.toString("latin1");
+  assert.equal((source.match(/\/Type\s*\/Page\b/g) || []).length, 1);
+});
+
 test("long PDF reports paginate instead of clipping content", async () => {
   const content = `${REPORT}\n${Array.from(
     { length: 90 },
@@ -109,4 +120,11 @@ test("the PDF route and client carry report photographs", async () => {
 
   const main = await readFile(new URL("../src/main.jsx", import.meta.url), "utf8");
   assert.match(main, /\["docx", "pdf"\]\.includes\(format\)/);
+});
+
+test("PDF block renderers reset the flow cursor after lists and tables", async () => {
+  const source = await readFile(new URL("../server/pdfExport.js", import.meta.url), "utf8");
+  assert.match(source, /function resetFlowCursor\(doc\)/);
+  assert.match(source, /function drawBlocks[\s\S]*resetFlowCursor\(doc\)/);
+  assert.match(source, /async function drawDocumentation[\s\S]*ensureSpace\(doc, boxHeight \+ 80\)/);
 });

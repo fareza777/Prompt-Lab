@@ -30,7 +30,12 @@ function ensureSpace(doc, required) {
   if (doc.y + required > bottom) doc.addPage();
 }
 
+function resetFlowCursor(doc) {
+  doc.x = PAGE.margin;
+}
+
 function drawHeading(doc, block) {
+  resetFlowCursor(doc);
   const top = block.level === 1;
   ensureSpace(doc, top ? 58 : 42);
   doc.moveDown(top ? 0.75 : 0.45);
@@ -49,6 +54,7 @@ function drawHeading(doc, block) {
 }
 
 function drawParagraph(doc, text) {
+  resetFlowCursor(doc);
   ensureSpace(doc, 34);
   doc
     .font("Helvetica")
@@ -61,17 +67,23 @@ function drawParagraph(doc, text) {
 function drawList(doc, block) {
   block.items.forEach((item, index) => {
     ensureSpace(doc, 28);
-    const marker = block.ordered ? `${index + 1}.` : "•";
-    const x = doc.x;
+    resetFlowCursor(doc);
+    const marker = block.ordered ? `${index + 1}.` : "";
+    const x = PAGE.margin;
     const y = doc.y;
-    doc.font("Helvetica-Bold").fontSize(10.5).fillColor(COLOR.accent).text(marker, x, y, {
-      width: 20,
-      lineBreak: false,
-    });
+    if (block.ordered) {
+      doc.font("Helvetica-Bold").fontSize(10.5).fillColor(COLOR.accent).text(marker, x, y, {
+        width: 20,
+        lineBreak: false,
+      });
+    } else {
+      doc.fillColor(COLOR.accent).circle(x + 4, y + 6, 2).fill();
+    }
     doc.font("Helvetica").fillColor(COLOR.ink).text(item, x + 22, y, {
       width: doc.page.width - PAGE.margin - (x + 22),
       lineGap: 2,
     });
+    resetFlowCursor(doc);
     doc.moveDown(0.25);
   });
   doc.moveDown(0.25);
@@ -88,6 +100,7 @@ function normalizedRows(block) {
 }
 
 function drawTable(doc, block) {
+  resetFlowCursor(doc);
   const { columns, rows } = normalizedRows(block);
   const tableWidth = doc.page.width - PAGE.margin * 2;
   const cellWidth = tableWidth / columns;
@@ -122,13 +135,16 @@ function drawTable(doc, block) {
           lineGap: 1,
         });
     });
+    resetFlowCursor(doc);
     doc.y = y + height;
   });
+  resetFlowCursor(doc);
   doc.moveDown(0.8);
 }
 
 function drawBlocks(doc, blocks) {
   for (const block of blocks) {
+    resetFlowCursor(doc);
     if (block.type === "heading") drawHeading(doc, block);
     if (block.type === "paragraph") drawParagraph(doc, block.text);
     if (block.type === "list") drawList(doc, block);
@@ -143,6 +159,7 @@ function drawBlocks(doc, blocks) {
         .stroke();
       doc.moveDown(1);
     }
+    resetFlowCursor(doc);
   }
 }
 
@@ -152,15 +169,16 @@ async function drawDocumentation(doc, images, language) {
     .filter((entry) => entry.image);
   if (!prepared.length) return;
 
+  const gap = 14;
+  const width = (doc.page.width - PAGE.margin * 2 - gap) / 2;
+  const boxHeight = 222;
+  ensureSpace(doc, boxHeight + 80);
   drawHeading(doc, {
     type: "heading",
     level: 1,
     text: language === "en" ? "Documentation" : "Dokumentasi",
   });
 
-  const gap = 14;
-  const width = (doc.page.width - PAGE.margin * 2 - gap) / 2;
-  const boxHeight = 222;
   for (let index = 0; index < prepared.length; index += 2) {
     ensureSpace(doc, boxHeight + 34);
     const rowY = doc.y;
@@ -193,6 +211,7 @@ async function drawDocumentation(doc, images, language) {
         .fillColor(COLOR.muted)
         .text(label, x, rowY + boxHeight + 6, { width, align: "center" });
     });
+    resetFlowCursor(doc);
     doc.y = rowY + boxHeight + 30;
   }
 }
@@ -204,6 +223,8 @@ function addFooters(doc, language, plan) {
     const pageNumber = index - range.start + 1;
     const label = `${language === "en" ? "Page" : "Halaman"} ${pageNumber}`;
     const brand = plan === "Free" ? "AI Work Studio  ·  " : "";
+    const bottomMargin = doc.page.margins.bottom;
+    doc.page.margins.bottom = 0;
     doc
       .font("Helvetica")
       .fontSize(8)
@@ -213,6 +234,7 @@ function addFooters(doc, language, plan) {
         align: "center",
         lineBreak: false,
       });
+    doc.page.margins.bottom = bottomMargin;
   }
 }
 
