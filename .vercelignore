@@ -1,7 +1,14 @@
 .tools/
+.worktrees/
+.repo-inspect/
+.superpowers/
 android-app/
+playstore/
 node_modules/
 dist/
+.vercel/output/
+previews/
+tmp/
 .claude/
 playstore/*.aab
 playstore/*.apk

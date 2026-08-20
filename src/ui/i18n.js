@@ -48,9 +48,10 @@ const id = {
   "canvas.removeFile": "Hapus lampiran {name}",
   "canvas.clear": "Mulai baru",
 
-  "tpl.galleryTitle": "Mau membuat apa hari ini?",
+  "tpl.galleryKicker": "MULAI DARI SINI",
+  "tpl.galleryTitle": "Pilih hasil yang ingin dibuat",
   "tpl.gallerySubtitle":
-    "Pilih satu template, lampirkan bahannya, dan hasilnya keluar sebagai dokumen siap kirim.",
+    "Pilih template, tambahkan bahan, dan dapatkan dokumen siap kirim.",
   "tpl.search": "Cari template",
   "tpl.searchEmpty": "Tidak ada template yang cocok.",
   "tpl.group.report": "Laporan",
@@ -477,9 +478,10 @@ const en = {
   "canvas.removeFile": "Remove attachment {name}",
   "canvas.clear": "Start over",
 
-  "tpl.galleryTitle": "What are you making today?",
+  "tpl.galleryKicker": "START HERE",
+  "tpl.galleryTitle": "Choose what you want to make",
   "tpl.gallerySubtitle":
-    "Pick a template, attach your material, and the result comes back as a document you can send.",
+    "Pick a template, add your material, and get a document ready to send.",
   "tpl.search": "Search templates",
   "tpl.searchEmpty": "No template matches that.",
   "tpl.group.report": "Reports",

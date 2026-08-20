@@ -53,6 +53,43 @@ const stripInline = (value = "") =>
     .replace(/`(.*?)`/g, "$1")
     .trim();
 
+/**
+ * The model may write photo captions into the report while the exporter also
+ * creates the real documentation section. Keep one source of truth: when
+ * images are available, the exporter owns that section and its captions.
+ */
+export function normalizeExportContent(content = "", { imageCount = 0 } = {}) {
+  let ready = sanitizeReadyDocument(content, "report");
+  if (!Number.isFinite(imageCount) || imageCount <= 0) return ready;
+
+  const output = [];
+  let skippingDocumentation = false;
+  let documentationLevel = 99;
+  for (const line of ready.split("\n")) {
+    const heading = line.match(/^(#{1,6})\s+(.+?)\s*$/);
+    const plainDocumentation = /^\s*(?:Dokumentasi|Documentation)\s*$/i.test(line);
+    if (heading) {
+      const level = heading[1].length;
+      const title = heading[2].trim();
+      if (/^(?:Dokumentasi|Documentation)$/i.test(title)) {
+        skippingDocumentation = true;
+        documentationLevel = level;
+        continue;
+      }
+      if (skippingDocumentation && level <= documentationLevel) skippingDocumentation = false;
+    } else if (plainDocumentation) {
+      skippingDocumentation = true;
+      documentationLevel = 99;
+      continue;
+    }
+    if (skippingDocumentation) continue;
+    if (/^\s*(?:Foto|Photo)\s+\d+\s*(?:[-:—–])\s*.+$/i.test(line)) continue;
+    output.push(line);
+  }
+  ready = output.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  return ready;
+}
+
 function isTableDivider(line) {
   // The trailing column was previously required, so a single-column table
   // ("| Nama |") was never recognised and silently degraded into paragraphs.
@@ -482,7 +519,7 @@ export async function buildDocxBuffer({
   plan = "Free",
   images = [],
 } = {}) {
-  const ready = sanitizeReadyDocument(content, "report");
+  const ready = normalizeExportContent(content, { imageCount: images.length });
   // "Dokumen kerja profesional" sat on every export regardless of what it was.
   // Minutes should say minutes, a report should say report.
   //

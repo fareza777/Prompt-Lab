@@ -28,5 +28,6 @@ test("buildVisionUserContent attaches image_url parts for photos", () => {
 test("vision prompts require looking at the image", () => {
   assert.match(imageVisionExtractPrompt("id"), /Jelaskan singkat|Ekstrak SEMUA teks/i);
   assert.match(runVisionDirective("id"), /LIHAT|vision/i);
+  assert.match(runVisionDirective("id"), /PDF/i);
   assert.match(toDataUrl(Buffer.from("hi"), "image/png"), /^data:image\/png;base64,/);
 });

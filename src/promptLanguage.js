@@ -89,5 +89,7 @@ export function getLanguageLockInstruction(code) {
   return `Language rule (critical):
 - User input language: ${meta.label}.
 - The final prompt MUST be written entirely in ${meta.label}.
-- Do not switch to another language unless the user explicitly requests it.`;
+- Do not switch to another language unless the user explicitly requests it.
+- Use standard Latin script and normal punctuation for Indonesian/English output.
+- Do not emit Chinese, Japanese, or Korean characters, mojibake, or encoding artifacts. If a source quote genuinely uses another script, preserve only that exact quote.`;
 }

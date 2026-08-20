@@ -155,7 +155,7 @@ export default function TemplateGallery({
 
   return (
     <section className="pl-gallery" aria-labelledby="gallery-title">
-      <div className="pl-gallery-head">
+      <div className={`pl-gallery-head${activeGroup ? " pl-gallery-head--group" : ""}`}>
         {activeGroup ? (
           <button type="button" className="pl-gallery-back" onClick={goHome}>
             <ChevronLeft size={20} aria-hidden="true" />
@@ -163,6 +163,7 @@ export default function TemplateGallery({
           </button>
         ) : (
           <>
+            <span className="pl-gallery-kicker">{t("tpl.galleryKicker")}</span>
             <h1 id="gallery-title">{t("tpl.galleryTitle")}</h1>
             <p>{t("tpl.gallerySubtitle")}</p>
           </>

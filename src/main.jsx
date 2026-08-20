@@ -1356,6 +1356,10 @@ function App() {
   const [globalConfigSource, setGlobalConfigSource] = useState("env");
   /** Output of running the prompt — the finished deliverable, not instructions. */
   const [runOutput, setRunOutput] = useState("");
+  // Photos extracted from PDF/DOCX sources on the server remain available to
+  // the later Word/PDF export even when the original picker had no standalone
+  // image file to read in the browser.
+  const [exportImages, setExportImages] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
   const [runError, setRunError] = useState("");
   // Template mode keeps the stream but stops painting it; this is what the
@@ -1617,6 +1621,7 @@ function App() {
     setGenerationModel("");
     setGenerationStatus("local");
     setWarningMessage("");
+    setExportImages([]);
   }, [narrative, category, tone, model, outputType, attachments.length]);
 
   useEffect(() => {
@@ -1982,6 +1987,7 @@ function App() {
     setNarrative("");
     setGeneratedPrompt("");
     setRunOutput("");
+    setExportImages([]);
     setAttachments([]);
     setErrorMessage("");
     setWarningMessage("");
@@ -2444,14 +2450,19 @@ function App() {
 
     setIsRunning(true);
     setRunError("");
+    setExportImages([]);
     const resultId = globalThis.crypto?.randomUUID?.() || `result-${Date.now()}`;
     try {
       const effectiveOutputType = detectDiagramIntent({ narrative, outputType })
         ? "Diagram"
         : outputType;
       const authHeaders = await getAuthHeaders();
-      const imageAttachments = attachments.filter(
-        (item) => item?.file && String(item.type || "").startsWith("image/")
+      // A direct run can summarize or diagram any supported upload. Keep
+      // documents in the request so the server can extract their text and
+      // render PDF/DOCX pages for the same vision path as photos.
+      const outgoingAttachments = attachments.filter((item) => item?.file);
+      const imageAttachments = outgoingAttachments.filter(
+        (item) => String(item.type || "").startsWith("image/")
       );
       let visionFiles = imageAttachments;
       if (imageAttachments.length) {
@@ -2462,10 +2473,20 @@ function App() {
           visionFiles = imageAttachments;
         }
       }
-      const uploadPlan = getAttachmentUploadPlan(visionFiles, apiBase);
+      const outgoing = [
+        ...visionFiles,
+        ...outgoingAttachments.filter((item) => !String(item.type || "").startsWith("image/")),
+      ];
+      const uploadPlan = getAttachmentUploadPlan(outgoing, apiBase);
 
       let response;
-      if (visionFiles.length && uploadPlan.sendRawFiles) {
+      if (outgoing.length && !uploadPlan.sendRawFiles) {
+        throw new Error(
+          uploadPlan.warning ||
+            "Lampiran terlalu besar untuk dikirim. Kurangi ukuran atau jumlah file lalu coba lagi."
+        );
+      }
+      if (outgoing.length) {
         const formData = new FormData();
         formData.append("prompt", text);
         formData.append("narrative", narrative || text);
@@ -2473,10 +2494,10 @@ function App() {
         formData.append("category", category);
         formData.append("generationMode", generationMode);
         formData.append("resultId", resultId);
-        // Prefer smaller photos first so vision fits serverless limits.
-        [...visionFiles]
+        // Prefer smaller files first so the whole source set reaches the API.
+        [...outgoing]
           .sort((a, b) => (a.file?.size || 0) - (b.file?.size || 0))
-          .slice(0, 4)
+          .slice(0, TEMPLATE_UPLOAD_LIMIT)
           .forEach((item) => formData.append("attachments", item.file));
         response = await fetch(`${apiBase}/api/run-prompt`, {
           method: "POST",
@@ -2484,12 +2505,6 @@ function App() {
           body: formData,
         });
       } else {
-        if (visionFiles.length && !uploadPlan.sendRawFiles) {
-          setWarningMessage(
-            (uploadPlan.warning || "") +
-              " Foto terlalu besar untuk dikirim ulang saat Buat hasil; coba foto lebih kecil."
-          );
-        }
         response = await fetch(`${apiBase}/api/run-prompt`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders },
@@ -2521,6 +2536,7 @@ function App() {
       }
       if (!response.ok) throw new Error(data.error || "Failed to run the prompt.");
       const rawContent = data.content || data.prompt || "";
+      setExportImages(Array.isArray(data.images) ? data.images : []);
       if (data.truncated) {
         setWarningMessage(
           "Dokumen berhenti sebelum selesai karena batas waktu. Bagian yang sudah jadi tetap tersimpan — persingkat permintaan untuk hasil penuh."
@@ -2639,6 +2655,7 @@ function App() {
     setRunError("");
     setWarningMessage("");
     setRunOutput("");
+    setExportImages([]);
     setTemplatePhase("reading");
     const resultId = globalThis.crypto?.randomUUID?.() || `result-${Date.now()}`;
 
@@ -2705,6 +2722,7 @@ function App() {
       const checked = validateFinishedOutput(data.content || data.prompt || "", template.profile);
       const content = checked.content;
       if (!content) throw new Error("Dokumen kembali kosong. Coba lagi.");
+      setExportImages(Array.isArray(data.images) ? data.images : []);
 
       if (data.truncated) {
         setWarningMessage(
@@ -3233,9 +3251,14 @@ function App() {
         );
       }
       // Finished reports carry their photographs in both portable formats.
-      const images = ["docx", "pdf"].includes(format)
+      const localImages = ["docx", "pdf"].includes(format)
         ? await readAttachmentImages(attachments)
         : [];
+      const images = localImages.length
+        ? localImages
+        : Array.isArray(exportImages)
+          ? exportImages.slice(0, TEMPLATE_UPLOAD_LIMIT)
+          : [];
 
       const response = await fetch(`${apiBase}/api/export/${format}`, {
         method: "POST",

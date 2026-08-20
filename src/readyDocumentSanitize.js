@@ -44,6 +44,23 @@ const META_SECTION_HEADING =
 const TRAILING_ASUMSI =
   /\n+(?:#{1,6}\s*)?(?:\*{0,2})?Asumsi(?:\s*\([^)]*\))?\s*[:：][\s\S]*$/i;
 
+const ENCODING_ARTIFACTS = [
+  [/\u00e2\u20ac\u201d/g, "-"],
+  [/\u00e2\u20ac\u201c/g, "-"],
+  [/\u00e2\u20ac\u00a2/g, "-"],
+  [/\u00c2\u00b1/g, "+/-"],
+  [/\u00c2\u00b7/g, "-"],
+  [/\u00e2\u20ac\u00a6/g, "..."],
+  [/\ufffd/g, ""],
+];
+
+function normalizeEncodingArtifacts(text) {
+  return ENCODING_ARTIFACTS.reduce(
+    (value, [pattern, replacement]) => value.replace(pattern, replacement),
+    text
+  );
+}
+
 /** Leading outline that only repeats upcoming numbered section titles. */
 function stripLeadingOutline(text) {
   const lines = String(text).split(/\r?\n/);
@@ -164,6 +181,7 @@ export function sanitizeReadyDocument(content = "", profile = "general") {
     .trim();
   if (!text) return "";
 
+  text = normalizeEncodingArtifacts(text);
   text = stripLeadingOutline(text);
   text = text.replace(PURPOSE_ITALIC_BLOCK, "");
   text = text.replace(PURPOSE_LINE, "");

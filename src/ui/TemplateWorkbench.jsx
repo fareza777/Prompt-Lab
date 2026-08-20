@@ -158,8 +158,8 @@ export default function TemplateWorkbench({
   return (
     <section className="pl-bench" aria-labelledby="bench-title">
       <div className="pl-bench-head">
-        <button type="button" className="pl-btn pl-btn--quiet pl-btn--sm" onClick={onBack}>
-          <ArrowLeft size={16} aria-hidden="true" />
+        <button type="button" className="pl-btn pl-template-back" onClick={onBack}>
+          <ArrowLeft size={19} strokeWidth={2.2} aria-hidden="true" />
           {t("tpl.change")}
         </button>
       </div>

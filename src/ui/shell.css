@@ -1950,22 +1950,47 @@
 }
 
 .pl-gallery-head {
+  text-align: left;
+  margin: 0 auto var(--s-6);
+  max-width: 560px;
+  padding: 0 var(--s-1);
+}
+
+.pl-gallery-head--group {
   text-align: center;
-  margin-bottom: var(--s-6);
+}
+
+.pl-gallery-kicker {
+  display: block;
+  margin-bottom: var(--s-2);
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+  line-height: 1;
 }
 
 .pl-gallery-head h1 {
   font-family: var(--font-display);
-  font-size: clamp(1.55rem, 4.5vw, 2.15rem);
-  line-height: 1.2;
-  letter-spacing: -0.015em;
+  font-size: clamp(1.85rem, 7vw, 2.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
   margin: 0 0 var(--s-2);
+  max-width: 15ch;
 }
 
 .pl-gallery-head p {
   color: var(--ink-soft);
-  margin: 0 auto;
-  max-width: 46ch;
+  margin: 0;
+  max-width: 36ch;
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.pl-gallery-head--group p,
+.pl-gallery-head--group h1 {
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .pl-gallery-back {
@@ -2149,6 +2174,27 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
+}
+
+/* The escape hatch from a template form must read like navigation, not a
+   secondary utility action. A full tap target and stronger contrast make it
+   easy to find and use on a narrow screen. */
+.pl-template-back {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0.65rem 0.9rem;
+  border-color: var(--rule-strong);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font-size: var(--t-base);
+  font-weight: 650;
+  box-shadow: 0 1px 0 rgb(31 42 36 / 0.08);
+}
+
+.pl-template-back:hover:not(:disabled) {
+  background: var(--paper-sunken);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .pl-bench-title h1 {

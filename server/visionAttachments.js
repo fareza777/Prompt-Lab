@@ -75,13 +75,13 @@ export function runVisionDirective(langHint = "id") {
   const id = langHint !== "en";
   return id
     ? [
-        "Jika ada foto/gambar terlampir: LIHAT isinya (vision multimodal).",
-        "Gunakan teks + visual di foto sebagai sumber utama. Jangan mengarang yang tidak terlihat.",
-        "Jangan bilang kamu tidak bisa melihat gambar.",
+        "Jika ada foto, gambar, atau halaman PDF terlampir: LIHAT isinya (vision multimodal).",
+        "Gunakan teks + visual pada lampiran sebagai sumber utama. Jangan mengarang yang tidak terlihat.",
+        "Jangan bilang kamu tidak bisa melihat gambar atau PDF.",
       ].join(" ")
     : [
-        "If photos/images are attached: LOOK at them (multimodal vision).",
-        "Use visible text and visuals as primary source. Do not invent unseen details.",
-        "Do not say you cannot see images.",
+        "If photos, images, or PDF pages are attached: LOOK at them (multimodal vision).",
+        "Use visible text and visuals in the attachments as primary source. Do not invent unseen details.",
+        "Do not say you cannot see images or PDFs.",
       ].join(" ");
 }

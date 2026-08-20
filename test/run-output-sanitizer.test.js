@@ -99,7 +99,7 @@ test("the anti-stalling directive is repeated after the prompt", () => {
   );
   // Template mode has its own pair of directives, so this assembly is now the
   // untemplated branch rather than the only one.
-  assert.match(server, /userText = `\$\{prompt\}\$\{deliverableInstruction\}\$\{diagramAddon\}\$\{visionNote\}\\n\\n\$\{RUN_FINAL_DIRECTIVE\}`/);
+  assert.match(server, /userText = `\$\{source\}\$\{prompt\}\$\{deliverableInstruction\}\$\{diagramAddon\}\$\{visionNote\}\\n\\n\$\{RUN_FINAL_DIRECTIVE\}`/);
 });
 
 test("template mode repeats the selected completion policy at the end", () => {

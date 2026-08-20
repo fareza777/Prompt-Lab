@@ -91,7 +91,7 @@ export function buildDeliverableInstruction({
   return `\n\nPROFESSIONAL DELIVERABLE CONTRACT (${profile.toUpperCase()}):\n${contract}\n${lengthDirective}\n${universal}`;
 }
 
-export function validateFinishedOutput(content = "", profile = "general") {
+export function validateFinishedOutput(content = "", profile = "general", language = "id") {
   const warnings = [];
   let cleaned = String(content || "").trim();
   if (profile !== "diagram") {
@@ -122,6 +122,13 @@ export function validateFinishedOutput(content = "", profile = "general") {
     warnings.push("missing_process_or_mermaid");
   }
   if (profile === "diagram" && !/```mermaid/i.test(cleaned)) warnings.push("missing_mermaid_fence");
+  if (
+    profile !== "diagram" &&
+    ["id", "en"].includes(language) &&
+    /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/u.test(cleaned)
+  ) {
+    warnings.push("unexpected_script");
+  }
   if (
     profile === "diagram" &&
     /```mermaid/i.test(cleaned) &&

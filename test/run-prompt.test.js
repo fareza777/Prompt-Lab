@@ -31,6 +31,28 @@ test("run-prompt accepts image attachments for multimodal vision", () => {
   assert.match(server, /multipart\/form-data/);
 });
 
+test("run-prompt sends PDF and image attachments through the shared vision reader", () => {
+  const endpoint = server.slice(
+    server.indexOf('app.post("/api/run-prompt"'),
+    server.indexOf('app.post("/api/optimize-prompt"')
+  );
+  const directBranch = endpoint.slice(
+    endpoint.indexOf("} else {\n      const sources = await normalizeRunAttachments"),
+    endpoint.indexOf("const quotaEstimate")
+  );
+
+  // A direct summary/diagram must receive document excerpts and rendered PDF
+  // pages, not just the user's instruction text.
+  assert.match(directBranch, /normalizeRunAttachments\(\s*req\.files \|\| \[\]/s);
+  assert.match(directBranch, /templateDocuments = sources\.documents/);
+  assert.match(endpoint, /buildTemplateSourceBlock\(templateDocuments, outputLang\)/);
+
+  // The browser must upload every supported attachment type. Filtering to
+  // image/* here silently discards PDFs before the request is made.
+  assert.match(main, /const outgoingAttachments = attachments\.filter\(/);
+  assert.match(main, /getAttachmentUploadPlan\(outgoing, apiBase\)/);
+});
+
 test("the client resends photos when running a finished result", () => {
   assert.match(main, /formData\.append\("attachments"/);
   assert.match(main, /imageAttachments/);

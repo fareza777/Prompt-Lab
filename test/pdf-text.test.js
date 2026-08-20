@@ -138,7 +138,8 @@ test("a non-PDF buffer is handled without throwing", async () => {
 
 test("the server uses the shared extractor rather than its own copy", async () => {
   const server = await readFile(new URL("../server/index.js", import.meta.url), "utf8");
-  assert.match(server, /import \{ extractPdfImages, extractPdfText \} from "\.\/pdfText\.js"/);
+  assert.match(server, /import \{ extractPdfText \} from "\.\/pdfText\.js"/);
+  assert.match(server, /import \{ extractDocumentImages \} from "\.\/documentImages\.js"/);
   assert.doesNotMatch(server, /async function extractPdfText/);
 });
 
@@ -156,7 +157,8 @@ test("a scanned PDF falls back to reading its page images", async () => {
   assert.ok(pdfSource.includes("width < 500 || height < 500"));
 
   const server = await readFile(new URL("../server/index.js", import.meta.url), "utf8");
-  assert.match(server, /extractPdfImages\(file\.buffer, 3\)/);
+  assert.match(server, /import \{ extractDocumentImages \} from "\.\/documentImages\.js"/);
+  assert.match(server, /extractDocumentImages\(file, 8\)/);
   assert.match(server, /halaman dokumen hasil scan/);
 });
 

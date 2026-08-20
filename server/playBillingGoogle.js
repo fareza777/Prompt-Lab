@@ -20,6 +20,19 @@ const PLAN_BY_PRODUCT = {
   promptlab_business_monthly: { plan: "Business", quotaLimit: 2000000 },
 };
 
+/**
+ * The one-time purchase that removes advertising.
+ *
+ * Deliberately kept out of PLAN_BY_PRODUCT: it grants no quota and does not
+ * change the plan, so treating it as a subscription would silently downgrade a
+ * Pro user who also bought it. It is a separate, non-consumable entitlement.
+ */
+export const REMOVE_ADS_PRODUCT_ID = "promptlab_remove_ads";
+
+export function isRemoveAdsProduct(productId) {
+  return String(productId || "") === REMOVE_ADS_PRODUCT_ID;
+}
+
 export function getPlanForProductId(productId) {
   return PLAN_BY_PRODUCT[productId] || null;
 }

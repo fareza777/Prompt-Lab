@@ -84,7 +84,9 @@ import { persistReservedUsage, quotaFailureStatus } from "./quotaReservation.js"
 import { buildDocxBuffer, buildPptxBuffer } from "./officeExport.js";
 import { buildPdfBuffer } from "./pdfExport.js";
 import { buildXlsxBuffer } from "./xlsxExport.js";
-import { extractPdfImages, extractPdfText } from "./pdfText.js";
+import { extractPdfText } from "./pdfText.js";
+import { extractDocumentImages } from "./documentImages.js";
+import { serializeExportImages } from "./exportImagesPayload.js";
 import { buildTemplateInstruction, getTemplate } from "../src/workTemplates.js";
 import { attachmentDisposition } from "./exportFilename.js";
 import {
@@ -1445,30 +1447,10 @@ function parseRunPromptBody(req) {
 }
 
 async function normalizeRunAttachments(files = [], modelSettings = {}, plan = "Free") {
-  const list = Array.isArray(files) ? files.slice(0, 4) : [];
-  const out = [];
-  for (const file of list) {
-    const mime = file.mimetype || "application/octet-stream";
-    if (!mime.startsWith("image/")) continue;
-    const compressed = await compressImageForVision(file.buffer, mime);
-    out.push({
-      filename: file.originalname || "image.jpg",
-      mime: compressed.mime,
-      dataUrl: toDataUrl(compressed.buffer, compressed.mime),
-      size: compressed.buffer.length,
-      kind: "gambar/screenshot",
-      excerpt: "",
-    });
-  }
-  // Soft cap: keep total vision payload under ~4.5MB base64-ish.
-  let total = 0;
-  const capped = [];
-  for (const item of out) {
-    total += item.dataUrl.length;
-    if (total > 4_500_000) break;
-    capped.push(item);
-  }
-  return capped;
+  // Keep the direct run and template run on one attachment contract: text
+  // documents become source excerpts, while photos and rendered PDF/DOCX
+  // pages become multimodal vision inputs.
+  return normalizeTemplateAttachments(files, modelSettings, plan);
 }
 
 function acceptRunPromptBody(req, res, next) {
@@ -1526,7 +1508,6 @@ async function normalizeTemplateAttachments(files = [], modelSettings = {}, plan
     });
     if (normalized?.excerpt) {
       documents.push({ filename: normalized.filename, excerpt: normalized.excerpt });
-      continue;
     }
 
     /**
@@ -1537,12 +1518,14 @@ async function normalizeTemplateAttachments(files = [], modelSettings = {}, plan
      * which is otherwise the single largest category of files that simply
      * cannot be summarised.
      */
-    const isPdf =
-      mime === "application/pdf" || /\.pdf$/i.test(file.originalname || "");
-    if (!isPdf) continue;
+    const isDocument =
+      mime === "application/pdf" ||
+      mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      /\.(pdf|docx)$/i.test(file.originalname || "");
+    if (!isDocument) continue;
 
-    const pages = await extractPdfImages(file.buffer, 3).catch((error) => {
-      console.warn("pdf page images skipped", file.originalname, error.message);
+    const pages = await extractDocumentImages(file, 8).catch((error) => {
+      console.warn("embedded document images skipped", file.originalname, error.message);
       return [];
     });
 
@@ -1552,7 +1535,7 @@ async function normalizeTemplateAttachments(files = [], modelSettings = {}, plan
       if (visionBytes + dataUrl.length > 4_500_000) break;
       visionBytes += dataUrl.length;
       vision.push({
-        filename: `${file.originalname || "dokumen"} (halaman ${vision.length + 1})`,
+        filename: `${file.originalname || "dokumen"} (foto ${vision.length + 1})`,
         mime: compressed.mime,
         dataUrl,
         size: compressed.buffer.length,
@@ -1743,7 +1726,24 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
         .join("\n");
       payload.narrative = answers.find(Boolean) || body.templateId;
     } else {
-      visionAttachments = await normalizeRunAttachments(req.files || [], modelSettings, membership.plan);
+      const sources = await normalizeRunAttachments(
+        req.files || [],
+        modelSettings,
+        membership.plan
+      );
+      visionAttachments = sources.vision;
+      templateDocuments = sources.documents;
+      const documentUploads = (req.files || []).filter(
+        (file) => !String(file.mimetype || "").startsWith("image/")
+      );
+      if (documentUploads.length && !templateDocuments.length && !visionAttachments.length) {
+        throw publicApiError("UNREADABLE_DOCUMENT", 422);
+      }
+      // Count extracted source text toward the run budget and token quota. The
+      // original user instruction remains in `narrative` for intent detection.
+      payload.prompt = [prompt, ...templateDocuments.map((doc) => doc.excerpt)]
+        .filter(Boolean)
+        .join("\n");
     }
     const quotaEstimate = estimateRunTokens(payload, membership.plan) + visionAttachments.length * 400;
     const quotaSession = await getQuotaSession(req, quotaEstimate);
@@ -1814,10 +1814,11 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
       const diagramAddon = detectDiagramIntent(payload)
         ? `\n\n${buildMermaidDeliveryAddon({ ...payload, outputLanguage: outputLang })}`
         : "";
+      const source = buildTemplateSourceBlock(templateDocuments, outputLang);
       const visionNote = visionAttachments.length
         ? `\n\n${runVisionDirective(outputLang)}`
         : "";
-      userText = `${prompt}${deliverableInstruction}${diagramAddon}${visionNote}\n\n${RUN_FINAL_DIRECTIVE}`;
+      userText = `${source}${prompt}${deliverableInstruction}${diagramAddon}${visionNote}\n\n${RUN_FINAL_DIRECTIVE}`;
     }
 
     const messages = [
@@ -1907,6 +1908,7 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
           model: streamed.model,
           prompt: streamContent,
           content: streamContent,
+          images: serializeExportImages(visionAttachments),
           // Lets the client tell the user the document stopped early rather
           // than presenting a cut-off draft as finished.
           truncated: streamed.truncated,
@@ -1988,6 +1990,7 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
         model: usedModel,
         prompt: content,
         content,
+        images: serializeExportImages(visionAttachments),
         weeklyResults: weeklyReservation
           ? {
               limit: 5,
@@ -2759,6 +2762,7 @@ export {
   downgradePlayMembershipIfNeeded,
   getDomainPromptPack,
   mergeCompareEvaluationPositionSwap,
+  normalizeRunAttachments,
   resolveCompareEvaluation,
   scorePromptText,
   tryOpenRouterFallbackModels,

@@ -1,6 +1,5 @@
 import PDFDocument from "pdfkit";
-import { sanitizeReadyDocument } from "../src/readyDocumentSanitize.js";
-import { parseStructuredContent } from "./officeExport.js";
+import { normalizeExportContent, parseStructuredContent } from "./officeExport.js";
 import { prepareExportImage } from "./exportImages.js";
 
 const PAGE = { size: "A4", margin: 54 };
@@ -169,9 +168,12 @@ async function drawDocumentation(doc, images, language) {
     .filter((entry) => entry.image);
   if (!prepared.length) return;
 
+  const single = prepared.length === 1;
   const gap = 14;
-  const width = (doc.page.width - PAGE.margin * 2 - gap) / 2;
-  const boxHeight = 222;
+  const width = single
+    ? doc.page.width - PAGE.margin * 2
+    : (doc.page.width - PAGE.margin * 2 - gap) / 2;
+  const boxHeight = single ? 300 : 222;
   ensureSpace(doc, boxHeight + 80);
   drawHeading(doc, {
     type: "heading",
@@ -245,7 +247,7 @@ export async function buildPdfBuffer({
   plan = "Free",
   images = [],
 } = {}) {
-  const ready = sanitizeReadyDocument(content, "report");
+  const ready = normalizeExportContent(content, { imageCount: images.length });
   const blocks = parseStructuredContent(ready, title);
   const doc = new PDFDocument({
     size: PAGE.size,
