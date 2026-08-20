@@ -35,12 +35,6 @@ export const PLAN_ENTITLEMENTS = {
     aiOptimize: true,
     priorityRouting: false,
     teamLibraryBundle: false,
-    /**
-     * Ads pay for the free tier, and paying anything at all removes them.
-     * A one-time remove-ads purchase writes the same flag onto the profile,
-     * so the profile is consulted first and this is only the fallback.
-     */
-    adFree: false,
   },
   Pro: {
     quotaLimit: 500_000,
@@ -57,7 +51,6 @@ export const PLAN_ENTITLEMENTS = {
     aiOptimize: true,
     priorityRouting: false,
     teamLibraryBundle: false,
-    adFree: true,
   },
   Business: {
     quotaLimit: 2_000_000,
@@ -74,7 +67,6 @@ export const PLAN_ENTITLEMENTS = {
     aiOptimize: true,
     priorityRouting: true,
     teamLibraryBundle: true,
-    adFree: true,
   },
 };
 
@@ -231,18 +223,3 @@ export const MEMBERSHIP_MARKETING = {
     ],
   },
 };
-
-/**
- * Whether this user should be shown advertising.
- *
- * Three ways to be ad-free, and the order matters. A one-time purchase is
- * recorded on the profile, so it has to outrank the plan lookup — otherwise a
- * Free user who paid to remove ads would keep seeing them.
- *
- * @param {string} plan
- * @param {{ adFree?: boolean, removeAdsPurchased?: boolean }} [profile]
- */
-export function shouldShowAds(plan, profile = {}) {
-  if (profile.removeAdsPurchased || profile.adFree) return false;
-  return !getEntitlements(plan).adFree;
-}
