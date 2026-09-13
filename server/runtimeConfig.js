@@ -36,7 +36,7 @@ export function getEnvDefaultModelSettings() {
     baseUrl: process.env.OPENROUTER_BASE_URL || process.env.CUSTOM_LLM_BASE_URL || "",
     fallbackModels,
     ocrModel: process.env.OPENROUTER_OCR_MODEL || "baidu/qianfan-ocr-fast:free",
-    primaryModel: process.env.OPENROUTER_MODEL || "deepseek/deepseek-v4-flash",
+    primaryModel: process.env.OPENROUTER_MODEL || "google/gemma-4-31b-it:free",
     provider: "openrouter",
     timeoutMs: String(process.env.OPENROUTER_PRIMARY_TIMEOUT_MS || ""),
   };
