@@ -155,14 +155,16 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key
 
 `SUPABASE_SERVICE_ROLE_KEY` ada di Supabase Dashboard → Project Settings → API → `service_role` (secret). Wajib untuk pencatatan quota yang stabil di server Vercel.
 
-Untuk provider custom OpenAI-compatible di Vercel, env opsional:
+Untuk provider custom OpenAI-compatible (contoh: LiteLLM free router lokal):
 
 ```bash
-CUSTOM_LLM_BASE_URL=https://provider.example.com/v1
-CUSTOM_LLM_API_KEY=isi_key_di_sini
-CUSTOM_LLM_MODEL=nama-model-default
+AI_PROVIDER=custom
+CUSTOM_LLM_BASE_URL=http://127.0.0.1:4000/v1
+CUSTOM_LLM_API_KEY=sk-litellm-local
+CUSTOM_LLM_MODEL=free-best
 ```
 
+Failover FREE-ONLY ditangani proxy LiteLLM (`free-best`); app tidak menambah fallback berbayar.
 ## OpenAI API
 
 Buat `.env` dari `.env.example`:

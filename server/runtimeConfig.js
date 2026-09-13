@@ -31,9 +31,20 @@ export function getEnvDefaultModelSettings() {
     timeoutMs: String(process.env.MINIMAX_PRIMARY_TIMEOUT_MS || "55000"),
   };
 
+  // Custom OpenAI-compatible (e.g. local LiteLLM free-best); failover stays in the proxy.
+  const customDefaults = {
+    apiKey: "",
+    baseUrl: process.env.CUSTOM_LLM_BASE_URL || "http://127.0.0.1:4000/v1",
+    fallbackModels: [],
+    ocrModel: process.env.OPENROUTER_OCR_MODEL || "baidu/qianfan-ocr-fast:free",
+    primaryModel: process.env.CUSTOM_LLM_MODEL || "free-best",
+    provider: "custom",
+    timeoutMs: String(process.env.CUSTOM_LLM_PRIMARY_TIMEOUT_MS || process.env.OPENROUTER_PRIMARY_TIMEOUT_MS || "120000"),
+  };
+
   const openRouterDefaults = {
     apiKey: "",
-    baseUrl: process.env.OPENROUTER_BASE_URL || process.env.CUSTOM_LLM_BASE_URL || "",
+    baseUrl: process.env.OPENROUTER_BASE_URL || "",
     fallbackModels,
     ocrModel: process.env.OPENROUTER_OCR_MODEL || "baidu/qianfan-ocr-fast:free",
     primaryModel: process.env.OPENROUTER_MODEL || "deepseek/deepseek-v4-flash",
@@ -42,6 +53,7 @@ export function getEnvDefaultModelSettings() {
   };
 
   if (provider === "minimax") return minimaxDefaults;
+  if (provider === "custom") return customDefaults;
   if (provider === "openai") {
     return {
       ...openRouterDefaults,
@@ -70,6 +82,14 @@ function envPrefersMinimax() {
   );
 }
 
+function envPrefersCustomLiteLlm() {
+  return (
+    String(process.env.AI_PROVIDER || "").toLowerCase() === "custom" &&
+    Boolean(String(process.env.CUSTOM_LLM_API_KEY || "").trim()) &&
+    Boolean(String(process.env.CUSTOM_LLM_BASE_URL || "").trim())
+  );
+}
+
 /** Published OpenRouter routing (e.g. mimo) must not override Vercel MiniMax when env is configured. */
 function publishedConflictsWithEnvMinimax(published) {
   if (!published) return false;
@@ -77,10 +97,18 @@ function publishedConflictsWithEnvMinimax(published) {
   return envPrefersMinimax();
 }
 
+function publishedConflictsWithEnvCustom(published) {
+  if (!published) return false;
+  if (String(published.provider || "").toLowerCase() === "custom") return false;
+  return envPrefersCustomLiteLlm();
+}
+
 /** Merge env → published (DB) → optional admin request overrides. API keys never come from DB. */
 export function mergeModelSettingsLayers({ published, request, allowRequestOverride = false }) {
   const merged = { ...getEnvDefaultModelSettings() };
-  if (published && !publishedConflictsWithEnvMinimax(published)) {
+  const keepEnvRouting =
+    publishedConflictsWithEnvMinimax(published) || publishedConflictsWithEnvCustom(published);
+  if (published && !keepEnvRouting) {
     pickNonEmpty(merged, published, [
       "provider",
       "baseUrl",

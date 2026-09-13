@@ -64,4 +64,24 @@ describe("mergeModelSettingsLayers", () => {
 
     assert.deepEqual(merged.fallbackModels, ["MiniMax-M2.5-highspeed", "MiniMax-M2.7-highspeed"]);
   });
+
+  it("keeps custom LiteLLM free-best env routing when published config differs", () => {
+    process.env.AI_PROVIDER = "custom";
+    process.env.CUSTOM_LLM_API_KEY = "sk-litellm-local";
+    process.env.CUSTOM_LLM_BASE_URL = "http://127.0.0.1:4000/v1";
+    process.env.CUSTOM_LLM_MODEL = "free-best";
+
+    const merged = mergeModelSettingsLayers({
+      published: {
+        provider: "minimax",
+        primaryModel: "MiniMax-M3",
+        baseUrl: "https://api.minimax.io/v1",
+      },
+    });
+
+    assert.equal(merged.provider, "custom");
+    assert.equal(merged.primaryModel, "free-best");
+    assert.equal(merged.baseUrl, "http://127.0.0.1:4000/v1");
+    assert.deepEqual(merged.fallbackModels, []);
+  });
 });

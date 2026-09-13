@@ -3319,6 +3319,9 @@ function getDefaultOpenRouterModel() {
   if (normalizeProvider(process.env.AI_PROVIDER) === "minimax") {
     return process.env.MINIMAX_MODEL || "MiniMax-M3";
   }
+  if (normalizeProvider(process.env.AI_PROVIDER) === "custom") {
+    return process.env.CUSTOM_LLM_MODEL || "free-best";
+  }
   return process.env.OPENROUTER_MODEL || "deepseek/deepseek-v4-flash";
 }
 
