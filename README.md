@@ -77,7 +77,7 @@ Environment variables yang perlu diisi di Vercel:
 ```bash
 AI_PROVIDER=openrouter
 OPENROUTER_API_KEY=isi_key_di_sini
-OPENROUTER_MODEL=deepseek/deepseek-v4-flash
+OPENROUTER_MODEL=nvidia/nemotron-3.5-lightning:free
 OPENROUTER_OCR_MODEL=baidu/qianfan-ocr-fast:free
 APP_URL=https://prompt-lab.xyz
 VITE_SUPABASE_URL=https://project-ref.supabase.co
@@ -185,7 +185,7 @@ Untuk memakai OpenRouter, isi `.env` seperti ini:
 ```bash
 AI_PROVIDER=openrouter
 OPENROUTER_API_KEY=isi_key_di_sini
-OPENROUTER_MODEL=deepseek/deepseek-v4-flash
+OPENROUTER_MODEL=nvidia/nemotron-3.5-lightning:free
 OPENROUTER_FALLBACK_MODEL=nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
 PORT=8787
 ```
