@@ -186,13 +186,14 @@ Untuk memakai OpenRouter, isi `.env` seperti ini:
 AI_PROVIDER=openrouter
 OPENROUTER_API_KEY=isi_key_di_sini
 OPENROUTER_MODEL=nvidia/nemotron-3.5-lightning:free
-OPENROUTER_FALLBACK_MODEL=nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
+OPENROUTER_FALLBACK_MODEL=nvidia/nemotron-3-ultra-550b-a55b:free
+OPENROUTER_FALLBACK_MODELS=nvidia/nemotron-3-ultra-550b-a55b:free,nvidia/nemotron-3.5-lightning:free,nvidia/nemotron-3-super-120b-a12b:free
 PORT=8787
 ```
 
 Jangan commit `.env`. File tersebut sudah masuk `.gitignore`.
 
-Jika model utama OpenRouter overload/rate-limit, server akan mencoba `OPENROUTER_FALLBACK_MODEL` terlebih dahulu sebelum memakai generator lokal.
+Jika model utama OpenRouter overload/rate-limit, server akan mencoba daftar `OPENROUTER_FALLBACK_MODELS` (semua `:free`) sebelum memakai generator lokal.
 
 ## Attachment
 
