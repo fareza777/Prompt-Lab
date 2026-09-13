@@ -3319,7 +3319,7 @@ function getDefaultOpenRouterModel() {
   if (normalizeProvider(process.env.AI_PROVIDER) === "minimax") {
     return process.env.MINIMAX_MODEL || "MiniMax-M3";
   }
-  return process.env.OPENROUTER_MODEL || "google/gemma-4-31b-it:free";
+  return process.env.OPENROUTER_MODEL || "deepseek/deepseek-v4-flash";
 }
 
 function getDefaultOcrModel() {
