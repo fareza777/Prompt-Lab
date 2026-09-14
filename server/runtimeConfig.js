@@ -190,13 +190,28 @@ export async function getCachedPublishedModelSettings(adminClient) {
   if (cache.expiresAt > now) {
     return { settings: cache.settings, meta: cache.meta };
   }
-  const loaded = await fetchPublishedModelSettings(adminClient);
-  cache = {
-    settings: loaded.settings,
-    meta: loaded.meta,
-    expiresAt: now + CACHE_TTL_MS,
-  };
-  return loaded;
+  try {
+    const loaded = await fetchPublishedModelSettings(adminClient);
+    cache = {
+      settings: loaded.settings,
+      meta: loaded.meta,
+      expiresAt: now + CACHE_TTL_MS,
+    };
+    return loaded;
+  } catch (error) {
+    // Do not take down AI generation when Supabase is paused/unreachable —
+    // fall back to env defaults for this process until the cache window ends.
+    console.warn(
+      "Published model settings unavailable; using env defaults:",
+      error?.message || error
+    );
+    cache = {
+      settings: null,
+      meta: null,
+      expiresAt: now + Math.min(CACHE_TTL_MS, 5000),
+    };
+    return { settings: null, meta: null };
+  }
 }
 
 export async function savePublishedModelSettings(adminClient, normalized, userId) {
