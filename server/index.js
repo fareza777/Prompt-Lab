@@ -3322,7 +3322,7 @@ function getDefaultOpenRouterModel() {
   if (normalizeProvider(process.env.AI_PROVIDER) === "custom") {
     return process.env.CUSTOM_LLM_MODEL || "free-best";
   }
-  return process.env.OPENROUTER_MODEL || "nvidia/nemotron-3.5-lightning:free";
+  return process.env.OPENROUTER_MODEL || "qwen/qwen3.7-flash";
 }
 
 function getDefaultOcrModel() {

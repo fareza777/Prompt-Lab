@@ -47,7 +47,7 @@ export function getEnvDefaultModelSettings() {
     baseUrl: process.env.OPENROUTER_BASE_URL || "",
     fallbackModels,
     ocrModel: process.env.OPENROUTER_OCR_MODEL || "baidu/qianfan-ocr-fast:free",
-    primaryModel: process.env.OPENROUTER_MODEL || "nvidia/nemotron-3.5-lightning:free",
+    primaryModel: process.env.OPENROUTER_MODEL || "qwen/qwen3.7-flash",
     provider: "openrouter",
     timeoutMs: String(process.env.OPENROUTER_PRIMARY_TIMEOUT_MS || ""),
   };
