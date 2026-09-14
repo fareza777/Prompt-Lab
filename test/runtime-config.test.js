@@ -65,23 +65,21 @@ describe("mergeModelSettingsLayers", () => {
     assert.deepEqual(merged.fallbackModels, ["MiniMax-M2.5-highspeed", "MiniMax-M2.7-highspeed"]);
   });
 
-  it("keeps custom LiteLLM free-best env routing when published config differs", () => {
-    process.env.AI_PROVIDER = "custom";
-    process.env.CUSTOM_LLM_API_KEY = "sk-litellm-local";
-    process.env.CUSTOM_LLM_BASE_URL = "http://127.0.0.1:4000/v1";
-    process.env.CUSTOM_LLM_MODEL = "free-best";
+  it("keeps env OpenRouter primary when published config pins another model", () => {
+    process.env.AI_PROVIDER = "openrouter";
+    process.env.OPENROUTER_API_KEY = "sk-or-test";
+    process.env.OPENROUTER_MODEL = "qwen/qwen3.7-flash";
 
     const merged = mergeModelSettingsLayers({
       published: {
-        provider: "minimax",
-        primaryModel: "MiniMax-M3",
-        baseUrl: "https://api.minimax.io/v1",
+        provider: "openrouter",
+        primaryModel: "xiaomi/mimo-v2.5",
+        baseUrl: "https://openrouter.ai/api/v1",
+        fallbackModels: ["deepseek/deepseek-v4-flash"],
       },
     });
 
-    assert.equal(merged.provider, "custom");
-    assert.equal(merged.primaryModel, "free-best");
-    assert.equal(merged.baseUrl, "http://127.0.0.1:4000/v1");
-    assert.deepEqual(merged.fallbackModels, []);
+    assert.equal(merged.provider, "openrouter");
+    assert.equal(merged.primaryModel, "qwen/qwen3.7-flash");
   });
 });

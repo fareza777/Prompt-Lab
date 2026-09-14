@@ -90,6 +90,14 @@ function envPrefersCustomLiteLlm() {
   );
 }
 
+function envPrefersOpenRouter() {
+  return (
+    String(process.env.AI_PROVIDER || "").toLowerCase() === "openrouter" &&
+    Boolean(String(process.env.OPENROUTER_API_KEY || "").trim()) &&
+    Boolean(String(process.env.OPENROUTER_MODEL || "").trim())
+  );
+}
+
 /** Published OpenRouter routing (e.g. mimo) must not override Vercel MiniMax when env is configured. */
 function publishedConflictsWithEnvMinimax(published) {
   if (!published) return false;
@@ -103,11 +111,19 @@ function publishedConflictsWithEnvCustom(published) {
   return envPrefersCustomLiteLlm();
 }
 
+function publishedConflictsWithEnvOpenRouter(published) {
+  if (!published) return false;
+  // Keep env primary/fallback when Vercel explicitly pins OpenRouter + model.
+  return envPrefersOpenRouter();
+}
+
 /** Merge env → published (DB) → optional admin request overrides. API keys never come from DB. */
 export function mergeModelSettingsLayers({ published, request, allowRequestOverride = false }) {
   const merged = { ...getEnvDefaultModelSettings() };
   const keepEnvRouting =
-    publishedConflictsWithEnvMinimax(published) || publishedConflictsWithEnvCustom(published);
+    publishedConflictsWithEnvMinimax(published) ||
+    publishedConflictsWithEnvCustom(published) ||
+    publishedConflictsWithEnvOpenRouter(published);
   if (published && !keepEnvRouting) {
     pickNonEmpty(merged, published, [
       "provider",
