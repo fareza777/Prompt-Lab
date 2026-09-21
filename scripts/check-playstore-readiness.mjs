@@ -38,9 +38,15 @@ if (existsSync(capacitorConfigPath)) {
     capacitorConfig.appId === "app.promptlab.twa",
     capacitorConfig.appId
   ) ? 0 : 1;
+  let serverHost = "";
+  try {
+    serverHost = new URL(capacitorConfig.server?.url || "").host;
+  } catch {
+    serverHost = "";
+  }
   failed += check(
     "capacitor server.url points at production",
-    capacitorConfig.server?.url === "https://prompt-lab.xyz",
+    serverHost === new URL(productionUrl).host,
     capacitorConfig.server?.url
   ) ? 0 : 1;
 }
