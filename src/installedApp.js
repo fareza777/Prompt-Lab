@@ -1,3 +1,5 @@
+import { App } from "@capacitor/app";
+
 /** Detect the installed Android app (Capacitor build or legacy Play Store TWA) / installed PWA — not a regular browser tab. */
 export function isInstalledApp() {
   if (typeof window === "undefined") return false;
@@ -42,9 +44,7 @@ export function clearInstalledAppEntry() {
 export function installNativeAppLinkHandler() {
   if (typeof window === "undefined") return;
   if (window.Capacitor?.isNativePlatform?.() !== true) return;
-  const appPlugin = window.Capacitor?.Plugins?.App;
-  if (!appPlugin?.addListener) return;
-  appPlugin.addListener("appUrlOpen", ({ url }) => {
+  App.addListener("appUrlOpen", ({ url }) => {
     if (typeof url === "string" && url.startsWith("https://prompt-lab.xyz")) {
       window.location.href = url;
     }

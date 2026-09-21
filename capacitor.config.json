@@ -7,7 +7,7 @@
     "allowMixedContent": false
   },
   "server": {
-    "url": "https://prompt-lab.xyz",
+    "url": "https://prompt-lab.xyz/app",
     "androidScheme": "https",
     "cleartext": false,
     "allowNavigation": [
