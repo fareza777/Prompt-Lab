@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AI Work Studio</string>
+    <string name="title_activity_main">AI Work Studio</string>
+    <string name="package_name">app.promptlab.twa</string>
+    <string name="custom_url_scheme">app.promptlab.twa</string>
+</resources>

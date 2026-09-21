@@ -1,0 +1,22 @@
+{
+  "appName": "AI Work Studio",
+  "appId": "app.promptlab.twa",
+  "serverUrl": "https://prompt-lab.xyz",
+  "themeColor": "#f7f3eb",
+  "navigationColor": "#f7f3eb",
+  "backgroundColor": "#f7f3eb",
+  "orientation": "portrait",
+  "signing": {
+    "keystorePath": "playstore/signing/promptlab-release.jks",
+    "keyAlias": "promptlab",
+    "propertiesFile": "android/keystore.properties"
+  },
+  "billing": {
+    "requiredForAndroidDigitalMembership": true,
+    "plugin": "PlayBillingPlugin (native, Play Billing Library 8.3.0)",
+    "subscriptions": [
+      "promptlab_pro_monthly",
+      "promptlab_business_monthly"
+    ]
+  }
+}

@@ -1,4 +1,11 @@
-/** Google Play Billing via Digital Goods API + Payment Request API (TWA on Android). */
+/**
+ * Google Play Billing for the Android app.
+ *
+ * The Capacitor build uses the native PlayBilling plugin (Play Billing
+ * Library 8). The Digital Goods API path is kept as a fallback for older
+ * TWA installs still in the field.
+ */
+import { Capacitor, registerPlugin } from "@capacitor/core";
 
 export const PLAY_BILLING_SERVICE = "https://play.google.com/billing";
 
@@ -12,16 +19,31 @@ const PLAN_BY_PRODUCT = {
   [PLAY_PRODUCT_IDS.Business]: "Business",
 };
 
+const NativePlayBilling =
+  typeof window !== "undefined" ? registerPlugin("PlayBilling") : null;
+
 export function planNameForProductId(productId) {
   return PLAN_BY_PRODUCT[productId] || null;
 }
 
-export function isPlayBillingAvailable() {
+export function isNativeAndroidApp() {
+  return (
+    typeof Capacitor !== "undefined" &&
+    Capacitor.isNativePlatform() &&
+    Capacitor.getPlatform() === "android"
+  );
+}
+
+function hasDigitalGoods() {
   return (
     typeof window !== "undefined" &&
     typeof window.getDigitalGoodsService === "function" &&
     typeof PaymentRequest !== "undefined"
   );
+}
+
+export function isPlayBillingAvailable() {
+  return isNativeAndroidApp() || hasDigitalGoods();
 }
 
 export function isLikelyAndroidTwa() {
@@ -53,31 +75,75 @@ export function getPlayBillingHint() {
 }
 
 async function getBillingService() {
-  if (!isPlayBillingAvailable()) {
+  if (!hasDigitalGoods()) {
     throw new Error("Play Billing is only available in AI Work Studio from Google Play (Android).");
   }
   return window.getDigitalGoodsService(PLAY_BILLING_SERVICE);
 }
 
 export async function getPlayProductDetails() {
-  const service = await getBillingService();
   const ids = Object.values(PLAY_PRODUCT_IDS);
+  if (isNativeAndroidApp()) {
+    const { items } = await NativePlayBilling.getProductDetails({ productIds: ids });
+    return items || [];
+  }
+  const service = await getBillingService();
   return service.getDetails(ids);
 }
 
 export async function listPlayPurchases() {
+  if (isNativeAndroidApp()) {
+    const { purchases } = await NativePlayBilling.listPurchases();
+    return purchases || [];
+  }
   const service = await getBillingService();
   return service.listPurchases();
 }
 
 /**
- * Start Play purchase via Payment Request API (Digital Goods has no purchase() method).
+ * Start a Play purchase. On Capacitor this calls the native billing plugin;
+ * on the legacy TWA it falls back to Payment Request + Digital Goods.
  * @param {"Pro"|"Business"} planName
  * @returns {Promise<{ productId: string, purchaseToken: string, completeBilling: (ok: boolean) => Promise<void> }>}
  */
 export async function purchasePlayPlan(planName) {
   const productId = PLAY_PRODUCT_IDS[planName];
   if (!productId) throw new Error("Unknown plan.");
+
+  if (isNativeAndroidApp()) {
+    let result;
+    try {
+      result = await NativePlayBilling.purchase({ productId });
+    } catch (error) {
+      if (error?.code === "USER_CANCELED") {
+        throw new Error("Purchase canceled.");
+      }
+      throw error;
+    }
+
+    const purchaseToken = result?.purchaseToken || "";
+    if (!purchaseToken) {
+      throw new Error("Purchase token was not returned from the Play Store.");
+    }
+
+    // Play auto-refunds unacknowledged purchases; acknowledge only after the
+    // server has verified the token and granted entitlement.
+    const completeBilling = async (ok) => {
+      if (!ok) return;
+      try {
+        await NativePlayBilling.acknowledge({ purchaseToken });
+      } catch {
+        /* token already acknowledged or connection dropped */
+      }
+    };
+
+    return {
+      productId: result.productId || productId,
+      purchaseToken,
+      raw: result,
+      completeBilling,
+    };
+  }
 
   await getBillingService();
 
@@ -168,7 +234,7 @@ export async function restorePlayPurchasesOnServer(apiBase, accessToken, purchas
   return data;
 }
 
-/** Map Digital Goods listPurchases() items into verify/restore payload shape. */
+/** Map billing purchase lists (native plugin or Digital Goods) into verify/restore payload shape. */
 export function normalizePlayPurchaseList(items = []) {
   return (items || [])
     .map((item) => ({

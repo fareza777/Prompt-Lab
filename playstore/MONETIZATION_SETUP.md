@@ -50,7 +50,7 @@ Notif merah di header **bukan** dari halaman ini.
 
 ### Sudah disiapkan di repo
 
-- `src/playBilling.js` — Digital Goods API (TWA Android)
+- `src/playBilling.js` — Play Billing bridge — plugin Capacitor native + fallback Digital Goods API
 - `POST /api/billing/verify-play-purchase` — verifikasi + update plan di Supabase
 
 ### Setup server (wajib untuk verify otomatis)
@@ -73,11 +73,11 @@ Tanpa env ini: tombol upgrade tetap muncul di Android, tapi verify gagal dengan 
 
 ### Build Android
 
-Billing library sudah di `android-app` (`androidbrowserhelper:billing`). Upload **AAB baru** ke closed testing setelah uji billing.
+Play Billing Library 8.3.0 sudah di `android/app` via `PlayBillingPlugin`. Upload **AAB baru** ke closed testing setelah uji billing.
 
 ### Uji di web desktop
 
-Play Billing **hanya** di app Android (TWA). Di browser biasa tombol upgrade menampilkan: *Install dari Play Store*.
+Play Billing **hanya** di app Android (Capacitor). Di browser biasa tombol upgrade menampilkan: *Install dari Play Store*.
 
 ### Fitur per plan (setelah deploy web)
 

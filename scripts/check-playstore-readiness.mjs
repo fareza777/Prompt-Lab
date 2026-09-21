@@ -20,12 +20,30 @@ const swPath = join(root, "public", "sw.js");
 const icon192 = join(root, "public", "icons", "icon-192.png");
 const icon512 = join(root, "public", "icons", "icon-512.png");
 const maskable512 = join(root, "public", "icons", "maskable-512.png");
+const capacitorConfigPath = join(root, "capacitor.config.json");
+const androidGradlePath = join(root, "android", "app", "build.gradle");
 
 failed += check("manifest exists", existsSync(manifestPath)) ? 0 : 1;
 failed += check("service worker exists", existsSync(swPath)) ? 0 : 1;
 failed += check("192px icon exists", existsSync(icon192)) ? 0 : 1;
 failed += check("512px icon exists", existsSync(icon512)) ? 0 : 1;
 failed += check("maskable icon exists", existsSync(maskable512)) ? 0 : 1;
+failed += check("capacitor.config.json exists", existsSync(capacitorConfigPath)) ? 0 : 1;
+failed += check("android/ Capacitor project exists", existsSync(androidGradlePath)) ? 0 : 1;
+
+if (existsSync(capacitorConfigPath)) {
+  const capacitorConfig = readJson(capacitorConfigPath);
+  failed += check(
+    "capacitor appId",
+    capacitorConfig.appId === "app.promptlab.twa",
+    capacitorConfig.appId
+  ) ? 0 : 1;
+  failed += check(
+    "capacitor server.url points at production",
+    capacitorConfig.server?.url === "https://prompt-lab.xyz",
+    capacitorConfig.server?.url
+  ) ? 0 : 1;
+}
 
 if (existsSync(manifestPath)) {
   const manifest = readJson(manifestPath);
@@ -86,7 +104,7 @@ try {
     (item) => item?.target?.androidApp?.packageName === "app.promptlab.twa"
   );
   if (!linked) {
-    console.log("WARN TWA not verified by Google yet — URL bar may show until Play signing SHA-256 is added and app is reinstalled.");
+    console.log("WARN App Links not verified by Google yet — add Play signing SHA-256 to assetlinks.json and reinstall the app.");
   }
   check("Google Digital Asset Links", linked, linked ? "app.promptlab.twa linked" : "not linked yet");
 } catch (error) {

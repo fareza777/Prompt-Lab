@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AI Work Studio brand palette (matches the PWA theme color). -->
+    <color name="colorPrimary">#f7f3eb</color>
+    <color name="colorPrimaryDark">#f7f3eb</color>
+    <color name="colorAccent">#1c1917</color>
+</resources>

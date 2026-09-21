@@ -43,24 +43,25 @@ Sebelum deploy server, jalankan migration berikut melalui Supabase SQL Editor/CL
 - [ ] `supabase/migrations/011_atomic_quota_usage.sql` — reservasi quota + usage event atomik/idempotent.
 - [ ] `supabase/migrations/012_billing_idempotency.sql` — kepemilikan purchase token dan replay billing idempotent.
 
-## 3. Android TWA (wajib rebuild domain baru)
+## 3. Android (Capacitor)
 
-AAB closed testing lama masih menunjuk ke `promptlab-six-phi.vercel.app`. Untuk production **harus** rebuild:
+App Android adalah wrapper Capacitor yang memuat `https://prompt-lab.xyz` (`server.url` di `capacitor.config.json`). Untuk production rebuild:
 
 ```bash
-# Dari root repo — update host di android-app lalu build
-cd android-app
-npx bubblewrap update --manifest twa-manifest.json
-gradlew.bat bundleRelease
+# Dari root repo — build web, sync ke android/, lalu build AAB
+npm run build
+npx cap sync android
+cd android
+gradlew bundleRelease
 ```
 
-Atau dari root: `npm run playstore:build` (setelah `bubblewrap update`).
+Atau dari root: `npm run playstore:build` (sudah termasuk sync + icons).
 
 Upload AAB baru ke **Production** (bukan hanya closed test):
 
-`android-app/app/build/outputs/bundle/release/AI Work Studio-release-signed.aab`
+`android/app/build/outputs/bundle/release/app-release.aab`
 
-Naikkan `appVersionCode` di `twa-manifest.json` jika Play menolak versi duplikat.
+Naikkan `versionCode` di `android/app/build.gradle` jika Play menolak versi duplikat.
 
 ## 4. Play Console — Store & policy
 

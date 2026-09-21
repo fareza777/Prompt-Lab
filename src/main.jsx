@@ -69,7 +69,11 @@ import {
 } from "./mermaidDelivery.js";
 import { API_MSG } from "./apiUserMessages.js";
 import { isSuperAccount, SUPER_QUOTA_LIMIT } from "./superAccounts.js";
-import { clearInstalledAppEntry, markInstalledAppEntered } from "./installedApp.js";
+import {
+  clearInstalledAppEntry,
+  installNativeAppLinkHandler,
+  markInstalledAppEntered,
+} from "./installedApp.js";
 import { purgeLegacyServiceWorkers, repairStuckLocalProfile } from "./bootRecovery.js";
 import { scorePrompt } from "./promptScore.js";
 import { captureFocusReturn } from "./accessibilityInteractions.js";
@@ -92,6 +96,7 @@ markStartupSplashStarted();
 installSplashSafetyNet();
 repairStuckLocalProfile();
 purgeLegacyServiceWorkers();
+installNativeAppLinkHandler();
 
 
 /**

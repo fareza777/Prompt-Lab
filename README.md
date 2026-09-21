@@ -208,4 +208,22 @@ Sudah didukung:
 
 ## PWA
 
-App sudah punya manifest, service worker dasar, dan icon SVG. Tahap berikutnya untuk Google Play adalah membungkus PWA dengan Android wrapper seperti Capacitor atau Trusted Web Activity.
+App sudah punya manifest, service worker dasar, dan icon SVG.
+
+## Android App (Capacitor)
+
+App Android adalah wrapper **Capacitor** (menggantikan TWA/Bubblewrap) yang memuat `https://prompt-lab.xyz` di WebView native — frontend Vite/React tetap dipakai apa adanya. Konfigurasi di `capacitor.config.json` (`server.url`), project native di `android/`.
+
+```bash
+npm run build          # build web ke dist/
+npx cap sync android   # salin web assets + config ke android/
+npm run icons:android  # generate launcher/splash icons ke android/
+npm run playstore:build # test policy + icons + build + sync + gradlew bundleRelease
+```
+
+- Package id tetap `app.promptlab.twa` → update listing Play Store yang sama.
+- Play Billing memakai plugin native `PlayBillingPlugin` (Play Billing Library 8.3.0) di `android/app/src/main/java/app/promptlab/twa/` — pengganti Digital Goods API TWA. Frontend tetap memanggil API yang sama di `src/playBilling.js`.
+- Signing: isi `android/keystore.properties` (gitignored) menunjuk ke `playstore/signing/promptlab-release.jks`, sama seperti era TWA.
+- Deep link `https://prompt-lab.xyz` diverifikasi via Android App Links (`autoVerify`) — `public/.well-known/assetlinks.json` tetap wajib terpasang.
+
+Dokumen Play Store: `playstore/README.md`.
