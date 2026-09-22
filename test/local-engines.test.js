@@ -88,6 +88,9 @@ test("pushVersionToArray dedupes and caps the rolling list", () => {
   const long = "x".repeat(80);
   assert.equal(pushVersionToArray(arr, long), true);
   assert.equal(pushVersionToArray(arr, long), false); // identical content skipped
+  pushVersionToArray(arr, `${long}-other`);
+  assert.equal(pushVersionToArray(arr, long), false); // non-adjacent dupe skipped too
+  assert.equal(arr.get(1).markdown.endsWith("-other"), true);
   assert.equal(pushVersionToArray(arr, "tiny"), false); // below min length
   for (let i = 0; i < MAX_VERSIONS + 3; i++) {
     pushVersionToArray(arr, `${long}-${i}`);

@@ -55,18 +55,18 @@ export function columnStatsSql(columnName, columnType) {
   const col = quoteIdent(columnName);
   if (NUMERIC_TYPES.test(columnType)) {
     return `SELECT count(*) AS total, count(${col}) AS non_null, ` +
-      `approx_count_distinct(${col}) AS distinct_count, ` +
+      `count(DISTINCT ${col}) AS distinct_count, ` +
       `min(${col})::VARCHAR AS min_v, max(${col})::VARCHAR AS max_v, ` +
       `round(avg(${col})::DOUBLE, 4)::VARCHAR AS mean_v FROM t`;
   }
   if (DATE_TYPES.test(columnType)) {
     return `SELECT count(*) AS total, count(${col}) AS non_null, ` +
-      `approx_count_distinct(${col}) AS distinct_count, ` +
+      `count(DISTINCT ${col}) AS distinct_count, ` +
       `min(${col})::VARCHAR AS min_v, max(${col})::VARCHAR AS max_v, ` +
       `NULL AS mean_v FROM t`;
   }
   return `SELECT count(*) AS total, count(${col}) AS non_null, ` +
-    `approx_count_distinct(${col}) AS distinct_count, ` +
+    `count(DISTINCT ${col}) AS distinct_count, ` +
     `NULL AS min_v, NULL AS max_v, NULL AS mean_v FROM t`;
 }
 

@@ -216,6 +216,7 @@ export default function TemplateWorkbench({
                     onFiles={addAttachments}
                     disabled={isBusy || disabled}
                     atLimit={atLimit}
+                    slotsLeft={allowed - attachments.length}
                   />
                 </Suspense>
               )}

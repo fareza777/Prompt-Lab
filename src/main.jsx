@@ -1514,21 +1514,22 @@ function App() {
       try {
         const { searchWorkspace, mergeRankedLists } = await import("./workspaceSearch.js");
         const lexical = await searchWorkspace(library, query, { limit: 60 });
-        let ordered = lexical;
-        let smart = false;
+        // Lexical hits render immediately — the first semantic run downloads a
+        // ~23 MB model, so holding the list until then looked like "0 saved".
+        if (!cancelled) {
+          setSearchHits(lexical.map((hit) => hit.id));
+          setSemanticSearch(false);
+        }
         try {
           const { rankSemantically } = await import("./semanticSearch.js");
           const semantic = await rankSemantically(query, lexical, library);
-          if (semantic) {
-            ordered = mergeRankedLists(lexical, semantic);
-            smart = true;
+          if (!cancelled && semantic) {
+            const ordered = mergeRankedLists(lexical, semantic);
+            setSearchHits(ordered.map((hit) => hit.id));
+            setSemanticSearch(true);
           }
         } catch {
           /* embeddings unavailable — lexical results stand */
-        }
-        if (!cancelled) {
-          setSearchHits(ordered.map((hit) => hit.id));
-          setSemanticSearch(smart);
         }
       } catch {
         if (!cancelled) setSearchHits(null);

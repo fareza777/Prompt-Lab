@@ -47,7 +47,7 @@ export async function searchWorkspace(items, query, { limit = 60 } = {}) {
   const result = await search(db, {
     term: query,
     limit,
-    tolerance: 1,
+    tolerance: 2,
     boost: { title: 2, tag: 1.5 },
   });
   return result.hits.map((hit) => ({ id: hit.document.id, score: hit.score }));

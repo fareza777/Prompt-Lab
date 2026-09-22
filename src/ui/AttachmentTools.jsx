@@ -30,6 +30,10 @@ const LABELS = {
   merging: { id: "Menggabung…", en: "Merging…" },
   analyze: { id: "Analisis {count} data", en: "Analyze {count} sheets" },
   analyzing: { id: "Menganalisis…", en: "Analyzing…" },
+  analyzeNoRoom: {
+    id: "Cuma tersisa {n} slot lampiran — hapus lampiran atau upgrade dulu.",
+    en: "Only {n} attachment slots left — remove an attachment or upgrade first.",
+  },
   importFailed: { id: "Gagal mengimpor.", en: "Import failed." },
   scanLost: {
     id: "Pindaian sebelumnya hilang karena aplikasi dimuat ulang.",
@@ -44,7 +48,7 @@ function lt(lang, key, vars = {}) {
   );
 }
 
-export default function AttachmentTools({ apiBase, attachments, onFiles, disabled, atLimit }) {
+export default function AttachmentTools({ apiBase, attachments, onFiles, disabled, atLimit, slotsLeft }) {
   const lang = detectLanguage();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -93,12 +97,19 @@ export default function AttachmentTools({ apiBase, attachments, onFiles, disable
       downloadBlob(blob, "merged.pdf");
     });
 
-  const analyzeData = () =>
+  const analyzeData = () => {
+    // Each sheet yields a new *-profil.md attachment; profiling more sheets
+    // than there are free slots would silently evict existing files.
+    if (Number.isFinite(slotsLeft) && sheets.length > slotsLeft) {
+      setError(lt(lang, "analyzeNoRoom", { n: slotsLeft }));
+      return;
+    }
     run("analyze", async () => {
       const files = [];
       for (const sheet of sheets) files.push(await analyzeSpreadsheetAttachment(sheet));
       if (files.length) onFiles(files);
     });
+  };
 
   const anyBusy = Boolean(busy) || disabled;
 

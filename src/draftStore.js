@@ -51,8 +51,11 @@ export function snapshotToDraft(snapshot) {
 export function pushVersionToArray(yarray, markdown, max = MAX_VERSIONS) {
   const text = String(markdown || "").trim();
   if (text.length < VERSION_SNAPSHOT_MIN_CHARS) return false;
-  const last = yarray.length ? yarray.get(yarray.length - 1) : null;
-  if (last && last.markdown === text) return false;
+  // Dedupe against every stored entry, not just the last: restoring an older
+  // version pushes its markdown through here again and would otherwise clone it.
+  for (let index = 0; index < yarray.length; index += 1) {
+    if (yarray.get(index)?.markdown === text) return false;
+  }
   yarray.push([{ savedAt: Date.now(), markdown: text }]);
   while (yarray.length > max) yarray.delete(0, 1);
   return true;
@@ -108,6 +111,16 @@ export async function saveAttachmentFiles(attachments) {
   try {
     const tx = db.transaction(FILES_STORE, "readwrite");
     const store = tx.objectStore(FILES_STORE);
+    // Bodies for attachments the user removed would linger forever otherwise.
+    const liveIds = new Set(attachments.map((item) => item?.id).filter(Boolean));
+    const staleKeys = await new Promise((resolve, reject) => {
+      const req = store.getAllKeys();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    for (const key of staleKeys) {
+      if (!liveIds.has(String(key))) store.delete(key);
+    }
     for (const item of attachments) {
       if (item?.id && item.file instanceof File) {
         store.put(item.file, item.id);
