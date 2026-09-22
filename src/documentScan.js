@@ -12,6 +12,24 @@ export function canScanDocuments() {
   return isNativeAndroidApp();
 }
 
+const SCAN_PENDING_KEY = "pl-scan-pending";
+
+/**
+ * The scanner runs in a separate activity — Android may kill the app process
+ * (and reload the WebView) before its result arrives, especially on low-RAM
+ * devices. We mark a scan in-flight so the next launch can at least tell the
+ * user their scan never made it back instead of failing silently.
+ */
+export function consumeLostScanWarning() {
+  try {
+    const at = Number(localStorage.getItem(SCAN_PENDING_KEY) || 0);
+    localStorage.removeItem(SCAN_PENDING_KEY);
+    return Boolean(at) && Date.now() - at < 15 * 60 * 1000;
+  } catch {
+    return false;
+  }
+}
+
 async function ensureScannerModule(DocumentScanner) {
   try {
     const { available } = await DocumentScanner.isGoogleDocumentScannerModuleAvailable();
@@ -25,6 +43,23 @@ async function ensureScannerModule(DocumentScanner) {
 /** Runs the scanner UI then OCRs every page. Returns a File, or null when cancelled/empty. */
 export async function scanDocumentToFile() {
   if (!canScanDocuments()) return null;
+  try {
+    localStorage.setItem(SCAN_PENDING_KEY, String(Date.now()));
+  } catch {
+    /* storage unavailable */
+  }
+  try {
+    return await scanDocumentToFileInner();
+  } finally {
+    try {
+      localStorage.removeItem(SCAN_PENDING_KEY);
+    } catch {
+      /* storage unavailable */
+    }
+  }
+}
+
+async function scanDocumentToFileInner() {
   const [{ DocumentScanner }, { TextRecognition }] = await Promise.all([
     import("@capacitor-mlkit/document-scanner"),
     import("@capacitor-mlkit/text-recognition"),

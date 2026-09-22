@@ -214,7 +214,8 @@ export default function TemplateWorkbench({
                     apiBase={apiBase}
                     attachments={attachments}
                     onFiles={addAttachments}
-                    disabled={isBusy || atLimit || disabled}
+                    disabled={isBusy || disabled}
+                    atLimit={atLimit}
                   />
                 </Suspense>
               )}

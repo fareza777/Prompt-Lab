@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 // Only icons already used by the entry bundle — importing a fresh lucide icon
 // here would inflate the shared "icons" chunk for every user, even though this
 // component itself is lazy.
 import { Download, ImagePlus, Search } from "lucide-react";
 import { detectLanguage } from "./i18n.js";
-import { canScanDocuments, scanDocumentToFile } from "../documentScan.js";
+import { canScanDocuments, consumeLostScanWarning, scanDocumentToFile } from "../documentScan.js";
 import { importUrlToFile } from "../urlImport.js";
 import { downloadBlob, isPdfAttachment, mergePdfAttachments } from "../pdfTools.js";
 
@@ -27,6 +27,10 @@ const LABELS = {
   mergePdfs: { id: "Gabung {count} PDF", en: "Merge {count} PDFs" },
   merging: { id: "Menggabung…", en: "Merging…" },
   importFailed: { id: "Gagal mengimpor.", en: "Import failed." },
+  scanLost: {
+    id: "Pindaian sebelumnya hilang karena aplikasi dimuat ulang.",
+    en: "The last scan was lost when the app reloaded.",
+  },
 };
 
 function lt(lang, key, vars = {}) {
@@ -36,10 +40,16 @@ function lt(lang, key, vars = {}) {
   );
 }
 
-export default function AttachmentTools({ apiBase, attachments, onFiles, disabled }) {
+export default function AttachmentTools({ apiBase, attachments, onFiles, disabled, atLimit }) {
   const lang = detectLanguage();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    // Reaching this component after a process-death reload means the scan that
+    // was in flight never delivered its file — surface that instead of silence.
+    if (consumeLostScanWarning()) setError(lt(detectLanguage(), "scanLost"));
+  }, []);
 
   const pdfCount = attachments.filter(isPdfAttachment).length;
   const showScan = canScanDocuments();
@@ -82,11 +92,11 @@ export default function AttachmentTools({ apiBase, attachments, onFiles, disable
 
   return (
     <div className="pl-source-tools">
-      <button type="button" className="pl-tool-button" disabled={anyBusy} onClick={importUrl}>
+      <button type="button" className="pl-tool-button" disabled={anyBusy || atLimit} onClick={importUrl}>
         <Search size={14} /> {busy === "url" ? lt(lang, "importing") : lt(lang, "fromUrl")}
       </button>
       {showScan ? (
-        <button type="button" className="pl-tool-button" disabled={anyBusy} onClick={scanDocument}>
+        <button type="button" className="pl-tool-button" disabled={anyBusy || atLimit} onClick={scanDocument}>
           <ImagePlus size={14} /> {busy === "scan" ? lt(lang, "scanning") : lt(lang, "scanDoc")}
         </button>
       ) : null}
