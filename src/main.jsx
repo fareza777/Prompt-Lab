@@ -1,6 +1,5 @@
 ﻿import React, { Component, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import LandingPage from "./LandingPage.jsx";
 import { Check, Clipboard, Settings, User, X } from "lucide-react";
 import "./ui/tokens.css";
 import "./ui/base.css";
@@ -20,6 +19,9 @@ import {
 } from "./deliverableProfiles.js";
 /* Admin-only; kept out of the initial bundle along with the legacy stylesheet. */
 const AdminConsole = React.lazy(() => import("./admin/AdminConsole.jsx"));
+/* The marketing page only renders for the `/` route; keeping it out of the
+   app shell's initial graph buys back real first-paint budget. */
+const LandingPage = React.lazy(() => import("./LandingPage.jsx"));
 import {
   CATEGORIES as categories,
   TONES as tones,
@@ -3702,7 +3704,11 @@ function mountPromptLab() {
         </AppErrorBoundary>
       );
     } else {
-      createRoot(root).render(<LandingPage />);
+      createRoot(root).render(
+        <React.Suspense fallback={null}>
+          <LandingPage />
+        </React.Suspense>
+      );
     }
     dismissStartupSplash();
   } catch (error) {
