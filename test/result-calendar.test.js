@@ -135,7 +135,7 @@ test("reopening a filed document restores its template, not just its text", asyn
   assert.match(shell, /if \(template\) \{\s*\r?\n\s*setActiveTemplate\(template\)/);
   // Custom templates live outside the built-in registry and must resolve too.
   assert.match(shell, /userTemplates\.find\(\(candidate\) => candidate\.id === item\.templateId\)/);
-  assert.match(shell, /open=\{sheet === "calendar"\}/);
+  assert.match(shell, /sheet === "calendar" \? \(/);
   assert.match(shell, /onChangeDate=\{setResultDate\}/);
   // Only finished documents belong on a calendar of work done.
   assert.match(shell, /item\.contentType === "output"/);

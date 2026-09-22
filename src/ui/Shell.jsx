@@ -13,12 +13,9 @@ import {
   resolvePalette,
   writePaletteChoice,
 } from "./themePalette.js";
-import Result from "./Result.jsx";
 import TemplateGallery from "./TemplateGallery.jsx";
 import TemplateWorkbench from "./TemplateWorkbench.jsx";
 import TemplateProgress from "./TemplateProgress.jsx";
-import Calendar from "./Calendar.jsx";
-import TemplateEditor from "./TemplateEditor.jsx";
 import {
   defaultFieldValues,
   getTemplate,
@@ -26,10 +23,17 @@ import {
   normalizeCustomTemplate,
   templateSubjectField,
 } from "../workTemplates.js";
-import History from "./History.jsx";
 import Report from "./Report.jsx";
 import DiagramSaveSheet from "./DiagramSaveSheet.jsx";
 import { getRecordRestoreState } from "./contentRecord.js";
+
+// Result and the three sheets mount lazily: each only ever renders inside its
+// own conditional branch (Sheet returns null while closed), so keeping them
+// out of the initial bundle costs the user nothing.
+const Result = lazy(() => import("./Result.jsx"));
+const Calendar = lazy(() => import("./Calendar.jsx"));
+const TemplateEditor = lazy(() => import("./TemplateEditor.jsx"));
+const History = lazy(() => import("./History.jsx"));
 
 // Account rides a lazy chunk: it is only ever opened from the sheets menu,
 // so keeping it out of the initial bundle costs the user nothing.
@@ -647,7 +651,8 @@ export default function Shell(props) {
             ) : hasResult || runError ? (
               <div className="pl-result-tray">
                 <div className="pl-tray-core">
-                  <Result
+                  <Suspense fallback={null}>
+                    <Result
                     t={t}
                     prompt={runOutput}
                     metrics={metrics}
@@ -685,7 +690,8 @@ export default function Shell(props) {
                       setSheet("report");
                     }}
                     onStartOver={leaveTemplate}
-                  />
+                    />
+                  </Suspense>
                 </div>
               </div>
             ) : (
@@ -713,40 +719,52 @@ export default function Shell(props) {
 
       </main>
 
-      <TemplateEditor
-        t={t}
-        lang={lang}
-        open={sheet === "editor"}
-        onClose={closeSheet}
-        onSave={saveCustomTemplate}
-      />
+      {sheet === "editor" ? (
+        <Suspense fallback={null}>
+          <TemplateEditor
+            t={t}
+            lang={lang}
+            open
+            onClose={closeSheet}
+            onSave={saveCustomTemplate}
+          />
+        </Suspense>
+      ) : null}
 
-      <Calendar
-        t={t}
-        lang={lang}
-        open={sheet === "calendar"}
-        onClose={closeSheet}
-        items={(filteredLibrary || []).filter((item) => item.contentType === "output")}
-        onOpenItem={openCalendarItem}
-        onDelete={deleteLibraryItem}
-        onChangeDate={setResultDate}
-      />
+      {sheet === "calendar" ? (
+        <Suspense fallback={null}>
+          <Calendar
+            t={t}
+            lang={lang}
+            open
+            onClose={closeSheet}
+            items={(filteredLibrary || []).filter((item) => item.contentType === "output")}
+            onOpenItem={openCalendarItem}
+            onDelete={deleteLibraryItem}
+            onChangeDate={setResultDate}
+          />
+        </Suspense>
+      ) : null}
 
-      <History
-        t={t}
-        lang={lang}
-        open={sheet === "history"}
-        onClose={closeSheet}
-        items={filteredLibrary || []}
-        search={search}
-        setSearch={setSearch}
-        semantic={semanticSearch}
-        onOpenItem={openHistoryItem}
-        onDelete={deleteLibraryItem}
-        onDuplicate={duplicateLibraryItem}
-        syncStatus={librarySyncStatus}
-        isLocalOnly={isLocalOnly}
-      />
+      {sheet === "history" ? (
+        <Suspense fallback={null}>
+          <History
+            t={t}
+            lang={lang}
+            open
+            onClose={closeSheet}
+            items={filteredLibrary || []}
+            search={search}
+            setSearch={setSearch}
+            semantic={semanticSearch}
+            onOpenItem={openHistoryItem}
+            onDelete={deleteLibraryItem}
+            onDuplicate={duplicateLibraryItem}
+            syncStatus={librarySyncStatus}
+            isLocalOnly={isLocalOnly}
+          />
+        </Suspense>
+      ) : null}
 
       <Suspense fallback={null}>
         <Account
