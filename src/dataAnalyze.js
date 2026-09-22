@@ -131,12 +131,9 @@ async function fileToCsvText(file) {
   if (/\.(csv|tsv)$/i.test(file.name || "") || file.type === "text/csv") {
     return { csv: await file.text(), source: "csv" };
   }
-  // XLSX goes through SheetJS (also lazy) — first sheet only.
-  const XLSX = await import("xlsx");
-  const book = XLSX.read(await file.arrayBuffer(), { type: "array" });
-  const first = book.SheetNames[0];
-  if (!first) throw new Error("Spreadsheet has no sheets");
-  return { csv: XLSX.utils.sheet_to_csv(book.Sheets[first]), source: "xlsx" };
+  // XLSX unpacks via the local jszip-based reader — first sheet only.
+  const { xlsxFileToCsv } = await import("./xlsxToCsv.js");
+  return { csv: await xlsxFileToCsv(file), source: "xlsx" };
 }
 
 function rows(result) {

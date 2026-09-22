@@ -236,7 +236,7 @@ npm run playstore:build # test policy + icons + build + sync + gradlew bundleRel
 
 ### Local-first engines (lazy chunks, tidak masuk initial bundle)
 
-- **DuckDB-Wasm** (`@duckdb/duckdb-wasm`, `src/dataAnalyze.js`) — tombol "Analisis N data" muncul saat lampiran CSV/XLSX ada; memprofil kolom (non-null, unik, rentang, nilai teratas) jadi lampiran `<nama>-profil.md`, semuanya di browser. XLSX lewat `xlsx` (SheetJS, sheet pertama → CSV).
+- **DuckDB-Wasm** (`@duckdb/duckdb-wasm`, `src/dataAnalyze.js`) — tombol "Analisis N data" muncul saat lampiran CSV/XLSX ada; memprofil kolom (non-null, unik, rentang, nilai teratas) jadi lampiran `<nama>-profil.md`, semuanya di browser. XLSX dibaca lokal (`src/xlsxToCsv.js`, jszip — SheetJS tidak dipakai karena advisories-nya belum ter-patch di npm).
 - **Orama** (`@orama/orama`, `src/workspaceSearch.js`) — pencarian riwayat/library memakai indeks full-text (typo tolerance, boost judul) menggantikan substring filter; indeks dibangun lazy dan di-cache per array library.
 - **Transformers.js** (`@huggingface/transformers`, `src/semanticSearch.js`) — embedding `Xenova/all-MiniLM-L6-v2` (q8, ~23 MB sekali unduh, di-cache browser) me-rerank hasil Orama secara semantik lalu digabung RRF; indikator "pencarian pintar" muncul di Riwayat saat aktif. Gagal load (offline/webview lama) → diam-diam tetap leksikal.
 - **Yjs** (`yjs` + `y-indexeddb`, `src/draftStore.js`) — autosave draft workbench (narasi, kategori, tone, model, tipe output, runOutput, lampiran) ke IndexedDB setiap ~800 ms; dipulihkan saat reload/process-death. Snapshot hasil disimpan sebagai maks 10 versi — dropdown "Versi" di halaman hasil mengembalikannya. File lampiran disimpan di store IDB terpisah (bukan di dalam Y.Doc).

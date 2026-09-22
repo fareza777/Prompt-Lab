@@ -96,6 +96,16 @@ test("pushVersionToArray dedupes and caps the rolling list", () => {
   assert.ok(arr.get(arr.length - 1).markdown.endsWith(`-${MAX_VERSIONS + 2}`));
 });
 
+test("parseSheetXml decodes shared strings, sparse cells, and escapes", async () => {
+  const { parseSheetXml, rowsToCsv } = await import("../src/xlsxToCsv.js");
+  const xml =
+    '<worksheet><sheetData><row><c r="A1" t="s"><v>0</v></c><c r="C1"><v>42</v></c></row>' +
+    '<row><c r="A2" t="inlineStr"><is><t>a,b &amp; c</t></is></c><c r="B2" t="b"><v>1</v></c></row></sheetData></worksheet>';
+  const rows = parseSheetXml(xml, ["Jakarta"]);
+  assert.deepEqual(rows, [["Jakarta", "", "42"], ["a,b & c", "TRUE"]]);
+  assert.equal(rowsToCsv(rows), 'Jakarta,,42\n"a,b & c",TRUE');
+});
+
 test("snapshotToDraft normalizes partial state", () => {
   const draft = snapshotToDraft({ narrative: "halo", savedAt: "nope" });
   assert.equal(draft.narrative, "halo");
@@ -105,7 +115,7 @@ test("snapshotToDraft normalizes partial state", () => {
 
 test("heavy engines ship as lazy chunks, never in the initial bundle", async () => {
   const pkg = JSON.parse(await readFile(packageJsonUrl, "utf8"));
-  for (const dep of ["@duckdb/duckdb-wasm", "@orama/orama", "@huggingface/transformers", "yjs", "y-indexeddb", "xlsx"]) {
+  for (const dep of ["@duckdb/duckdb-wasm", "@orama/orama", "@huggingface/transformers", "yjs", "y-indexeddb", "jszip"]) {
     assert.ok(pkg.dependencies[dep], `${dep} missing from dependencies`);
   }
   const main = await readFile(new URL("../src/main.jsx", import.meta.url), "utf8");
