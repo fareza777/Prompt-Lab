@@ -5,13 +5,15 @@ import { useEffect, useState } from "react";
 import { Download, ImagePlus, Search } from "lucide-react";
 import { detectLanguage } from "./i18n.js";
 import { canScanDocuments, consumeLostScanWarning, scanDocumentToFile } from "../documentScan.js";
+import { analyzeSpreadsheetAttachment, isSupportedSpreadsheet } from "../dataAnalyze.js";
 import { importUrlToFile } from "../urlImport.js";
 import { downloadBlob, isPdfAttachment, mergePdfAttachments } from "../pdfTools.js";
 
 /**
  * Extra ways to feed a template: scan a paper document (native app only,
  * ML Kit scanner + OCR), import a web page as clean markdown (Defuddle via
- * /api/fetch-url), and merge attached PDFs into one download (pdf-lib).
+ * /api/fetch-url), merge attached PDFs into one download (pdf-lib), and
+ * profile CSV/XLSX attachments locally with DuckDB-Wasm.
  *
  * Like DocumentEditor this file ships as a lazy chunk, so its labels live in
  * a local table instead of the shared i18n dictionary — that keeps them out
@@ -26,6 +28,8 @@ const LABELS = {
   scanning: { id: "Memindai…", en: "Scanning…" },
   mergePdfs: { id: "Gabung {count} PDF", en: "Merge {count} PDFs" },
   merging: { id: "Menggabung…", en: "Merging…" },
+  analyze: { id: "Analisis {count} data", en: "Analyze {count} sheets" },
+  analyzing: { id: "Menganalisis…", en: "Analyzing…" },
   importFailed: { id: "Gagal mengimpor.", en: "Import failed." },
   scanLost: {
     id: "Pindaian sebelumnya hilang karena aplikasi dimuat ulang.",
@@ -52,6 +56,7 @@ export default function AttachmentTools({ apiBase, attachments, onFiles, disable
   }, []);
 
   const pdfCount = attachments.filter(isPdfAttachment).length;
+  const sheets = attachments.filter(isSupportedSpreadsheet);
   const showScan = canScanDocuments();
 
   async function run(action, job) {
@@ -88,6 +93,13 @@ export default function AttachmentTools({ apiBase, attachments, onFiles, disable
       downloadBlob(blob, "merged.pdf");
     });
 
+  const analyzeData = () =>
+    run("analyze", async () => {
+      const files = [];
+      for (const sheet of sheets) files.push(await analyzeSpreadsheetAttachment(sheet));
+      if (files.length) onFiles(files);
+    });
+
   const anyBusy = Boolean(busy) || disabled;
 
   return (
@@ -103,6 +115,11 @@ export default function AttachmentTools({ apiBase, attachments, onFiles, disable
       {pdfCount >= 2 ? (
         <button type="button" className="pl-tool-button" disabled={anyBusy} onClick={mergePdfs}>
           <Download size={14} /> {busy === "merge" ? lt(lang, "merging") : lt(lang, "mergePdfs", { count: pdfCount })}
+        </button>
+      ) : null}
+      {sheets.length ? (
+        <button type="button" className="pl-tool-button" disabled={anyBusy || atLimit} onClick={analyzeData}>
+          <Search size={14} /> {busy === "analyze" ? lt(lang, "analyzing") : lt(lang, "analyze", { count: sheets.length })}
         </button>
       ) : null}
       {error ? (

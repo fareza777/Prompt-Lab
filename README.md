@@ -234,4 +234,11 @@ npm run playstore:build # test policy + icons + build + sync + gradlew bundleRel
 - **pdf-lib** — `server/pdfToolkit.js`: semua PDF yang diekspor `/api/export/pdf` distempel footer + metadata, dan `POST /api/pdf/merge` menggabung lampiran PDF (tombol "Gabung PDF" muncul saat ≥2 PDF terlampir).
 - **Tiptap** (`@tiptap/react` + `tiptap-markdown`) — tombol "Edit" di halaman hasil membuka `src/ui/DocumentEditor.jsx`, editor rich-text lazy chunk yang menulis balik markdown ke output.
 
+### Local-first engines (lazy chunks, tidak masuk initial bundle)
+
+- **DuckDB-Wasm** (`@duckdb/duckdb-wasm`, `src/dataAnalyze.js`) — tombol "Analisis N data" muncul saat lampiran CSV/XLSX ada; memprofil kolom (non-null, unik, rentang, nilai teratas) jadi lampiran `<nama>-profil.md`, semuanya di browser. XLSX lewat `xlsx` (SheetJS, sheet pertama → CSV).
+- **Orama** (`@orama/orama`, `src/workspaceSearch.js`) — pencarian riwayat/library memakai indeks full-text (typo tolerance, boost judul) menggantikan substring filter; indeks dibangun lazy dan di-cache per array library.
+- **Transformers.js** (`@huggingface/transformers`, `src/semanticSearch.js`) — embedding `Xenova/all-MiniLM-L6-v2` (q8, ~23 MB sekali unduh, di-cache browser) me-rerank hasil Orama secara semantik lalu digabung RRF; indikator "pencarian pintar" muncul di Riwayat saat aktif. Gagal load (offline/webview lama) → diam-diam tetap leksikal.
+- **Yjs** (`yjs` + `y-indexeddb`, `src/draftStore.js`) — autosave draft workbench (narasi, kategori, tone, model, tipe output, runOutput, lampiran) ke IndexedDB setiap ~800 ms; dipulihkan saat reload/process-death. Snapshot hasil disimpan sebagai maks 10 versi — dropdown "Versi" di halaman hasil mengembalikannya. File lampiran disimpan di store IDB terpisah (bukan di dalam Y.Doc).
+
 Dokumen Play Store: `playstore/README.md`.

@@ -416,6 +416,7 @@ export default function Result({
   runError,
   onStartOver,
   onOutputChange,
+  versions,
 }) {
   const [editing, setEditing] = useState(false);
   const output = String(runOutput || "").trim();
@@ -479,6 +480,29 @@ export default function Result({
           <h2>{output ? t("result.title") : t("result.failedTitle")}</h2>
         </div>
         {output && <span className="pl-result-status">{t("result.ready")}</span>}
+        {output && onOutputChange && Array.isArray(versions) && versions.length > 1 && (
+          <select
+            className="pl-select pl-versions"
+            aria-label={t("result.versions")}
+            value=""
+            onChange={(event) => {
+              const hit = versions.find((entry) => String(entry.index) === event.target.value);
+              if (hit) onOutputChange(hit.markdown);
+            }}
+          >
+            <option value="" disabled>
+              {t("result.versions")}
+            </option>
+            {[...versions].reverse().map((entry) => (
+              <option key={entry.index} value={entry.index}>
+                {new Date(entry.savedAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </option>
+            ))}
+          </select>
+        )}
         {output && onOutputChange && (
           <button
             type="button"

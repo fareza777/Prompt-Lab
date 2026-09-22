@@ -2840,3 +2840,10 @@ body.pl-admob-banner .pl-shell {
 .pl-editor-content .ProseMirror > *:first-child {
   margin-top: 0;
 }
+
+.pl-versions {
+  width: auto;
+  max-width: 7.5rem;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+}

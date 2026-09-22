@@ -123,6 +123,8 @@ export default function Shell(props) {
     templates,
     setBuilderFromTemplate,
     filteredLibrary,
+    outputVersions,
+    semanticSearch,
     search,
     setSearch,
     deleteLibraryItem,
@@ -656,6 +658,7 @@ export default function Shell(props) {
                     saved={saved}
                     runOutput={runOutput}
                     onOutputChange={setRunOutput}
+                    versions={outputVersions}
                     isRunning={false}
                     runError={humanizeApiError(runError, t)}
                     onExport={(format, text) =>
@@ -737,6 +740,7 @@ export default function Shell(props) {
         items={filteredLibrary || []}
         search={search}
         setSearch={setSearch}
+        semantic={semanticSearch}
         onOpenItem={openHistoryItem}
         onDelete={deleteLibraryItem}
         onDuplicate={duplicateLibraryItem}
