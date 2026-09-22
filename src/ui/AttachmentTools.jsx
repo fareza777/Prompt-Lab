@@ -37,9 +37,9 @@ const LABELS = {
   merging: { id: "Menggabung…", en: "Merging…" },
   analyze: { id: "Analisis {count} data", en: "Analyze {count} sheets" },
   analyzing: { id: "Menganalisis…", en: "Analyzing…" },
-  analyzeNoRoom: {
+  noRoom: {
     id: "Cuma tersisa {n} slot lampiran — hapus lampiran atau upgrade dulu.",
-    en: "Only {n} attachment slots left — remove an attachment or upgrade first.",
+    en: "Only {n} attachment slot{s} left — remove one or upgrade first.",
   },
   ocr: { id: "OCR {count} gambar", en: "OCR {count} images" },
   ocrBusy: { id: "Membaca teks…", en: "Reading text…" },
@@ -137,13 +137,18 @@ export default function AttachmentTools({ apiBase, attachments, onFiles, disable
       downloadBlob(blob, "merged.pdf");
     });
 
-  const analyzeData = () => {
-    // Each sheet yields a new *-profil.md attachment; profiling more sheets
-    // than there are free slots would silently evict existing files.
-    if (Number.isFinite(slotsLeft) && sheets.length > slotsLeft) {
-      setError(lt(lang, "analyzeNoRoom", { n: slotsLeft }));
-      return;
+  // Every add-type tool below emits one file per input; producing more files
+  // than free slots would silently evict existing attachments (list truncates).
+  const refuseNoRoom = (count) => {
+    if (Number.isFinite(slotsLeft) && count > slotsLeft) {
+      setError(lt(lang, "noRoom", { n: slotsLeft, s: slotsLeft === 1 ? "" : "s" }));
+      return true;
     }
+    return false;
+  };
+
+  const analyzeData = () => {
+    if (refuseNoRoom(sheets.length)) return;
     run("analyze", async () => {
       const files = [];
       for (const sheet of sheets) files.push(await analyzeSpreadsheetAttachment(sheet));
@@ -151,7 +156,8 @@ export default function AttachmentTools({ apiBase, attachments, onFiles, disable
     });
   };
 
-  const ocrImages = () =>
+  const ocrImages = () => {
+    if (refuseNoRoom(images.length)) return;
     run("ocr", async () => {
       const files = [];
       for (const image of images) {
@@ -166,8 +172,10 @@ export default function AttachmentTools({ apiBase, attachments, onFiles, disable
       }
       if (files.length) onFiles(files);
     });
+  };
 
-  const convertDocs = () =>
+  const convertDocs = () => {
+    if (refuseNoRoom(docs.length)) return;
     run("convert", async () => {
       const files = [];
       try {
@@ -181,6 +189,7 @@ export default function AttachmentTools({ apiBase, attachments, onFiles, disable
       }
       if (files.length) onFiles(files);
     });
+  };
 
   const anyBusy = Boolean(busy) || disabled;
 

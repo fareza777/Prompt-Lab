@@ -5,6 +5,11 @@
  * here stays behind dynamic imports and never enters the initial bundle.
  */
 
+// Contour detection on multi-megapixel photos wedges the main thread for
+// minutes on weak hardware — OpenCV always works on this downscaled copy.
+const MAX_SCAN_DIM = 1280;
+const MAX_RESULT_DIM = 1500;
+
 let scannerPromise = null;
 
 async function loadScanner() {
@@ -27,12 +32,14 @@ async function loadScanner() {
   return scannerPromise;
 }
 
-async function fileToImageElement(file) {
+async function fileToCanvas(file, maxDim) {
   const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
-  canvas.getContext("2d").drawImage(bitmap, 0, 0);
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
   return canvas;
 }
 
@@ -46,6 +53,10 @@ function canvasToJpegFile(canvas, name) {
   });
 }
 
+function distance(p1, p2) {
+  return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+}
+
 /**
  * @param {File} photo camera/gallery capture
  * @returns {Promise<{file: File, corrected: boolean}>} corrected JPEG, or the
@@ -54,10 +65,17 @@ function canvasToJpegFile(canvas, name) {
  */
 export async function scanPhotoToFile(photo) {
   const scanner = await loadScanner();
-  const image = await fileToImageElement(photo);
-  // Ask for the photo's own proportions; jscanify returns null when the
-  // contour isn't paper-shaped (glare, clutter, too close).
-  const canvas = scanner.extractPaper(image, image.width, image.height);
+  const image = await fileToCanvas(photo, MAX_SCAN_DIM);
+  const contour = scanner.findPaperContour(image);
+  if (!contour) return { file: photo, corrected: false };
+  const corners = scanner.getCornerPoints(contour, image);
+  const { topLeftCorner, topRightCorner, bottomLeftCorner, bottomRightCorner } = corners;
+  // Estimate the paper's aspect from the contour so the warp doesn't squash
+  // landscape documents into portrait frames.
+  const width = (distance(topLeftCorner, topRightCorner) + distance(bottomLeftCorner, bottomRightCorner)) / 2;
+  const height = (distance(topLeftCorner, bottomLeftCorner) + distance(topRightCorner, bottomRightCorner)) / 2;
+  const scale = Math.min(1, MAX_RESULT_DIM / Math.max(width, height));
+  const canvas = scanner.extractPaper(image, Math.max(1, Math.round(width * scale)), Math.max(1, Math.round(height * scale)), corners);
   if (!canvas) return { file: photo, corrected: false };
   const base = (photo.name || "scan").replace(/\.[^.]+$/, "");
   return { file: await canvasToJpegFile(canvas, `${base}-scan.jpg`), corrected: true };
