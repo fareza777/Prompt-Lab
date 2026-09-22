@@ -26,7 +26,11 @@ async function forwardFile(path, file) {
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
       const detail = typeof body?.detail === "string" ? body.detail : "sidecar request failed";
-      throw new Error(detail);
+      const error = new Error(detail);
+      // 4xx means the document could not be parsed (client sees 422);
+      // 5xx means the sidecar itself failed (client sees 502).
+      error.status = response.status >= 500 ? 502 : 422;
+      throw error;
     }
     return body;
   } finally {

@@ -32,7 +32,12 @@ async function buildIndex(items) {
 
 function indexFor(items) {
   if (!cache || cache.items !== items) {
-    cache = { items, db: buildIndex(items) };
+    const db = buildIndex(items);
+    // A failed build must not poison the cache — the next query should retry.
+    db.catch(() => {
+      if (cache?.db === db) cache = null;
+    });
+    cache = { items, db };
   }
   return cache.db;
 }

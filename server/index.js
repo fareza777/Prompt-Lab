@@ -166,14 +166,19 @@ const upload = multer({
       "application/vnd.openxmlformats-officedocument.presentationml.presentation",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+      "application/vnd.oasis.opendocument.text",
+      "application/rtf",
+      "text/rtf",
       "image/jpeg",
       "image/png",
       "image/webp",
       "text/csv",
+      "text/html",
       "text/markdown",
       "text/plain",
     ];
-    const allowedExt = /\.(csv|docx|json|md|pdf|png|jpe?g|pptx|txt|webp|xlsx)$/i;
+    const allowedExt = /\.(csv|docx|json|md|pdf|png|jpe?g|pptx|txt|webp|xlsx?|html?|odt|rtf)$/i;
     if (allowedMime.includes(file.mimetype) || allowedExt.test(file.originalname)) {
       cb(null, true);
       return;

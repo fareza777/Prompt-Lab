@@ -79,10 +79,12 @@ export default function AttachmentTools({ apiBase, attachments, onFiles, disable
     if (consumeLostScanWarning()) setError(lt(detectLanguage(), "scanLost"));
   }, []);
 
-  const pdfCount = attachments.filter(isPdfAttachment).length;
-  const sheets = attachments.filter(isSupportedSpreadsheet);
-  const images = attachments.filter((item) => item?.type?.startsWith("image/"));
-  const docs = attachments.filter(isConvertibleDocument);
+  // Only file-backed attachments can be sent to a tool — drafts restored from
+  // an older save may carry metadata without the body.
+  const pdfCount = attachments.filter((item) => isPdfAttachment(item) && item?.file instanceof File).length;
+  const sheets = attachments.filter((item) => isSupportedSpreadsheet(item) && item?.file instanceof File);
+  const images = attachments.filter((item) => item?.type?.startsWith("image/") && item?.file instanceof File);
+  const docs = attachments.filter((item) => isConvertibleDocument(item) && item?.file instanceof File);
   const nativeScan = canScanDocuments();
 
   async function run(action, job) {

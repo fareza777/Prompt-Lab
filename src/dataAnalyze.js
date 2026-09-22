@@ -151,7 +151,14 @@ export async function analyzeSpreadsheetAttachment(item) {
     throw new Error(`File too large to analyze locally (max ${Math.round(MAX_ANALYZE_BYTES / 1048576)} MB)`);
   }
 
-  const { csv, source } = await fileToCsvText(file);
+  let csv;
+  try {
+    ({ csv } = await fileToCsvText(file));
+  } catch (error) {
+    // Legacy .xls isn't a zip and other corruptions land here — surface a
+    // readable message instead of the raw parser error.
+    throw new Error(`Couldn't read that spreadsheet (${error?.message || "unsupported format"}).`);
+  }
   const db = await loadDuckDb();
   const conn = await db.connect();
   try {
@@ -196,6 +203,5 @@ export async function analyzeSpreadsheetAttachment(item) {
     return new File([markdown], `${stamp}-profil.md`, { type: "text/markdown" });
   } finally {
     await conn.close().catch(() => {});
-    void source;
   }
 }

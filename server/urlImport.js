@@ -24,11 +24,28 @@ const PRIVATE_IPV4 = [
 ];
 
 function isPrivateIp(ip) {
-  if (PRIVATE_IPV4.some((re) => re.test(ip))) return true;
-  const lower = ip.toLowerCase();
+  const lower = String(ip || "").toLowerCase();
+  // IPv4-mapped IPv6 ("::ffff:10.0.0.1" or hex "::ffff:a00:1") must not
+  // bypass the IPv4 private ranges.
+  if (lower.startsWith("::ffff:")) {
+    const tail = lower.slice(7);
+    if (tail.includes(".")) return isPrivateIp(tail);
+    const value = parseInt(tail, 16);
+    if (Number.isFinite(value)) {
+      const octets = [24, 16, 8, 0].map((shift) => (value >>> shift) & 255).join(".");
+      return isPrivateIp(octets);
+    }
+    return true;
+  }
+  if (PRIVATE_IPV4.some((re) => re.test(lower))) return true;
   return (
     lower === "::1" ||
-    lower.startsWith("fe80") ||
+    lower === "::" ||
+    lower.startsWith("fe8") || // fe80–febf link-local
+    lower.startsWith("fe9") ||
+    lower.startsWith("fea") ||
+    lower.startsWith("feb") ||
+    /^fe[c-f]/.test(lower) || // fec0–feff site-local
     lower.startsWith("fc") ||
     lower.startsWith("fd")
   );

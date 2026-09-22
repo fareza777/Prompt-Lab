@@ -71,9 +71,11 @@ def _write_temp(body: bytes, suffix: str) -> str:
     return path
 
 
+# Parsing/OCR are CPU-bound blocking calls — plain `def` endpoints run in
+# FastAPI's threadpool so one conversion cannot stall every other request.
 @app.post("/parse")
-async def parse(file: UploadFile = File(...)):
-    body = await file.read()
+def parse(file: UploadFile = File(...)):
+    body = file.file.read()
     if not body:
         raise HTTPException(400, "empty file")
     suffix = os.path.splitext(file.filename or "doc.bin")[1] or ".bin"
@@ -114,23 +116,22 @@ async def parse(file: UploadFile = File(...)):
 
 
 @app.post("/ocr")
-async def ocr(file: UploadFile = File(...)):
-    body = await file.read()
+def ocr(file: UploadFile = File(...)):
+    body = file.file.read()
     if not body:
         raise HTTPException(400, "empty file")
+    engine = get_paddleocr()
     try:
-        engine = get_paddleocr()
         result = engine.ocr(io.BytesIO(body))  # type: ignore[arg-type]
-    except TypeError:
+    except Exception:  # noqa: BLE001 - retry on a real path instead
         # Some PaddleOCR releases only accept paths/np arrays, not streams.
         tmp = _write_temp(body, os.path.splitext(file.filename or "img.png")[1] or ".png")
         try:
-            engine = get_paddleocr()
             result = engine.ocr(tmp)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(500, f"paddleocr failed: {exc}")
         finally:
             os.unlink(tmp)
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(500, f"paddleocr failed: {exc}")
 
     lines = []
     for page in result or []:

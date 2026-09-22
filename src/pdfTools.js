@@ -8,7 +8,9 @@ export function isPdfAttachment(file) {
 }
 
 export async function mergePdfAttachments(apiBase, attachments) {
-  const pdfs = attachments.filter(isPdfAttachment);
+  // Drafts restored from storage can lack the File body — only merge what
+  // we can actually send.
+  const pdfs = attachments.filter((item) => isPdfAttachment(item) && item?.file instanceof File);
   if (pdfs.length < 2) throw new Error("Attach at least two PDF files.");
   const form = new FormData();
   for (const item of pdfs) {
