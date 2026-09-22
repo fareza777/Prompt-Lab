@@ -81,10 +81,13 @@ import {
   FREE_PLAN_DEFAULTS,
 } from "./playBillingGoogle.js";
 import { persistReservedUsage, quotaFailureStatus } from "./quotaReservation.js";
+import { callSidecar, sidecarConfigured } from "./documents.js";
 import { buildDocxBuffer, buildPptxBuffer } from "./officeExport.js";
 import { buildPdfBuffer } from "./pdfExport.js";
 import { buildXlsxBuffer } from "./xlsxExport.js";
 import { extractPdfText } from "./pdfText.js";
+import { mergePdfBuffers, stampPdfBuffer } from "./pdfToolkit.js";
+import { fetchCleanArticle } from "./urlImport.js";
 import { extractDocumentImages } from "./documentImages.js";
 import { serializeExportImages } from "./exportImagesPayload.js";
 import { buildTemplateInstruction, getTemplate } from "../src/workTemplates.js";
@@ -163,14 +166,19 @@ const upload = multer({
       "application/vnd.openxmlformats-officedocument.presentationml.presentation",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+      "application/vnd.oasis.opendocument.text",
+      "application/rtf",
+      "text/rtf",
       "image/jpeg",
       "image/png",
       "image/webp",
       "text/csv",
+      "text/html",
       "text/markdown",
       "text/plain",
     ];
-    const allowedExt = /\.(csv|docx|json|md|pdf|png|jpe?g|pptx|txt|webp|xlsx)$/i;
+    const allowedExt = /\.(csv|docx|json|md|pdf|png|jpe?g|pptx|txt|webp|xlsx?|html?|odt|rtf)$/i;
     if (allowedMime.includes(file.mimetype) || allowedExt.test(file.originalname)) {
       cb(null, true);
       return;
@@ -565,12 +573,73 @@ app.post("/api/export/pdf", express.json({ limit: "12mb" }), async (req, res) =>
       plan: membership.plan,
       images: Array.isArray(req.body?.images) ? req.body.images.slice(0, 8) : [],
     });
+    const stamped = await stampPdfBuffer(buffer, { title });
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", attachmentDisposition(title, "pdf"));
-    res.send(buffer);
+    res.send(stamped);
   } catch (error) {
     console.error("pdf export failed", error.message);
     res.status(500).json({ error: API_MSG.pdfFailed });
+  }
+});
+
+app.post("/api/pdf/merge", upload.array("files", 8), async (req, res) => {
+  try {
+    const buffers = (req.files || [])
+      .filter(
+        (file) =>
+          file.mimetype === "application/pdf" || /\.pdf$/i.test(file.originalname || "")
+      )
+      .map((file) => file.buffer);
+    if (buffers.length < 2) {
+      res.status(400).json({ error: "Attach at least two PDF files." });
+      return;
+    }
+    const merged = await mergePdfBuffers(buffers);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", attachmentDisposition("merged", "pdf"));
+    res.send(merged);
+  } catch (error) {
+    console.error("pdf merge failed", error.message);
+    res.status(500).json({ error: "Could not merge the PDF files." });
+  }
+});
+
+app.post("/api/fetch-url", express.json({ limit: "32kb" }), async (req, res) => {
+  try {
+    const { title, markdown } = await fetchCleanArticle(req.body?.url);
+    res.json({ title, markdown });
+  } catch (error) {
+    res.status(422).json({ error: error.message || "Could not read that page." });
+  }
+});
+
+// Layout-aware document parsing and OCR live in the optional Python sidecar
+// (server/sidecar — Docling, MarkItDown, PaddleOCR). When SIDECAR_URL is unset
+// these answer 503 so the client keeps its lighter built-in tools.
+app.post("/api/documents/parse", upload.single("file"), async (req, res) => {
+  if (!req.file?.buffer?.length) {
+    res.status(400).json({ error: "Attach one document file." });
+    return;
+  }
+  try {
+    const { markdown, engine } = await callSidecar("/parse", req.file);
+    res.json({ markdown, engine });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message, configured: sidecarConfigured() });
+  }
+});
+
+app.post("/api/ocr", upload.single("file"), async (req, res) => {
+  if (!req.file?.buffer?.length) {
+    res.status(400).json({ error: "Attach one image file." });
+    return;
+  }
+  try {
+    const { text, engine } = await callSidecar("/ocr", req.file);
+    res.json({ text, engine });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message, configured: sidecarConfigured() });
   }
 });
 

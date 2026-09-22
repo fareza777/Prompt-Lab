@@ -12,6 +12,11 @@
   min-height: 100dvh;
 }
 
+/* Reserve room for the native AdMob banner pinned to the screen bottom. */
+body.pl-admob-banner .pl-shell {
+  padding-bottom: calc(var(--pl-banner-height, 60px) + env(safe-area-inset-bottom, 0px));
+}
+
 /* ---- Top bar: names the app, nothing else competes ---------------------- */
 
 .pl-top {
@@ -2708,4 +2713,137 @@
   font-family: var(--font-mono);
   font-size: var(--t-xs);
   color: var(--ink-faint);
+}
+
+/* ---- Attachment source tools (URL import / document scan / PDF merge) ----- */
+
+.pl-source-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+}
+
+.pl-tool-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: 34px;
+  padding: var(--s-1) var(--s-3);
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink-mute);
+  font-family: inherit;
+  font-size: var(--t-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.pl-tool-button:hover:not(:disabled) {
+  background: var(--paper-sunken);
+  border-color: var(--ink-faint);
+  color: var(--ink);
+}
+
+.pl-tool-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pl-source-tools-error {
+  flex-basis: 100%;
+}
+
+/* ---- Rich result editor (Tiptap) ----------------------------------------- */
+
+.pl-result-edit {
+  margin-left: auto;
+}
+
+.pl-editor {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: var(--paper-raised);
+  box-shadow: var(--lift-1);
+  max-width: var(--measure);
+}
+
+.pl-editor-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--rule);
+}
+
+.pl-editor-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink-mute);
+  cursor: pointer;
+}
+
+.pl-editor-tool:hover:not(:disabled) {
+  background: var(--paper-sunken);
+  color: var(--ink);
+}
+
+.pl-editor-tool.is-active {
+  background: var(--accent-soft, var(--paper-sunken));
+  color: var(--accent);
+}
+
+.pl-editor-tool:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pl-editor-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 var(--s-1);
+  background: var(--rule-strong);
+}
+
+.pl-editor-done {
+  margin-left: auto;
+}
+
+.pl-editor-content {
+  padding: var(--s-5);
+  font-family: var(--font-doc);
+  font-size: var(--t-base);
+  line-height: var(--lh-doc);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.pl-editor-content .ProseMirror {
+  outline: none;
+  min-height: 240px;
+}
+
+.pl-editor-content .ProseMirror > *:first-child {
+  margin-top: 0;
+}
+
+.pl-versions {
+  width: auto;
+  max-width: 7.5rem;
+  padding: 4px 8px;
+  font-size: 0.8rem;
 }

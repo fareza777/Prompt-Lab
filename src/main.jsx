@@ -43,6 +43,7 @@ import {
 } from "./promptLanguage.js";
 import {
   getPlayBillingHint,
+  isNativeAndroidApp,
   isPlayBillingAvailable,
   isLikelyAndroidTwa,
   listPlayPurchases,
@@ -1316,6 +1317,9 @@ function App() {
   const [actionToast, setActionToast] = useState("");
   const [search, setSearch] = useState("");
   const [templateSearch, setTemplateSearch] = useState("");
+  // Orama hit ordering for the current query; null falls back to substring.
+  const [searchHits, setSearchHits] = useState(null);
+  const [semanticSearch, setSemanticSearch] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const commandPaletteRestoreFocus = React.useRef(() => {});
   const openCommandPalette = () => {
@@ -1382,6 +1386,11 @@ function App() {
   const playBillingHint = useMemo(() => getPlayBillingHint(), [playBillingReady]);
   const [exportStatus, setExportStatus] = useState("");
   const [diagramExportOffer, setDiagramExportOffer] = useState(null);
+  // Yjs-backed draft autosave: gated until hydration finishes so an empty
+  // mount can't overwrite the stored draft.
+  const [draftReady, setDraftReady] = useState(false);
+  const [outputVersions, setOutputVersions] = useState([]);
+  const lastVersionedOutput = React.useRef("");
   const [library, setLibrary] = useState(() => {
     try {
       return normalizeLibrary(JSON.parse(localStorage.getItem("promptlab-library")));
@@ -1408,6 +1417,130 @@ function App() {
   const [isAuthBusy, setIsAuthBusy] = useState(false);
   const [authSessionReady, setAuthSessionReady] = useState(!isSupabaseConfigured);
   const [hasAuthSession, setHasAuthSession] = useState(false);
+
+  // Native AdMob banner: Free members see it; paying members never load one.
+  // The plugin stays a lazy chunk — it must never inflate the initial bundle.
+  useEffect(() => {
+    if (isNativeAndroidApp())
+      import("./admob.js")
+        .then((m) => m.syncNativeBanner(accountState.plan))
+        .catch(() => {});
+  }, [accountState.plan]);
+
+  // Restore the Yjs-persisted workbench draft once, then keep autosaving it.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const store = await import("./draftStore.js");
+        await store.initDraftStore();
+        const draft = store.readDraft();
+        if (!cancelled && draft && !narrative && !runOutput && attachments.length === 0) {
+          if (draft.narrative) setNarrative(draft.narrative);
+          if (draft.category) setCategory(draft.category);
+          if (draft.tone) setTone(draft.tone);
+          if (draft.model) setModel(draft.model);
+          if (draft.outputType) setOutputType(draft.outputType);
+          if (draft.runOutput) {
+            setRunOutput(draft.runOutput);
+            lastVersionedOutput.current = draft.runOutput;
+          }
+          if (draft.attachments?.length) {
+            setAttachments(await store.materializeAttachments(draft.attachments));
+          }
+        }
+        if (!cancelled) setOutputVersions(store.listVersions());
+      } catch {
+        /* draft persistence is optional — keep the session usable without it */
+      }
+      if (!cancelled) setDraftReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debounced autosave of the whole workbench draft into the Yjs doc, plus a
+  // rolling version snapshot whenever the finished output changes.
+  useEffect(() => {
+    if (!draftReady) return undefined;
+    const timer = window.setTimeout(() => {
+      import("./draftStore.js")
+        .then(async (store) => {
+          store.writeDraft({
+            narrative,
+            category,
+            tone,
+            model,
+            outputType,
+            runOutput,
+            attachments: attachments.map((item) => ({
+              id: item.id,
+              name: item.name,
+              type: item.type,
+              kind: item.kind,
+              sizeLabel: item.sizeLabel,
+              excerpt: item.excerpt,
+              slot: item.slot,
+            })),
+          });
+          if (attachments.length) await store.saveAttachmentFiles(attachments);
+          else await store.clearAttachmentFiles();
+          if (!isRunning && runOutput && runOutput !== lastVersionedOutput.current) {
+            if (store.recordVersion(runOutput)) {
+              lastVersionedOutput.current = runOutput;
+              setOutputVersions(store.listVersions());
+            }
+          }
+        })
+        .catch(() => {});
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [draftReady, narrative, category, tone, model, outputType, runOutput, attachments, isRunning]);
+
+  // Workspace search: Orama full-text index (lazy), then a Transformers.js
+  // embedding re-rank fused in — silently stays lexical when the model can't
+  // load (offline, old WebView, download blocked).
+  useEffect(() => {
+    const query = search.trim();
+    if (query.length < 2) {
+      setSearchHits(null);
+      setSemanticSearch(false);
+      return undefined;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        const { searchWorkspace, mergeRankedLists } = await import("./workspaceSearch.js");
+        const lexical = await searchWorkspace(library, query, { limit: 60 });
+        // Lexical hits render immediately — the first semantic run downloads a
+        // ~23 MB model, so holding the list until then looked like "0 saved".
+        if (!cancelled) {
+          setSearchHits(lexical.map((hit) => hit.id));
+          setSemanticSearch(false);
+        }
+        try {
+          const { rankSemantically } = await import("./semanticSearch.js");
+          const semantic = await rankSemantically(query, lexical, library);
+          if (!cancelled && semantic) {
+            const ordered = mergeRankedLists(lexical, semantic);
+            setSearchHits(ordered.map((hit) => hit.id));
+            setSemanticSearch(true);
+          }
+        } catch {
+          /* embeddings unavailable — lexical results stand */
+        }
+      } catch {
+        if (!cancelled) setSearchHits(null);
+      }
+    }, 180);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [search, library]);
+
   /**
    * An anonymous Supabase session lets a new user try the app before creating
    * an account. It authenticates the API call, but the UI must keep treating
@@ -3329,9 +3462,15 @@ function App() {
     window.setTimeout(() => setExportStatus(""), 4500);
   }
 
-  const filteredLibrary = library.filter((item) =>
-    `${item.title} ${item.content} ${item.folder} ${item.tag}`.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredLibrary = searchHits
+    ? searchHits
+        .map((id) => library.find((item) => String(item.id) === String(id)))
+        .filter(Boolean)
+    : library.filter((item) =>
+        `${item.title} ${item.content} ${item.folder} ${item.tag}`
+          .toLowerCase()
+          .includes(search.toLowerCase())
+      );
   const selectedLibrary = library.find((item) => item.id === selectedLibraryId) || filteredLibrary[0];
 
   const shared = {
@@ -3381,6 +3520,8 @@ function App() {
     selectedLibrary,
     selectedLibraryId,
     setSelectedLibraryId,
+    outputVersions,
+    semanticSearch,
     updateLibraryItem,
     deleteLibraryItem,
     duplicateLibraryItem,

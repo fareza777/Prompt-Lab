@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -19,6 +19,10 @@ import {
   parseProcessJson,
   processFlowToMermaid,
 } from "../processFlow.js";
+
+// Tiptap + ProseMirror is too heavy for the initial bundle, so the editor
+// arrives as its own chunk and only downloads when the user taps Edit.
+const DocumentEditor = lazy(() => import("./DocumentEditor.jsx"));
 
 function renderInline(text) {
   return String(text)
@@ -411,7 +415,10 @@ export default function Result({
   isRunning,
   runError,
   onStartOver,
+  onOutputChange,
+  versions,
 }) {
+  const [editing, setEditing] = useState(false);
   const output = String(runOutput || "").trim();
   // While text is still arriving the document is re-parsed on every delta, and
   // half-written fences would send Mermaid into repeated failed renders. The
@@ -473,6 +480,38 @@ export default function Result({
           <h2>{output ? t("result.title") : t("result.failedTitle")}</h2>
         </div>
         {output && <span className="pl-result-status">{t("result.ready")}</span>}
+        {output && onOutputChange && Array.isArray(versions) && versions.length > 1 && (
+          <select
+            className="pl-select pl-versions"
+            aria-label={t("result.versions")}
+            value=""
+            onChange={(event) => {
+              const hit = versions.find((entry) => String(entry.index) === event.target.value);
+              if (hit) onOutputChange(hit.markdown);
+            }}
+          >
+            <option value="" disabled>
+              {t("result.versions")}
+            </option>
+            {[...versions].reverse().map((entry) => (
+              <option key={entry.index} value={entry.index}>
+                {new Date(entry.savedAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </option>
+            ))}
+          </select>
+        )}
+        {output && onOutputChange && (
+          <button
+            type="button"
+            className="pl-btn pl-btn--sm pl-result-edit"
+            onClick={() => setEditing((value) => !value)}
+          >
+            {editing ? t("common.done") : t("result.edit")}
+          </button>
+        )}
       </header>
 
       {output && (
@@ -505,7 +544,18 @@ export default function Result({
             <AlertTriangle size={16} aria-hidden="true" />
             <span>{t("result.aiNotice")}</span>
           </p>
-          <DocumentPage sections={sections} t={t} />
+          {editing ? (
+            <Suspense fallback={null}>
+              <DocumentEditor
+                t={t}
+                markdown={output}
+                onChange={onOutputChange}
+                onDone={() => setEditing(false)}
+              />
+            </Suspense>
+          ) : (
+            <DocumentPage sections={sections} t={t} />
+          )}
         </>
       )}
 

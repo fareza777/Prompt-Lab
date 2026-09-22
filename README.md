@@ -226,4 +226,25 @@ npm run playstore:build # test policy + icons + build + sync + gradlew bundleRel
 - Signing: isi `android/keystore.properties` (gitignored) menunjuk ke `playstore/signing/promptlab-release.jks`, sama seperti era TWA.
 - Deep link `https://prompt-lab.xyz` diverifikasi via Android App Links (`autoVerify`) — `public/.well-known/assetlinks.json` tetap wajib terpasang.
 
+### Native features
+
+- **AdMob** (`@capacitor-community/admob`) — banner adaptive di bawah layar hanya untuk paket Free; `src/admob.js` di-load lazy dari `main.jsx`. Ganti ID lewat `VITE_ADMOB_BANNER_ID` + meta-data `com.google.android.gms.ads.APPLICATION_ID` di `android/app/src/main/AndroidManifest.xml` (masih ID test Google).
+- **ML Kit** (`@capacitor-mlkit/document-scanner` + `text-recognition`) — tombol "Pindai dokumen" di workbench men-scan kertas lalu OCR menjadi lampiran markdown (`src/documentScan.js`, native-only).
+- **Defuddle** — endpoint `POST /api/fetch-url` (`server/urlImport.js`) mengambil halaman web sebagai markdown bersih (SSRF-guard: hanya http(s) publik, redirect divalidasi ulang); dipakai tombol "Dari URL" di workbench.
+- **pdf-lib** — `server/pdfToolkit.js`: semua PDF yang diekspor `/api/export/pdf` distempel footer + metadata, dan `POST /api/pdf/merge` menggabung lampiran PDF (tombol "Gabung PDF" muncul saat ≥2 PDF terlampir).
+- **Tiptap** (`@tiptap/react` + `tiptap-markdown`) — tombol "Edit" di halaman hasil membuka `src/ui/DocumentEditor.jsx`, editor rich-text lazy chunk yang menulis balik markdown ke output.
+
+### Local-first engines (lazy chunks, tidak masuk initial bundle)
+
+- **DuckDB-Wasm** (`@duckdb/duckdb-wasm`, `src/dataAnalyze.js`) — tombol "Analisis N data" muncul saat lampiran CSV/XLSX ada; memprofil kolom (non-null, unik, rentang, nilai teratas) jadi lampiran `<nama>-profil.md`, semuanya di browser. XLSX dibaca lokal (`src/xlsxToCsv.js`, jszip — SheetJS tidak dipakai karena advisories-nya belum ter-patch di npm).
+- **Orama** (`@orama/orama`, `src/workspaceSearch.js`) — pencarian riwayat/library memakai indeks full-text (typo tolerance, boost judul) menggantikan substring filter; indeks dibangun lazy dan di-cache per array library.
+- **Transformers.js** (`@huggingface/transformers`, `src/semanticSearch.js`) — embedding `Xenova/all-MiniLM-L6-v2` (q8, ~23 MB sekali unduh, di-cache browser) me-rerank hasil Orama secara semantik lalu digabung RRF; indikator "pencarian pintar" muncul di Riwayat saat aktif. Gagal load (offline/webview lama) → diam-diam tetap leksikal.
+- **Yjs** (`yjs` + `y-indexeddb`, `src/draftStore.js`) — autosave draft workbench (narasi, kategori, tone, model, tipe output, runOutput, lampiran) ke IndexedDB setiap ~800 ms; dipulihkan saat reload/process-death. Snapshot hasil disimpan sebagai maks 10 versi — dropdown "Versi" di halaman hasil mengembalikannya. File lampiran disimpan di store IDB terpisah (bukan di dalam Y.Doc).
+
+### Document understanding (web + sidecar opsional)
+
+- **Tesseract.js** (`src/ocr.js`) — tombol "OCR N gambar" pada lampiran gambar: teks dibaca di browser jadi lampiran `-ocr.md`. Kalau sidecar PaddleOCR dikonfigurasi, dipakai duluan.
+- **jscanify + OpenCV** (`src/webScan.js`) — tombol "Pindai dokumen" kini juga jalan di web: ambil foto (capture kamera/galeri) → jscanify mencari kontur kertas + perspective-correct jadi `-scan.jpg` (fallback ke foto asli kalau kontur tidak ketemu). Di Android tetap ML Kit.
+- **Docling + MarkItDown + PaddleOCR** (`server/sidecar/`, FastAPI) — layanan Python opsional: `POST /parse` (Docling→MarkItDown fallback → markdown) dan `POST /ocr`. Node mem-proxy lewat `/api/documents/parse` + `/api/ocr` hanya saat `SIDECAR_URL` di-set — tombol "Dokumen → Markdown" muncul untuk lampiran pdf/docx/pptx/xlsx; tanpa sidecar, endpoint menjawab 503 dan UI menampilkan petunjuk. Lihat `server/sidecar/README.md` untuk setup (model weights diunduh saat request pertama).
+
 Dokumen Play Store: `playstore/README.md`.

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarDays, Clock, User, HelpCircle } from "lucide-react";
 import { makeTranslator, detectLanguage, persistLanguage, hasStoredLanguage } from "./i18n.js";
 import FirstRun from "./FirstRun.jsx";
@@ -27,10 +27,13 @@ import {
   templateSubjectField,
 } from "../workTemplates.js";
 import History from "./History.jsx";
-import Account from "./Account.jsx";
 import Report from "./Report.jsx";
 import DiagramSaveSheet from "./DiagramSaveSheet.jsx";
 import { getRecordRestoreState } from "./contentRecord.js";
+
+// Account rides a lazy chunk: it is only ever opened from the sheets menu,
+// so keeping it out of the initial bundle costs the user nothing.
+const Account = lazy(() => import("./Account.jsx"));
 
 /**
  * The application shell — one canvas, with everything secondary arriving as a
@@ -120,6 +123,8 @@ export default function Shell(props) {
     templates,
     setBuilderFromTemplate,
     filteredLibrary,
+    outputVersions,
+    semanticSearch,
     search,
     setSearch,
     deleteLibraryItem,
@@ -652,6 +657,8 @@ export default function Shell(props) {
                     onSave={handleSave}
                     saved={saved}
                     runOutput={runOutput}
+                    onOutputChange={setRunOutput}
+                    versions={outputVersions}
                     isRunning={false}
                     runError={humanizeApiError(runError, t)}
                     onExport={(format, text) =>
@@ -698,6 +705,7 @@ export default function Shell(props) {
                 errorMessage={humanizeApiError(errorMessage, t)}
                 disabled={trialExhausted}
                 disabledReason={trialExhausted ? t("trial.overHint") : ""}
+                apiBase={apiBase}
               />
             )}
           </div>
@@ -732,6 +740,7 @@ export default function Shell(props) {
         items={filteredLibrary || []}
         search={search}
         setSearch={setSearch}
+        semantic={semanticSearch}
         onOpenItem={openHistoryItem}
         onDelete={deleteLibraryItem}
         onDuplicate={duplicateLibraryItem}
@@ -739,38 +748,40 @@ export default function Shell(props) {
         isLocalOnly={isLocalOnly}
       />
 
-      <Account
-        t={t}
-        lang={lang}
-        setLang={setLang}
-        themeMode={themeMode}
-        setThemeMode={setThemeMode}
-        open={sheet === "account"}
-        onClose={closeSheet}
-        accountState={accountState}
-        hasAuthSession={hasAuthSession}
-        isGuest={isGuest}
-        isAuthBusy={isAuthBusy}
-        authStatus={authStatus}
-        authError={authError}
-        googleEnabled={googleEnabled}
-        signInWithPassword={signInWithPassword}
-        signUpWithPassword={signUpWithPassword}
-        signInWithGoogle={signInWithGoogle}
-        resetPasswordForEmail={resetPasswordForEmail}
-        signOut={signOut}
-        deleteAccountPermanently={deleteAccountPermanently}
-        onUpgrade={requestMembershipUpgrade}
-        onRestore={restorePlayPurchases}
-        billingMessage={billingMessage}
-        billingBusy={billingBusy}
-        quotaSummary={quotaSummary}
-        paletteChoice={paletteChoice}
-        palette={resolvePalette(paletteChoice)?.palette || PALETTE_PRESETS[0].palette}
-        onPickPreset={pickPreset}
-        onEditColour={editColour}
-        onResetPalette={resetPalette}
-      />
+      <Suspense fallback={null}>
+        <Account
+          t={t}
+          lang={lang}
+          setLang={setLang}
+          themeMode={themeMode}
+          setThemeMode={setThemeMode}
+          open={sheet === "account"}
+          onClose={closeSheet}
+          accountState={accountState}
+          hasAuthSession={hasAuthSession}
+          isGuest={isGuest}
+          isAuthBusy={isAuthBusy}
+          authStatus={authStatus}
+          authError={authError}
+          googleEnabled={googleEnabled}
+          signInWithPassword={signInWithPassword}
+          signUpWithPassword={signUpWithPassword}
+          signInWithGoogle={signInWithGoogle}
+          resetPasswordForEmail={resetPasswordForEmail}
+          signOut={signOut}
+          deleteAccountPermanently={deleteAccountPermanently}
+          onUpgrade={requestMembershipUpgrade}
+          onRestore={restorePlayPurchases}
+          billingMessage={billingMessage}
+          billingBusy={billingBusy}
+          quotaSummary={quotaSummary}
+          paletteChoice={paletteChoice}
+          palette={resolvePalette(paletteChoice)?.palette || PALETTE_PRESETS[0].palette}
+          onPickPreset={pickPreset}
+          onEditColour={editColour}
+          onResetPalette={resetPalette}
+        />
+      </Suspense>
 
       {/* Improve and Compare were removed here, not merely hidden: nothing has
           opened them since the prompt-first flow was replaced, so they were

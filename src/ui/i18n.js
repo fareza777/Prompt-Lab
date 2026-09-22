@@ -183,6 +183,8 @@ const id = {
   "result.improving": "Memperbaiki…",
   "result.compare": "Bandingkan",
   "result.export": "Unduh",
+  "result.edit": "Edit",
+  "result.versions": "Versi",
   "result.exportPdf": "Bagikan / Ekspor PDF",
   "result.exportWord": "Unduh Word",
   "result.exportPpt": "Unduh PowerPoint",
@@ -260,6 +262,7 @@ const id = {
   "history.duplicate": "Gandakan",
   "history.local": "Tersimpan di perangkat ini",
   "history.synced": "Tersinkron",
+  "history.smart": "pencarian pintar",
   "history.count": "{n} tersimpan",
 
   "account.title": "Akun",
@@ -613,6 +616,8 @@ const en = {
   "result.improving": "Improving…",
   "result.compare": "Compare",
   "result.export": "Download",
+  "result.edit": "Edit",
+  "result.versions": "Versions",
   "result.exportPdf": "Share / Export PDF",
   "result.exportWord": "Download Word",
   "result.exportPpt": "Download PowerPoint",
@@ -689,6 +694,7 @@ const en = {
   "history.duplicate": "Duplicate",
   "history.local": "Saved on this device",
   "history.synced": "Synced",
+  "history.smart": "smart search",
   "history.count": "{n} saved",
 
   "account.title": "Account",

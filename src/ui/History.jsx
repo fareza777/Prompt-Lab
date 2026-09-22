@@ -28,6 +28,7 @@ export default function History({
   items,
   search,
   setSearch,
+  semantic,
   onOpenItem,
   onDelete,
   onDuplicate,
@@ -66,6 +67,7 @@ export default function History({
       <p className="pl-meta">
         {t("history.count", { n: items.length })} ·{" "}
         {isLocalOnly ? t("history.local") : syncStatus || t("history.synced")}
+        {semantic && search.trim().length >= 2 ? ` · ${t("history.smart")}` : ""}
       </p>
 
       {items.length === 0 ? (
