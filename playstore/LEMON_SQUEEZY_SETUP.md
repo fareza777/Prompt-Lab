@@ -1,7 +1,7 @@
 # Lemon Squeezy — Web billing AI Work Studio
 
 Pembayaran **web** (browser desktop / mobile web) via Lemon Squeezy.  
-Pembayaran **Android Play Store app** tetap pakai Google Play Billing — jangan link checkout eksternal di dalam TWA.
+Pembayaran **Android Play Store app** tetap pakai Google Play Billing — jangan link checkout eksternal di dalam app Android.
 
 ---
 
@@ -143,7 +143,7 @@ select * from membership_events order by created_at desc limit 5;
 
 | Channel | Pembayaran |
 |---------|------------|
-| App Android (TWA dari Play) | **Google Play Billing** saja |
+| App Android (Capacitor dari Play) | **Google Play Billing** saja |
 | Browser `prompt-lab.xyz` | **Lemon Squeezy** |
 | Guest / belum login | Tidak bisa checkout — harus sign in dulu |
 

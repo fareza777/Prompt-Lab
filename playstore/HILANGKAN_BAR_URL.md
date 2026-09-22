@@ -1,6 +1,8 @@
-# Hilangkan bar alamat Vercel di atas (TWA fullscreen)
+# Hilangkan bar alamat / verifikasi deep link (Digital Asset Links)
 
-Kalau di HP masih terlihat URL `prompt-lab.xyz` (atau domain lama) di bagian atas, artinya Android **belum mengenali** app sebagai Trusted Web Activity. Bukan bug UI web — ini verifikasi **Digital Asset Links**.
+> Sejak migrasi ke **Capacitor** app tidak lagi menampilkan bar URL — WebView native selalu fullscreen. Dokumen ini tetap relevan untuk verifikasi **App Links** (`autoVerify`) supaya link `https://prompt-lab.xyz` langsung membuka app, dan untuk riwayat TWA lama.
+
+Di era TWA: kalau di HP masih terlihat URL `prompt-lab.xyz` (atau domain lama) di bagian atas, artinya Android **belum mengenali** app sebagai Trusted Web Activity. Bukan bug UI web — ini verifikasi **Digital Asset Links**.
 
 ## Penyebab paling umum
 
@@ -27,7 +29,8 @@ Script ini juga memanggil API Google Digital Asset Links dan memberi tahu apakah
 
 ## Setelah berhasil
 
-- Bar URL hilang (mode fullscreen TWA)
+- Link `https://prompt-lab.xyz` terbuka langsung di app (verified App Links)
+- Di Capacitor tidak ada bar URL sama sekali — WebView native fullscreen
 - Splash native Android tetap sebentar, lalu splash animasi web AI Work Studio
 
 ## Rebuild AAB (opsional)

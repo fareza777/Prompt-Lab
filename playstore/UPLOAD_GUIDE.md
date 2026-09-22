@@ -5,10 +5,23 @@
 Setelah `npm run playstore:build`, file ada di:
 
 ```
-android-app/app/build/outputs/bundle/release/app-release.aab
+android/app/build/outputs/bundle/release/app-release.aab
 ```
 
-atau `AI Work Studio-release-signed.aab` — cek folder di atas.
+atau `app-release-unsigned.aab` kalau signing belum diisi — cek folder di atas.
+
+## Signing (sekali per mesin)
+
+Buat `android/keystore.properties` (sudah di-gitignore) dengan isi:
+
+```properties
+storeFile=../playstore/signing/promptlab-release.jks
+storePassword=<password keystore>
+keyAlias=promptlab
+keyPassword=<password key>
+```
+
+Keystore `playstore/signing/promptlab-release.jks` adalah kunci upload yang sama seperti era TWA — jangan ganti atau Play Console menolak update. Tanpa `keystore.properties`, `bundleRelease` tetap jalan tapi menghasilkan AAB **unsigned** (tidak bisa di-upload ke Play Console).
 
 ## Langkah Play Console
 

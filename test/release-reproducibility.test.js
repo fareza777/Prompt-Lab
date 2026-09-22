@@ -41,8 +41,8 @@ test("production runbook covers required server and Play Console gates", () => {
 });
 
 test("Play Store README describes the tracked wrapper as current source", () => {
-  assert.match(readme, /android-app\/.*tracked|tracked.*android-app\//i);
-  assert.doesNotMatch(readme, /Generated Android project: `android-app\/` \(ignored by Git\)/);
+  assert.match(readme, /android\/.*tracked|tracked.*android\//i);
+  assert.doesNotMatch(readme, /Generated Android project: `android\/` \(ignored by Git\)/);
 });
 
 test("source HTML does not contain known malformed blog-link fragments", () => {
@@ -52,10 +52,10 @@ test("source HTML does not contain known malformed blog-link fragments", () => {
 
 test("release source tracks Android build inputs but ignores signing material", () => {
   const ignore = readFileSync(join(process.cwd(), ".gitignore"), "utf8");
-  assert.doesNotMatch(ignore, /^android-app\/$/m);
-  assert.match(ignore, /^android-app\/keystore\.properties$/m);
-  assert.match(ignore, /^android-app\/local\.properties$/m);
-  assert.match(ignore, /^android-app\/app\/build\/$/m);
+  assert.doesNotMatch(ignore, /^android\/$/m);
+  assert.match(ignore, /^android\/keystore\.properties$/m);
+  assert.match(ignore, /^android\/local\.properties$/m);
+  assert.match(ignore, /^android\/app\/build\/$/m);
 });
 
 test("npm test builds static output before running dist-dependent tests", () => {

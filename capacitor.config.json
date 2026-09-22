@@ -1,0 +1,19 @@
+{
+  "appId": "app.promptlab.twa",
+  "appName": "AI Work Studio",
+  "webDir": "dist",
+  "backgroundColor": "#f7f3eb",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "url": "https://prompt-lab.xyz/app",
+    "androidScheme": "https",
+    "cleartext": false,
+    "allowNavigation": [
+      "*.supabase.co",
+      "accounts.google.com",
+      "*.google.com"
+    ]
+  }
+}

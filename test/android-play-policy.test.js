@@ -2,27 +2,54 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const buildGradleUrl = new URL("../android-app/app/build.gradle", import.meta.url);
-const twaManifestUrl = new URL("../android-app/twa-manifest.json", import.meta.url);
+const buildGradleUrl = new URL("../android/app/build.gradle", import.meta.url);
+const variablesGradleUrl = new URL("../android/variables.gradle", import.meta.url);
+const manifestUrl = new URL("../android/app/src/main/AndroidManifest.xml", import.meta.url);
+const capacitorConfigUrl = new URL("../capacitor.config.json", import.meta.url);
+const packageJsonUrl = new URL("../package.json", import.meta.url);
+const billingPluginUrl = new URL(
+  "../android/app/src/main/java/app/promptlab/twa/PlayBillingPlugin.java",
+  import.meta.url
+);
 
 test("Android release configuration meets the August 2026 Play requirements", async () => {
-  const [buildGradle, twaManifestSource] = await Promise.all([
-    readFile(buildGradleUrl, "utf8"),
-    readFile(twaManifestUrl, "utf8"),
-  ]);
-  const twaManifest = JSON.parse(twaManifestSource);
+  const [buildGradle, variablesGradle, manifest, capacitorSource, billingPlugin, pkgSource] =
+    await Promise.all([
+      readFile(buildGradleUrl, "utf8"),
+      readFile(variablesGradleUrl, "utf8"),
+      readFile(manifestUrl, "utf8"),
+      readFile(capacitorConfigUrl, "utf8"),
+      readFile(billingPluginUrl, "utf8"),
+      readFile(packageJsonUrl, "utf8"),
+    ]);
+  const capacitorConfig = JSON.parse(capacitorSource);
+  const pkg = JSON.parse(pkgSource);
 
-  assert.match(buildGradle, /compileSdkVersion\s+36\b/);
-  assert.match(buildGradle, /targetSdkVersion\s+36\b/);
-  assert.match(buildGradle, /minSdkVersion\s+23\b/);
-  assert.match(buildGradle, /versionCode\s+10\b/);
-  assert.match(buildGradle, /versionName\s+"1\.0\.9"/);
-  assert.match(buildGradle, /com\.google\.androidbrowserhelper:billing:1\.2\.0/);
+  assert.match(variablesGradle, /compileSdkVersion\s*=\s*36\b/);
+  assert.match(variablesGradle, /targetSdkVersion\s*=\s*36\b/);
+  assert.match(variablesGradle, /minSdkVersion\s*=\s*2[34]\b/);
+  assert.match(buildGradle, /versionCode\s+11\b/);
+  assert.match(buildGradle, /versionName\s+"1\.1\.0"/);
   assert.match(buildGradle, /com\.android\.billingclient:billing:8\.3\.0/);
   assert.doesNotMatch(buildGradle, /com\.android\.billingclient:billing:7\./);
+  assert.doesNotMatch(buildGradle, /androidbrowserhelper/);
 
-  assert.equal(twaManifest.minSdkVersion, 23);
-  assert.equal(twaManifest.appVersionCode, 10);
-  assert.equal(twaManifest.appVersionName, "1.0.9");
-  assert.equal(twaManifest.appVersion, "1.0.9");
+  assert.equal(capacitorConfig.appId, "app.promptlab.twa");
+  assert.equal(capacitorConfig.appName, "AI Work Studio");
+  assert.equal(capacitorConfig.server.url, "https://prompt-lab.xyz/app");
+  assert.equal(capacitorConfig.webDir, "dist");
+
+  assert.match(manifest, /android\.permission\.POST_NOTIFICATIONS/);
+  assert.match(manifest, /android:autoVerify="true"/);
+  assert.match(manifest, /android:host="prompt-lab\.xyz"/);
+
+  assert.match(billingPlugin, /@CapacitorPlugin\(name = "PlayBilling"\)/);
+  assert.match(billingPlugin, /launchBillingFlow/);
+  assert.match(billingPlugin, /acknowledgePurchase/);
+
+  // Without @capacitor/app the native App plugin is not compiled in and
+  // installNativeAppLinkHandler() silently no-ops — App Links never navigate.
+  assert.ok(pkg.dependencies["@capacitor/app"], "@capacitor/app must be a dependency");
+  assert.ok(pkg.dependencies["@capacitor/core"], "@capacitor/core must be a dependency");
+  assert.ok(pkg.dependencies["@capacitor/android"], "@capacitor/android must be a dependency");
 });

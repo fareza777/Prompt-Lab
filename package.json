@@ -16,11 +16,15 @@
     "playstore:assets": "node --use-system-ca scripts/generate-playstore-assets.mjs && node --use-system-ca scripts/capture-playstore-screenshots.mjs && node --use-system-ca scripts/frame-playstore-screenshots.mjs",
     "playstore:frame": "node --use-system-ca scripts/frame-playstore-screenshots.mjs",
     "playstore:promo": "node scripts/generate-promo-audio.mjs && remotion render playstore/remotion/index.jsx AIWorkStudioPromo playstore/assets/promo/AI-Work-Studio-remotion-1080p.mp4 --codec=h264 --crf=18",
-    "playstore:build": "node --test test/android-play-policy.test.js && npm run icons:android && cd android-app && gradlew.bat bundleRelease",
+    "playstore:build": "node --test test/android-play-policy.test.js && npm run icons:android && npm run build && npx cap sync android && cd android && gradlew bundleRelease",
     "setup:google-auth": "node scripts/setup-google-auth.mjs",
-    "check:supabase": "node --use-system-ca scripts/check-supabase-setup.mjs"
+    "check:supabase": "node --use-system-ca scripts/check-supabase-setup.mjs",
+    "cap:sync": "npx cap sync android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
     "@supabase/supabase-js": "^2.106.1",
     "@vitejs/plugin-react": "6.0.3",
     "cors": "^2.8.6",
@@ -43,7 +47,7 @@
     "vite": "8.1.4"
   },
   "devDependencies": {
-    "@bubblewrap/cli": "^1.24.1",
+    "@capacitor/cli": "^8.5.2",
     "@remotion/cli": "^4.0.501",
     "playwright": "^1.59.1",
     "remotion": "^4.0.501"

@@ -4,12 +4,12 @@ This folder tracks the Android / Google Play migration work for AI Work Studio.
 
 ## Current Route
 
-Use Trusted Web Activity (TWA) first because AI Work Studio is already deployed as a responsive web app:
+The Android app is a **Capacitor** wrapper that loads the deployed PWA (`server.url`), replacing the earlier Bubblewrap/TWA build:
 
 - Production URL: `https://prompt-lab.xyz/`
-- Android package: `app.promptlab.twa`
+- Android package: `app.promptlab.twa` (unchanged — same Play Console listing)
 - App name: `AI Work Studio`
-- Display mode: standalone / fullscreen browser surface
+- Display mode: native fullscreen WebView (no URL bar)
 
 ## Production domain
 
@@ -25,14 +25,16 @@ Custom domain: **https://prompt-lab.xyz/** — checklist lengkap sebelum Product
    - `public/icons/maskable-512.png`
 
 2. Maintain the Android wrapper.
-   - The Bubblewrap/TWA source under `android-app/` is tracked in Git; build outputs, local SDK paths, and signing material remain ignored.
+   - The Capacitor project under `android/` is tracked in Git; build outputs, local SDK paths, and signing material remain ignored.
    - Local tools installed on this machine:
      - JDK 17: `C:\Users\USER\promptlab-android-tools\jdk17`
      - Android SDK: `C:\Users\USER\promptlab-android-tools\android-sdk`
-     - Bubblewrap CLI: `@bubblewrap/cli`
-   - Android project source: `android-app/` (tracked by Git).
-   - Signed APK: `android-app/app/build/outputs/apk/release/AI Work Studio-release-signed.apk`
-   - Signed AAB: `android-app/app/build/outputs/bundle/release/AI Work Studio-release-signed.aab`
+     - Capacitor CLI: `@capacitor/cli` (via `npx cap`)
+   - Android project source: `android/` (tracked by Git).
+   - Sync web assets after `npm run build`: `npx cap sync android`.
+   - Signed APK: `android/app/build/outputs/apk/release/app-release.apk`
+   - Signed AAB: `android/app/build/outputs/bundle/release/app-release.aab`
+   - Signing uses `android/keystore.properties` (gitignored) pointing at `playstore/signing/promptlab-release.jks`, same keys as the TWA.
 
 3. Configure Digital Asset Links.
    - Build/sign the Android app.

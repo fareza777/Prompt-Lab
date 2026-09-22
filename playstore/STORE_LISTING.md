@@ -165,7 +165,7 @@ Add caption bands outside the app UI so controls remain unobstructed.
 
 Path after local build:
 
-`android-app/app/build/outputs/bundle/release/AI Work Studio-release-signed.aab`
+`android/app/build/outputs/bundle/release/app-release.aab`
 
 ## Internal testing release notes
 
