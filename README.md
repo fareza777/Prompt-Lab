@@ -241,4 +241,10 @@ npm run playstore:build # test policy + icons + build + sync + gradlew bundleRel
 - **Transformers.js** (`@huggingface/transformers`, `src/semanticSearch.js`) — embedding `Xenova/all-MiniLM-L6-v2` (q8, ~23 MB sekali unduh, di-cache browser) me-rerank hasil Orama secara semantik lalu digabung RRF; indikator "pencarian pintar" muncul di Riwayat saat aktif. Gagal load (offline/webview lama) → diam-diam tetap leksikal.
 - **Yjs** (`yjs` + `y-indexeddb`, `src/draftStore.js`) — autosave draft workbench (narasi, kategori, tone, model, tipe output, runOutput, lampiran) ke IndexedDB setiap ~800 ms; dipulihkan saat reload/process-death. Snapshot hasil disimpan sebagai maks 10 versi — dropdown "Versi" di halaman hasil mengembalikannya. File lampiran disimpan di store IDB terpisah (bukan di dalam Y.Doc).
 
+### Document understanding (web + sidecar opsional)
+
+- **Tesseract.js** (`src/ocr.js`) — tombol "OCR N gambar" pada lampiran gambar: teks dibaca di browser jadi lampiran `-ocr.md`. Kalau sidecar PaddleOCR dikonfigurasi, dipakai duluan.
+- **jscanify + OpenCV** (`src/webScan.js`) — tombol "Pindai dokumen" kini juga jalan di web: ambil foto (capture kamera/galeri) → jscanify mencari kontur kertas + perspective-correct jadi `-scan.jpg` (fallback ke foto asli kalau kontur tidak ketemu). Di Android tetap ML Kit.
+- **Docling + MarkItDown + PaddleOCR** (`server/sidecar/`, FastAPI) — layanan Python opsional: `POST /parse` (Docling→MarkItDown fallback → markdown) dan `POST /ocr`. Node mem-proxy lewat `/api/documents/parse` + `/api/ocr` hanya saat `SIDECAR_URL` di-set — tombol "Dokumen → Markdown" muncul untuk lampiran pdf/docx/pptx/xlsx; tanpa sidecar, endpoint menjawab 503 dan UI menampilkan petunjuk. Lihat `server/sidecar/README.md` untuk setup (model weights diunduh saat request pertama).
+
 Dokumen Play Store: `playstore/README.md`.

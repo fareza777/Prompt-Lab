@@ -81,6 +81,7 @@ import {
   FREE_PLAN_DEFAULTS,
 } from "./playBillingGoogle.js";
 import { persistReservedUsage, quotaFailureStatus } from "./quotaReservation.js";
+import { callSidecar, sidecarConfigured } from "./documents.js";
 import { buildDocxBuffer, buildPptxBuffer } from "./officeExport.js";
 import { buildPdfBuffer } from "./pdfExport.js";
 import { buildXlsxBuffer } from "./xlsxExport.js";
@@ -605,6 +606,35 @@ app.post("/api/fetch-url", express.json({ limit: "32kb" }), async (req, res) => 
     res.json({ title, markdown });
   } catch (error) {
     res.status(422).json({ error: error.message || "Could not read that page." });
+  }
+});
+
+// Layout-aware document parsing and OCR live in the optional Python sidecar
+// (server/sidecar — Docling, MarkItDown, PaddleOCR). When SIDECAR_URL is unset
+// these answer 503 so the client keeps its lighter built-in tools.
+app.post("/api/documents/parse", upload.single("file"), async (req, res) => {
+  if (!req.file?.buffer?.length) {
+    res.status(400).json({ error: "Attach one document file." });
+    return;
+  }
+  try {
+    const { markdown, engine } = await callSidecar("/parse", req.file);
+    res.json({ markdown, engine });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message, configured: sidecarConfigured() });
+  }
+});
+
+app.post("/api/ocr", upload.single("file"), async (req, res) => {
+  if (!req.file?.buffer?.length) {
+    res.status(400).json({ error: "Attach one image file." });
+    return;
+  }
+  try {
+    const { text, engine } = await callSidecar("/ocr", req.file);
+    res.json({ text, engine });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message, configured: sidecarConfigured() });
   }
 });
 
