@@ -85,6 +85,8 @@ import { buildDocxBuffer, buildPptxBuffer } from "./officeExport.js";
 import { buildPdfBuffer } from "./pdfExport.js";
 import { buildXlsxBuffer } from "./xlsxExport.js";
 import { extractPdfText } from "./pdfText.js";
+import { mergePdfBuffers, stampPdfBuffer } from "./pdfToolkit.js";
+import { fetchCleanArticle } from "./urlImport.js";
 import { extractDocumentImages } from "./documentImages.js";
 import { serializeExportImages } from "./exportImagesPayload.js";
 import { buildTemplateInstruction, getTemplate } from "../src/workTemplates.js";
@@ -565,12 +567,44 @@ app.post("/api/export/pdf", express.json({ limit: "12mb" }), async (req, res) =>
       plan: membership.plan,
       images: Array.isArray(req.body?.images) ? req.body.images.slice(0, 8) : [],
     });
+    const stamped = await stampPdfBuffer(buffer, { title });
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", attachmentDisposition(title, "pdf"));
-    res.send(buffer);
+    res.send(stamped);
   } catch (error) {
     console.error("pdf export failed", error.message);
     res.status(500).json({ error: API_MSG.pdfFailed });
+  }
+});
+
+app.post("/api/pdf/merge", upload.array("files", 8), async (req, res) => {
+  try {
+    const buffers = (req.files || [])
+      .filter(
+        (file) =>
+          file.mimetype === "application/pdf" || /\.pdf$/i.test(file.originalname || "")
+      )
+      .map((file) => file.buffer);
+    if (buffers.length < 2) {
+      res.status(400).json({ error: "Attach at least two PDF files." });
+      return;
+    }
+    const merged = await mergePdfBuffers(buffers);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", attachmentDisposition("merged", "pdf"));
+    res.send(merged);
+  } catch (error) {
+    console.error("pdf merge failed", error.message);
+    res.status(500).json({ error: "Could not merge the PDF files." });
+  }
+});
+
+app.post("/api/fetch-url", express.json({ limit: "32kb" }), async (req, res) => {
+  try {
+    const { title, markdown } = await fetchCleanArticle(req.body?.url);
+    res.json({ title, markdown });
+  } catch (error) {
+    res.status(422).json({ error: error.message || "Could not read that page." });
   }
 });
 

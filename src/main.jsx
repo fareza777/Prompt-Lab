@@ -43,6 +43,7 @@ import {
 } from "./promptLanguage.js";
 import {
   getPlayBillingHint,
+  isNativeAndroidApp,
   isPlayBillingAvailable,
   isLikelyAndroidTwa,
   listPlayPurchases,
@@ -1408,6 +1409,16 @@ function App() {
   const [isAuthBusy, setIsAuthBusy] = useState(false);
   const [authSessionReady, setAuthSessionReady] = useState(!isSupabaseConfigured);
   const [hasAuthSession, setHasAuthSession] = useState(false);
+
+  // Native AdMob banner: Free members see it; paying members never load one.
+  // The plugin stays a lazy chunk — it must never inflate the initial bundle.
+  useEffect(() => {
+    if (isNativeAndroidApp())
+      import("./admob.js")
+        .then((m) => m.syncNativeBanner(accountState.plan))
+        .catch(() => {});
+  }, [accountState.plan]);
+
   /**
    * An anonymous Supabase session lets a new user try the app before creating
    * an account. It authenticates the API call, but the UI must keep treating

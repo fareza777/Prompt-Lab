@@ -1,4 +1,4 @@
-﻿import { useId, useMemo } from "react";
+﻿import { lazy, Suspense, useId, useMemo } from "react";
 import { ArrowLeft, ImagePlus, Paperclip, Sparkles, X } from "lucide-react";
 import {
   acceptFor,
@@ -7,6 +7,9 @@ import {
   templateSlots,
   validateTemplateInput,
 } from "../workTemplates.js";
+// Scan/URL/merge tools load with the workbench, not the app shell — keeping
+// them out of the initial chunk preserves the initial-asset budget.
+const AttachmentTools = lazy(() => import("./AttachmentTools.jsx"));
 
 /**
  * The second screen: supply what this template needs.
@@ -130,6 +133,7 @@ export default function TemplateWorkbench({
   planMaxAttachments,
   disabled,
   disabledReason,
+  apiBase,
 }) {
   const spec = template.input.attachments;
   const slots = templateSlots(template);
@@ -204,6 +208,16 @@ export default function TemplateWorkbench({
                 disabled={isBusy || atLimit}
                 t={t}
               />
+              {!photosOnly && (
+                <Suspense fallback={null}>
+                  <AttachmentTools
+                    apiBase={apiBase}
+                    attachments={attachments}
+                    onFiles={addAttachments}
+                    disabled={isBusy || atLimit || disabled}
+                  />
+                </Suspense>
+              )}
             </>
           )}
 
