@@ -14,7 +14,7 @@
 
 /* Reserve room for the native AdMob banner pinned to the screen bottom. */
 body.pl-admob-banner .pl-shell {
-  padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(var(--pl-banner-height, 60px) + env(safe-area-inset-bottom, 0px));
 }
 
 /* ---- Top bar: names the app, nothing else competes ---------------------- */
