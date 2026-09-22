@@ -68,5 +68,7 @@ test("document engines stay lazy chunks, never in the initial bundle", async () 
   assert.ok(tools.includes('import("../webScan.js")'), "webScan.js must load lazily");
   assert.ok(tools.includes('import("../ocr.js")'), "ocr.js must load lazily");
   const webScan = await readFile(new URL("../src/webScan.js", import.meta.url), "utf8");
-  assert.ok(webScan.includes('import("@techstark/opencv-js")'), "opencv must load lazily");
+  assert.ok(webScan.includes('new Worker('), "scan must run in a Web Worker off the main thread");
+  const scanWorker = await readFile(new URL("../src/scanWorker.js", import.meta.url), "utf8");
+  assert.ok(scanWorker.includes('import("@techstark/opencv-js")'), "opencv must load lazily in the worker");
 });
