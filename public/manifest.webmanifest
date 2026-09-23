@@ -1,7 +1,7 @@
 {
   "name": "AI Work Studio",
   "short_name": "AI Work Studio",
-  "description": "Turn notes, photos, and files into polished reports, meeting minutes, presentations, and other finished work.",
+  "description": "Foto, catatan, PDF jadi dokumen, tabel, slide, dan diagram siap pakai.",
   "id": "/app",
   "start_url": "/app",
   "scope": "/app",
@@ -9,7 +9,7 @@
   "background_color": "#f7f3eb",
   "theme_color": "#f7f3eb",
   "orientation": "portrait-primary",
-  "lang": "en",
+  "lang": "id",
   "dir": "ltr",
   "categories": ["productivity", "utilities", "education"],
   "icons": [

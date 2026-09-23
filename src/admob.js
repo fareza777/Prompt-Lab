@@ -13,12 +13,12 @@ import { App } from "@capacitor/app";
  * launch, transient no-fill) — retries stop after a few attempts and wait for
  * the next resume/online/plan-change trigger.
  *
- * Test IDs: Google's public demo ad units ship in the manifest/config so the
- * debug build shows real ads. Swap them for real ca-app-pub-… ids before a
- * signed release.
+ * The release IDs are public identifiers (they are safe to ship in an app).
+ * Keep the Vite override for local QA, while the checked-in fallback keeps a
+ * release build monetized even when no local .env file is present.
  */
 
-const FALLBACK_BANNER_AD_ID = "ca-app-pub-3940256099942544/6300978111";
+const FALLBACK_BANNER_AD_ID = "ca-app-pub-6279186647593327/9657875420";
 const RETRY_DELAYS_MS = [15000, 30000, 60000, 120000];
 
 let initialized = false;

@@ -33,11 +33,10 @@
 
         </activity>
 
-        <!-- AdMob app ID — Google's public test ID. Replace with the real
-             ca-app-pub-…~… id before a signed release ships. -->
+        <!-- AdMob app ID for AI Work Studio (public identifier). -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-6279186647593327~4597120437" />
         <!-- Faster ad SDK init; recommended by Google. -->
         <meta-data
             android:name="com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION"

@@ -28,8 +28,8 @@ test("Android release configuration meets the August 2026 Play requirements", as
   assert.match(variablesGradle, /compileSdkVersion\s*=\s*36\b/);
   assert.match(variablesGradle, /targetSdkVersion\s*=\s*36\b/);
   assert.match(variablesGradle, /minSdkVersion\s*=\s*2[34]\b/);
-  assert.match(buildGradle, /versionCode\s+11\b/);
-  assert.match(buildGradle, /versionName\s+"1\.1\.0"/);
+  assert.match(buildGradle, /versionCode\s+32\b/);
+  assert.match(buildGradle, /versionName\s+"1\.3\.0"/);
   assert.match(buildGradle, /com\.android\.billingclient:billing:8\.3\.0/);
   assert.doesNotMatch(buildGradle, /com\.android\.billingclient:billing:7\./);
   assert.doesNotMatch(buildGradle, /androidbrowserhelper/);

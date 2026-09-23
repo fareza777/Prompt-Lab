@@ -228,7 +228,7 @@ npm run playstore:build # test policy + icons + build + sync + gradlew bundleRel
 
 ### Native features
 
-- **AdMob** (`@capacitor-community/admob`) — banner adaptive di bawah layar hanya untuk paket Free; `src/admob.js` di-load lazy dari `main.jsx`. Ganti ID lewat `VITE_ADMOB_BANNER_ID` + meta-data `com.google.android.gms.ads.APPLICATION_ID` di `android/app/src/main/AndroidManifest.xml` (masih ID test Google).
+- **AdMob** (`@capacitor-community/admob`) — banner adaptive di bawah layar hanya untuk paket Free; `src/admob.js` di-load lazy dari `main.jsx`. ID produksi AI Work Studio tersimpan di `VITE_ADMOB_BANNER_ID` dan meta-data `com.google.android.gms.ads.APPLICATION_ID` di `android/app/src/main/AndroidManifest.xml`; `public/app-ads.txt` tersedia di domain publik.
 - **ML Kit** (`@capacitor-mlkit/document-scanner` + `text-recognition`) — tombol "Pindai dokumen" di workbench men-scan kertas lalu OCR menjadi lampiran markdown (`src/documentScan.js`, native-only).
 - **Defuddle** — endpoint `POST /api/fetch-url` (`server/urlImport.js`) mengambil halaman web sebagai markdown bersih (SSRF-guard: hanya http(s) publik, redirect divalidasi ulang); dipakai tombol "Dari URL" di workbench.
 - **pdf-lib** — `server/pdfToolkit.js`: semua PDF yang diekspor `/api/export/pdf` distempel footer + metadata, dan `POST /api/pdf/merge` menggabung lampiran PDF (tombol "Gabung PDF" muncul saat ≥2 PDF terlampir).
