@@ -5,6 +5,7 @@
 android-app/
 playstore/
 node_modules/
+.git/
 dist/
 .vercel/output/
 previews/
