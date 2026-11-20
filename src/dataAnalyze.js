@@ -105,11 +105,12 @@ async function loadDuckDb() {
   if (!dbPromise) {
     dbPromise = (async () => {
       const duckdb = await import("@duckdb/duckdb-wasm");
-      const [wasm, worker] = await Promise.all([
-        import("@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url"),
-        import("@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?worker"),
-      ]);
-      const mvp = { mainModule: wasm.default, mainWorker: worker.default };
+      // The MVP wasm (~40 MB) is above the 25 MiB per-file limit of Cloudflare
+      // Workers Static Assets, so it is loaded from jsDelivr (pinned to the
+      // installed package version). The worker script stays self-hosted.
+      const worker = await import("@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?worker");
+      const wasmUrl = `https://cdn.jsdelivr.net/npm/${duckdb.PACKAGE_NAME}@${duckdb.PACKAGE_VERSION}/dist/duckdb-mvp.wasm`;
+      const mvp = { mainModule: wasmUrl, mainWorker: worker.default };
       // MVP only: the eh bundle needs cross-origin isolation (SharedArrayBuffer),
       // which the app deliberately doesn't enable.
       const bundle = await duckdb.selectBundle({ mvp, eh: mvp });

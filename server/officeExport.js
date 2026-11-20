@@ -21,12 +21,23 @@ import { detectDeliverableProfile } from "../src/deliverableProfiles.js";
 import { prepareExportImage } from "./exportImages.js";
 
 // Vercel serverless resolves dynamic import("pptxgenjs") to the ESM build and
-// then crashes with "Cannot use import statement outside a module". Force CJS.
-const require = createRequire(import.meta.url);
-function loadPptxGen() {
-  // createRequire hits the package "require" export (CJS). Dynamic import()
-  // resolves to the ESM build and crashes on Vercel serverless.
-  const mod = require("pptxgenjs");
+// then crashes with "Cannot use import statement outside a module". Force CJS
+// there. Bundled runtimes (Cloudflare Workers) have no import.meta.url, so fall
+// back to a dynamic import that the bundler resolves at build time.
+const require = (() => {
+  try {
+    return import.meta.url ? createRequire(import.meta.url) : null;
+  } catch {
+    return null;
+  }
+})();
+async function loadPptxGen() {
+  if (require) {
+    // createRequire hits the package "require" export (CJS).
+    const mod = require("pptxgenjs");
+    return mod?.default || mod;
+  }
+  const mod = await import("pptxgenjs");
   return mod?.default || mod;
 }
 
@@ -958,7 +969,7 @@ export async function buildPptxBuffer({
   content = "",
   language = "id",
 } = {}) {
-  const PptxGenJS = loadPptxGen();
+  const PptxGenJS = await loadPptxGen();
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: "WIDE_16x9", width: 13.333, height: 7.5 });
   pptx.layout = "WIDE_16x9";

@@ -42,3 +42,7 @@ playstore/assets/raw/
 .worktrees/
 playstore/assets/.native-*.png
 playstore/assets/*.prev.png
+
+# Cloudflare
+.wrangler/
+.dev.vars
