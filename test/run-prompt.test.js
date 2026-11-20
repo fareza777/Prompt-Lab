@@ -75,7 +75,7 @@ test("execution falls back like the other provider calls", () => {
 test("the client keeps the prompt and its output separate", () => {
   assert.match(main, /const \[runOutput, setRunOutput\] = useState\(""\)/);
   assert.match(main, /async function runPrompt/);
-  assert.match(main, /applyServerQuota\(data\.quota\)/);
+  assert.doesNotMatch(main, /applyServerQuota/);
   // Generating a new prompt must not leave the previous run's output behind.
   assert.match(shell, /setRunOutput\?\.\(""\)/);
 });

@@ -11,7 +11,6 @@ const resultSource = await read("../src/ui/Result.jsx");
 const compareSource = await read("../src/ui/Compare.jsx");
 const accountSource = await read("../src/ui/Account.jsx");
 const sheetSource = await read("../src/ui/Sheet.jsx");
-const adminSource = await read("../src/admin/AdminConsole.jsx");
 const baseCss = await read("../src/ui/base.css");
 const tokensCss = await read("../src/ui/tokens.css");
 const i18nSource = await read("../src/ui/i18n.js");
@@ -107,12 +106,6 @@ test("sheets are modal, labelled, focus-trapping, and restore focus", () => {
   assert.match(sheetSource, /event\.key === "Escape"/);
   assert.match(sheetSource, /event\.key !== "Tab"/);
   assert.match(sheetSource, /restoreRef\.current/);
-});
-
-test("admin tab controls still identify their tabs and panels", () => {
-  assert.match(adminSource, /role="tab"[\s\S]*?aria-selected=/);
-  assert.match(adminSource, /aria-controls=\{`admin-panel-/);
-  assert.match(adminSource, /role="tabpanel"[\s\S]*?id=\{`admin-panel-/);
 });
 
 test("interactive controls have a visible keyboard focus treatment", () => {

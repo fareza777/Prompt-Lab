@@ -10,10 +10,6 @@
     "url": "https://prompt-lab.xyz/app",
     "androidScheme": "https",
     "cleartext": false,
-    "allowNavigation": [
-      "*.supabase.co",
-      "accounts.google.com",
-      "*.google.com"
-    ]
+    "allowNavigation": []
   }
 }

@@ -14,25 +14,13 @@ const runTemplate = main.slice(
   main.indexOf("/** Moves a filed document to the day")
 );
 
-test("a guest gets an anonymous session before a template run", () => {
-  // Every run used to pass through generatePrompt, which bootstrapped the
-  // trial session as a side effect. Template mode skips that step by design,
-  // and skipping it also skipped the sign-in — so a guest who picked a
-  // template could never generate anything.
+test("a template run needs no account or trial session", () => {
+  // Accounts, trials and quotas were removed with Supabase: anyone can run a
+  // template straight away; spend is bounded by the server rate limit.
   assert.ok(runTemplate.length > 0, "runTemplate could not be located");
-  assert.match(runTemplate, /const onTrial = !hasAuthSession \|\| isAnonymousSession/);
-  assert.match(runTemplate, /await ensureTrialSession\(\)/);
-  assert.match(runTemplate, /Sign in to use AI features\./);
-});
-
-test("the trial limit is enforced on the template path too", () => {
-  assert.match(runTemplate, /if \(onTrial && trialUsed >= TRIAL_LIMIT\)/);
-  // The session must be established before the request is built, not after.
-  assert.ok(
-    runTemplate.indexOf("ensureTrialSession") < runTemplate.indexOf("getAuthHeaders"),
-    "the session is created after the auth headers are read"
-  );
-  assert.match(runTemplate, /if \(isAnonymousSession\) countTrialUse\(\)/);
+  assert.doesNotMatch(runTemplate, /ensureTrialSession|onTrial|TRIAL_LIMIT|countTrialUse/);
+  assert.doesNotMatch(runTemplate, /Sign in to use AI features/);
+  assert.doesNotMatch(main, /@supabase|supabaseClient/);
 });
 
 test("light is the default appearance and dark is an explicit choice", () => {

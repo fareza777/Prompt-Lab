@@ -1,13 +1,4 @@
-/** Global model settings stored in Supabase (effective on Vercel for all users). */
-
-const CONFIG_ID = "global";
-const CACHE_TTL_MS = 12_000;
-
-let cache = { settings: null, meta: null, expiresAt: 0 };
-
-export function clearRuntimeConfigCache() {
-  cache = { settings: null, meta: null, expiresAt: 0 };
-}
+/** Model routing settings, resolved from the Worker environment (no database). */
 
 export function getEnvDefaultModelSettings() {
   const provider = String(process.env.AI_PROVIDER || "minimax").toLowerCase();
@@ -171,82 +162,5 @@ export function toPublicRuntimeConfig(normalized, meta = {}) {
     timeoutMs: normalized.timeoutMs,
     updatedAt: meta.updatedAt || null,
     updatedBy: meta.updatedBy || null,
-  };
-}
-
-export async function fetchPublishedModelSettings(adminClient) {
-  if (!adminClient) return { settings: null, meta: null };
-  const { data, error } = await adminClient
-    .from("app_runtime_config")
-    .select("model_settings, updated_at, updated_by")
-    .eq("id", CONFIG_ID)
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) return { settings: null, meta: null };
-  const settings = data.model_settings || {};
-  return {
-    settings: {
-      provider: settings.provider || "",
-      baseUrl: settings.baseUrl || "",
-      primaryModel: settings.primaryModel || "",
-      ocrModel: settings.ocrModel || "",
-      fallbackModels: Array.isArray(settings.fallbackModels) ? settings.fallbackModels : [],
-      timeoutMs: settings.timeoutMs || "",
-      apiKey: "",
-    },
-    meta: {
-      updatedAt: data.updated_at,
-      updatedBy: data.updated_by,
-    },
-  };
-}
-
-export async function getCachedPublishedModelSettings(adminClient) {
-  const now = Date.now();
-  if (cache.expiresAt > now) {
-    return { settings: cache.settings, meta: cache.meta };
-  }
-  try {
-    const loaded = await fetchPublishedModelSettings(adminClient);
-    cache = {
-      settings: loaded.settings,
-      meta: loaded.meta,
-      expiresAt: now + CACHE_TTL_MS,
-    };
-    return loaded;
-  } catch (error) {
-    // Do not take down AI generation when Supabase is paused/unreachable —
-    // fall back to env defaults for this process until the cache window ends.
-    console.warn(
-      "Published model settings unavailable; using env defaults:",
-      error?.message || error
-    );
-    cache = {
-      settings: null,
-      meta: null,
-      expiresAt: now + Math.min(CACHE_TTL_MS, 5000),
-    };
-    return { settings: null, meta: null };
-  }
-}
-
-export async function savePublishedModelSettings(adminClient, normalized, userId) {
-  if (!adminClient) throw new Error("Supabase service role is not configured.");
-  const payload = {
-    id: CONFIG_ID,
-    model_settings: toStoredModelSettings(normalized),
-    updated_at: new Date().toISOString(),
-    updated_by: userId || null,
-  };
-  const { data, error } = await adminClient
-    .from("app_runtime_config")
-    .upsert(payload, { onConflict: "id" })
-    .select("model_settings, updated_at, updated_by")
-    .single();
-  if (error) throw error;
-  clearRuntimeConfigCache();
-  return {
-    settings: payload.model_settings,
-    meta: { updatedAt: data.updated_at, updatedBy: data.updated_by },
   };
 }

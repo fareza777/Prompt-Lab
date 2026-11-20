@@ -41,27 +41,26 @@ Workers Builds (dashboard → `prompt-lab` → Settings → Build):
 **Runtime vars** (non-secret) live in `wrangler.jsonc`.
 
 **Build vars** (Workers Builds → Build variables; Vite bakes them into the client):
-`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (publishable key), `VITE_WEB_CHECKOUT_PRO_URL`,
-`VITE_WEB_CHECKOUT_BUSINESS_URL`, `VITE_WEB_MEMBERSHIP_EMAIL`, `VITE_SUPER_ACCOUNT_EMAILS`,
-`VITE_ADMOB_BANNER_ID`.
+`VITE_ADMOB_BANNER_ID` only.
 
 **Secrets** (`npx wrangler secret put NAME` or dashboard → Variables and Secrets):
 
 | Name | Needed for |
 |---|---|
-| `SUPABASE_ANON_KEY` | Server-side auth checks (same publishable key as above) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Quota, billing, admin, account delete |
 | `OPENROUTER_API_KEY` | All AI generation |
-| `LEMON_SQUEEZY_WEBHOOK_SECRET` | Lemon Squeezy webhook |
-| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Play Billing verification |
-| `KV_REST_API_URL`, `KV_REST_API_TOKEN` | Optional durable rate limit (Upstash) |
+| `KV_REST_API_URL`, `KV_REST_API_TOKEN` | Durable per-IP AI rate limit (Upstash). The limiter fails closed, so AI routes return 503 without them. |
 | `MINIMAX_API_KEY`, `OPENAI_API_KEY`, `NVIDIA_API_KEY`, `GROQ_API_KEY`, `CEREBRAS_API_KEY`, `SIDECAR_URL` | Optional |
+
+There is no database, login, quota or billing any more (Supabase, Lemon Squeezy and
+Play Billing verification were removed). Every visitor gets the same features; AI spend
+is bounded by the per-IP rate limit. Content reports (`/api/report-content`) are written
+to Workers Logs (`npx wrangler tail`).
 
 Local: put them in `.dev.vars` (git-ignored).
 
 ## Free-plan caveats
 
-- Workers Free allows 10 ms CPU per request (waiting on OpenRouter/Supabase does not count).
+- Workers Free allows 10 ms CPU per request (waiting on OpenRouter does not count).
   AI routes are I/O-bound and fine; heavy exports (large PDF/DOCX/XLSX, diagram PNG) can hit
   the CPU limit on big documents. If that happens, Workers Paid ($5/mo) raises it to 30 s.
 - 100k Worker requests/day (static asset requests are free and unlimited).

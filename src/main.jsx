@@ -17,8 +17,6 @@ import {
   detectDeliverableProfile,
   validateFinishedOutput,
 } from "./deliverableProfiles.js";
-/* Admin-only; kept out of the initial bundle along with the legacy stylesheet. */
-const AdminConsole = React.lazy(() => import("./admin/AdminConsole.jsx"));
 /* The marketing page only renders for the `/` route; keeping it out of the
    app shell's initial graph buys back real first-paint budget. */
 const LandingPage = React.lazy(() => import("./LandingPage.jsx"));
@@ -29,7 +27,6 @@ import {
   OUTPUT_TYPES as outputTypes,
 } from "./ui/options.js";
 import { defaultModelSettings, generationModes } from "./modelSettings.js";
-import { mergeLibraryPayload, pullUserLibrary, pushUserLibrary } from "./librarySync.js";
 import {
   scorePromptForCompare,
   getLocalPromptRisks,
@@ -43,18 +40,6 @@ import {
   getLanguageMeta,
   resolveOutputLanguage,
 } from "./promptLanguage.js";
-import {
-  getPlayBillingHint,
-  isNativeAndroidApp,
-  isPlayBillingAvailable,
-  isLikelyAndroidTwa,
-  listPlayPurchases,
-  normalizePlayPurchaseList,
-  purchasePlayPlan,
-  restorePlayPurchasesOnServer,
-  verifyPlayPurchaseOnServer,
-} from "./playBilling.js";
-import { getWebCheckoutUrlForPlan, isWebCheckoutConfigured } from "./webBilling.js";
 import {
   canExportFormat,
   canUseFeature,
@@ -71,29 +56,15 @@ import {
   detectDiagramIntent,
 } from "./mermaidDelivery.js";
 import { API_MSG } from "./apiUserMessages.js";
-import { isSuperAccount, SUPER_QUOTA_LIMIT } from "./superAccounts.js";
-import {
-  clearInstalledAppEntry,
-  installNativeAppLinkHandler,
-  markInstalledAppEntered,
-} from "./installedApp.js";
+import { installNativeAppLinkHandler } from "./installedApp.js";
 import { purgeLegacyServiceWorkers, repairStuckLocalProfile } from "./bootRecovery.js";
+import { isLikelyAndroidTwa, isNativeAndroidApp } from "./platform.js";
 import { scorePrompt } from "./promptScore.js";
 import { captureFocusReturn } from "./accessibilityInteractions.js";
 import { dismissStartupSplash, installSplashSafetyNet, markStartupSplashStarted } from "./startupSplash";
-import {
-  buildGoogleOAuthOptions,
-  getUserDisplayName,
-  humanizeAuthError,
-} from "./authGoogle.js";
-import {
-  clearAuthCallbackParams,
-  getAuthRedirectUrl,
-  isGoogleAuthEnabled,
-  isSupabaseConfigured,
-  readAuthCallbackError,
-  supabase,
-} from "./supabaseClient";
+
+/** Entitlement tier everyone gets now that there are no accounts or billing. */
+const OPEN_PLAN = "Pro";
 
 markStartupSplashStarted();
 installSplashSafetyNet();
@@ -102,68 +73,6 @@ purgeLegacyServiceWorkers();
 installNativeAppLinkHandler();
 
 
-/**
- * Free generations granted before an account is required. The old build
- * refused every AI call until the user signed up, so nobody could see what the
- * app did before being asked to commit.
- */
-const TRIAL_LIMIT = 5;
-const TRIAL_KEY = "promptlab-trial-used";
-
-function currentTrialWeekStart(now = new Date()) {
-  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const day = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() - day + 1);
-  return date.toISOString().slice(0, 10);
-}
-
-function readTrialUsed() {
-  try {
-    const stored = localStorage.getItem(TRIAL_KEY);
-    if (!stored) return 0;
-    const parsed = JSON.parse(stored);
-    if (typeof parsed === "number") return Math.min(Math.max(0, parsed), TRIAL_LIMIT);
-    if (parsed?.weekStart !== currentTrialWeekStart()) return 0;
-    return Math.min(Math.max(0, Number(parsed?.used) || 0), TRIAL_LIMIT);
-  } catch {
-    const legacy = Number(localStorage.getItem(TRIAL_KEY));
-    return Number.isFinite(legacy) ? Math.min(Math.max(0, legacy), TRIAL_LIMIT) : 0;
-  }
-}
-
-function writeTrialUsed(value) {
-  try {
-    localStorage.setItem(
-      TRIAL_KEY,
-      JSON.stringify({ weekStart: currentTrialWeekStart(), used: Math.min(TRIAL_LIMIT, value) }),
-    );
-  } catch {
-    /* ignore */
-  }
-}
-
-/**
- * Copy for the native account-deletion dialogs.
- *
- * Play requires that deleting an account is reachable in-app and that the user
- * is told what it does and does not remove — notably that it does not cancel a
- * Play subscription.
- */
-function translateAccountDeletion() {
-  const lang = detectLanguage();
-  if (lang === "en") {
-    return {
-      warning:
-        "Delete your AI Work Studio account permanently? This removes your profile, synced history, and membership record.\n\nImportant: this does NOT cancel a Google Play subscription. Manage that in Google Play → Payments & subscriptions.",
-      typeToConfirm: "Type DELETE to confirm account deletion:",
-    };
-  }
-  return {
-    warning:
-      "Hapus akun AI Work Studio secara permanen? Tindakan ini menghapus profil, riwayat tersinkron, dan catatan keanggotaan.\n\nPenting: ini TIDAK membatalkan langganan Google Play. Batalkan langganan lewat Google Play → Pembayaran & langganan.",
-    typeToConfirm: 'Ketik DELETE untuk mengonfirmasi penghapusan akun:',
-  };
-}
 const membershipPlans = Object.fromEntries(
   Object.entries(MEMBERSHIP_MARKETING).map(([plan, marketing]) => [
     plan,
@@ -1014,25 +923,6 @@ function normalizeAccountState(raw) {
   };
 }
 
-function profileToAccount(profile, user) {
-  const plan = membershipPlans[profile?.plan] ? profile.plan : "Free";
-  const unlimited = isSuperAccount(profile);
-  return normalizeAccountState({
-    userId: user?.id || profile?.id || "",
-    email: profile?.email || user?.email || "",
-    name: profile?.full_name || getUserDisplayName(user) || "",
-    role: profile?.role === "admin" ? "admin" : "user",
-    plan,
-    quotaUsed: Number(profile?.quota_used || 0),
-    quotaLimit: unlimited
-      ? SUPER_QUOTA_LIMIT
-      : Number(profile?.quota_limit || membershipPlans[plan].quota || defaultAccountState.quotaLimit),
-    quotaUnlimited: unlimited,
-    quotaReset: resolveQuotaResetLabel(profile?.quota_reset_at),
-    playBilling: profile?.play_billing || defaultAccountState.playBilling,
-  });
-}
-
 async function writeClipboard(text) {
   const value = String(text || "");
   if (!value.trim()) return false;
@@ -1328,9 +1218,6 @@ function App() {
     commandPaletteRestoreFocus.current = captureFocusReturn(document);
     setCommandPaletteOpen(true);
   };
-  const [librarySyncStatus, setLibrarySyncStatus] = useState("");
-  const libraryPulledForUser = React.useRef("");
-  const libraryPushEnabled = React.useRef(false);
   const [selectedLibraryId, setSelectedLibraryId] = useState("");
   const [compareA, setCompareA] = useState("");
   const [compareB, setCompareB] = useState("");
@@ -1353,18 +1240,7 @@ function App() {
       return defaultModelSettings;
     }
   });
-  const [providerTestStatus, setProviderTestStatus] = useState("");
-  const [isTestingProvider, setIsTestingProvider] = useState(false);
   const [settingsSavedAt, setSettingsSavedAt] = useState("");
-  const [globalPublishBusy, setGlobalPublishBusy] = useState(false);
-  const [adminAnalytics, setAdminAnalytics] = useState(null);
-  const [adminAnalyticsLoading, setAdminAnalyticsLoading] = useState(false);
-  const [adminUsers, setAdminUsers] = useState(null);
-  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
-  const [adminUsersSearch, setAdminUsersSearch] = useState("");
-  const [adminActionStatus, setAdminActionStatus] = useState("");
-  const [globalPublishAt, setGlobalPublishAt] = useState("");
-  const [globalConfigSource, setGlobalConfigSource] = useState("env");
   /** Output of running the prompt — the finished deliverable, not instructions. */
   const [runOutput, setRunOutput] = useState("");
   // Photos extracted from PDF/DOCX sources on the server remain available to
@@ -1381,11 +1257,6 @@ function App() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizerError, setOptimizerError] = useState("");
   const [optimizerWarning, setOptimizerWarning] = useState("");
-  const [billingBusy, setBillingBusy] = useState(false);
-  const [billingMessage, setBillingMessage] = useState("");
-  const [showAuthUpsell, setShowAuthUpsell] = useState(false);
-  const [playBillingReady, setPlayBillingReady] = useState(() => isPlayBillingAvailable());
-  const playBillingHint = useMemo(() => getPlayBillingHint(), [playBillingReady]);
   const [exportStatus, setExportStatus] = useState("");
   const [diagramExportOffer, setDiagramExportOffer] = useState(null);
   // Yjs-backed draft autosave: gated until hydration finishes so an empty
@@ -1414,20 +1285,16 @@ function App() {
       return createDefaultAccountState();
     }
   });
-  const [authStatus, setAuthStatus] = useState(isSupabaseConfigured ? "Checking session..." : "Supabase not configured");
-  const [authError, setAuthError] = useState("");
-  const [isAuthBusy, setIsAuthBusy] = useState(false);
-  const [authSessionReady, setAuthSessionReady] = useState(!isSupabaseConfigured);
-  const [hasAuthSession, setHasAuthSession] = useState(false);
 
-  // Native AdMob banner: Free members see it; paying members never load one.
+  // Native AdMob banner. There are no paid plans any more, so every user of the
+  // Android app sees the single bottom banner.
   // The plugin stays a lazy chunk — it must never inflate the initial bundle.
   useEffect(() => {
     if (isNativeAndroidApp())
       import("./admob.js")
-        .then((m) => m.syncNativeBanner(accountState.plan))
+        .then((m) => m.syncNativeBanner("Free"))
         .catch(() => {});
-  }, [accountState.plan]);
+  }, []);
 
   // Restore the Yjs-persisted workbench draft once, then keep autosaving it.
   useEffect(() => {
@@ -1543,17 +1410,6 @@ function App() {
     };
   }, [search, library]);
 
-  /**
-   * An anonymous Supabase session lets a new user try the app before creating
-   * an account. It authenticates the API call, but the UI must keep treating
-   * the person as signed out — otherwise we would show them account and
-   * membership state they do not actually have.
-   */
-  const [isAnonymousSession, setIsAnonymousSession] = useState(false);
-  const [trialUsed, setTrialUsed] = useState(readTrialUsed);
-  const [weeklyResults, setWeeklyResults] = useState(null);
-  /** Cleared once we learn the project cannot issue anonymous sessions. */
-  const [trialAvailable, setTrialAvailable] = useState(true);
   const allTemplates = useMemo(() => [...customTemplates, ...templates], [customTemplates]);
 
   const localPrompt = useMemo(
@@ -1565,23 +1421,13 @@ function App() {
   const apiBase = import.meta.env.DEV
     ? import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787"
     : "";
-  const entitlements = useMemo(() => getEntitlements(accountState.plan), [accountState.plan]);
+  // No accounts or billing: every feature is available to everyone. Cost is
+  // bounded by the server-side rate limit instead of per-user quotas.
+  const entitlements = getEntitlements(OPEN_PLAN);
   const libraryLimit = entitlements.libraryLimit;
   const customTemplateLimit = entitlements.customTemplateLimit;
   const maxAttachments = entitlements.maxAttachments;
 
-  useEffect(() => {
-    const syncPlayBilling = () => setPlayBillingReady(isPlayBillingAvailable());
-    syncPlayBilling();
-    window.addEventListener("focus", syncPlayBilling);
-    const interval = window.setInterval(syncPlayBilling, 2500);
-    const stop = window.setTimeout(() => window.clearInterval(interval), 45000);
-    return () => {
-      window.removeEventListener("focus", syncPlayBilling);
-      window.clearInterval(interval);
-      window.clearTimeout(stop);
-    };
-  }, []);
 
   useEffect(() => {
     setLibrary((items) => items.slice(0, libraryLimit));
@@ -1600,95 +1446,7 @@ function App() {
     localStorage.setItem("promptlab-account", JSON.stringify(accountState));
   }, [accountState]);
 
-  useEffect(() => {
-    if (!supabase) return;
-    let mounted = true;
 
-    const callbackError = humanizeAuthError(readAuthCallbackError());
-    if (callbackError) {
-      setAuthError(callbackError);
-      setAuthStatus("Sign in failed");
-      clearAuthCallbackParams();
-    }
-
-    async function bootstrapSession() {
-      let data;
-      let error;
-      try {
-        const result = await Promise.race([
-          supabase.auth.getSession(),
-          new Promise((_, reject) => {
-            window.setTimeout(() => reject(new Error("Session check timed out")), 8000);
-          }),
-        ]);
-        ({ data, error } = result);
-      } catch (sessionError) {
-        if (!mounted) return;
-        setAuthError(sessionError?.message || "Session check failed");
-        setAuthStatus("Session check failed");
-        setHasAuthSession(false);
-        setAuthSessionReady(true);
-        return;
-      }
-      if (!mounted) return;
-      if (error) {
-        setAuthError(error.message);
-        setAuthStatus("Session check failed");
-        setHasAuthSession(false);
-        setAuthSessionReady(true);
-        return;
-      }
-      const user = data.session?.user;
-      if (user) {
-        setHasAuthSession(true);
-        setIsAnonymousSession(Boolean(user.is_anonymous));
-        setAuthStatus("Signed in");
-        setAuthSessionReady(true);
-        void loadUserProfile(user, { autoRestorePlay: isLikelyAndroidTwa() });
-      } else {
-        setHasAuthSession(false);
-        setIsAnonymousSession(false);
-        setAccountState(createDefaultAccountState());
-        setAuthStatus("Signed out");
-        setAuthSessionReady(true);
-      }
-    }
-
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      const user = session?.user;
-      if (user) {
-        setHasAuthSession(true);
-        setIsAnonymousSession(Boolean(user.is_anonymous));
-        setAuthSessionReady(true);
-        setAuthStatus("Signed in");
-        if (event === "SIGNED_IN") {
-          markInstalledAppEntered();
-          setAuthError("");
-          loadUserProfile(user, { autoRestorePlay: isLikelyAndroidTwa() });
-        } else {
-          loadUserProfile(user);
-        }
-      } else {
-        setHasAuthSession(false);
-        setIsAnonymousSession(false);
-        setAuthSessionReady(true);
-        setAccountState(createDefaultAccountState());
-        setAuthStatus("Signed out");
-      }
-    });
-
-    bootstrapSession();
-    return () => {
-      mounted = false;
-      listener.subscription.unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (authSessionReady && accountState.role === "admin" && accountState.userId) {
-      loadAdminRuntimeConfig();
-    }
-  }, [authSessionReady, accountState.role, accountState.userId]);
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -1701,43 +1459,7 @@ function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  useEffect(() => {
-    if (!accountState.userId || !supabase || libraryPulledForUser.current === accountState.userId) return;
-    libraryPulledForUser.current = accountState.userId;
-    libraryPushEnabled.current = false;
-    let cancelled = false;
-    (async () => {
-      try {
-        const remote = await pullUserLibrary(supabase, accountState.userId);
-        if (cancelled) return;
-        if (remote) {
-          const merged = mergeLibraryPayload({ library, customTemplates }, remote);
-          setLibrary(merged.library.slice(0, libraryLimit));
-          setCustomTemplates(merged.customTemplates.slice(0, customTemplateLimit));
-          setLibrarySyncStatus("Synced from cloud");
-        } else {
-          setLibrarySyncStatus("Cloud library ready");
-        }
-      } catch {
-        setLibrarySyncStatus("Local library (cloud sync unavailable)");
-      } finally {
-        if (!cancelled) libraryPushEnabled.current = true;
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [accountState.userId, libraryLimit, customTemplateLimit]);
 
-  useEffect(() => {
-    if (!accountState.userId || !supabase || !libraryPushEnabled.current) return undefined;
-    const timer = window.setTimeout(() => {
-      pushUserLibrary(supabase, accountState.userId, { library, customTemplates })
-        .then(() => setLibrarySyncStatus("Synced"))
-        .catch(() => setLibrarySyncStatus("Sync pending"));
-    }, 1500);
-    return () => window.clearTimeout(timer);
-  }, [library, customTemplates, accountState.userId]);
 
   useEffect(() => {
     localStorage.setItem("promptlab-generation-mode", generationMode);
@@ -1772,13 +1494,6 @@ function App() {
     if (active === "Settings") refreshHealth();
   }, [active]);
 
-  useEffect(() => {
-    if (active === "Admin" && accountState.role === "admin") {
-      loadAdminAnalytics();
-      loadAdminUsers();
-      loadAdminRuntimeConfig();
-    }
-  }, [active, accountState.role, accountState.userId]);
 
   useEffect(() => {
     setCompareResult(null);
@@ -1902,227 +1617,6 @@ function App() {
     setCustomTemplates((items) => items.filter((item) => item.id !== id));
   }
 
-  async function loadUserProfile(user, { autoRestorePlay = false } = {}) {
-    if (!supabase || !user?.id) return;
-    setAuthError("");
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (error) {
-      setAuthError("Could not load your profile. Please try again.");
-      setAccountState((account) => ({
-        ...account,
-        userId: user.id,
-        email: user.email || account.email,
-        name: getUserDisplayName(user) || account.name,
-      }));
-      return;
-    }
-
-    if (data) {
-      setAccountState(profileToAccount(data, user));
-      if (autoRestorePlay && isPlayBillingAvailable()) {
-        void restorePlayPurchases({ silent: true, userId: user.id });
-        void syncPlayMembership({ silent: true, userId: user.id });
-      }
-      return;
-    }
-
-    const draftProfile = {
-      id: user.id,
-      email: user.email || "",
-      full_name: getUserDisplayName(user) || "",
-    };
-    const { data: inserted, error: insertError } = await supabase
-      .from("profiles")
-      .insert(draftProfile)
-      .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
-      .maybeSingle();
-
-    if (insertError) {
-      setAuthError("Could not create your profile. Please try again.");
-      setAccountState(profileToAccount(draftProfile, user));
-      return;
-    }
-
-    setAccountState(profileToAccount(inserted || draftProfile, user));
-    if (autoRestorePlay && isPlayBillingAvailable()) {
-      void restorePlayPurchases({ silent: true, userId: user.id });
-      void syncPlayMembership({ silent: true, userId: user.id });
-    }
-  }
-
-  async function signInWithPassword(email, password) {
-    if (!supabase) {
-      setAuthError("Supabase is not configured.");
-      return;
-    }
-    setIsAuthBusy(true);
-    setAuthError("");
-    setAuthStatus("Signing in...");
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    setIsAuthBusy(false);
-    if (error) {
-      setAuthError(error.message);
-      setAuthStatus("Sign in failed");
-      return;
-    }
-    setHasAuthSession(Boolean(data.session));
-    setAuthSessionReady(true);
-    setAuthStatus("Signed in");
-    markInstalledAppEntered();
-    await loadUserProfile(data.user);
-  }
-
-  async function resetPasswordForEmail(email) {
-    if (!supabase) {
-      setAuthError("Supabase is not configured.");
-      return;
-    }
-    const target = String(email || "").trim();
-    if (!target) {
-      setAuthError("Enter your email to reset the password.");
-      return;
-    }
-    setIsAuthBusy(true);
-    setAuthError("");
-    setAuthStatus("Sending reset email...");
-    const { error } = await supabase.auth.resetPasswordForEmail(target, {
-      redirectTo: `${window.location.origin}/app`,
-    });
-    setIsAuthBusy(false);
-    if (error) {
-      setAuthError(error.message);
-      setAuthStatus("Reset failed");
-      return;
-    }
-    setAuthStatus("Password reset email sent. Check your inbox.");
-  }
-
-  async function deleteAccountPermanently() {
-    if (!supabase) {
-      setBillingMessage("Supabase is not configured.");
-      flashAction("Account deletion unavailable");
-      return;
-    }
-    // These are native dialogs outside the React tree, so they read the UI
-    // language directly rather than going through the translator hook.
-    const inIndonesian = translateAccountDeletion();
-    const confirmed = window.confirm(inIndonesian.warning);
-    if (!confirmed) return;
-    const typed = window.prompt(inIndonesian.typeToConfirm, "");
-    if (String(typed || "").trim().toUpperCase() !== "DELETE") {
-      setBillingMessage("Account deletion canceled.");
-      flashAction("Deletion canceled");
-      return;
-    }
-    setBillingBusy(true);
-    setBillingMessage("");
-    try {
-      const token = await getAccessToken();
-      if (!token) throw new Error("Session expired. Please sign in again.");
-      const response = await fetch(`${apiBase}/api/account/delete`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ confirm: "DELETE" }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "Failed to delete account.");
-      await supabase.auth.signOut();
-      setHasAuthSession(false);
-      setAccountState(normalizeAccountState({}));
-      localStorage.removeItem("promptlab-installed-entry");
-      setBillingMessage("Account deleted. Sign in again or continue as guest.");
-      flashAction("Account deleted");
-      window.location.assign("/app");
-    } catch (error) {
-      setBillingMessage(error.message || "Delete failed.");
-    } finally {
-      setBillingBusy(false);
-    }
-  }
-
-  async function signInWithGoogle() {
-    if (!isGoogleAuthEnabled) {
-      setAuthError("Google sign-in is disabled in this build.");
-      return;
-    }
-    if (!supabase) {
-      setAuthError("Supabase is not configured.");
-      return;
-    }
-    setIsAuthBusy(true);
-    setAuthError("");
-    setAuthStatus("Redirecting to Google...");
-    const { error } = await supabase.auth.signInWithOAuth(
-      buildGoogleOAuthOptions(getAuthRedirectUrl()),
-    );
-    setIsAuthBusy(false);
-    if (error) {
-      setAuthError(humanizeAuthError(error.message));
-      setAuthStatus("Google sign in failed");
-    }
-  }
-
-  async function signUpWithPassword(email, password, fullName) {
-    if (!supabase) {
-      setAuthError("Supabase is not configured.");
-      return;
-    }
-    setIsAuthBusy(true);
-    setAuthError("");
-    setAuthStatus("Creating account...");
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName || "" } },
-    });
-    setIsAuthBusy(false);
-    if (error) {
-      setAuthError(error.message);
-      setAuthStatus("Sign up failed");
-      return;
-    }
-    if (data.user && data.session) {
-      setHasAuthSession(true);
-      setAuthSessionReady(true);
-      setAuthStatus("Signed in");
-      markInstalledAppEntered();
-      await loadUserProfile(data.user);
-    } else {
-      setAuthStatus("Check your email to confirm your account.");
-    }
-  }
-
-  async function signOut() {
-    if (supabase) await supabase.auth.signOut();
-    clearInstalledAppEntry();
-    localStorage.removeItem("promptlab-guest");
-    localStorage.removeItem("promptlab-onboarded");
-    localStorage.removeItem("promptlab-auth-intent");
-    localStorage.removeItem("promptlab-auth-gate");
-    libraryPulledForUser.current = "";
-    libraryPushEnabled.current = false;
-    setLibrarySyncStatus("");
-    setHasAuthSession(false);
-    setIsAnonymousSession(false);
-    setAuthSessionReady(true);
-    setAccountState(createDefaultAccountState());
-    setAuthStatus("Signed out");
-  }
-
-  async function continueAsGuest() {
-    writeGuestFlagSafe(true);
-    const ready = await ensureTrialSession();
-    return ready;
-  }
-
   function clearComposer() {
     setNarrative("");
     setGeneratedPrompt("");
@@ -2133,227 +1627,6 @@ function App() {
     setWarningMessage("");
     setExportStatus("");
     import("./diagramSvgStore.js").then((m) => m.clearRenderedDiagramSvg()).catch(() => {});
-  }
-
-  function writeGuestFlagSafe(isGuest) {
-    try {
-      if (isGuest) localStorage.setItem("promptlab-guest", "1");
-      else localStorage.removeItem("promptlab-guest");
-    } catch {
-      /* ignore */
-    }
-  }
-
-  async function getAuthHeaders() {
-    if (!supabase) return {};
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    const userId = data.session?.user?.id || accountState.userId || "";
-    if (!token) return {};
-    return {
-      Authorization: `Bearer ${token}`,
-      ...(userId ? { "x-user-id": userId } : {}),
-    };
-  }
-
-  async function getAccessToken() {
-    if (!supabase) return "";
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token || "";
-  }
-
-  async function upgradeViaPlayBilling(planName) {
-    if (!accountState.userId) {
-      setBillingMessage("Sign in to upgrade your plan.");
-      return;
-    }
-    if (!isPlayBillingAvailable()) {
-      if (isLikelyAndroidTwa()) {
-        setBillingMessage(
-          "Play Billing is not ready in this install. Reinstall AI Work Studio from Google Play, then try again. Web checkout is disabled inside the Android app."
-        );
-        return;
-      }
-      upgradeViaWebMembership(planName);
-      return;
-    }
-    setBillingBusy(true);
-    setBillingMessage("");
-    let completeBilling = null;
-    try {
-      const purchase = await purchasePlayPlan(planName);
-      completeBilling = purchase.completeBilling;
-      const token = await getAccessToken();
-      if (!token) throw new Error("Session expired. Please sign in again.");
-      const data = await verifyPlayPurchaseOnServer(apiBase, token, {
-        productId: purchase.productId,
-        purchaseToken: purchase.purchaseToken,
-      });
-      await completeBilling?.(true);
-      if (data.quota) applyServerQuota(data.quota);
-      else await loadUserProfile({ id: accountState.userId, email: accountState.email });
-      setBillingMessage(data.message || `Upgraded to ${planName} successfully.`);
-      flashAction(`Plan ${planName} active`);
-    } catch (error) {
-      await completeBilling?.(false);
-      setBillingMessage(error.message || "Upgrade failed.");
-    } finally {
-      setBillingBusy(false);
-    }
-  }
-
-  async function restorePlayPurchases({ silent = false, userId = "" } = {}) {
-    const effectiveUserId = userId || accountState.userId;
-    if (!effectiveUserId) {
-      if (!silent) {
-        setBillingMessage("Sign in to restore purchases.");
-        flashAction("Sign in required");
-      }
-      return;
-    }
-    if (!isPlayBillingAvailable()) {
-      if (!silent) {
-        setBillingMessage(
-          isLikelyAndroidTwa()
-            ? "Play Billing is not available in this session. Reinstall from Google Play."
-            : "Restore purchases is only available in the Android app from Google Play."
-        );
-      }
-      return;
-    }
-    if (!silent) {
-      setBillingBusy(true);
-      setBillingMessage("");
-    }
-    try {
-      const items = await listPlayPurchases();
-      const purchases = normalizePlayPurchaseList(items);
-      if (!purchases.length) {
-        if (!silent) throw new Error("No active Google Play purchases found on this device.");
-        await syncPlayMembership({ silent: true, purchases: [], userId: effectiveUserId });
-        return;
-      }
-      const token = await getAccessToken();
-      if (!token) throw new Error("Session expired. Please sign in again.");
-      const data = await restorePlayPurchasesOnServer(apiBase, token, purchases);
-      if (data.quota) applyServerQuota(data.quota);
-      else await loadUserProfile({ id: effectiveUserId, email: accountState.email });
-      if (!silent) {
-        setBillingMessage(data.message || "Purchases restored.");
-        flashAction("Purchases restored");
-      } else if (data.plan && data.plan !== "Free") {
-        flashAction(`${data.plan} restored`);
-      }
-    } catch (error) {
-      if (!silent) {
-        setBillingMessage(error.message || "Restore failed.");
-        flashAction("Restore failed");
-      }
-    } finally {
-      if (!silent) setBillingBusy(false);
-    }
-  }
-
-  async function syncPlayMembership({ silent = true, purchases, userId = "" } = {}) {
-    const effectiveUserId = userId || accountState.userId;
-    if (!effectiveUserId) return;
-    try {
-      const token = await getAccessToken();
-      if (!token) return;
-      let payloadPurchases = purchases;
-      if (payloadPurchases == null && isPlayBillingAvailable()) {
-        try {
-          payloadPurchases = normalizePlayPurchaseList(await listPlayPurchases());
-        } catch {
-          payloadPurchases = [];
-        }
-      }
-      const response = await fetch(`${apiBase}/api/billing/sync-play-membership`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ purchases: payloadPurchases || [] }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) return;
-      if (data.quota) applyServerQuota(data.quota);
-      if (data.changed && data.plan === "Free") {
-        flashAction("Membership updated to Free");
-        if (!silent) setBillingMessage(data.message || "Membership updated to Free.");
-      }
-    } catch {
-      /* silent sync */
-    }
-  }
-
-  function upgradeViaWebMembership(planName) {
-    if (isLikelyAndroidTwa()) {
-      setBillingMessage(
-        "Android upgrades must use Google Play Billing. Open Membership and tap Pro or Business after installing from Play Store."
-      );
-      return;
-    }
-    if (!accountState.userId) {
-      setBillingMessage("Sign in to request a web membership upgrade.");
-      return;
-    }
-
-    const checkoutUrl = getWebCheckoutUrlForPlan(planName, {
-      email: accountState.email,
-      userId: accountState.userId,
-      name: accountState.name,
-    });
-    if (checkoutUrl) {
-      window.open(checkoutUrl, "_blank", "noopener,noreferrer");
-      setBillingMessage(
-        `Opening Lemon Squeezy checkout for ${planName}. Your plan updates automatically after payment — tap Refresh membership below if needed.`
-      );
-      flashAction(`${planName} checkout opened`);
-      return;
-    }
-
-    const supportEmail = import.meta.env.VITE_WEB_MEMBERSHIP_EMAIL || "support@prompt-lab.xyz";
-    const subject = `AI Work Studio ${planName} web membership request`;
-    const body = [
-      `Requested plan: ${planName}`,
-      `Current plan: ${accountState.plan}`,
-      `Email: ${accountState.email}`,
-      `User ID: ${accountState.userId}`,
-      "",
-      "Please activate this membership after payment confirmation.",
-    ].join("\n");
-    window.location.href = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setBillingMessage(`Web upgrade request prepared for ${planName}. After payment or admin confirmation, your account plan will update here.`);
-    flashAction(`${planName} request prepared`);
-  }
-
-  function requestMembershipUpgrade(planName) {
-    if (isLikelyAndroidTwa()) {
-      upgradeViaPlayBilling(planName);
-      return;
-    }
-    if (isPlayBillingAvailable()) {
-      upgradeViaPlayBilling(planName);
-      return;
-    }
-    upgradeViaWebMembership(planName);
-  }
-
-  function applyServerQuota(quota) {
-    if (!quota) return;
-    setAccountState((account) => normalizeAccountState({
-      ...account,
-      email: quota.email || account.email,
-      name: quota.fullName || account.name,
-      playBilling: quota.playBilling || account.playBilling,
-      plan: quota.plan || account.plan,
-      quotaLimit: quota.quotaLimit ?? account.quotaLimit,
-      quotaReset: resolveQuotaResetLabel(quota.quotaResetAt || account.quotaReset),
-      quotaUsed: quota.quotaUsed ?? account.quotaUsed,
-      role: quota.role || account.role,
-    }));
   }
 
   function updateLibraryItem(id, patch) {
@@ -2377,59 +1650,7 @@ function App() {
     setLibrary((items) => [copy, ...items].slice(0, libraryLimit));
     setSelectedLibraryId(copy.id);
   }
-
-  /**
-   * Starts an anonymous session so a first-time user can generate without
-   * signing up. Returns false when anonymous sign-in is unavailable (the
-   * Supabase project has it disabled), in which case the caller falls back to
-   * asking for an account rather than failing with a bare 401.
-   */
-  function countTrialUse() {
-    setTrialUsed((used) => {
-      const next = Math.min(TRIAL_LIMIT, used + 1);
-      writeTrialUsed(next);
-      return next;
-    });
-  }
-
-  async function ensureTrialSession() {
-    if (hasAuthSession) return true;
-    if (!supabase) {
-      setTrialAvailable(false);
-      return false;
-    }
-    try {
-      const { data, error } = await supabase.auth.signInAnonymously();
-      if (error || !data?.session) {
-        // Anonymous sign-ins are disabled for this project, so the trial can
-        // never succeed. Stop advertising it rather than repeating a promise
-        // the backend will not honour.
-        setTrialAvailable(false);
-        return false;
-      }
-      setIsAnonymousSession(true);
-      return true;
-    } catch {
-      setTrialAvailable(false);
-      return false;
-    }
-  }
-
   async function generatePrompt(customNarrative = narrative, customOutputType = outputType) {
-    const onTrial = !hasAuthSession || isAnonymousSession;
-    if (onTrial && trialUsed >= TRIAL_LIMIT) {
-      setErrorMessage("");
-      return null;
-    }
-    if (!hasAuthSession) {
-      const ready = await ensureTrialSession();
-      if (!ready) {
-        // Phrased so the UI's error humanizer maps it to the localized
-        // "create a free account" copy rather than the generic fallback.
-        setErrorMessage("Sign in to use AI features.");
-        return null;
-      }
-    }
 
     let effectiveOutputType = customOutputType;
     let effectiveNarrative = String(customNarrative || "").trim();
@@ -2471,7 +1692,7 @@ function App() {
         filesToSend.forEach((item) => formData.append("attachments", item.file));
       }
 
-      const authHeaders = await getAuthHeaders();
+      const authHeaders = {};
       let response = null;
       let lastNetworkError = null;
       for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -2512,7 +1733,6 @@ function App() {
         setGenerationSource(data.source || "server");
         setGenerationModel(data.model || "");
         setGenerationStatus(data.modelStatus || data.source || "server");
-        applyServerQuota(data.quota);
         setWarningMessage([uploadPlan.warning, data.warning].filter(Boolean).join(" "));
         setEngineVersion(data.engineVersion || "");
         setEvalDelta(data.evalDelta || null);
@@ -2528,7 +1748,6 @@ function App() {
       setGenerationSource(data.source || "server");
       setGenerationModel(data.model || "");
       setGenerationStatus(data.modelStatus || data.source || "server");
-      applyServerQuota(data.quota);
       setWarningMessage([uploadPlan.warning, data.warning].filter(Boolean).join(" "));
       setEngineVersion(data.engineVersion || "");
       setEvalDelta(data.evalDelta || null);
@@ -2537,22 +1756,7 @@ function App() {
       return data.prompt || localPrompt;
     } catch (error) {
       const message = error.message || API_MSG.backendUnavailableLocalPrompt;
-      const needsSignIn = /sign in to use ai|invalid session|authentication required|401/i.test(message);
       const quotaOnly = /usage quota|quota exceeded|quota token|failed to record quota|too many ai requests|too many requests/i.test(message);
-      if (needsSignIn) {
-        setGeneratedPrompt("");
-        setGenerationSource("blocked");
-        setGenerationModel("");
-        setGenerationStatus("needs-auth");
-        setErrorMessage("");
-        setWarningMessage(
-          "AI generation requires a free account. Sign in to unlock quota, sync, and exports. Guest mode only keeps drafts on this device."
-        );
-        setShowAuthUpsell(true);
-        setGenerationPhase("idle");
-        flashAction("Sign in to generate");
-        return "";
-      }
       setGeneratedPrompt(localPrompt);
       setGenerationSource("local");
       setGenerationModel("");
@@ -2596,7 +1800,7 @@ function App() {
       const effectiveOutputType = detectDiagramIntent({ narrative, outputType })
         ? "Diagram"
         : outputType;
-      const authHeaders = await getAuthHeaders();
+      const authHeaders = {};
       // A direct run can summarize or diagram any supported upload. Keep
       // documents in the request so the server can extract their text and
       // render PDF/DOCX pages for the same vision path as photos.
@@ -2692,9 +1896,6 @@ function App() {
       setRunOutput(content);
       setErrorMessage("");
       import("./diagramSvgStore.js").then((m) => m.clearRenderedDiagramSvg()).catch(() => {});
-      applyServerQuota(data.quota);
-      if (data.weeklyResults) setWeeklyResults(data.weeklyResults);
-      if (isAnonymousSession) countTrialUse();
       return content;
     } catch (error) {
       setRunError(error.message || "Failed to run the prompt.");
@@ -2767,29 +1968,6 @@ function App() {
   async function runTemplate(template, values = {}, language = "id", editedFields = []) {
     if (!template) return null;
 
-    /**
-     * A guest needs an anonymous session before the server will run anything.
-     *
-     * The old flow got this for free because every run went through
-     * generatePrompt first, which bootstrapped the trial. Template mode skips
-     * that step by design, and skipping it also skipped the sign-in — so a
-     * guest who picked a template could never generate.
-     */
-    const onTrial = !hasAuthSession || isAnonymousSession;
-    if (onTrial && trialUsed >= TRIAL_LIMIT) {
-      setRunError("");
-      setErrorMessage("");
-      return null;
-    }
-    if (!hasAuthSession) {
-      const ready = await ensureTrialSession();
-      if (!ready) {
-        // Phrased so the error humanizer maps it to the localized
-        // "create a free account" copy rather than a generic failure.
-        setRunError("Sign in to use AI features.");
-        return null;
-      }
-    }
 
     setIsRunning(true);
     setRunError("");
@@ -2800,7 +1978,7 @@ function App() {
     const resultId = globalThis.crypto?.randomUUID?.() || `result-${Date.now()}`;
 
     try {
-      const authHeaders = await getAuthHeaders();
+      const authHeaders = {};
       const images = attachments.filter((item) => item?.file && String(item.type || "").startsWith("image/"));
       const documents = attachments.filter((item) => item?.file && !String(item.type || "").startsWith("image/"));
 
@@ -2873,9 +2051,6 @@ function App() {
       setRunOutput(content);
       setErrorMessage("");
       fileTemplateResult(template, content, values, language);
-      applyServerQuota(data.quota);
-      if (data.weeklyResults) setWeeklyResults(data.weeklyResults);
-      if (isAnonymousSession) countTrialUse();
       return content;
     } catch (error) {
       setRunError(error.message || "Gagal membuat dokumen.");
@@ -2940,7 +2115,7 @@ function App() {
     setOptimizerError("");
     setOptimizerWarning("");
 
-    if (!canUseFeature(accountState.plan, "aiOptimize")) {
+    if (!canUseFeature(OPEN_PLAN, "aiOptimize")) {
       const fallback = buildLocalOptimizedPrompt(rawPrompt, mode, model, tone);
       setOptimizerResult(fallback);
       setOptimizerSource("local");
@@ -2952,7 +2127,7 @@ function App() {
     try {
       const response = await fetch(`${apiBase}/api/optimize-prompt`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: rawPrompt,
           mode,
@@ -2966,7 +2141,6 @@ function App() {
       setOptimizerResult(data.prompt || buildLocalOptimizedPrompt(rawPrompt, mode, model, tone));
       setOptimizerSource(data.source || "server");
       setOptimizerWarning(data.warning || "");
-      applyServerQuota(data.quota);
       setEngineVersion(data.engineVersion || engineVersion);
       setPiiFindings(Array.isArray(data.piiFindings) ? data.piiFindings : []);
       return data.prompt;
@@ -2993,7 +2167,7 @@ function App() {
     setCompareError("");
     setCompareWarning("");
 
-    if (!canUseFeature(accountState.plan, "aiCompare")) {
+    if (!canUseFeature(OPEN_PLAN, "aiCompare")) {
       const fallback = buildLocalCompareResult(compareA, compareB);
       setCompareResult(fallback);
       setCompareSource("score-based");
@@ -3005,7 +2179,7 @@ function App() {
     try {
       const response = await fetch(`${apiBase}/api/compare-prompts`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           promptA: compareA,
           promptB: compareB,
@@ -3019,7 +2193,6 @@ function App() {
       setCompareResult(data.result ? { ...data.result, evaluationMethod: data.evaluationMethod } : null);
       setCompareSource(data.model || data.source || "AI judge");
       setCompareWarning(data.warning || "");
-      applyServerQuota(data.quota);
       setCompareBiasMitigation(data.result?.bias_mitigation || "");
       return data.result;
     } catch (error) {
@@ -3069,7 +2242,7 @@ function App() {
     setAttachments((items) => {
       const merged = [...nextFiles, ...items].slice(0, maxAttachments);
       if (merged.length >= maxAttachments && nextFiles.length > 0) {
-        setWarningMessage(`Maximum ${maxAttachments} attachments for the ${accountState.plan} plan. Upgrade to add more.`);
+        setWarningMessage(`Maximum ${maxAttachments} attachments.`);
       }
       return merged;
     });
@@ -3083,184 +2256,19 @@ function App() {
     });
   }
 
-  function applyRuntimeConfigToModelSettings(config) {
-    if (!config) return;
-    setModelSettings((prev) => ({
-      ...prev,
-      provider: config.provider || prev.provider,
-      baseUrl: config.baseUrl || prev.baseUrl,
-      primaryModel: config.primaryModel || prev.primaryModel,
-      ocrModel: config.ocrModel || prev.ocrModel,
-      timeoutMs: config.timeoutMs ? String(config.timeoutMs) : prev.timeoutMs,
-      fallbackModels: Array.isArray(config.fallbackModels)
-        ? config.fallbackModels.join("\n")
-        : String(config.fallbackModels || prev.fallbackModels || ""),
-    }));
-  }
-
-  async function loadAdminRuntimeConfig() {
-    if (accountState.role !== "admin" || !accountState.userId) return;
-    try {
-      const response = await fetch(`${apiBase}/api/admin/runtime-config`, {
-        headers: await getAuthHeaders(),
-      });
-      const data = await readApiJson(response);
-      if (!response.ok) return;
-      if (data.config) applyRuntimeConfigToModelSettings(data.config);
-      setGlobalConfigSource(data.source || "env");
-      if (data.config?.updatedAt) {
-        setGlobalPublishAt(new Date(data.config.updatedAt).toLocaleString("en-US"));
-      }
-    } catch {
-      /* optional */
-    }
-  }
-
-  async function publishGlobalModelSettings() {
-    setGlobalPublishBusy(true);
-    setProviderTestStatus("Publishing global model routing...");
-    try {
-      const response = await fetch(`${apiBase}/api/admin/runtime-config`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
-        body: JSON.stringify({
-          provider: modelSettings.provider,
-          baseUrl: modelSettings.baseUrl,
-          primaryModel: modelSettings.primaryModel,
-          ocrModel: modelSettings.ocrModel,
-          fallbackModels: modelSettings.fallbackModels,
-          timeoutMs: modelSettings.timeoutMs,
-        }),
-      });
-      const data = await readApiJson(response);
-      if (!response.ok) throw new Error(data.error || "Failed to publish global config.");
-      if (data.config) applyRuntimeConfigToModelSettings(data.config);
-      setGlobalConfigSource("published");
-      setGlobalPublishAt(
-        data.updatedAt
-          ? new Date(data.updatedAt).toLocaleString("en-US")
-          : new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit" }).format(new Date())
-      );
-      setProviderTestStatus(data.message || "Published globally for all users.");
-      localStorage.setItem("promptlab-model-settings", JSON.stringify(modelSettings));
-      await refreshHealth();
-    } catch (error) {
-      setProviderTestStatus(error.message || "Publish failed.");
-    } finally {
-      setGlobalPublishBusy(false);
-    }
-  }
-
-  async function loadAdminAnalytics() {
-    if (accountState.role !== "admin" || !accountState.userId) return;
-    setAdminAnalyticsLoading(true);
-    try {
-      const response = await fetch(`${apiBase}/api/admin/analytics/overview`, {
-        headers: await getAuthHeaders(),
-      });
-      const data = await readApiJson(response);
-      if (!response.ok) throw new Error(data.error || "Failed to load analytics.");
-      setAdminAnalytics(data.overview || null);
-    } catch (error) {
-      setAdminActionStatus(error.message || "Analytics unavailable.");
-    } finally {
-      setAdminAnalyticsLoading(false);
-    }
-  }
-
-  async function loadAdminUsers(search = adminUsersSearch) {
-    if (accountState.role !== "admin" || !accountState.userId) return;
-    setAdminUsersLoading(true);
-    try {
-      const params = new URLSearchParams({ limit: "100" });
-      if (search?.trim()) params.set("search", search.trim());
-      const response = await fetch(`${apiBase}/api/admin/users?${params}`, {
-        headers: await getAuthHeaders(),
-      });
-      const data = await readApiJson(response);
-      if (!response.ok) throw new Error(data.error || "Failed to load users.");
-      setAdminUsers(data);
-    } catch (error) {
-      setAdminActionStatus(error.message || "User list unavailable.");
-    } finally {
-      setAdminUsersLoading(false);
-    }
-  }
-
-  async function updateAdminUser(userId, patch) {
-    setAdminActionStatus("Saving user...");
-    try {
-      const response = await fetch(`${apiBase}/api/admin/users/${userId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
-        body: JSON.stringify(patch),
-      });
-      const data = await readApiJson(response);
-      if (!response.ok) throw new Error(data.error || "Failed to update user.");
-      setAdminActionStatus("User updated.");
-      await loadAdminUsers();
-      await loadAdminAnalytics();
-      if (userId === accountState.userId) await loadUserProfile();
-    } catch (error) {
-      setAdminActionStatus(error.message || "Update failed.");
-    }
-  }
-
-  async function grantSuperUser(userId) {
-    const resetDate = new Date();
-    resetDate.setDate(resetDate.getDate() + 365);
-    await updateAdminUser(userId, {
-      role: "admin",
-      plan: "Business",
-      quotaLimit: SUPER_QUOTA_LIMIT,
-      quotaUsed: 0,
-      quotaResetAt: resetDate.toISOString().slice(0, 10),
-    });
-  }
-
   async function refreshHealth() {
     try {
       const response = await fetch(`${apiBase}/api/health`);
       const data = await readApiJson(response);
       setSettingsStatus(data);
-      setProviderTestStatus(data.ok ? "Health check OK" : "Health check failed");
     } catch {
       setSettingsStatus({ ok: false, provider: "unreachable", model: "-", fallbackModel: "-" });
-      setProviderTestStatus("Backend is not connected");
-    }
-  }
-
-  async function testProvider() {
-    setIsTestingProvider(true);
-    setProviderTestStatus("Testing provider...");
-    try {
-      const response = await fetch(`${apiBase}/api/test-provider`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
-        body: JSON.stringify(modelSettings),
-      });
-      const data = await readApiJson(response);
-      if (!response.ok || !data.ok) throw new Error(data.error || "Provider test failed.");
-      setProviderTestStatus(`OK: ${data.model || modelSettings.primaryModel}`);
-      setSettingsStatus((status) => ({
-        ...(status || {}),
-        ai: true,
-        model: data.model || modelSettings.primaryModel,
-        ok: true,
-        provider: data.provider || status?.provider || "openrouter",
-      }));
-    } catch (error) {
-      setProviderTestStatus(error.message || "Provider test failed.");
-      setSettingsStatus((status) => ({ ...(status || {}), ok: false }));
-    } finally {
-      setIsTestingProvider(false);
     }
   }
 
   function saveModelSettings() {
     localStorage.setItem("promptlab-model-settings", JSON.stringify(modelSettings));
     setSettingsSavedAt(new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date()));
-    setProviderTestStatus("Draft saved in this browser only.");
   }
 
   async function exportFile(format, content = prompt, titleSeed = "") {
@@ -3280,12 +2288,7 @@ function App() {
             attachmentNames: attachments.map((file) => file.name),
           }) || "Diagram";
 
-        let authHeaders = {};
-        try {
-          authHeaders = await getAuthHeaders();
-        } catch {
-          authHeaders = {};
-        }
+        const authHeaders = {};
 
         const { blob, extension, note } = await buildDiagramExportBlob(content, format, {
           apiBase,
@@ -3349,14 +2352,13 @@ function App() {
           : format === "pdf"
             ? "pdfExport"
             : "docxExport";
-    if (!canExportFormat(accountState.plan, format)) {
+    if (!canExportFormat(OPEN_PLAN, format)) {
       const message =
         format === "pptx"
           ? detectLanguage() === "en"
             ? "PowerPoint export needs Pro or Business. Word export works on Free."
             : "Export PowerPoint perlu paket Pro/Business. Word tetap bisa di Free."
           : upgradeMessageForFeature(feature);
-      setBillingMessage(message);
       setExportStatus("");
       flashAction("Upgrade to export");
       setWarningMessage(message);
@@ -3366,12 +2368,7 @@ function App() {
     try {
       setExportStatus(`Preparing ${formatLabel}...`);
       setErrorMessage("");
-      let authHeaders = {};
-      try {
-        authHeaders = await getAuthHeaders();
-      } catch {
-        authHeaders = {};
-      }
+      const authHeaders = {};
       // Document language follows UI locale (owned by Shell via detectLanguage).
       // Do not reference a free `lang` binding here — App no longer owns that state.
       const documentLanguage = detectLanguage() === "en" ? "en" : "id";
@@ -3535,7 +2532,6 @@ function App() {
     setCommandPaletteOpen,
     openCommandPalette,
     commandPaletteRestoreFocus,
-    librarySyncStatus,
     compareA,
     setCompareA,
     compareB,
@@ -3555,26 +2551,7 @@ function App() {
     modelSettings,
     setModelSettings,
     saveModelSettings,
-    publishGlobalModelSettings,
-    loadAdminRuntimeConfig,
-    globalPublishBusy,
-    globalPublishAt,
-    globalConfigSource,
     settingsSavedAt,
-    providerTestStatus,
-    isTestingProvider,
-    testProvider,
-    adminAnalytics,
-    adminAnalyticsLoading,
-    adminUsers,
-    adminUsersLoading,
-    adminUsersSearch,
-    setAdminUsersSearch,
-    loadAdminAnalytics,
-    loadAdminUsers,
-    updateAdminUser,
-    grantSuperUser,
-    adminActionStatus,
     exportStatus,
     diagramExportOffer,
     closeDiagramExportOffer,
@@ -3583,17 +2560,6 @@ function App() {
     apiBase,
     accountState,
     setAccountState,
-    authStatus,
-    authError,
-    isAuthBusy,
-    authSessionReady,
-    hasAuthSession,
-    isSupabaseConfigured,
-    membershipPlans,
-    signInWithPassword,
-    signInWithGoogle,
-    signUpWithPassword,
-    signOut,
     setBuilderFromTemplate,
     optimizerResult,
     optimizerSource,
@@ -3607,20 +2573,6 @@ function App() {
     piiFindings,
     compareBiasMitigation,
     clearOptimizerResult,
-    billingBusy,
-    billingMessage,
-    upgradeViaPlayBilling,
-    restorePlayPurchases,
-    syncPlayMembership,
-    requestMembershipUpgrade,
-    resetPasswordForEmail,
-    deleteAccountPermanently,
-    showAuthUpsell,
-    setShowAuthUpsell,
-    loadUserProfile,
-    playBillingReady,
-    playBillingHint,
-    webCheckoutReady: isWebCheckoutConfigured(),
 
     // --- Shell contract -----------------------------------------------------
     // The shell shows only what the AI actually returned. `prompt` above falls
@@ -3637,41 +2589,10 @@ function App() {
     setRunOutput,
     isRunning,
     runError,
-    getAuthHeaders,
-    googleEnabled: isGoogleAuthEnabled,
-    quotaSummary:
-      accountState.plan === "Free" && weeklyResults
-        ? `${weeklyResults.remaining} / ${weeklyResults.limit} results left this week`
-        : formatQuotaSummary(accountState),
-    weeklyAllowance: weeklyResults,
-    // An anonymous trial session is not an account, and must not be presented
-    // as one.
-    hasAuthSession: hasAuthSession && !isAnonymousSession,
-    // null hides the trial affordance entirely — used when the backend cannot
-    // grant trials, so the UI never advertises a free try it cannot deliver.
-    trialRemaining: trialAvailable ? Math.max(0, TRIAL_LIMIT - trialUsed) : null,
-    isAdmin: accountState.role === "admin",
-    authSessionReady,
-    continueAsGuest,
     clearComposer,
   };
 
-  // The admin console keeps the legacy layout: it is internal-only, and
-  // rebuilding it would add risk without reaching a single end user.
-  if (active === "Admin" && accountState.role === "admin") {
-    return (
-      <div data-theme="v2" style={{ padding: 16 }}>
-        <button className="v2-btn" type="button" onClick={() => setActive("Builder")}>
-          ← Back to app
-        </button>
-        <React.Suspense fallback={<p style={{ padding: 24 }}>Loading admin console…</p>}>
-          <AdminConsole {...shared} />
-        </React.Suspense>
-      </div>
-    );
-  }
-
-  return <Shell {...shared} onOpenAdmin={() => setActive("Admin")} />;
+  return <Shell {...shared} />;
 }
 
 function mountPromptLab() {

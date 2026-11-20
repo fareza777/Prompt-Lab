@@ -1,4 +1,4 @@
-import { isNativeAndroidApp } from "./playBilling.js";
+import { isNativeAndroidApp } from "./platform.js";
 
 /**
  * On-device document scanning + OCR for the Capacitor build. The Google ML Kit
