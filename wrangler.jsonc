@@ -1,0 +1,45 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "prompt-lab",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-11-01",
+  // nodejs_compat lets the Express API (server/index.js) run unchanged and
+  // populates process.env from the vars/secrets below.
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // Sitemap/canonical URLs have no trailing slash (/blog/foo, /privacy).
+    "html_handling": "drop-trailing-slash",
+    "not_found_handling": "none",
+    "run_worker_first": ["/api/*", "/app/*"]
+  },
+  // pdfkit's Node build reads its standard-font metrics from disk via
+  // __dirname, which does not exist in Workers. The standalone build embeds
+  // them, so /api/export/pdf works unchanged.
+  "alias": {
+    "pdfkit": "./node_modules/pdfkit/js/pdfkit.standalone.js"
+  },
+  "workers_dev": true,
+  "preview_urls": true,
+  "observability": { "enabled": true },
+  // Non-secret runtime config. Secrets (API keys, service role key, webhook
+  // secret, Play service account) are set with `wrangler secret put` or in the
+  // dashboard; see MIGRATION-CLOUDFLARE.md.
+  "vars": {
+    "APP_URL": "https://prompt-lab.xyz",
+    "CORS_ORIGIN": "https://prompt-lab.xyz",
+    "GOOGLE_PLAY_PACKAGE_NAME": "app.promptlab.twa",
+    "SUPABASE_URL": "https://oqakopejqlcqrnqdkquo.supabase.co",
+    "AI_PROVIDER": "openrouter",
+    "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
+    "OPENROUTER_MODEL": "qwen/qwen3.7-flash",
+    "OPENROUTER_FALLBACK_MODEL": "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "OPENROUTER_FALLBACK_MODELS": "nvidia/nemotron-3-ultra-550b-a55b:free,nvidia/nemotron-3.5-lightning:free,nvidia/nemotron-3-super-120b-a12b:free",
+    "OPENROUTER_OCR_MODEL": "baidu/qianfan-ocr-fast:free",
+    "SUPER_ACCOUNT_EMAILS": "fajar.mreza@gmail.com",
+    "LEMON_SQUEEZY_VARIANT_ID_PRO": "https://prom.lemonsqueezy.com/checkout/buy/ab217d1d-0715-4223-b741-ab06a2fd1068",
+    "LEMON_SQUEEZY_VARIANT_ID_BUSINESS": "https://prom.lemonsqueezy.com/checkout/buy/543907b2-919d-489f-b58c-eabae9aa12c0",
+    "QUOTA_RECORD_SOFT_FAIL": "false"
+  }
+}
