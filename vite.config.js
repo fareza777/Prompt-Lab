@@ -73,7 +73,6 @@ export default defineConfig({
           // That folded dynamically imported packages (e.g. mermaid) into the
           // initial graph and blew the 700 KiB budget on Vercel.
           if (id.includes("lucide-react")) return "icons";
-          if (id.includes("@supabase")) return "supabase";
           if (
             id.includes("node_modules/react-dom") ||
             id.includes("node_modules\\react-dom") ||

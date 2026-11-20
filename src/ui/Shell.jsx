@@ -2,7 +2,6 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { CalendarDays, Clock, User, HelpCircle } from "lucide-react";
 import { makeTranslator, detectLanguage, persistLanguage, hasStoredLanguage } from "./i18n.js";
 import FirstRun from "./FirstRun.jsx";
-import AuthGate from "./AuthGate.jsx";
 import Guide from "./Guide.jsx";
 import { humanizeApiError } from "./errors.js";
 import { readThemeMode, applyThemeMode, watchSystemScheme, resolveScheme } from "./theme.js";
@@ -41,12 +40,10 @@ const Account = lazy(() => import("./Account.jsx"));
 
 /**
  * The application shell — one canvas, with everything secondary arriving as a
- * sheet. Boot order: language → login/guest → skippable tour → canvas.
+ * sheet. Boot order: language → skippable tour → canvas (no sign-in).
  */
 
 const FIRST_RUN_KEY = "promptlab-onboarded";
-const AUTH_GATE_KEY = "promptlab-auth-gate";
-const GUEST_KEY = "promptlab-guest";
 
 function readFirstRunDone() {
   try {
@@ -65,39 +62,6 @@ function writeFirstRunDone(done) {
   }
 }
 
-function readAuthGateDone() {
-  try {
-    return localStorage.getItem(AUTH_GATE_KEY) === "1";
-  } catch {
-    return true;
-  }
-}
-
-function writeAuthGateDone(done) {
-  try {
-    if (done) localStorage.setItem(AUTH_GATE_KEY, "1");
-    else localStorage.removeItem(AUTH_GATE_KEY);
-  } catch {
-    /* ignore */
-  }
-}
-
-function writeGuestFlag(isGuest) {
-  try {
-    if (isGuest) localStorage.setItem(GUEST_KEY, "1");
-    else localStorage.removeItem(GUEST_KEY);
-  } catch {
-    /* ignore */
-  }
-}
-
-function readGuestFlag() {
-  try {
-    return localStorage.getItem(GUEST_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
 
 export default function Shell(props) {
   const {
@@ -145,22 +109,6 @@ export default function Shell(props) {
     confirmDiagramExportShare,
     entitlements,
     accountState,
-    hasAuthSession,
-    isAuthBusy,
-    authStatus,
-    authError,
-    signInWithPassword,
-    signUpWithPassword,
-    signInWithGoogle,
-    resetPasswordForEmail,
-    signOut,
-    deleteAccountPermanently,
-    requestMembershipUpgrade,
-    restorePlayPurchases,
-    billingMessage,
-    billingBusy,
-    googleEnabled,
-    quotaSummary,
     runOutput,
     setRunOutput,
     isRunning,
@@ -181,12 +129,6 @@ export default function Shell(props) {
     actionToast,
     apiBase,
     getAuthHeaders,
-    trialRemaining,
-    weeklyAllowance,
-    isAdmin,
-    onOpenAdmin,
-    authSessionReady,
-    continueAsGuest,
     clearComposer,
     runTemplate,
     templatePhase,
@@ -199,8 +141,6 @@ export default function Shell(props) {
   const [paletteChoice, setPaletteChoice] = useState(readPaletteChoice);
   const [sheet, setSheet] = useState(null);
   const [firstRunDone, setFirstRunDone] = useState(readFirstRunDone);
-  const [authGateDone, setAuthGateDone] = useState(readAuthGateDone);
-  const [isGuest, setIsGuest] = useState(readGuestFlag);
   // The language screen only appears when nothing has been chosen or detected
   // before; a returning user is never asked again.
   const [languageChosen, setLanguageChosen] = useState(hasStoredLanguage);
@@ -290,19 +230,6 @@ export default function Shell(props) {
     setPaletteChoice(null);
   }, []);
 
-  // A real signed-in session (or a previous guest choice) clears the auth gate.
-  useEffect(() => {
-    if (hasAuthSession) {
-      writeAuthGateDone(true);
-      setAuthGateDone(true);
-      writeGuestFlag(false);
-      setIsGuest(false);
-    } else if (isGuest) {
-      writeAuthGateDone(true);
-      setAuthGateDone(true);
-    }
-  }, [hasAuthSession, isGuest]);
-
   const setLang = useCallback((next) => {
     persistLanguage(next);
     setLangState(next);
@@ -336,7 +263,8 @@ export default function Shell(props) {
   }, [runOutput]);
 
   const hasResult = Boolean(String(runOutput || "").trim());
-  const isLocalOnly = !hasAuthSession || !accountState?.userId;
+  // History, templates and drafts live only on this device.
+  const isLocalOnly = true;
 
   const handleGenerate = useCallback(async () => {
     setPreviousPrompt("");
@@ -460,35 +388,11 @@ export default function Shell(props) {
     [setBuilderFromTemplate, clearMessages]
   );
 
-  const trialNotice = useMemo(() => {
-    const remaining = hasAuthSession ? weeklyAllowance?.remaining : trialRemaining;
-    if (remaining == null) return null;
-    if (remaining <= 0) return { tone: "warn", text: t("trial.over"), hint: t("trial.overHint") };
-    if (remaining === 1) return { tone: "warn", text: t("trial.lastOne") };
-    return { tone: "plain", text: t("trial.left", { n: remaining }) };
-  }, [hasAuthSession, trialRemaining, weeklyAllowance, t]);
-
-  const allowanceRemaining = hasAuthSession ? weeklyAllowance?.remaining : trialRemaining;
-  const trialExhausted = allowanceRemaining != null && allowanceRemaining <= 0;
-
   const finishFirstRun = useCallback(() => {
     writeFirstRunDone(true);
     setFirstRunDone(true);
     setLanguageChosen(true);
   }, []);
-
-  const finishAuthGate = useCallback(() => {
-    writeAuthGateDone(true);
-    setAuthGateDone(true);
-  }, []);
-
-  const handleGuest = useCallback(async () => {
-    const ok = await continueAsGuest?.();
-    writeGuestFlag(true);
-    setIsGuest(true);
-    finishAuthGate();
-    return ok;
-  }, [continueAsGuest, finishAuthGate]);
 
   const replayFirstRun = useCallback(() => {
     setSheet(null);
@@ -505,9 +409,7 @@ export default function Shell(props) {
   }, [clearComposer, clearMessages]);
 
   const languageReady = languageChosen || hasStoredLanguage();
-  const sessionReady = authSessionReady !== false;
-  const needsAuthGate = languageReady && sessionReady && !authGateDone && !hasAuthSession && !isGuest;
-  const needsTour = languageReady && !needsAuthGate && !firstRunDone;
+  const needsTour = languageReady && !firstRunDone;
 
   if (!languageReady) {
     return (
@@ -517,41 +419,6 @@ export default function Shell(props) {
           setLang(code);
           setLanguageChosen(true);
         }}
-      />
-    );
-  }
-
-  if (!sessionReady) {
-    return (
-      <main className="pl-firstrun" data-stage="session">
-        <section className="pl-firstrun-card">
-          <p className="pl-eyebrow">{t("app.name")}</p>
-          <h1>{t("auth.gate.title")}</h1>
-          <p className="pl-firstrun-lede">{t("result.workingHint")}</p>
-        </section>
-      </main>
-    );
-  }
-
-  if (needsAuthGate) {
-    return (
-      <AuthGate
-        t={t}
-        isBusy={isAuthBusy}
-        status={authStatus}
-        error={authError}
-        onSignIn={async (...args) => {
-          await signInWithPassword?.(...args);
-        }}
-        onSignUp={async (...args) => {
-          await signUpWithPassword?.(...args);
-        }}
-        onGoogle={async () => {
-          await signInWithGoogle?.();
-        }}
-        onForgot={resetPasswordForEmail}
-        onGuest={handleGuest}
-        googleEnabled={googleEnabled}
       />
     );
   }
@@ -579,11 +446,6 @@ export default function Shell(props) {
           {t("app.name")} <span>{t("app.tagline")}</span>
         </button>
         <div className="pl-top-actions">
-          {isAdmin && (
-            <button type="button" className="pl-btn pl-btn--quiet pl-btn--sm" onClick={onOpenAdmin}>
-              Admin
-            </button>
-          )}
           <button
             type="button"
             className="pl-icon-btn"
@@ -630,17 +492,6 @@ export default function Shell(props) {
           />
         ) : (
           <div className="pl-template-flow">
-            {trialNotice && (
-              <div
-                className={trialNotice.tone === "warn" ? "pl-notice pl-notice--warn" : "pl-notice"}
-                role="status"
-              >
-                <span>
-                  {trialNotice.text}
-                  {trialNotice.hint ? ` ${trialNotice.hint}` : ""}
-                </span>
-              </div>
-            )}
 
             {isRunning ? (
               <TemplateProgress
@@ -709,8 +560,6 @@ export default function Shell(props) {
                 isBusy={isRunning}
                 planMaxAttachments={maxAttachments}
                 errorMessage={humanizeApiError(errorMessage, t)}
-                disabled={trialExhausted}
-                disabledReason={trialExhausted ? t("trial.overHint") : ""}
                 apiBase={apiBase}
               />
             )}
@@ -775,24 +624,6 @@ export default function Shell(props) {
           setThemeMode={setThemeMode}
           open={sheet === "account"}
           onClose={closeSheet}
-          accountState={accountState}
-          hasAuthSession={hasAuthSession}
-          isGuest={isGuest}
-          isAuthBusy={isAuthBusy}
-          authStatus={authStatus}
-          authError={authError}
-          googleEnabled={googleEnabled}
-          signInWithPassword={signInWithPassword}
-          signUpWithPassword={signUpWithPassword}
-          signInWithGoogle={signInWithGoogle}
-          resetPasswordForEmail={resetPasswordForEmail}
-          signOut={signOut}
-          deleteAccountPermanently={deleteAccountPermanently}
-          onUpgrade={requestMembershipUpgrade}
-          onRestore={restorePlayPurchases}
-          billingMessage={billingMessage}
-          billingBusy={billingBusy}
-          quotaSummary={quotaSummary}
           paletteChoice={paletteChoice}
           palette={resolvePalette(paletteChoice)?.palette || PALETTE_PRESETS[0].palette}
           onPickPreset={pickPreset}

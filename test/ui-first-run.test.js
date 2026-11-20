@@ -6,20 +6,17 @@ import { translate, LANGUAGES, hasStoredLanguage } from "../src/ui/i18n.js";
 const read = (p) => readFile(new URL(p, import.meta.url), "utf8");
 
 const firstRun = await read("../src/ui/FirstRun.jsx");
-const authGate = await read("../src/ui/AuthGate.jsx");
 const guide = await read("../src/ui/Guide.jsx");
 const shell = await read("../src/ui/Shell.jsx");
 const shellCss = await read("../src/ui/shell.css");
 const resultSource = await read("../src/ui/Result.jsx");
 
-test("boot order is language, then auth/guest, then skippable tour", () => {
-  assert.match(shell, /Boot order: language → login\/guest → skippable tour → canvas/);
-  assert.match(shell, /const AUTH_GATE_KEY = "promptlab-auth-gate"/);
-  assert.match(shell, /const GUEST_KEY = "promptlab-guest"/);
-  assert.match(shell, /needsAuthGate/);
+test("boot order is language, then skippable tour, with no login wall", () => {
+  // Accounts were removed: /app must open straight into the tool.
   assert.match(shell, /needsTour/);
-  assert.match(shell, /continueAsGuest/);
-  assert.match(shell, /<AuthGate/);
+  assert.doesNotMatch(shell, /<AuthGate/);
+  assert.doesNotMatch(shell, /needsAuthGate/);
+  assert.doesNotMatch(shell, /continueAsGuest/);
 });
 
 test("first run language stage finishes into the next boot step", () => {
@@ -68,20 +65,9 @@ test("double-tapping Next cannot run the tour past its last step", () => {
   assert.doesNotMatch(firstRun, /setIndex\(\(value\) => value \+ 1\)/);
 });
 
-test("auth gate offers guest continue without email", () => {
-  assert.match(authGate, /data-stage="auth"/);
-  assert.match(authGate, /auth\.gate\.guest/);
-  assert.match(authGate, /onGuest/);
-  assert.match(authGate, /UserRound/);
-  for (const lang of ["id", "en"]) {
-    assert.match(translate(lang, "auth.gate.guestHint"), /email/i);
-  }
-});
-
-test("first run / auth choices are remembered", () => {
+test("first run choice is remembered", () => {
   assert.match(shell, /const FIRST_RUN_KEY = "promptlab-onboarded"/);
   assert.match(shell, /writeFirstRunDone\(true\)/);
-  assert.match(shell, /writeAuthGateDone\(true\)/);
   // Storage failure must not trap someone on a screen we cannot dismiss.
   assert.match(shell, /return true; \/\/ No storage/);
 });

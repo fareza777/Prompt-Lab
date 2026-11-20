@@ -14,7 +14,6 @@ import JSZip from "jszip";
 import mammoth from "mammoth";
 import multer from "multer";
 import OpenAI from "openai";
-import { createClient } from "@supabase/supabase-js";
 import { buildPhasedAppDeliveryInstruction } from "../src/phasedAppDelivery.js";
 import { buildStructuredAuditInstruction } from "../src/structuredAuditDelivery.js";
 import {
@@ -68,19 +67,6 @@ import {
   upgradeMessageForFeature,
 } from "../src/planEntitlements.js";
 import { API_MSG, UNSUPPORTED_FILE_TYPE } from "../src/apiUserMessages.js";
-import { isSuperAccount, SUPER_QUOTA_LIMIT } from "../src/superAccounts.js";
-import {
-  getPlanForProductId,
-  verifyPlaySubscriptionPurchase,
-  acknowledgePlaySubscriptionPurchase,
-  classifyPlaySyncVerification,
-  hashPurchaseToken,
-  claimPlayMembership,
-  loadPlayMembershipEvents,
-  persistPlayMembership,
-  FREE_PLAN_DEFAULTS,
-} from "./playBillingGoogle.js";
-import { persistReservedUsage, quotaFailureStatus } from "./quotaReservation.js";
 import { callSidecar, sidecarConfigured } from "./documents.js";
 import { buildDocxBuffer, buildPptxBuffer } from "./officeExport.js";
 import { buildPdfBuffer } from "./pdfExport.js";
@@ -92,23 +78,7 @@ import { extractDocumentImages } from "./documentImages.js";
 import { serializeExportImages } from "./exportImagesPayload.js";
 import { buildTemplateInstruction, getTemplate } from "../src/workTemplates.js";
 import { attachmentDisposition } from "./exportFilename.js";
-import {
-  releaseWeeklyFreeResult,
-  reserveWeeklyFreeResult,
-} from "./weeklyResultQuota.js";
-import {
-  handleLemonSqueezyWebhook,
-  parseLemonSqueezyWebhook,
-  verifyLemonSqueezySignature,
-} from "./lemonSqueezyBilling.js";
-import {
-  clearRuntimeConfigCache,
-  getCachedPublishedModelSettings,
-  mergeModelSettingsLayers,
-  savePublishedModelSettings,
-  toPublicRuntimeConfig,
-} from "./runtimeConfig.js";
-import { fetchAdminOverview, fetchAdminUsers, patchAdminUser } from "./adminApi.js";
+import { mergeModelSettingsLayers, toPublicRuntimeConfig } from "./runtimeConfig.js";
 import {
   buildProviderChatCompletionBody,
   resolveMinimaxBaseUrl,
@@ -128,14 +98,9 @@ import {
 const app = express();
 
 async function attachAiRateLimitIdentity(req, _res, next) {
-  try {
-    const membership = await getMembershipFromRequest(req);
-    req.authUserId = membership?.user?.id || "";
-    req.aiRateLimitPlan = membership?.plan || "Free";
-  } catch {
-    req.authUserId = "";
-    req.aiRateLimitPlan = "Free";
-  }
+  // Anonymous only: everyone is limited per IP at the tightest tier.
+  req.authUserId = "";
+  req.aiRateLimitPlan = "Free";
   next();
 }
 
@@ -206,11 +171,6 @@ const openRouterPrimaryTimeoutMs = Number(process.env.OPENROUTER_PRIMARY_TIMEOUT
 const openRouterFallbackTimeoutMs = Number(process.env.OPENROUTER_FALLBACK_TIMEOUT_MS || 55000);
 const openRouterOcrModel = process.env.OPENROUTER_OCR_MODEL || "baidu/qianfan-ocr-fast:free";
 const openRouterOcrTimeoutMs = Number(process.env.OPENROUTER_OCR_TIMEOUT_MS || 45000);
-const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const quotaAuthEnabled = Boolean(supabaseUrl && supabaseAnonKey) && process.env.QUOTA_AUTH_ENABLED !== "false";
-const quotaServiceRoleEnabled = Boolean(supabaseUrl && supabaseServiceRoleKey);
 const defaultOpenRouterFallbackModels = [
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   "openai/gpt-oss-20b:free",
@@ -242,61 +202,12 @@ app.use(
   })
 );
 
-app.post(
-  "/api/billing/lemon-squeezy-webhook",
-  express.raw({ type: "application/json", limit: "256kb" }),
-  async (req, res) => {
-    try {
-      const secret = process.env.LEMON_SQUEEZY_WEBHOOK_SECRET || "";
-      const signature = req.get("X-Signature") || "";
-      const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body || "");
-
-      const verified = verifyLemonSqueezySignature(rawBody, signature, secret);
-      if (!verified.ok) {
-        res.status(401).json({ error: verified.error });
-        return;
-      }
-
-      const parsed = parseLemonSqueezyWebhook(rawBody);
-      if (!parsed.ok) {
-        res.status(400).json({ error: parsed.error });
-        return;
-      }
-
-      const admin = createServiceRoleSupabaseClient();
-      if (!admin) {
-        res.status(503).json({ error: "SUPABASE_SERVICE_ROLE_KEY is required for billing webhooks." });
-        return;
-      }
-
-      const result = await handleLemonSqueezyWebhook(admin, parsed.payload, parsed.eventName);
-      if (!result.ok) {
-        console.error("lemon squeezy webhook", parsed.eventName, result.error);
-        res.status(result.userId ? 422 : 400).json({ error: result.error || "Webhook handling failed." });
-        return;
-      }
-
-      res.json({
-        ok: true,
-        event: parsed.eventName,
-        ignored: Boolean(result.ignored),
-        plan: result.plan || null,
-        userId: result.userId || null,
-      });
-    } catch (error) {
-      console.error("lemon squeezy webhook error", error);
-      res.status(500).json({ error: error.message || "Webhook error." });
-    }
-  }
-);
-
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", async (req, res) => {
   try {
     const modelSettings = await resolveModelSettings(req, req.query);
     const runtime = getRuntimeProvider(modelSettings);
-    const { meta } = await getCachedPublishedModelSettings(createServiceRoleSupabaseClient());
     const aiReady = Boolean(runtime.client);
     const status = aiReady ? "online" : "degraded";
     res.json({
@@ -325,8 +236,8 @@ app.get("/api/health", async (req, res) => {
               runtime.provider
             ),
       ocrModel: modelSettings.ocrModel || getDefaultOcrModel(),
-      configSource: meta?.updatedAt ? "published" : "env",
-      configUpdatedAt: meta?.updatedAt || null,
+      configSource: "env",
+      configUpdatedAt: null,
       warning: aiReady ? "" : "AI provider is not configured. Generations may use a local preview.",
     });
   } catch (error) {
@@ -341,186 +252,16 @@ app.get("/api/health", async (req, res) => {
 
 app.get("/api/runtime-config", async (_req, res) => {
   try {
-    const admin = createServiceRoleSupabaseClient();
-    const { settings: published, meta } = await getCachedPublishedModelSettings(admin);
-    const merged = mergeModelSettingsLayers({ published, allowRequestOverride: false });
+    // Model routing comes from the Worker's environment only; there is no
+    // database-backed admin override any more.
+    const merged = mergeModelSettingsLayers({ published: null, allowRequestOverride: false });
     res.json({
       ok: true,
-      source: published ? "published" : "env",
-      config: toPublicRuntimeConfig(merged, meta),
+      source: "env",
+      config: toPublicRuntimeConfig(merged, {}),
     });
   } catch (error) {
     res.status(503).json({ ok: false, error: error.message || "Runtime config unavailable." });
-  }
-});
-
-app.get("/api/admin/runtime-config", async (req, res) => {
-  try {
-    await requireAdminMembership(req);
-    const admin = createServiceRoleSupabaseClient();
-    if (!admin) {
-      res.status(503).json({ error: "SUPABASE_SERVICE_ROLE_KEY is required to load global config." });
-      return;
-    }
-    const { settings: published, meta } = await getCachedPublishedModelSettings(admin);
-    const merged = mergeModelSettingsLayers({ published, allowRequestOverride: false });
-    res.json({
-      ok: true,
-      source: published ? "published" : "env",
-      config: toPublicRuntimeConfig(merged, meta),
-      draft: published || null,
-    });
-  } catch (error) {
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json({ error: error.publicMessage || error.message || "Failed to load config." });
-  }
-});
-
-app.put("/api/admin/runtime-config", express.json({ limit: "64kb" }), async (req, res) => {
-  try {
-    const membership = await requireAdminMembership(req);
-    const admin = createServiceRoleSupabaseClient();
-    if (!admin) {
-      res.status(503).json({ error: "SUPABASE_SERVICE_ROLE_KEY is required to publish global config." });
-      return;
-    }
-    const normalized = normalizeModelSettings(req.body);
-    const saved = await savePublishedModelSettings(admin, normalized, membership.user?.id);
-    clearRuntimeConfigCache();
-    res.json({
-      ok: true,
-      message: "Global model routing published. All users on production will use this within a few seconds.",
-      config: toPublicRuntimeConfig(normalized, saved.meta),
-      updatedAt: saved.meta?.updatedAt || null,
-    });
-  } catch (error) {
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json({ error: error.publicMessage || error.message || "Failed to publish config." });
-  }
-});
-
-app.get("/api/admin/analytics/overview", async (req, res) => {
-  try {
-    await requireAdminMembership(req);
-    const admin = createServiceRoleSupabaseClient();
-    if (!admin) {
-      res.status(503).json({ error: "SUPABASE_SERVICE_ROLE_KEY is required for admin analytics." });
-      return;
-    }
-    const overview = await fetchAdminOverview(admin);
-    res.json({ ok: true, overview });
-  } catch (error) {
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json({ error: error.publicMessage || error.message || "Failed to load analytics." });
-  }
-});
-
-app.get("/api/admin/users", async (req, res) => {
-  try {
-    await requireAdminMembership(req);
-    const admin = createServiceRoleSupabaseClient();
-    if (!admin) {
-      res.status(503).json({ error: "SUPABASE_SERVICE_ROLE_KEY is required for user management." });
-      return;
-    }
-    const result = await fetchAdminUsers(admin, {
-      limit: req.query.limit,
-      offset: req.query.offset,
-      search: req.query.search,
-    });
-    res.json({ ok: true, ...result });
-  } catch (error) {
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json({ error: error.publicMessage || error.message || "Failed to load users." });
-  }
-});
-
-app.patch("/api/admin/users/:userId", express.json({ limit: "16kb" }), async (req, res) => {
-  try {
-    await requireAdminMembership(req);
-    const admin = createServiceRoleSupabaseClient();
-    if (!admin) {
-      res.status(503).json({ error: "SUPABASE_SERVICE_ROLE_KEY is required for user management." });
-      return;
-    }
-    const body = req.body || {};
-    const updated = await patchAdminUser(admin, req.params.userId, {
-      plan: body.plan,
-      role: body.role,
-      quotaLimit: body.quotaLimit,
-      quotaUsed: body.quotaUsed,
-      quotaResetAt: body.quotaResetAt,
-    });
-    res.json({ ok: true, user: updated });
-  } catch (error) {
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json({ error: error.publicMessage || error.message || "Failed to update user." });
-  }
-});
-
-app.post("/api/test-provider", express.json({ limit: "64kb" }), async (req, res) => {
-  try {
-    await requireAdminMembership(req);
-    const modelSettings = await resolveModelSettings(req, req.body);
-    const runtime = getRuntimeProvider(modelSettings);
-    const model = modelSettings.primaryModel || runtime.defaultModel;
-
-    if (!runtime.client) {
-      res.status(400).json({ ok: false, provider: runtime.provider, error: API_MSG.apiKeyInactive });
-      return;
-    }
-
-    if (runtime.provider !== "openai") {
-      const completion = await withTimeout(
-        runtime.client.chat.completions.create(
-          buildProviderChatCompletionBody(runtime, {
-            model,
-            messages: [
-              {
-                role: "user",
-                content:
-                  "Buat prompt singkat berbahasa Indonesia untuk mengubah brief mentah menjadi prompt AI profesional. Maksimal 120 kata.",
-              },
-            ],
-            max_tokens: 220,
-          }),
-          { timeout: 20000 }
-        ),
-        20000,
-        model
-      );
-
-      res.json({
-        ok: true,
-        provider: runtime.provider,
-        endpoint: runtime.baseURL,
-        model: completion.model || model,
-        message: completion.choices?.[0]?.message?.content || "OK",
-      });
-      return;
-    }
-
-    const response = await runtime.client.responses.create(
-      {
-        model,
-        input: "Buat prompt singkat berbahasa Indonesia untuk mengubah brief mentah menjadi prompt AI profesional. Maksimal 120 kata.",
-      },
-      { timeout: 20000 }
-    );
-
-    res.json({
-      ok: true,
-      provider: runtime.provider,
-      endpoint: runtime.baseURL || "OpenAI default",
-      model,
-      message: response.output_text || "OK",
-    });
-  } catch (error) {
-    res.status(502).json({
-      ok: false,
-      provider: normalizeModelSettings(req.body).provider || provider,
-      error: formatProviderError(error),
-    });
   }
 });
 
@@ -753,465 +494,6 @@ app.post("/api/client-log", express.json({ limit: "16kb" }), async (req, res) =>
   }
 });
 
-app.post("/api/billing/verify-play-purchase", express.json({ limit: "32kb" }), async (req, res) => {
-  try {
-    const productId = String(req.body?.productId || "").trim();
-    const purchaseToken = String(req.body?.purchaseToken || "").trim();
-    if (!productId || !purchaseToken) {
-      res.status(400).json({ error: "productId and purchaseToken are required." });
-      return;
-    }
-
-    const planConfig = getPlanForProductId(productId);
-    if (!planConfig) {
-      res.status(400).json({ error: "Unknown product ID." });
-      return;
-    }
-
-    const quotaSession = await getQuotaSession(req, 0);
-    const verification = await verifyPlaySubscriptionPurchase({
-      subscriptionId: productId,
-      purchaseToken,
-    });
-
-    if (!verification.ok) {
-      if (verification.expired) {
-        await downgradePlayMembershipIfNeeded(quotaSession.user.id, {
-          reason: "expired_on_verify",
-          productId,
-        });
-      }
-      res.status(400).json({ error: verification.error || "Google Play verification failed." });
-      return;
-    }
-
-    const admin = createServiceRoleSupabaseClient();
-    if (!admin || !quotaSession?.user?.id) {
-      res.status(503).json({ error: "Membership server is not ready." });
-      return;
-    }
-
-    const userId = quotaSession.user.id;
-    const tokenHash = hashPurchaseToken(purchaseToken);
-
-    let acknowledged = Number(verification.acknowledgementState) === 1;
-    if (!acknowledged) {
-      const ack = await acknowledgePlaySubscriptionPurchase({
-        subscriptionId: productId,
-        purchaseToken,
-        packageName: verification.packageName,
-      });
-      if (!ack.ok) {
-        console.warn("play acknowledge failed", ack.error);
-        res.status(502).json({
-          error: ack.error || "Purchase verified but could not be acknowledged. Please try again.",
-        });
-        return;
-      }
-      acknowledged = true;
-    }
-
-    const previousPlan = normalizePlanName(quotaSession.profile?.plan);
-    const upgrading = previousPlan !== planConfig.plan;
-    const profileUpdate = {
-      plan: planConfig.plan,
-      quota_limit: planConfig.quotaLimit,
-      play_billing: "Google Play",
-      updated_at: new Date().toISOString(),
-    };
-    // Fresh paid period: reset usage so upgrade feels immediate.
-    if (upgrading && previousPlan === "Free") {
-      profileUpdate.quota_used = 0;
-      const resetDate = new Date();
-      resetDate.setDate(resetDate.getDate() + 30);
-      profileUpdate.quota_reset_at = resetDate.toISOString().slice(0, 10);
-    }
-
-    const persisted = await claimPlayMembership(admin, {
-      userId,
-      tokenHash,
-      profileUpdate,
-      event: {
-        event_type: "subscription_verified",
-        plan: planConfig.plan,
-        metadata: {
-          productId,
-          orderId: verification.orderId || "",
-          expiryTimeMillis: verification.expiryTimeMillis || null,
-          acknowledged,
-        },
-      },
-    });
-    if (persisted.conflict) {
-      res.status(409).json({ error: "This purchase is already linked to another account." });
-      return;
-    }
-    if (!persisted.ok) {
-      res.status(503).json({ error: "Could not update your membership. Please try again." });
-      return;
-    }
-
-    const { data: profile, error: readError } = await admin
-      .from("profiles")
-      .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (readError || !profile) {
-      res.json({ ok: true, plan: planConfig.plan, message: "Plan updated." });
-      return;
-    }
-
-    res.json({
-      ok: true,
-      plan: planConfig.plan,
-      message: `Successfully upgraded to ${planConfig.plan}.`,
-      quota: publicQuota(profile),
-    });
-  } catch (error) {
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json({ error: error.publicMessage || error.message || "Billing error." });
-  }
-});
-
-app.post("/api/billing/restore-play-purchases", express.json({ limit: "64kb" }), async (req, res) => {
-  try {
-    const purchases = Array.isArray(req.body?.purchases) ? req.body.purchases : [];
-    if (!purchases.length) {
-      res.status(400).json({ error: "No Google Play purchases were provided." });
-      return;
-    }
-
-    const quotaSession = await getQuotaSession(req, 0);
-    const admin = createServiceRoleSupabaseClient();
-    if (!admin || !quotaSession?.user?.id) {
-      res.status(503).json({ error: "Membership server is not ready." });
-      return;
-    }
-
-    const userId = quotaSession.user.id;
-    let lastPlan = null;
-    let lastQuota = null;
-    let sawExpired = false;
-    let sawClaimConflict = false;
-    const errors = [];
-
-    for (const item of purchases.slice(0, 6)) {
-      const productId = String(item.productId || item.itemId || "").trim();
-      const purchaseToken = String(item.purchaseToken || item.token || "").trim();
-      if (!productId || !purchaseToken) continue;
-      try {
-        const planConfig = getPlanForProductId(productId);
-        if (!planConfig) {
-          errors.push(`${productId}: unknown product`);
-          continue;
-        }
-        const verification = await verifyPlaySubscriptionPurchase({ subscriptionId: productId, purchaseToken });
-        if (!verification.ok) {
-          if (verification.expired) sawExpired = true;
-          errors.push(`${productId}: ${verification.error}`);
-          continue;
-        }
-
-        const tokenHash = hashPurchaseToken(purchaseToken);
-        if (Number(verification.acknowledgementState) !== 1) {
-          const ack = await acknowledgePlaySubscriptionPurchase({ subscriptionId: productId, purchaseToken });
-          if (!ack.ok) {
-            errors.push(`${productId}: ${ack.error || "acknowledge failed"}`);
-            continue;
-          }
-        }
-
-        const previousPlan = normalizePlanName(quotaSession.profile?.plan);
-        const profileUpdate = {
-          plan: planConfig.plan,
-          quota_limit: planConfig.quotaLimit,
-          play_billing: "Google Play",
-          updated_at: new Date().toISOString(),
-        };
-        if (previousPlan === "Free" && planConfig.plan !== "Free") {
-          profileUpdate.quota_used = 0;
-          const resetDate = new Date();
-          resetDate.setDate(resetDate.getDate() + 30);
-          profileUpdate.quota_reset_at = resetDate.toISOString().slice(0, 10);
-        }
-
-        const persisted = await claimPlayMembership(admin, {
-          userId,
-          tokenHash,
-          profileUpdate,
-          event: {
-            event_type: "subscription_restored",
-            plan: planConfig.plan,
-            metadata: {
-              productId,
-              orderId: verification.orderId || "",
-              expiryTimeMillis: verification.expiryTimeMillis || null,
-            },
-          },
-        });
-        if (persisted.conflict) {
-          sawClaimConflict = true;
-          errors.push(`${productId}: already linked to another account`);
-          continue;
-        }
-        if (!persisted.ok) {
-          errors.push(`${productId}: membership persistence unavailable`);
-          continue;
-        }
-        lastPlan = planConfig.plan;
-        const { data: profile } = await admin
-          .from("profiles")
-          .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
-          .eq("id", userId)
-          .maybeSingle();
-        if (profile) lastQuota = publicQuota(profile);
-      } catch (error) {
-        errors.push(error.publicMessage || error.message || "restore failed");
-      }
-    }
-
-    if (!lastPlan) {
-      if (sawExpired && !sawClaimConflict) {
-        await downgradePlayMembershipIfNeeded(userId, { reason: "expired_on_restore" });
-      }
-      res.status(sawClaimConflict ? 409 : 400).json({
-        error: errors[0] || "No active Play purchases found.",
-        errors,
-      });
-      return;
-    }
-
-    res.json({
-      ok: true,
-      plan: lastPlan,
-      message: `Restored ${lastPlan} membership from Google Play.`,
-      quota: lastQuota,
-      errors: errors.length ? errors : undefined,
-    });
-  } catch (error) {
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json({ error: error.publicMessage || error.message || "Restore failed." });
-  }
-});
-
-app.post("/api/billing/sync-play-membership", express.json({ limit: "32kb" }), async (req, res) => {
-  try {
-    const quotaSession = await getQuotaSession(req, 0);
-    const admin = createServiceRoleSupabaseClient();
-    if (!admin || !quotaSession?.user?.id) {
-      res.status(503).json({ error: "Membership server is not ready." });
-      return;
-    }
-
-    const userId = quotaSession.user.id;
-    const currentPlan = normalizePlanName(quotaSession.profile?.plan);
-    if (currentPlan === "Free") {
-      res.json({ ok: true, plan: "Free", changed: false, quota: publicQuota(quotaSession.profile) });
-      return;
-    }
-
-    const storedEvents = await loadPlayMembershipEvents(admin, userId);
-    if (!storedEvents.ok) {
-      res.status(503).json({ error: "Could not verify membership status. Please try again." });
-      return;
-    }
-    const events = storedEvents.events;
-
-    const purchases = Array.isArray(req.body?.purchases) ? req.body.purchases : [];
-    let stillActive = false;
-    let activePlan = null;
-    let activeQuota = null;
-    let sawAuthoritativeInactive = false;
-    let sawIndeterminate = false;
-
-    for (const item of purchases.slice(0, 6)) {
-      const productId = String(item.productId || item.itemId || "").trim();
-      const purchaseToken = String(item.purchaseToken || item.token || "").trim();
-      if (!productId || !purchaseToken) {
-        sawIndeterminate = true;
-        continue;
-      }
-      const planConfig = getPlanForProductId(productId);
-      if (!planConfig) {
-        sawIndeterminate = true;
-        continue;
-      }
-      let verification;
-      try {
-        verification = await verifyPlaySubscriptionPurchase({ subscriptionId: productId, purchaseToken });
-      } catch {
-        sawIndeterminate = true;
-        continue;
-      }
-      const verificationState = classifyPlaySyncVerification(verification);
-      if (verificationState === "inactive") {
-        sawAuthoritativeInactive = true;
-        continue;
-      }
-      if (verificationState === "indeterminate") {
-        sawIndeterminate = true;
-        continue;
-      }
-      stillActive = true;
-      activePlan = planConfig.plan;
-      const tokenHash = hashPurchaseToken(purchaseToken);
-      const persisted = await claimPlayMembership(admin, {
-        userId,
-        tokenHash,
-        profileUpdate: {
-          plan: planConfig.plan,
-          quota_limit: planConfig.quotaLimit,
-          play_billing: "Google Play",
-          updated_at: new Date().toISOString(),
-        },
-        event: {
-          event_type: "subscription_synced",
-          plan: planConfig.plan,
-          metadata: {
-            productId,
-            orderId: verification.orderId || "",
-            expiryTimeMillis: verification.expiryTimeMillis || null,
-          },
-        },
-      });
-      if (persisted.conflict) {
-        throw publicApiError("This purchase is already linked to another account.", 409);
-      }
-      if (!persisted.ok) {
-        throw publicApiError("Could not update your membership. Please try again.", 503);
-      }
-      const { data: profile } = await admin
-        .from("profiles")
-        .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
-        .eq("id", userId)
-        .maybeSingle();
-      if (profile) activeQuota = publicQuota(profile);
-      break;
-    }
-
-    // If client sent no purchases but profile is paid via Play, check stored expiry metadata.
-    if (!stillActive && !purchases.length) {
-      const latest = (events || []).find((row) => row.metadata?.expiryTimeMillis);
-      const expiry = Number(latest?.metadata?.expiryTimeMillis || 0);
-      if (expiry && expiry > Date.now()) {
-        stillActive = true;
-        activePlan = currentPlan;
-        activeQuota = publicQuota(quotaSession.profile);
-      } else if (expiry) {
-        sawAuthoritativeInactive = true;
-      } else {
-        sawIndeterminate = true;
-      }
-    }
-
-    if (!stillActive) {
-      if (sawIndeterminate || !sawAuthoritativeInactive) {
-        throw publicApiError("Could not verify membership status. Please try again.", 503);
-      }
-      const downgraded = await downgradePlayMembershipIfNeeded(userId, { reason: "sync_inactive" });
-      res.json({
-        ok: true,
-        plan: "Free",
-        changed: Boolean(downgraded),
-        message: downgraded ? "Membership updated to Free because no active Play subscription was found." : "Already on Free.",
-        quota: downgraded || publicQuota({ ...quotaSession.profile, plan: "Free", quota_limit: FREE_PLAN_DEFAULTS.quotaLimit }),
-      });
-      return;
-    }
-
-    res.json({
-      ok: true,
-      plan: activePlan || currentPlan,
-      changed: false,
-      quota: activeQuota || publicQuota(quotaSession.profile),
-    });
-  } catch (error) {
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json({ error: error.publicMessage || error.message || "Sync failed." });
-  }
-});
-
-async function downgradePlayMembershipIfNeeded(
-  userId,
-  { reason = "expired", productId = "" } = {},
-  adminOverride = null
-) {
-  const admin = adminOverride || createServiceRoleSupabaseClient();
-  if (!admin || !userId) return null;
-  const { data: profile, error: profileError } = await admin
-    .from("profiles")
-    .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
-    .eq("id", userId)
-    .maybeSingle();
-  if (profileError) {
-    throw publicApiError("Could not verify your membership. Please try again.", 503);
-  }
-  if (!profile) return null;
-  if (normalizePlanName(profile.plan) === "Free") return publicQuota(profile);
-  if (!/google play/i.test(String(profile.play_billing || ""))) return publicQuota(profile);
-
-  const profileUpdate = {
-      plan: FREE_PLAN_DEFAULTS.plan,
-      quota_limit: FREE_PLAN_DEFAULTS.quotaLimit,
-      play_billing: "Expired",
-      updated_at: new Date().toISOString(),
-  };
-  const persisted = await persistPlayMembership(admin, {
-    userId,
-    profileUpdate,
-    event: {
-      event_type: "subscription_expired",
-      plan: "Free",
-      metadata: { reason, productId },
-    },
-  });
-  if (!persisted.ok) {
-    throw publicApiError("Could not update your membership. Please try again.", 503);
-  }
-  const { data: updated } = await admin
-    .from("profiles")
-    .select("id,email,full_name,role,plan,quota_used,quota_limit,quota_reset_at,play_billing")
-    .eq("id", userId)
-    .maybeSingle();
-  return publicQuota(updated || { ...profile, plan: "Free", quota_limit: FREE_PLAN_DEFAULTS.quotaLimit, play_billing: "Expired" });
-}
-app.post("/api/account/delete", express.json({ limit: "8kb" }), async (req, res) => {
-  try {
-    const confirm = String(req.body?.confirm || "").trim().toUpperCase();
-    if (confirm !== "DELETE") {
-      res.status(400).json({ error: 'Type confirm: "DELETE" to permanently delete your account.' });
-      return;
-    }
-    const quotaSession = await getQuotaSession(req, 0);
-    const admin = createServiceRoleSupabaseClient();
-    if (!admin || !quotaSession?.user?.id) {
-      res.status(503).json({ error: "Account deletion is not available right now." });
-      return;
-    }
-    const userId = quotaSession.user.id;
-    await admin.from("membership_events").insert({
-      user_id: userId,
-      event_type: "account_delete_requested",
-      plan: quotaSession.profile?.plan || "Free",
-      provider: "app",
-      metadata: { at: new Date().toISOString() },
-    });
-    // Best-effort cleanup of user library before auth user delete.
-    await admin.from("user_library").delete().eq("user_id", userId);
-    await admin.from("profiles").delete().eq("id", userId);
-    const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
-    if (deleteError) {
-      res.status(503).json({ error: `Failed to delete auth user: ${deleteError.message}` });
-      return;
-    }
-    res.json({ ok: true, message: "Account deleted." });
-  } catch (error) {
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json({ error: error.publicMessage || error.message || "Delete failed." });
-  }
-});
-
 const REPORT_REASONS = new Set([
   "offensive",
   "harmful",
@@ -1241,29 +523,16 @@ app.post("/api/report-content", express.json({ limit: "64kb" }), async (req, res
     const detail = String(req.body?.detail || "").slice(0, 2000);
     const content = String(req.body?.content || "").slice(0, 8000);
 
-    let userId = null;
-    try {
-      const membership = await getMembershipFromRequest(req);
-      userId = membership?.user?.id || null;
-    } catch {
-      // An unauthenticated report is still a valid report.
-    }
+    const userId = null;
 
-    const admin = createServiceRoleSupabaseClient();
-    if (!admin) {
-      // Never drop a report silently; make it recoverable from logs.
-      console.error("content report (no database configured)", { reason, userId, detail });
-      res.json({ ok: true });
-      return;
-    }
-
-    const { error } = await admin.from("content_reports").insert({
-      user_id: userId,
+    // No database any more: reports are recorded in the Worker logs
+    // (Cloudflare Workers Logs / `wrangler tail`) so none is dropped silently.
+    console.warn("content report", {
       reason,
+      userId,
       detail,
-      content,
+      content: content.slice(0, 2000),
     });
-    if (error) throw new Error(error.message);
 
     res.json({ ok: true });
   } catch (error) {
@@ -1826,25 +1095,6 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
       return;
     }
 
-    if (normalizePlanName(membership.plan) === "Free") {
-      const resultId = body.resultId || randomUUID();
-      weeklyReservation = {
-        client: quotaSession.client,
-        key: resultId,
-        ...(await reserveWeeklyFreeResult(quotaSession.client, {
-          userId: quotaSession.user?.id,
-          idempotencyKey: resultId,
-        })),
-      };
-      if (!weeklyReservation.ok) {
-        const message =
-          weeklyReservation.reason === "weekly_limit"
-            ? "Free weekly limit reached. Upgrade or wait until Monday."
-            : "Weekly allowance is temporarily unavailable.";
-        throw publicApiError(message, weeklyReservation.reason === "weekly_limit" ? 402 : 503);
-      }
-    }
-
     // The generated prompt is written as a brief for a human to hand over with
     // real data attached, so run cold a model reasonably replies "send me the
     // details first". A system message loses to 5,000 characters of user
@@ -2070,9 +1320,6 @@ app.post("/api/run-prompt", attachAiRateLimitIdentity, aiRateLimit, acceptRunPro
       }
     );
   } catch (error) {
-    if (weeklyReservation?.ok && weeklyReservation?.client && weeklyReservation?.key) {
-      await releaseWeeklyFreeResult(weeklyReservation.client, weeklyReservation.key);
-    }
     console.error("run-prompt failed", error.message);
 
     // Once the stream has started the status line is already on the wire, so a
@@ -2828,7 +2075,6 @@ export {
   buildOpenAIContent,
   buildOpenRouterContent,
   buildPromptSpecInstruction,
-  downgradePlayMembershipIfNeeded,
   getDomainPromptPack,
   mergeCompareEvaluationPositionSwap,
   normalizeRunAttachments,
@@ -3060,84 +2306,14 @@ function normalizeModelSettings(body = {}) {
   };
 }
 
-async function requireAdminMembership(req) {
-  const membership = await getMembershipFromRequest(req);
-  if (!membership.user) {
-    throw publicApiError("Sign in with an admin account.", 401);
-  }
-  if (membership.profile?.role !== "admin") {
-    throw publicApiError("Admin access required.", 403);
-  }
-  return membership;
-}
-
-async function resolveModelSettings(req, body = {}) {
-  const admin = createServiceRoleSupabaseClient();
-  const { settings: published } = await getCachedPublishedModelSettings(admin);
-  const fromRequest = normalizeModelSettings(body);
-  const membership = await getMembershipFromRequest(req);
-  const isAdmin = membership.profile?.role === "admin";
+async function resolveModelSettings(_req, body = {}) {
+  // Env defaults only. Request overrides were an admin-only feature and are
+  // never honoured now that there are no accounts.
   return mergeModelSettingsLayers({
-    published,
-    request: fromRequest,
-    allowRequestOverride: isAdmin,
+    published: null,
+    request: normalizeModelSettings(body),
+    allowRequestOverride: false,
   });
-}
-
-function extractBearerToken(req) {
-  const match = /^Bearer\s+(.+)$/i.exec(req.headers.authorization || "");
-  return match?.[1]?.trim() || "";
-}
-
-function createUserSupabaseClient(token) {
-  if (!quotaAuthEnabled || !token) return null;
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
-}
-
-function createServiceRoleSupabaseClient() {
-  if (!quotaServiceRoleEnabled) return null;
-  return createClient(supabaseUrl, supabaseServiceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
-
-function nextQuotaResetDateString() {
-  const resetDate = new Date();
-  resetDate.setDate(resetDate.getDate() + 30);
-  return resetDate.toISOString().slice(0, 10);
-}
-
-function normalizePublicQuotaProfile(profile) {
-  if (!profile) return null;
-  const today = new Date().toISOString().slice(0, 10);
-  if (!profile.quota_reset_at || String(profile.quota_reset_at) < today) {
-    return {
-      ...profile,
-      quota_reset_at: nextQuotaResetDateString(),
-      quota_used: 0,
-    };
-  }
-  return profile;
-}
-
-function publicQuota(profile) {
-  if (!profile) return null;
-  const normalized = normalizePublicQuotaProfile(profile);
-  const unlimited = isSuperAccount(profile);
-  return {
-    email: normalized.email,
-    fullName: normalized.full_name || "",
-    plan: normalized.plan || "Free",
-    playBilling: normalized.play_billing || "Not linked",
-    quotaLimit: unlimited ? SUPER_QUOTA_LIMIT : Number(normalized.quota_limit || 0),
-    quotaResetAt: normalized.quota_reset_at,
-    quotaUsed: Number(normalized.quota_used || 0),
-    role: normalized.role === "admin" ? "admin" : "user",
-    unlimited,
-  };
 }
 
 function publicApiError(message, statusCode = 400) {
@@ -3147,120 +2323,27 @@ function publicApiError(message, statusCode = 400) {
   return error;
 }
 
-async function getMembershipFromRequest(req) {
-  // Fail closed: never grant paid entitlements when auth is misconfigured.
-  if (!quotaAuthEnabled) {
-    return { plan: "Free", profile: null, user: null, client: null, authMisconfigured: true };
-  }
-  const token = extractBearerToken(req);
-  if (!token) {
-    return { plan: "Free", profile: null, user: null, client: null };
-  }
-  const client = createUserSupabaseClient(token);
-  const { data: userData, error: userError } = await client.auth.getUser(token);
-  if (userError || !userData?.user) {
-    return { plan: "Free", profile: null, user: null, client: null };
-  }
-  const { data, error } = await client.rpc("get_my_entitlement");
-  if (error || !data) {
-    return { plan: "Free", profile: null, user: userData.user, client };
-  }
-  const profile = Array.isArray(data) ? data[0] : data;
-  return {
-    plan: normalizePlanName(profile?.plan),
-    profile,
-    user: userData.user,
-    client,
-  };
+/**
+ * Every visitor gets the same open tier: there are no accounts, quotas or
+ * billing any more. Spend is bounded by the per-IP AI rate limit instead.
+ */
+const OPEN_PLAN = "Pro";
+
+async function getMembershipFromRequest(_req) {
+  return { plan: OPEN_PLAN, profile: null, user: null, client: null };
 }
 
-async function getQuotaSession(req, estimatedTokens = 0) {
-  if (!quotaAuthEnabled) {
-    throw publicApiError("Auth is not configured. AI features are unavailable.", 503);
-  }
-  const token = extractBearerToken(req);
-  if (!token) throw publicApiError("Sign in to use AI features and your token quota.", 401);
-
-  const client = createUserSupabaseClient(token);
-  const { data: userData, error: userError } = await client.auth.getUser(token);
-  if (userError || !userData?.user) throw publicApiError("Invalid session. Please sign in again.", 401);
-
-  const { data, error } = await client.rpc("get_my_entitlement");
-  if (error) throw publicApiError("Membership is not ready. Sign out and sign in again.", 503);
-  const profile = Array.isArray(data) ? data[0] : data;
-  if (!profile) throw publicApiError("Membership profile not found. Sign out and sign in again.", 403);
-
-  if (
-    !isSuperAccount(profile) &&
-    Number(profile.quota_used || 0) + estimatedTokens > Number(profile.quota_limit || 0)
-  ) {
-    throw publicApiError("Token quota exceeded. Upgrade your plan or wait for quota reset.", 402);
-  }
-
-  return {
-    client,
-    profile,
-    user: userData.user,
-    usageIdempotencyKey: randomUUID(),
-  };
+/** No per-user token quota: callers already treat a null session as "not metered". */
+async function getQuotaSession(_req, _estimatedTokens = 0) {
+  return null;
 }
 
-async function recordUsage(quotaSession, { eventType, metadata, outputText, tokenEstimate }) {
-  if (!quotaSession?.client) return null;
-  const tokens = Math.max(1, Math.round(tokenEstimate || estimateTextTokens(outputText)));
-  const result = await persistReservedUsage(quotaSession.client, {
-    userId: quotaSession.user?.id,
-    estimate: tokens,
-    eventType,
-    metadata: metadata || {},
-    idempotencyKey: quotaSession.usageIdempotencyKey,
-  });
-  if (!result.ok) {
-    const exhausted = result.reason === "quota_exhausted";
-    const message = exhausted
-      ? "Token quota exceeded. Upgrade your plan or wait for quota reset."
-      : "Failed to record quota usage.";
-    throw publicApiError(message, quotaFailureStatus(result));
-  }
-
-  const quotaLimit = Number(quotaSession.profile?.quota_limit || 0);
-  return publicQuota({
-    ...quotaSession.profile,
-    quota_used: Math.max(0, quotaLimit - result.remaining),
-  });
+async function recordUsage(_quotaSession, _usage) {
+  return null;
 }
 
-async function finishGenerateResponse(res, quotaSession, usagePayload, body) {
-  // Production default: hard-fail quota writes. Set QUOTA_RECORD_SOFT_FAIL=true only for emergency.
-  const softFail = process.env.QUOTA_RECORD_SOFT_FAIL === "true";
-  let quota = null;
-  let warning = body.warning || "";
-  const isFallback =
-    body?.source === "fallback" ||
-    body?.modelStatus === "local-fallback" ||
-    usagePayload?.metadata?.source === "fallback";
-
-  if (quotaSession) {
-    if (isFallback) {
-      // Do not charge full estimated tokens for local/template previews.
-      quota = publicQuota(quotaSession.profile);
-      warning = [warning, "Preview only — quota was not charged."].filter(Boolean).join(" ");
-    } else {
-      try {
-        quota = await recordUsage(quotaSession, usagePayload);
-      } catch (usageError) {
-        const note = usageError.publicMessage || usageError.message || "Failed to record quota usage.";
-        if (softFail) {
-          warning = [warning, note].filter(Boolean).join(" ");
-          console.warn("recordUsage soft-failed", note);
-        } else {
-          throw usageError;
-        }
-      }
-    }
-  }
-
-  res.json({ ...body, warning, quota });
+async function finishGenerateResponse(res, _quotaSession, _usagePayload, body) {
+  res.json({ ...body, warning: body.warning || "", quota: null });
 }
 
 function estimateTextTokens(value = "") {

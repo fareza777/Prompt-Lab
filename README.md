@@ -2,26 +2,12 @@
 
 AI Work Studio adalah aplikasi mobile-first untuk mengubah catatan, foto, screenshot, dan file menjadi hasil kerja siap pakai seperti laporan Word, notulen, dan slide PowerPoint.
 
-## Wajib dilakukan setelah rilis ini
+## Tanpa akun / tanpa database
 
-Dua langkah manual berikut belum aktif dan **fitur terkait tidak jalan tanpanya**:
-
-**1. Aktifkan Anonymous Sign-Ins di Supabase** — tanpa ini, percobaan gratis
-tanpa akun tidak berfungsi dan pengguna baru langsung diminta membuat akun
-(persis masalah yang ingin dihilangkan rilis ini).
-
-Supabase Dashboard → Authentication → Sign In / Providers → **Anonymous Sign-Ins → Enable**.
-
-Verifikasi: buka `/app` dalam mode incognito, ketik permintaan, tekan
-**Buatkan**. Kalau muncul "Buat akun gratis dulu untuk memakai AI", toggle
-tersebut masih mati.
-
-**2. Jalankan `supabase/phase-13-content-reports.sql`** — membuat tabel
-`content_reports` untuk pelaporan konten AI yang diwajibkan kebijakan
-Generative AI Google Play. Tanpa tabel ini laporan hanya masuk log server,
-tidak tersimpan.
-
-Butuh `SUPABASE_SERVICE_ROLE_KEY` terisi di environment produksi.
+Sejak November 2026 aplikasi berjalan tanpa Supabase: tidak ada login, kuota,
+membership, maupun admin console. `/app` langsung terbuka untuk semua orang,
+semua fitur aktif, dan biaya AI dibatasi oleh rate limit per-IP di server
+(Cloudflare Worker + Upstash KV). Lihat `MIGRATION-CLOUDFLARE.md`.
 
 ## Bahasa
 
@@ -80,8 +66,6 @@ OPENROUTER_API_KEY=isi_key_di_sini
 OPENROUTER_MODEL=qwen/qwen3.7-flash
 OPENROUTER_OCR_MODEL=baidu/qianfan-ocr-fast:free
 APP_URL=https://prompt-lab.xyz
-VITE_SUPABASE_URL=https://project-ref.supabase.co
-VITE_SUPABASE_ANON_KEY=sb_publishable_xxx
 ```
 
 Saat production, frontend otomatis memakai same-origin API (`/api/...`). Saat development, frontend memakai API lokal `http://127.0.0.1:8787`.
@@ -106,65 +90,6 @@ LLM settings juga bisa diubah dari halaman **Settings** di aplikasi:
 
 Jika API key override dikosongkan, backend memakai Environment Variables Vercel. Jika diisi dari dashboard, key tersimpan di browser pengguna tersebut.
 
-## Login dan Membership
-
-AI Work Studio memakai Supabase Auth untuk login email/password. Setup tahap 1:
-
-1. Buka Supabase SQL Editor.
-2. Jalankan isi file `supabase/phase-1-auth.sql`.
-3. Isi `VITE_SUPABASE_URL` dan `VITE_SUPABASE_ANON_KEY` di `.env` lokal dan Vercel Production.
-4. Redeploy Vercel setelah env ditambahkan.
-
-**Google Sign-In:** tombol Google aktif secara default. Setup server (sekali):
-
-1. Google Cloud Console → OAuth client (Web) → redirect URI:
-   `https://<project-ref>.supabase.co/auth/v1/callback`
-2. Isi env lalu jalankan:
-   ```bash
-   npm run setup:google-auth
-   ```
-   Butuh `SUPABASE_ACCESS_TOKEN`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
-3. Jalankan `supabase/phase-10-google-auth-profile.sql` di SQL Editor (nama profil dari Google).
-4. Redeploy Vercel. URL Configuration di Supabase: Site URL `https://prompt-lab.xyz`, redirect `https://prompt-lab.xyz/**`.
-
-Untuk menyembunyikan tombol Google: `VITE_ENABLE_GOOGLE_AUTH=false`.
-
-Admin Console di aplikasi hanya muncul untuk user dengan `profiles.role = 'admin'`. Setelah akun admin dibuat lewat app, jalankan SQL opsional di bagian bawah `supabase/phase-1-auth.sql` untuk menaikkan role akun tersebut.
-
-### Quota Token
-
-Quota dihitung di backend saat `/api/generate-prompt` berhasil:
-
-- Frontend mengirim Supabase access token lewat header `Authorization`.
-- Backend membaca entitlement user dari Supabase.
-- Jika quota tidak cukup, request ditolak sebelum memanggil model AI.
-- Jika berhasil, backend mencatat `usage_events` dan menaikkan `profiles.quota_used`.
-- Plan buttons never activate paid access locally. Android purchases use Play Billing verification, while web purchases use Lemon Squeezy checkout (`VITE_WEB_CHECKOUT_*`) + webhook — see `playstore/LEMON_SQUEEZY_SETUP.md`.
-
-Jika SQL tahap 1 sudah pernah dijalankan sebelum fitur quota ini, cukup jalankan `supabase/phase-2-quota-upgrade.sql` agar fungsi `get_my_entitlement` dan `record_usage_event` tersedia.
-
-Jika generate gagal dengan **"Gagal mencatat usage quota"**, jalankan `supabase/phase-3-production-fix.sql` di Supabase SQL Editor (memperbaiki RLS policy yang memblokir update `quota_used`).
-
-Di Vercel Production, pastikan env backend juga terisi (bukan hanya `VITE_*`):
-
-```bash
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-or-publishable-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key
-```
-
-`SUPABASE_SERVICE_ROLE_KEY` ada di Supabase Dashboard → Project Settings → API → `service_role` (secret). Wajib untuk pencatatan quota yang stabil di server Vercel.
-
-Untuk provider custom OpenAI-compatible (contoh: LiteLLM free router lokal):
-
-```bash
-AI_PROVIDER=custom
-CUSTOM_LLM_BASE_URL=http://127.0.0.1:4000/v1
-CUSTOM_LLM_API_KEY=sk-litellm-local
-CUSTOM_LLM_MODEL=free-best
-```
-
-Failover FREE-ONLY ditangani proxy LiteLLM (`free-best`); app tidak menambah fallback berbayar.
 ## OpenAI API
 
 Buat `.env` dari `.env.example`:

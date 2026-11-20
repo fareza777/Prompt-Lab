@@ -94,7 +94,7 @@ test("production entry graph stays within the documented initial JS and CSS budg
   assert.match(config, /INITIAL_JS_BUDGET_KB = 700/);
   assert.match(config, /INITIAL_CSS_BUDGET_KB = 80/);
   assert.match(config, /enforceInitialAssetBudget/);
-  for (const chunk of ["react", "icons", "supabase"]) {
+  for (const chunk of ["react", "icons"]) {
     assert.match(config, new RegExp(`return "${chunk}"`));
   }
   assert.doesNotMatch(config, /return "vendor"/);
@@ -124,10 +124,6 @@ test("production entry graph stays within the documented initial JS and CSS budg
   assert.ok(jsKb <= 700, `initial JS is ${jsKb.toFixed(1)} KiB`);
   assert.ok(cssKb <= 80, `initial CSS is ${cssKb.toFixed(1)} KiB`);
 
-  // The admin console must stay off the initial path.
-  const adminAssets = files.filter((file) => file.name.startsWith("AdminConsole"));
-  assert.ok(adminAssets.length > 0, "admin console should be emitted as its own chunk");
-  for (const asset of adminAssets) {
-    assert.ok(!referenced.has(asset.name), `${asset.name} must not load on the initial path`);
-  }
+  // The admin console was removed together with accounts.
+  assert.equal(files.filter((file) => file.name.startsWith("AdminConsole")).length, 0);
 });
