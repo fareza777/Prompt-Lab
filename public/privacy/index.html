@@ -30,7 +30,7 @@
   <body>
     <main>
       <h1>Privacy Policy</h1>
-      <p class="meta">AI Work Studio · Last updated: May 22, 2026 · Contact: support@prompt-lab.xyz</p>
+      <p class="meta">AI Work Studio · Last updated: November 20, 2026 · Contact: support@prompt-lab.xyz</p>
 
       <p>
         AI Work Studio (“we”, “our”, “the app”) helps you turn notes, photos, files, and requests into finished work documents.
@@ -38,46 +38,47 @@
       </p>
 
       <h2>1. Information we collect</h2>
+      <p>AI Work Studio has no user accounts, logins, or paid plans. We do not ask for your name or email to use the app.</p>
       <ul>
-        <li><strong>Account data:</strong> email, display name, and authentication identifiers when you sign in (via Supabase Auth).</li>
-        <li><strong>Usage data:</strong> token quota usage, generation events, plan/membership status, and app settings stored for your account.</li>
-        <li><strong>Content you provide:</strong> requests, saved results, templates, and files you upload (images and documents) for AI processing.</li>
-        <li><strong>Technical data:</strong> basic diagnostics such as browser type and request metadata needed to operate the service.</li>
+        <li><strong>Content you provide:</strong> requests, templates, and files you upload (images and documents), sent to our server only to produce the result you asked for. We do not store them in a database.</li>
+        <li><strong>Data on your device:</strong> saved results, templates, and settings stay in your browser or app storage.</li>
+        <li><strong>Technical data:</strong> IP address and basic request metadata, used for rate limiting, security, and short-lived service logs.</li>
+        <li><strong>Advertising (Android app):</strong> Google AdMob shows a banner and may collect device identifiers under Google’s policies.</li>
       </ul>
 
       <h2>2. How we use information</h2>
       <ul>
-        <li>Create, improve, save, compare, and export finished work.</li>
-        <li>Enforce quotas, authenticate users, and maintain membership state.</li>
-        <li>Send internal processing instructions and attachments to configured AI providers only to fulfill your request.</li>
-        <li>Improve reliability, security, and abuse prevention.</li>
+        <li>Create, improve, compare, and export finished work.</li>
+        <li>Send internal processing instructions and attachments to AI providers only to fulfill your request.</li>
+        <li>Prevent abuse (per-IP rate limits) and keep the service reliable and secure.</li>
+        <li>Review content reports you send about AI output.</li>
       </ul>
 
       <h2>3. Third-party services</h2>
       <p>We use trusted processors, including:</p>
       <ul>
-        <li><strong>Supabase</strong> — authentication and database.</li>
-        <li><strong>Vercel</strong> — hosting and API delivery.</li>
-        <li><strong>AI providers</strong> — model inference (e.g. OpenRouter and models you configure).</li>
-        <li><strong>Google Play</strong> — billing when you purchase subscriptions inside the Android app (when enabled).</li>
+        <li><strong>Cloudflare</strong> — hosting, API delivery, and service logs.</li>
+        <li><strong>Upstash</strong> — short-lived rate-limit counters keyed by IP address.</li>
+        <li><strong>AI providers</strong> — model inference (e.g. OpenRouter).</li>
+        <li><strong>Google AdMob</strong> — ads in the Android app.</li>
       </ul>
       <p>These providers process data according to their own policies and our instructions.</p>
 
       <h2>4. Data retention</h2>
       <p>
-        Account and usage records are kept while your account is active. You may request deletion by contacting us.
-        Local-only guest data stays on your device until you clear it.
+        Content you submit is processed in memory and not kept after the response. Rate-limit counters expire within minutes; service logs are kept for a short period.
+        Data on your device stays there until you clear it or uninstall the app.
       </p>
 
       <h2>5. Security</h2>
       <p>
-        We use HTTPS, access controls, and row-level security on user data. API keys for AI providers should be stored in server environment variables, not shared publicly.
+        We use HTTPS and keep API keys for AI providers in server environment variables, never in the app.
       </p>
 
       <h2>6. Your rights</h2>
       <p>
-        Depending on your region, you may request access, correction, or deletion of personal data. Sign out to end your session on a device.
-        To delete your account, follow <a href="/privacy/delete-account">Delete account</a>.
+        Depending on your region, you may request access to or deletion of personal data by contacting us.
+        See <a href="/privacy/delete-account">Delete your data</a> for details, including data from accounts created before accounts were retired.
       </p>
 
       <h2>7. Children</h2>

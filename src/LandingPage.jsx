@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { MEMBERSHIP_MARKETING } from "./planEntitlements.js";
 import { dismissStartupSplash } from "./startupSplash";
 
 /**
@@ -146,7 +145,7 @@ export default function LandingPage() {
               marginBottom: 24,
             }}
           >
-            Free to start — no card required
+            Free to use — no account needed
           </p>
           <h1
             style={{
@@ -244,52 +243,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="pricing" style={S.section}>
-        <div style={S.wrap}>
-          <h2 style={{ ...S.h2, textAlign: "center" }}>Pricing</h2>
-          <p style={{ ...S.lede, textAlign: "center", marginBottom: 40 }}>
-            Start free. Upgrade from inside the app when you need exports, priority OCR, and higher
-            limits.
+      <section id="free" style={S.section}>
+        <div style={{ ...S.wrap, maxWidth: 680, textAlign: "center" }}>
+          <h2 style={S.h2}>Free to use</h2>
+          <p style={S.lede}>
+            Every template, export, and tool is open to everyone — no account, no subscription. The
+            Android app shows a small ad banner to keep it free.
           </p>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-              gap: 18,
-            }}
-          >
-            {Object.entries(MEMBERSHIP_MARKETING).map(([plan, meta]) => (
-              <div
-                key={plan}
-                style={{
-                  ...S.card,
-                  borderColor: plan === "Pro" ? "var(--accent-line)" : "var(--rule)",
-                }}
-              >
-                <span style={{ fontSize: 13, color: "var(--accent)", fontWeight: 600 }}>{plan}</span>
-                <strong style={{ display: "block", fontSize: "1.5rem", margin: "10px 0 8px" }}>
-                  {meta.price}
-                </strong>
-                <p style={{ color: "var(--ink-mute)", fontSize: "0.95rem", minHeight: 46 }}>
-                  {meta.detail}
-                </p>
-                <ul
-                  style={{
-                    margin: "16px 0 0",
-                    paddingLeft: 18,
-                    listStyle: "disc",
-                    color: "var(--ink-2)",
-                    fontSize: 14,
-                    lineHeight: 1.7,
-                  }}
-                >
-                  {meta.highlights.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -297,7 +257,7 @@ export default function LandingPage() {
         <div style={S.wrap}>
           <h2 style={S.h2}>Try it on something you are working on now</h2>
           <p style={{ ...S.lede, marginBottom: 32 }}>
-            The first few results are free, and you do not need an account to see one.
+            It is free, and you do not need an account.
           </p>
           <a href="/app" style={S.primary}>
             Open AI Work Studio
